@@ -1,0 +1,9 @@
+{
+  "action_id": "9074eb82-d359-4ce2-9155-1b71699fed8f",
+  "mode": "pr_only",
+  "strategy_id": "cloudtrail_enable_guided",
+  "profile_id": "cloudtrail_enable_guided",
+  "strategy_inputs": {"trail_bucket_name":"security-autopilot-phase5-cloudtrail-696505809372-052354","trail_name":"security-autopilot-trail","create_bucket_if_missing":true,"create_bucket_policy":true,"multi_region":true},
+  "risk_acknowledged": true,
+  "bucket_creation_acknowledged": true
+}

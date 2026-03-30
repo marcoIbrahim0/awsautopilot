@@ -1,0 +1,54 @@
+{
+  "pending_confirmation_sweep": {
+    "status_code": 200,
+    "body": {
+      "evaluated_states": 0,
+      "due_states": 0,
+      "enqueued_scopes": 0,
+      "invalid_scope_states": 0,
+      "message_ids": [],
+      "scopes": []
+    }
+  },
+  "manual_ingest_trigger": {
+    "status_code": 202,
+    "body": {
+      "account_id": "696505809372",
+      "jobs_queued": 1,
+      "regions": [
+        "eu-north-1"
+      ],
+      "message_ids": [
+        "f6e3a9f1-8536-4125-b6b0-24fe8be5d35d"
+      ],
+      "message": "Ingestion jobs queued successfully"
+    }
+  },
+  "reconcile_inventory_global": {
+    "status_code": 200,
+    "body": {
+      "enqueued": 0,
+      "accounts_considered": 1,
+      "accounts_skipped_disabled": 0,
+      "accounts_skipped_external_id_mismatch": 0,
+      "accounts_skipped_assume_role": 0,
+      "accounts_quarantined": 0,
+      "authoritative_mode_blocked": 0,
+      "assume_role_error_codes": [],
+      "skipped_prereq": 1,
+      "prereq_reasons": [
+        "control_plane_stale",
+        "prerequisite_check_error"
+      ],
+      "services": [
+        "config"
+      ]
+    }
+  },
+  "reconcile_inventory_shard": {
+    "status_code": 200,
+    "body": {
+      "enqueued": 1
+    }
+  }
+}

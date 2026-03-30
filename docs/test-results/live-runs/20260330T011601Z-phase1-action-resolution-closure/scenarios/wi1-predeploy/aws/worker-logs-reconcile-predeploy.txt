@@ -1,0 +1,2 @@
+[ERROR]	2026-03-30T01:21:32.189Z	162db260-91bd-51c6-89c1-d02343f1aa2b	[644cb925-f0dc-451f-8641-c7ac6977698e] Permission error (AccessDenied) account=696505809372 job_type=reconcile_inventory_shard. Message will retry/DLQ. Error=An error occurred (AccessDenied) when calling the GetBucketLocation operation: Access Denied
+

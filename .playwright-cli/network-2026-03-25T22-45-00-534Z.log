@@ -1,0 +1,7 @@
+[GET] http://localhost:8000/api/auth/me => [401] Unauthorized
+[GET] http://localhost:8000/api/meta/scope => [200] OK
+[GET] http://localhost:8000/api/aws/accounts?tenant_id=c3351a02-0bc2-4449-beed-d59d7ac937d0 => [200] OK
+[GET] http://localhost:8000/api/findings?limit=20&offset=0&tenant_id=c3351a02-0bc2-4449-beed-d59d7ac937d0 => [200] OK
+[GET] http://localhost:8000/api/findings/grouped?limit=20&offset=0&tenant_id=c3351a02-0bc2-4449-beed-d59d7ac937d0 => [200] OK
+[GET] http://localhost:8000/api/findings?control_id=EC2.53&limit=20&offset=0&tenant_id=c3351a02-0bc2-4449-beed-d59d7ac937d0 => [200] OK
+[GET] http://localhost:8000/api/findings/grouped?control_id=EC2.53&limit=20&offset=0&tenant_id=c3351a02-0bc2-4449-beed-d59d7ac937d0 => [200] OK

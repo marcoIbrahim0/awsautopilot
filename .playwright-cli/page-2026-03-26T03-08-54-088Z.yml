@@ -1,0 +1,130 @@
+- generic [active] [ref=e1]:
+  - status [ref=e2]
+  - generic [ref=e5]:
+    - complementary [ref=e6]:
+      - navigation [ref=e10]:
+        - link "Findings" [ref=e11] [cursor=pointer]:
+          - /url: /findings
+          - img [ref=e13]
+          - generic: Findings
+        - link "Accounts" [ref=e15] [cursor=pointer]:
+          - /url: /accounts
+          - img [ref=e17]
+          - generic: Accounts
+        - link "Settings" [ref=e19] [cursor=pointer]:
+          - /url: /settings
+          - img [ref=e21]
+          - generic: Settings
+        - link "Top Risks" [ref=e24] [cursor=pointer]:
+          - /url: /top-risks
+          - img [ref=e26]
+          - generic: Top Risks
+        - link "Exports" [ref=e28] [cursor=pointer]:
+          - /url: /exports
+          - img [ref=e30]
+          - generic: Exports
+        - link "Help" [ref=e32] [cursor=pointer]:
+          - /url: /help
+          - img [ref=e34]
+          - generic: Help
+        - link "Audit Log" [ref=e57] [cursor=pointer]:
+          - /url: /audit-log
+          - img [ref=e59]
+          - generic: Audit Log
+      - button "Pin sidebar open" [ref=e39]:
+        - img [ref=e40]
+    - generic [ref=e42]:
+      - banner [ref=e43]:
+        - heading "Findings" [level=1] [ref=e45]
+        - generic [ref=e46]:
+          - button "Switch to light mode" [ref=e62]:
+            - img [ref=e63]
+          - button "Notifications" [ref=e49]:
+            - img [ref=e50]
+          - button "Profile menu" [ref=e52]:
+            - generic [ref=e53]: M
+      - main [ref=e54]:
+        - generic [ref=e66]:
+          - generic [ref=e67]:
+            - generic [ref=e68]:
+              - generic [ref=e70]:
+                - img [ref=e71]
+                - generic [ref=e74]:
+                  - generic: Search findings by title, control, or resource
+                  - textbox "Search" [ref=e75]
+                - button "Search" [ref=e76]
+              - generic: Flat View Only
+            - generic [ref=e77]:
+              - generic [ref=e78]:
+                - button "Grouped" [ref=e79]
+                - button "Flat" [ref=e80]
+              - button "Refresh" [ref=e81]:
+                - generic [ref=e82]:
+                  - img [ref=e83]
+                  - text: Refresh
+          - generic [ref=e85]:
+            - generic [ref=e88]:
+              - button "All" [ref=e89]
+              - button "Critical(3)" [ref=e90]:
+                - text: Critical
+                - generic [ref=e91]: (3)
+              - button "High" [ref=e92]
+              - button "Medium" [ref=e93]
+              - button "Low" [ref=e94]
+            - generic [ref=e95]:
+              - generic [ref=e96]:
+                - generic [ref=e97]: Status
+                - button "Open" [ref=e98]:
+                  - generic [ref=e99]:
+                    - generic [ref=e100]: Open
+                    - img [ref=e101]
+              - generic [ref=e103]:
+                - generic [ref=e104]: Account
+                - button "All Accounts" [ref=e105]:
+                  - generic [ref=e106]:
+                    - generic [ref=e107]: All Accounts
+                    - img [ref=e108]
+              - generic [ref=e110]:
+                - generic [ref=e111]: Region
+                - button "All Regions" [ref=e112]:
+                  - generic [ref=e113]:
+                    - generic [ref=e114]: All Regions
+                    - img [ref=e115]
+              - generic [ref=e117]:
+                - generic [ref=e118]: IDs
+                - generic [ref=e119]:
+                  - textbox "Control ID" [ref=e120]
+                  - textbox "Resource ID" [ref=e121]
+          - generic [ref=e122]:
+            - generic [ref=e123]: "Active:"
+            - generic [ref=e124]:
+              - text: "Status: Open"
+              - button [ref=e125]:
+                - img [ref=e126]
+            - button "Clear All" [ref=e128]
+          - generic [ref=e130]:
+            - generic [ref=e131]: Group by
+            - generic [ref=e132]:
+              - generic [ref=e134]:
+                - generic [ref=e135]:
+                  - img [ref=e136]
+                  - generic [ref=e143]: Severity
+                  - button "Remove Severity grouping" [ref=e144]:
+                    - img [ref=e145]
+                - img [ref=e147]
+              - generic [ref=e151]:
+                - img [ref=e152]
+                - generic [ref=e159]: Rule
+                - button "Remove Rule grouping" [ref=e160]:
+                  - img [ref=e161]
+            - button "Add Grouping" [ref=e164]:
+              - img [ref=e165]
+              - text: Add Grouping
+            - button "Clear" [ref=e167]
+  - alert [ref=e56]
+  - button "Open Ask AI Chat" [ref=e178]:
+    - generic [ref=e182]:
+      - img [ref=e184]
+      - generic [ref=e190]:
+        - paragraph [ref=e191]: Ocypheris
+        - paragraph [ref=e192]: Ask AI

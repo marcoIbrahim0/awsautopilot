@@ -19,3 +19,17 @@ def test_api_serverless_template_raises_api_lambda_memory() -> None:
 
     assert "ApiFunction:" in template_text
     assert "MemorySize: 1536" in template_text
+
+
+def test_api_serverless_template_wires_database_fallback_env_vars() -> None:
+    template_text = Path(
+        "/Users/marcomaher/AWS Security Autopilot/infrastructure/cloudformation/saas-serverless-httpapi.yaml"
+    ).read_text()
+
+    required_tokens = (
+        "DatabaseUrlFallback:",
+        "DATABASE_URL_FALLBACK: !Ref DatabaseUrlFallback",
+    )
+
+    for token in required_tokens:
+        assert token in template_text

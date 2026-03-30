@@ -1,0 +1,2 @@
+
+An error occurred (AccessDenied) when calling the PutBucketPolicy operation: User: arn:aws:iam::696505809372:root is not authorized to perform: s3:PutBucketPolicy on resource: "arn:aws:s3:::sa-wi13-14-nopolicy-696505809372-20260328201935" because public policies are prevented by the BlockPublicPolicy setting in S3 Block Public Access.

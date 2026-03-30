@@ -553,8 +553,9 @@ def build_launch_stack_url(
     """
     Build CloudFormation console 'Launch Stack' URL with prefilled template and parameters.
 
-    Console deep link: /stacks/create/template with templateURL, stackName, and param_*
-    in the hash fragment so the user sees everything filled when they click Next.
+    Console deep link: /stacks/create/review with templateURL, stackName, and
+    param_* in the hash fragment so CloudFormation opens the quick-create flow
+    with parameters prefilled.
     Parameter keys must match the template (prefixed with param_).
     stack_name: optional; if the default name is already in use, use e.g. SecurityAutopilotReadRole-2.
     """
@@ -570,7 +571,7 @@ def build_launch_stack_url(
         saas_execution_role_arns=saas_execution_role_arns,
     )
     params.update({f"param_{key}": value for key, value in parameter_values.items()})
-    return f"{base}#/stacks/create/template?{urlencode(params)}"
+    return f"{base}#/stacks/create/review?{urlencode(params)}"
 
 
 def build_read_role_launch_stack_url(
@@ -624,7 +625,7 @@ def build_control_plane_forwarder_launch_stack_url(
         "stackName": name,
         "param_SaaSIngestUrl": ingest_url.strip(),
     }
-    return f"{base}#/stacks/create/template?{urlencode(params)}"
+    return f"{base}#/stacks/create/review?{urlencode(params)}"
 
 
 def get_saas_and_launch_url(

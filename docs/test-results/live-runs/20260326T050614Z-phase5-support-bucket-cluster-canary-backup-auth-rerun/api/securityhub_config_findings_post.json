@@ -1,0 +1,96 @@
+{
+    "Findings": [
+        {
+            "SchemaVersion": "2018-10-08",
+            "Id": "arn:aws:securityhub:eu-north-1:696505809372:security-control/Config.1/finding/f03976b4-12cc-4e4b-b5e5-50b93bef9f4c",
+            "ProductArn": "arn:aws:securityhub:eu-north-1::product/aws/securityhub",
+            "ProductName": "Security Hub",
+            "CompanyName": "AWS",
+            "Region": "eu-north-1",
+            "GeneratorId": "security-control/Config.1",
+            "AwsAccountId": "696505809372",
+            "Types": [
+                "Software and Configuration Checks/Industry and Regulatory Standards"
+            ],
+            "FirstObservedAt": "2026-03-11T18:40:52.702Z",
+            "LastObservedAt": "2026-03-26T00:45:44.902Z",
+            "CreatedAt": "2026-03-11T18:40:52.702Z",
+            "UpdatedAt": "2026-03-26T00:45:44.902Z",
+            "Severity": {
+                "Label": "CRITICAL",
+                "Normalized": 90,
+                "Original": "CRITICAL"
+            },
+            "Title": "AWS Config should be enabled and use the service-linked role for resource recording",
+            "Description": "This control checks whether AWS Config is enabled in your account in the current AWS Region, records all resources that correspond to controls that are enabled in the current Region, and uses the service-linked AWS Config role.",
+            "Remediation": {
+                "Recommendation": {
+                    "Text": "For information on how to correct this issue, consult the AWS Security Hub controls documentation.",
+                    "Url": "https://docs.aws.amazon.com/console/securityhub/Config.1/remediation"
+                }
+            },
+            "ProductFields": {
+                "aws/securityhub/ProductName": "Security Hub",
+                "aws/securityhub/CompanyName": "AWS",
+                "Resources:0/Id": "arn:aws:iam::696505809372:root",
+                "aws/securityhub/FindingId": "arn:aws:securityhub:eu-north-1::product/aws/securityhub/arn:aws:securityhub:eu-north-1:696505809372:security-control/Config.1/finding/f03976b4-12cc-4e4b-b5e5-50b93bef9f4c",
+                "PreviousComplianceStatus": "FAILED"
+            },
+            "Resources": [
+                {
+                    "Type": "AwsAccount",
+                    "Id": "AWS::::Account:696505809372",
+                    "Partition": "aws",
+                    "Region": "eu-north-1"
+                }
+            ],
+            "Compliance": {
+                "Status": "FAILED",
+                "RelatedRequirements": [
+                    "NIST.800-53.r5 CM-3",
+                    "NIST.800-53.r5 CM-6(1)",
+                    "NIST.800-53.r5 CM-8",
+                    "NIST.800-53.r5 CM-8(2)"
+                ],
+                "StatusReasons": [
+                    {
+                        "ReasonCode": "CONFIG_RECORDER_MISSING_REQUIRED_RESOURCE_TYPES",
+                        "Description": "AWS Config isn't recording all resource types that correspond to enabled Security Hub controls. Turn on recording for the following resources: AWS::IAM::User, AWS::IAM::Role, AWS::IAM::Group, AWS::IAM::Policy."
+                    }
+                ],
+                "SecurityControlId": "Config.1",
+                "AssociatedStandards": [
+                    {
+                        "StandardsId": "standards/aws-foundational-security-best-practices/v/1.0.0"
+                    },
+                    {
+                        "StandardsId": "standards/nist-800-53/v/5.0.0"
+                    }
+                ],
+                "SecurityControlParameters": [
+                    {
+                        "Name": "includeConfigServiceLinkedRoleCheck",
+                        "Value": [
+                            "true"
+                        ]
+                    }
+                ]
+            },
+            "WorkflowState": "NEW",
+            "Workflow": {
+                "Status": "NEW"
+            },
+            "RecordState": "ACTIVE",
+            "FindingProviderFields": {
+                "Severity": {
+                    "Label": "CRITICAL",
+                    "Original": "CRITICAL"
+                },
+                "Types": [
+                    "Software and Configuration Checks/Industry and Regulatory Standards"
+                ]
+            },
+            "ProcessedAt": "2026-03-26T00:46:02.046Z"
+        }
+    ]
+}

@@ -1,0 +1,40 @@
+{
+  "actions": [
+    {
+      "action_id": "4b97cf9a-f514-4033-b54e-dd679c427cd9",
+      "finding_coverage": {},
+      "support_tier": "deterministic_bundle"
+    },
+    {
+      "action_id": "8ab29997-bb6c-41fe-ba0c-26f03523f0ed",
+      "finding_coverage": {},
+      "support_tier": "deterministic_bundle"
+    },
+    {
+      "action_id": "cbe0d2c3-c609-4aa2-a12f-6afb336cd507",
+      "finding_coverage": {},
+      "support_tier": "manual_guidance_only"
+    },
+    {
+      "action_id": "176c29ed-fcec-4934-a1ab-344bb4b6f444",
+      "finding_coverage": {},
+      "support_tier": "manual_guidance_only"
+    },
+    {
+      "action_id": "a9e5a989-3dba-4114-aeaf-2ddac120ac0c",
+      "finding_coverage": {},
+      "support_tier": "manual_guidance_only"
+    },
+    {
+      "action_id": "37e0f71d-4805-46d0-9f9f-bf4342d7e63c",
+      "finding_coverage": {},
+      "support_tier": "manual_guidance_only"
+    },
+    {
+      "action_id": "abaa9de7-ac08-4b7c-8660-93695e992c1a",
+      "finding_coverage": {},
+      "support_tier": "manual_guidance_only"
+    }
+  ],
+  "layout_version": "grouped_bundle_mixed_tier/v1"
+}

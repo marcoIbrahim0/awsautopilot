@@ -1,0 +1,26 @@
+{
+    "Location": "https://route53.amazonaws.com/2013-04-01/hostedzone/Z00329292COTYL3PXC81O",
+    "HostedZone": {
+        "Id": "/hostedzone/Z00329292COTYL3PXC81O",
+        "Name": "wi5-canary-696505809372-164043.net.",
+        "CallerReference": "wi5-20260328t164043z-net",
+        "Config": {
+            "Comment": "WI-5 canary undelegated public zone",
+            "PrivateZone": false
+        },
+        "ResourceRecordSetCount": 2
+    },
+    "ChangeInfo": {
+        "Id": "/change/C06810002NL856DZOL3JN",
+        "Status": "PENDING",
+        "SubmittedAt": "2026-03-28T16:43:25.437000+00:00"
+    },
+    "DelegationSet": {
+        "NameServers": [
+            "ns-1858.awsdns-40.co.uk",
+            "ns-1215.awsdns-23.org",
+            "ns-956.awsdns-55.net",
+            "ns-240.awsdns-30.com"
+        ]
+    }
+}

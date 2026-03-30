@@ -1,0 +1,83 @@
+{
+  "run_id": "20260326T052354Z-phase5-cloudtrail-postdeploy-recheck",
+  "account_id": "696505809372",
+  "region": "eu-north-1",
+  "tenant_name": "Valens Local Backup",
+  "cloudtrail": {
+    "action_id": "9074eb82-d359-4ce2-9155-1b71699fed8f",
+    "run_id": "0f0a0212-ba3c-40e8-a8b9-9730cc496264",
+    "strategy_inputs": {
+      "trail_bucket_name": "security-autopilot-phase5-cloudtrail-696505809372-052354",
+      "trail_name": "security-autopilot-trail",
+      "create_bucket_if_missing": true,
+      "create_bucket_policy": true,
+      "multi_region": true
+    },
+    "preview_resolution": {
+      "strategy_id": "cloudtrail_enable_guided",
+      "profile_id": "cloudtrail_enable_guided",
+      "support_tier": "deterministic_bundle",
+      "resolved_inputs": {
+        "trail_name": "security-autopilot-trail",
+        "create_bucket_if_missing": true,
+        "create_bucket_policy": true,
+        "multi_region": true,
+        "trail_bucket_name": "security-autopilot-phase5-cloudtrail-696505809372-052354"
+      },
+      "missing_inputs": [],
+      "missing_defaults": [],
+      "blocked_reasons": [],
+      "rejected_profiles": [],
+      "finding_coverage": {},
+      "preservation_summary": {
+        "single_profile_compatible": true,
+        "strategy_only_supported": true,
+        "trail_bucket_name_resolved": true,
+        "log_bucket_reachable": false,
+        "support_bucket_safe": false,
+        "trail_bucket_source": "user_input",
+        "trail_bucket_mode": "create_if_missing",
+        "bucket_creation_requested": true,
+        "kms_delivery_requested": false,
+        "external_bucket_policy_management": false,
+        "multi_region_requested": true
+      },
+      "decision_rationale": "Family resolver kept compatibility profile 'cloudtrail_enable_guided' executable for strategy 'cloudtrail_enable_guided'.",
+      "decision_version": "resolver/v1"
+    },
+    "final_resolution": {
+      "strategy_id": "cloudtrail_enable_guided",
+      "profile_id": "cloudtrail_enable_guided",
+      "support_tier": "deterministic_bundle",
+      "resolved_inputs": {
+        "trail_name": "security-autopilot-trail",
+        "multi_region": true,
+        "trail_bucket_name": "security-autopilot-phase5-cloudtrail-696505809372-052354",
+        "create_bucket_policy": true,
+        "create_bucket_if_missing": true
+      },
+      "missing_inputs": [],
+      "missing_defaults": [],
+      "blocked_reasons": [],
+      "rejected_profiles": [],
+      "finding_coverage": {},
+      "preservation_summary": {
+        "trail_bucket_mode": "create_if_missing",
+        "support_bucket_safe": false,
+        "trail_bucket_source": "user_input",
+        "log_bucket_reachable": false,
+        "kms_delivery_requested": false,
+        "multi_region_requested": true,
+        "strategy_only_supported": true,
+        "bucket_creation_requested": true,
+        "single_profile_compatible": true,
+        "trail_bucket_name_resolved": true,
+        "external_bucket_policy_management": false
+      },
+      "decision_rationale": "Family resolver kept compatibility profile 'cloudtrail_enable_guided' executable for strategy 'cloudtrail_enable_guided'. Run creation did not require additional risk-only acceptance.",
+      "decision_version": "resolver/v1"
+    },
+    "bundle_dir": "/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260326T052354Z-phase5-cloudtrail-postdeploy-recheck/bundles/cloudtrail_bundle",
+    "bundle_zip": "/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260326T052354Z-phase5-cloudtrail-postdeploy-recheck/bundles/cloudtrail-pr-bundle-0f0a0212-ba3c-40e8-a8b9-9730cc496264.zip"
+  }
+}

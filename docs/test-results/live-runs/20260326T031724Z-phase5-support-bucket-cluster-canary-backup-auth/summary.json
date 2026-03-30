@@ -1,0 +1,60 @@
+{
+  "run_id": "20260326T031724Z-phase5-support-bucket-cluster-canary-backup-auth",
+  "created_at_utc": "2026-03-26T03:17:24Z",
+  "frontend_url": "https://ocypheris.com",
+  "backend_url": "https://api.ocypheris.com",
+  "phase": "phase5_support_bucket_cluster_canary",
+  "result": "partial",
+  "failure_bucket": "live_canary_revealed_runtime_and_resolver_gaps",
+  "auth_path": "backup_authenticated_browser_and_bearer_session",
+  "tenant_name": "Valens Local Backup",
+  "target_account_id": "696505809372",
+  "target_region": "eu-north-1",
+  "default_phase5_target_account_id": "029037611564",
+  "local_cluster_validation": {
+    "status": "pass",
+    "full_cluster": "353 passed in 1.47s",
+    "config_1_slice": "16 passed",
+    "s3_9_slice": "6 passed",
+    "cloudtrail_1_slice": "8 passed"
+  },
+  "live_runs": {
+    "config_1": {
+      "action_id": "84f874b0-d2fd-405f-87fb-edc3264601a2",
+      "run_id": "f5858299-3f08-4100-8c32-130736e427db",
+      "run_status": "success",
+      "bundle_kind": "executable",
+      "apply_status": "success",
+      "finding_status_after_apply": "NEW",
+      "finding_reason_after_apply": "CONFIG_RECORDER_MISSING_REQUIRED_RESOURCE_TYPES"
+    },
+    "s3_9": {
+      "action_id": "0c490240-f3b5-42b2-94ce-010ae67bd79f",
+      "run_id": "cd1b5f43-a971-4c78-ba37-1492804d66e7",
+      "run_status": "success",
+      "bundle_kind": "non_executable_guidance",
+      "support_tier": "review_required_bundle",
+      "blocked_reason": "Destination log bucket 'security-autopilot-phase5-access-logs-696505809372-canary' could not be verified from this account context (404)."
+    },
+    "cloudtrail_1": {
+      "action_id": "9074eb82-d359-4ce2-9155-1b71699fed8f",
+      "run_id": "91176ee9-6db1-42c1-aaa8-036b2f2b0d94",
+      "run_status": "success",
+      "bundle_kind": "non_executable_guidance",
+      "support_tier": "review_required_bundle",
+      "blocked_reason": "CloudTrail log bucket 'ocypheris-live-ct-20260323162333-eu-north-1' could not be verified from this account context (403)."
+    }
+  },
+  "post_apply_support_bucket": {
+    "bucket": "security-autopilot-config-696505809372-eu-north-1",
+    "public_access_block": "pass",
+    "encryption": "aws:kms",
+    "lifecycle": "present",
+    "ssl_only_policy": "present",
+    "config_delivery_statements": "present"
+  },
+  "sibling_s3_finding_check": {
+    "status": "pass_no_new_siblings",
+    "existing_new_finding": "S3.13"
+  }
+}

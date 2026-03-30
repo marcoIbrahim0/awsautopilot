@@ -15,6 +15,9 @@ Implemented in Phase 3 P0.7.
 - `backend/services/remediation_risk.py`
 - `backend/services/remediation_runtime_checks.py`
 - `backend/services/remediation_strategy.py`
+- `frontend/src/components/ActionDetailModal.tsx`
+- `frontend/src/components/RemediationModal.tsx`
+- `frontend/src/app/actions/group/page.tsx`
 
 ## API contract
 
@@ -70,6 +73,16 @@ Runtime probes remain best-effort and fail closed in the guidance:
 Historical direct-fix guidance remains out of scope for current API/UI behavior.
 
 Exception-only strategies are intentionally omitted from `execution_guidance[]` because this contract is focused on executable remediation paths.
+
+## Current frontend surface
+
+The shipped operator UI now consumes this guidance alongside canonical resolver output:
+
+- `ActionDetailModal` exposes the launch point, state refresh cues, execution-guidance summaries, implementation artifacts, and attack-path deep links for the action.
+- `RemediationModal` renders the current strategy inputs plus the canonical preview `Execution decision`, including support tier, rationale, blocked or downgraded reasons, missing tenant defaults, and preservation evidence from `GET /api/actions/{id}/remediation-preview`.
+- `frontend/src/app/actions/group/page.tsx` remains the grouped mixed-tier follow-up surface for `review_required_bundle`, `manual_guidance_only`, and executable member splits after generation.
+
+This keeps single-action and grouped operator flows aligned: review-only or manual conclusions are now visible in the same browser path that generates the bundle, instead of being understandable only from grouped pages or raw API payloads.
 
 ## Rollback hydration
 

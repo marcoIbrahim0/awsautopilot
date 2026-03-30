@@ -171,7 +171,10 @@ def resolve_output_dir(settings: dict[str, Any]) -> Path:
     return Path("artifacts/no-ui-agent") / ts
 
 
-def prompt_credentials() -> tuple[str, str]:
+def prompt_credentials() -> tuple[str, str, str | None]:
+    access_token = str(os.environ.get("SAAS_ACCESS_TOKEN") or "").strip()
+    if access_token:
+        return "", "", access_token
     email = str(os.environ.get("SAAS_EMAIL") or "").strip()
     password = str(os.environ.get("SAAS_PASSWORD") or "").strip()
     if not email:
@@ -180,7 +183,7 @@ def prompt_credentials() -> tuple[str, str]:
         password = getpass.getpass("SaaS password: ").strip()
     if not email or not password:
         raise AgentConfigError("Both email and password are required")
-    return email, password
+    return email, password, None
 
 
 def write_json(path: Path, payload: Any) -> None:
@@ -245,6 +248,15 @@ def _strategy_sort_key(strategy: dict[str, Any]) -> tuple[int, str]:
     return (0 if recommended else 1, strategy_id)
 
 
+def _normalized_mapping(value: Any) -> dict[str, Any] | None:
+    return value if isinstance(value, dict) else None
+
+
+def _preview_resolution_payload(preview: dict[str, Any]) -> dict[str, Any]:
+    resolution = preview.get("resolution")
+    return resolution if isinstance(resolution, dict) else {}
+
+
 class NoUiPrBundleAgent:
     def __init__(
         self,
@@ -252,6 +264,7 @@ class NoUiPrBundleAgent:
         output_dir: Path,
         email: str,
         password: str,
+        access_token: str | None = None,
         client_factory: Callable[..., SaaSApiClient] = SaaSApiClient,
         terraform_runner: Callable[..., list[dict[str, Any]]] = run_terraform_apply,
     ):
@@ -259,6 +272,7 @@ class NoUiPrBundleAgent:
         self.output_dir = output_dir
         self.email = email
         self.password = password
+        self.access_token = str(access_token or "").strip()
         self.output_dir.mkdir(parents=True, exist_ok=True)
         checkpoint_path = self.output_dir / "checkpoint.json"
         self.state = CheckpointManager.create_or_resume(checkpoint_path, settings["resume_from_checkpoint"])
@@ -331,7 +345,11 @@ class NoUiPrBundleAgent:
         return token or "no_eligible_finding_for_preferred_control"
 
     def phase_auth(self) -> None:
-        login = self.client.login(self.email, self.password)
+        if self.access_token:
+            self.client.set_access_token(self.access_token)
+            login = {"access_token": "provided_via_env"}
+        else:
+            login = self.client.login(self.email, self.password)
         me = self.client.get_me()
         tenant = me.get("tenant") if isinstance(me.get("tenant"), dict) else {}
         user = me.get("user") if isinstance(me.get("user"), dict) else {}
@@ -507,17 +525,19 @@ class NoUiPrBundleAgent:
         options = self.client.get_remediation_options(action_id)
         strategies = options.get("strategies") if isinstance(options.get("strategies"), list) else []
         mode_options = options.get("mode_options") if isinstance(options.get("mode_options"), list) else []
-        compatible = [
+        pr_only_strategies = [
             s
             for s in strategies
             if isinstance(s, dict)
             and str(s.get("mode") or "") == "pr_only"
-            and not bool(s.get("requires_inputs"))
         ]
-        compatible_non_exception = [s for s in compatible if not bool(s.get("supports_exception_flow"))]
-        candidate_strategies = compatible_non_exception if compatible_non_exception else compatible
+        compatible_non_exception = [s for s in pr_only_strategies if not bool(s.get("supports_exception_flow"))]
+        candidate_strategies = compatible_non_exception if compatible_non_exception else pr_only_strategies
         compatible_sorted = sorted(candidate_strategies, key=_strategy_sort_key)
         selected = select_pr_only_strategy(strategies)
+        selected_profile_id = ""
+        selected_strategy_inputs: dict[str, Any] | None = None
+        selected_preview: dict[str, Any] | None = None
         # Some action types support pr_only mode without an explicit strategy catalog.
         if selected is None and "pr_only" in [str(x) for x in mode_options] and not strategies:
             payload = {
@@ -532,7 +552,31 @@ class NoUiPrBundleAgent:
             write_json(self.output_dir / "strategy_selection.json", payload)
             return
         if selected is None:
-            raise AgentValidationError("No compatible pr_only strategy without required inputs")
+            last_reason = "No compatible pr_only strategy produced an executable deterministic preview"
+            for candidate in compatible_sorted:
+                strategy_id = str(candidate.get("strategy_id") or "")
+                if not strategy_id:
+                    continue
+                preview = self.client.get_remediation_preview(action_id, strategy_id=strategy_id)
+                resolution = _preview_resolution_payload(preview)
+                if str(resolution.get("support_tier") or "").strip() != "deterministic_bundle":
+                    blocked = resolution.get("blocked_reasons")
+                    missing_defaults = resolution.get("missing_defaults")
+                    parts = []
+                    if isinstance(blocked, list) and blocked:
+                        parts.append("; ".join(str(item) for item in blocked))
+                    if isinstance(missing_defaults, list) and missing_defaults:
+                        parts.append(f"missing_defaults={','.join(str(item) for item in missing_defaults)}")
+                    if parts:
+                        last_reason = " | ".join(parts)
+                    continue
+                selected = candidate
+                selected_preview = preview
+                selected_profile_id = str(resolution.get("profile_id") or "")
+                selected_strategy_inputs = _normalized_mapping(resolution.get("resolved_inputs"))
+                break
+            if selected is None:
+                raise AgentValidationError(last_reason)
         if bool(selected.get("supports_exception_flow")) and compatible_non_exception:
             selected = compatible_sorted[0]
 
@@ -548,8 +592,21 @@ class NoUiPrBundleAgent:
         if strategy_id not in candidate_ids:
             candidate_ids.insert(0, strategy_id)
 
-        payload = {"strategy_id": strategy_id, "strategy": selected, "strategy_candidates": candidate_ids}
+        payload = {
+            "strategy_id": strategy_id,
+            "profile_id": selected_profile_id,
+            "strategy_inputs": selected_strategy_inputs,
+            "strategy": selected,
+            "strategy_candidates": candidate_ids,
+            "preview": selected_preview,
+        }
         self.state.set_context("strategy_id", strategy_id)
+        self.state.set_context("strategy_profile_id", selected_profile_id)
+        self.state.set_context("strategy_inputs", selected_strategy_inputs or {})
+        self.state.set_context(
+            "bucket_creation_acknowledged",
+            bool(selected_strategy_inputs and selected_strategy_inputs.get("create_bucket_if_missing") is True),
+        )
         self.state.set_context("strategy_candidates", candidate_ids)
         write_json(self.output_dir / "strategy_selection.json", payload)
 
@@ -564,6 +621,10 @@ class NoUiPrBundleAgent:
 
         action_id = str(self.state.checkpoint.context.get("target_action_id") or "")
         strategy_id_raw = str(self.state.checkpoint.context.get("strategy_id") or "")
+        profile_id_raw = str(self.state.checkpoint.context.get("strategy_profile_id") or "")
+        strategy_inputs_ctx = self.state.checkpoint.context.get("strategy_inputs")
+        strategy_inputs = strategy_inputs_ctx if isinstance(strategy_inputs_ctx, dict) else None
+        bucket_creation_acknowledged = bool(self.state.checkpoint.context.get("bucket_creation_acknowledged"))
         candidates_ctx = self.state.checkpoint.context.get("strategy_candidates")
         candidate_ids: list[str] = []
         if isinstance(candidates_ctx, list):
@@ -577,7 +638,13 @@ class NoUiPrBundleAgent:
         for candidate_id in candidate_ids:
             attempted.append(candidate_id)
             try:
-                created = self.client.create_pr_bundle_run(action_id, candidate_id or None)
+                created = self.client.create_pr_bundle_run(
+                    action_id,
+                    candidate_id or None,
+                    profile_id=profile_id_raw or None,
+                    strategy_inputs=strategy_inputs,
+                    bucket_creation_acknowledged=bucket_creation_acknowledged,
+                )
                 self.state.set_context("strategy_id", candidate_id)
                 break
             except ApiError as exc:
@@ -1115,8 +1182,8 @@ def main() -> int:
         config = load_config(args.config)
         settings = merge_settings(args, config)
         output_dir = resolve_output_dir(settings)
-        email, password = prompt_credentials()
-        agent = NoUiPrBundleAgent(settings, output_dir, email, password)
+        email, password, access_token = prompt_credentials()
+        agent = NoUiPrBundleAgent(settings, output_dir, email, password, access_token=access_token)
         return agent.run()
     except AgentConfigError as exc:
         print(f"Configuration error: {exc}", file=sys.stderr)

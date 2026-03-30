@@ -1,0 +1,13 @@
+{
+    "ConfigurationRecordersStatus": [
+        {
+            "arn": "arn:aws:config:eu-north-1:696505809372:configuration-recorder/default/ufz0gz0v46x5zqwp",
+            "name": "default",
+            "lastStartTime": "2026-03-28T22:42:24.489000+02:00",
+            "lastStopTime": "2026-03-28T22:36:47.266000+02:00",
+            "recording": true,
+            "lastStatus": "SUCCESS",
+            "lastStatusChangeTime": "2026-03-30T02:12:40.432000+02:00"
+        }
+    ]
+}

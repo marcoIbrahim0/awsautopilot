@@ -51,6 +51,9 @@
    - `GET /api/actions` now supports additive `q` text search and explicit `ids` loading
    - create page filtering is server-backed with local selection persistence and explicit paging
    - summary loads only the chosen action IDs before running preflight/generation
+5. Action Detail follow-up actions now stay scoped to the selected action/group instead of broad tenant recomputes:
+   - `Refresh State` uses targeted action reevaluation first and falls back only to scoped account ingest when the strategy does not support immediate reevaluation
+   - remediation history and implementation artifacts now include grouped PR-bundle runs for every member action in the execution group, not only the representative action that owns the stored run row
 
 ### 1.5 Action Detail Visual Consistency Follow-Up (Implemented 2026-03-22)
 1. Action Detail now uses a stronger dashboard-native hero layout instead of isolated title text plus loose chips:

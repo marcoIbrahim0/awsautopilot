@@ -1,0 +1,6 @@
+{
+  "detail": {
+    "error": "Invalid strategy selection",
+    "detail": "strategy_inputs contains unknown field(s): create_log_bucket."
+  }
+}

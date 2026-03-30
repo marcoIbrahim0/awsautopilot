@@ -1,0 +1,31 @@
+{
+  "action_id": "6f3dd905-6941-4742-aff4-96f262d8948d",
+  "action_type": "sg_restrict_public_ports",
+  "blocked_reasons": [],
+  "control_id": "EC2.53",
+  "decision_rationale": "Family resolver matched the explicit legacy access_mode 'close_public' for strategy 'sg_restrict_public_ports_guided'. Run creation did not require additional risk-only acceptance.",
+  "decision_summary": "Family resolver matched the explicit legacy access_mode 'close_public' for strategy 'sg_restrict_public_ports_guided'. Run creation did not require additional risk-only acceptance.",
+  "decision_version": "resolver/v1",
+  "finding_coverage": {},
+  "folder": "executable/actions/01-arn-aws-ec2-eu-north-1-696505809372-security-gro-6f3dd905",
+  "has_runnable_terraform": true,
+  "index": 1,
+  "missing_defaults": [],
+  "missing_inputs": [],
+  "outcome": "executable_bundle_generated",
+  "preservation_summary": {
+    "single_profile_compatible": false,
+    "strategy_only_supported": true
+  },
+  "profile_id": "close_public",
+  "rejected_profiles": [],
+  "strategy_id": "sg_restrict_public_ports_guided",
+  "strategy_inputs": {
+    "access_mode": "close_public"
+  },
+  "support_tier": "deterministic_bundle",
+  "target_id": "696505809372|eu-north-1|arn:aws:ec2:eu-north-1:696505809372:security-group/sg-06f6252fa8a95b61d|EC2.53",
+  "tier": "executable",
+  "tier_root": "executable/actions",
+  "title": "Security groups should not allow unrestricted access to ports with high risk"
+}

@@ -1,0 +1,291 @@
+data.aws_s3_bucket.target: Reading...
+aws_cloudfront_origin_access_control.security_autopilot: Refreshing state... [id=EDLL3VYQR916E]
+data.aws_s3_bucket.target: Read complete after 1s [id=security-autopilot-w6-envready-s311-review-696505809372]
+aws_cloudfront_distribution.security_autopilot: Refreshing state... [id=E3VUPASYW2QL80]
+data.aws_iam_policy_document.bucket_policy: Reading...
+data.aws_iam_policy_document.bucket_policy: Read complete after 0s [id=2915260774]
+aws_s3_bucket_policy.security_autopilot: Refreshing state... [id=security-autopilot-w6-envready-s311-review-696505809372]
+aws_route53_record.website_ipv4["wi5-gate3-696505809372.ocypheris.com"]: Refreshing state... [id=Z081885955B6GUR4IL7E_wi5-gate3-696505809372.ocypheris.com_A]
+aws_route53_record.website_ipv6["wi5-gate3-696505809372.ocypheris.com"]: Refreshing state... [id=Z081885955B6GUR4IL7E_wi5-gate3-696505809372.ocypheris.com_AAAA]
+null_resource.disable_bucket_website: Refreshing state... [id=280799755198281464]
+aws_s3_bucket_public_access_block.security_autopilot: Refreshing state... [id=security-autopilot-w6-envready-s311-review-696505809372]
+
+Terraform used the selected providers to generate the following execution
+plan. Resource actions are indicated with the following symbols:
+  - destroy
+
+Terraform will perform the following actions:
+
+  # aws_cloudfront_distribution.security_autopilot will be destroyed
+  - resource "aws_cloudfront_distribution" "security_autopilot" {
+      - aliases                         = [
+          - "wi5-gate3-696505809372.ocypheris.com",
+        ] -> null
+      - arn                             = "arn:aws:cloudfront::696505809372:distribution/E3VUPASYW2QL80" -> null
+      - caller_reference                = "terraform-20260329232627834700000001" -> null
+      - comment                         = "Security Autopilot website migration for security-autopilot-w6-envready-s311-review-696505809372" -> null
+      - default_root_object             = "index.html" -> null
+      - domain_name                     = "dxxm59bao95gt.cloudfront.net" -> null
+      - enabled                         = true -> null
+      - etag                            = "E23ZP02F085DFQ" -> null
+      - hosted_zone_id                  = "Z2FDTNDATAQYW2" -> null
+      - http_version                    = "http2" -> null
+      - id                              = "E3VUPASYW2QL80" -> null
+      - in_progress_validation_batches  = 0 -> null
+      - is_ipv6_enabled                 = true -> null
+      - last_modified_time              = "2026-03-29 23:26:28.149 +0000 UTC" -> null
+      - price_class                     = "PriceClass_100" -> null
+      - retain_on_delete                = false -> null
+      - staging                         = false -> null
+      - status                          = "Deployed" -> null
+      - tags                            = {} -> null
+      - tags_all                        = {} -> null
+      - trusted_key_groups              = [
+          - {
+              - enabled = false
+              - items   = []
+            },
+        ] -> null
+      - trusted_signers                 = [
+          - {
+              - enabled = false
+              - items   = []
+            },
+        ] -> null
+      - wait_for_deployment             = true -> null
+        # (2 unchanged attributes hidden)
+
+      - default_cache_behavior {
+          - allowed_methods            = [
+              - "GET",
+              - "HEAD",
+              - "OPTIONS",
+            ] -> null
+          - cache_policy_id            = "658327ea-f89d-4fab-a63d-7e88639e58f6" -> null
+          - cached_methods             = [
+              - "GET",
+              - "HEAD",
+              - "OPTIONS",
+            ] -> null
+          - compress                   = true -> null
+          - default_ttl                = 0 -> null
+          - max_ttl                    = 0 -> null
+          - min_ttl                    = 0 -> null
+          - origin_request_policy_id   = "88a5eaf4-2fd4-4709-b370-b4c650ea3fcf" -> null
+          - smooth_streaming           = false -> null
+          - target_origin_id           = "s3-security-autopilot-w6-envready-s311-review-696505809372" -> null
+          - trusted_key_groups         = [] -> null
+          - trusted_signers            = [] -> null
+          - viewer_protocol_policy     = "redirect-to-https" -> null
+            # (3 unchanged attributes hidden)
+
+          - grpc_config {
+              - enabled = false -> null
+            }
+        }
+
+      - origin {
+          - connection_attempts      = 3 -> null
+          - connection_timeout       = 10 -> null
+          - domain_name              = "security-autopilot-w6-envready-s311-review-696505809372.s3.eu-north-1.amazonaws.com" -> null
+          - origin_access_control_id = "EDLL3VYQR916E" -> null
+          - origin_id                = "s3-security-autopilot-w6-envready-s311-review-696505809372" -> null
+            # (1 unchanged attribute hidden)
+        }
+
+      - restrictions {
+          - geo_restriction {
+              - locations        = [] -> null
+              - restriction_type = "none" -> null
+            }
+        }
+
+      - viewer_certificate {
+          - acm_certificate_arn            = "arn:aws:acm:us-east-1:696505809372:certificate/509785ff-eef1-4071-bddc-d275f1dfa6ed" -> null
+          - cloudfront_default_certificate = false -> null
+          - minimum_protocol_version       = "TLSv1.2_2021" -> null
+          - ssl_support_method             = "sni-only" -> null
+            # (1 unchanged attribute hidden)
+        }
+    }
+
+  # aws_cloudfront_origin_access_control.security_autopilot will be destroyed
+  - resource "aws_cloudfront_origin_access_control" "security_autopilot" {
+      - arn                               = "arn:aws:cloudfront::696505809372:origin-access-control/EDLL3VYQR916E" -> null
+      - description                       = "OAC for Security Autopilot website migration" -> null
+      - etag                              = "ETVPDKIKX0DER" -> null
+      - id                                = "EDLL3VYQR916E" -> null
+      - name                              = "security-autopilot-oac-a95f256f7ffa" -> null
+      - origin_access_control_origin_type = "s3" -> null
+      - signing_behavior                  = "always" -> null
+      - signing_protocol                  = "sigv4" -> null
+    }
+
+  # aws_route53_record.website_ipv4["wi5-gate3-696505809372.ocypheris.com"] will be destroyed
+  - resource "aws_route53_record" "website_ipv4" {
+      - fqdn                             = "wi5-gate3-696505809372.ocypheris.com" -> null
+      - id                               = "Z081885955B6GUR4IL7E_wi5-gate3-696505809372.ocypheris.com_A" -> null
+      - multivalue_answer_routing_policy = false -> null
+      - name                             = "wi5-gate3-696505809372.ocypheris.com" -> null
+      - records                          = [] -> null
+      - ttl                              = 0 -> null
+      - type                             = "A" -> null
+      - zone_id                          = "Z081885955B6GUR4IL7E" -> null
+        # (2 unchanged attributes hidden)
+
+      - alias {
+          - evaluate_target_health = false -> null
+          - name                   = "dxxm59bao95gt.cloudfront.net" -> null
+          - zone_id                = "Z2FDTNDATAQYW2" -> null
+        }
+    }
+
+  # aws_route53_record.website_ipv6["wi5-gate3-696505809372.ocypheris.com"] will be destroyed
+  - resource "aws_route53_record" "website_ipv6" {
+      - fqdn                             = "wi5-gate3-696505809372.ocypheris.com" -> null
+      - id                               = "Z081885955B6GUR4IL7E_wi5-gate3-696505809372.ocypheris.com_AAAA" -> null
+      - multivalue_answer_routing_policy = false -> null
+      - name                             = "wi5-gate3-696505809372.ocypheris.com" -> null
+      - records                          = [] -> null
+      - ttl                              = 0 -> null
+      - type                             = "AAAA" -> null
+      - zone_id                          = "Z081885955B6GUR4IL7E" -> null
+        # (2 unchanged attributes hidden)
+
+      - alias {
+          - evaluate_target_health = false -> null
+          - name                   = "dxxm59bao95gt.cloudfront.net" -> null
+          - zone_id                = "Z2FDTNDATAQYW2" -> null
+        }
+    }
+
+  # aws_s3_bucket_policy.security_autopilot will be destroyed
+  - resource "aws_s3_bucket_policy" "security_autopilot" {
+      - bucket = "security-autopilot-w6-envready-s311-review-696505809372" -> null
+      - id     = "security-autopilot-w6-envready-s311-review-696505809372" -> null
+      - policy = jsonencode(
+            {
+              - Statement = [
+                  - {
+                      - Action    = [
+                          - "s3:ListBucket",
+                          - "s3:GetBucketAcl",
+                          - "s3:GetBucketLocation",
+                          - "s3:GetBucketLogging",
+                          - "s3:GetBucketPolicy",
+                          - "s3:GetBucketPolicyStatus",
+                          - "s3:GetBucketWebsite",
+                          - "s3:GetLifecycleConfiguration",
+                          - "s3:GetEncryptionConfiguration",
+                        ]
+                      - Effect    = "Allow"
+                      - Principal = {
+                          - AWS = "arn:aws:iam::696505809372:role/CodexP2SecurityHubImportRole"
+                        }
+                      - Resource  = "arn:aws:s3:::security-autopilot-w6-envready-s311-review-696505809372"
+                      - Sid       = "AllowImportRoleBucketReadinessChecks"
+                    },
+                  - {
+                      - Action    = "s3:*"
+                      - Condition = {
+                          - Bool = {
+                              - "aws:SecureTransport" = "false"
+                            }
+                        }
+                      - Effect    = "Deny"
+                      - Principal = "*"
+                      - Resource  = [
+                          - "arn:aws:s3:::security-autopilot-w6-envready-s311-review-696505809372/*",
+                          - "arn:aws:s3:::security-autopilot-w6-envready-s311-review-696505809372",
+                        ]
+                      - Sid       = "DenyInsecureTransport"
+                    },
+                  - {
+                      - Action    = "s3:GetObject"
+                      - Condition = {
+                          - StringEquals = {
+                              - "AWS:SourceArn" = "arn:aws:cloudfront::696505809372:distribution/E3VUPASYW2QL80"
+                            }
+                        }
+                      - Effect    = "Allow"
+                      - Principal = {
+                          - Service = "cloudfront.amazonaws.com"
+                        }
+                      - Resource  = "arn:aws:s3:::security-autopilot-w6-envready-s311-review-696505809372/*"
+                      - Sid       = "AllowCloudFrontReadOnly"
+                    },
+                ]
+              - Version   = "2012-10-17"
+            }
+        ) -> null
+    }
+
+  # aws_s3_bucket_public_access_block.security_autopilot will be destroyed
+  - resource "aws_s3_bucket_public_access_block" "security_autopilot" {
+      - block_public_acls       = true -> null
+      - block_public_policy     = true -> null
+      - bucket                  = "security-autopilot-w6-envready-s311-review-696505809372" -> null
+      - id                      = "security-autopilot-w6-envready-s311-review-696505809372" -> null
+      - ignore_public_acls      = true -> null
+      - restrict_public_buckets = true -> null
+    }
+
+  # null_resource.disable_bucket_website will be destroyed
+  - resource "null_resource" "disable_bucket_website" {
+      - id       = "280799755198281464" -> null
+      - triggers = {
+          - "bucket_name"               = "security-autopilot-w6-envready-s311-review-696505809372"
+          - "remediation_region"        = "eu-north-1"
+          - "website_configuration_sha" = "7e10026369a89714b5b50bf124f1e6ed"
+        } -> null
+    }
+
+Plan: 0 to add, 0 to change, 7 to destroy.
+
+Changes to Outputs:
+  - cloudfront_distribution_id = "E3VUPASYW2QL80" -> null
+  - cloudfront_domain_name     = "dxxm59bao95gt.cloudfront.net" -> null
+  - website_aliases            = [
+      - "wi5-gate3-696505809372.ocypheris.com",
+    ] -> null
+aws_s3_bucket_public_access_block.security_autopilot: Destroying... [id=security-autopilot-w6-envready-s311-review-696505809372]
+aws_s3_bucket_public_access_block.security_autopilot: Destruction complete after 0s
+null_resource.disable_bucket_website: Destroying... [id=280799755198281464]
+null_resource.disable_bucket_website: Destruction complete after 0s
+aws_route53_record.website_ipv4["wi5-gate3-696505809372.ocypheris.com"]: Destroying... [id=Z081885955B6GUR4IL7E_wi5-gate3-696505809372.ocypheris.com_A]
+aws_route53_record.website_ipv6["wi5-gate3-696505809372.ocypheris.com"]: Destroying... [id=Z081885955B6GUR4IL7E_wi5-gate3-696505809372.ocypheris.com_AAAA]
+aws_route53_record.website_ipv6["wi5-gate3-696505809372.ocypheris.com"]: Still destroying... [id=Z081885955B6GUR4IL7E_wi5-gate3-696505809372.ocypheris.com_AAAA, 00m10s elapsed]
+aws_route53_record.website_ipv4["wi5-gate3-696505809372.ocypheris.com"]: Still destroying... [id=Z081885955B6GUR4IL7E_wi5-gate3-696505809372.ocypheris.com_A, 00m10s elapsed]
+aws_route53_record.website_ipv4["wi5-gate3-696505809372.ocypheris.com"]: Still destroying... [id=Z081885955B6GUR4IL7E_wi5-gate3-696505809372.ocypheris.com_A, 00m20s elapsed]
+aws_route53_record.website_ipv6["wi5-gate3-696505809372.ocypheris.com"]: Still destroying... [id=Z081885955B6GUR4IL7E_wi5-gate3-696505809372.ocypheris.com_AAAA, 00m20s elapsed]
+aws_route53_record.website_ipv6["wi5-gate3-696505809372.ocypheris.com"]: Still destroying... [id=Z081885955B6GUR4IL7E_wi5-gate3-696505809372.ocypheris.com_AAAA, 00m30s elapsed]
+aws_route53_record.website_ipv4["wi5-gate3-696505809372.ocypheris.com"]: Still destroying... [id=Z081885955B6GUR4IL7E_wi5-gate3-696505809372.ocypheris.com_A, 00m30s elapsed]
+aws_route53_record.website_ipv6["wi5-gate3-696505809372.ocypheris.com"]: Destruction complete after 33s
+aws_route53_record.website_ipv4["wi5-gate3-696505809372.ocypheris.com"]: Destruction complete after 33s
+aws_s3_bucket_policy.security_autopilot: Destroying... [id=security-autopilot-w6-envready-s311-review-696505809372]
+aws_s3_bucket_policy.security_autopilot: Destruction complete after 1s
+aws_cloudfront_distribution.security_autopilot: Destroying... [id=E3VUPASYW2QL80]
+aws_cloudfront_distribution.security_autopilot: Still destroying... [id=E3VUPASYW2QL80, 00m10s elapsed]
+aws_cloudfront_distribution.security_autopilot: Still destroying... [id=E3VUPASYW2QL80, 00m20s elapsed]
+aws_cloudfront_distribution.security_autopilot: Still destroying... [id=E3VUPASYW2QL80, 00m30s elapsed]
+aws_cloudfront_distribution.security_autopilot: Still destroying... [id=E3VUPASYW2QL80, 00m40s elapsed]
+aws_cloudfront_distribution.security_autopilot: Still destroying... [id=E3VUPASYW2QL80, 00m50s elapsed]
+aws_cloudfront_distribution.security_autopilot: Still destroying... [id=E3VUPASYW2QL80, 01m00s elapsed]
+aws_cloudfront_distribution.security_autopilot: Still destroying... [id=E3VUPASYW2QL80, 01m10s elapsed]
+aws_cloudfront_distribution.security_autopilot: Still destroying... [id=E3VUPASYW2QL80, 01m20s elapsed]
+aws_cloudfront_distribution.security_autopilot: Still destroying... [id=E3VUPASYW2QL80, 01m30s elapsed]
+aws_cloudfront_distribution.security_autopilot: Still destroying... [id=E3VUPASYW2QL80, 01m40s elapsed]
+aws_cloudfront_distribution.security_autopilot: Still destroying... [id=E3VUPASYW2QL80, 01m50s elapsed]
+aws_cloudfront_distribution.security_autopilot: Still destroying... [id=E3VUPASYW2QL80, 02m00s elapsed]
+aws_cloudfront_distribution.security_autopilot: Still destroying... [id=E3VUPASYW2QL80, 02m10s elapsed]
+aws_cloudfront_distribution.security_autopilot: Still destroying... [id=E3VUPASYW2QL80, 02m20s elapsed]
+aws_cloudfront_distribution.security_autopilot: Still destroying... [id=E3VUPASYW2QL80, 02m30s elapsed]
+aws_cloudfront_distribution.security_autopilot: Still destroying... [id=E3VUPASYW2QL80, 02m40s elapsed]
+aws_cloudfront_distribution.security_autopilot: Still destroying... [id=E3VUPASYW2QL80, 02m50s elapsed]
+aws_cloudfront_distribution.security_autopilot: Still destroying... [id=E3VUPASYW2QL80, 03m00s elapsed]
+aws_cloudfront_distribution.security_autopilot: Still destroying... [id=E3VUPASYW2QL80, 03m10s elapsed]
+aws_cloudfront_distribution.security_autopilot: Destruction complete after 3m19s
+aws_cloudfront_origin_access_control.security_autopilot: Destroying... [id=EDLL3VYQR916E]
+aws_cloudfront_origin_access_control.security_autopilot: Destruction complete after 1s
+
+Destroy complete! Resources: 7 destroyed.

@@ -1,0 +1,7 @@
+{
+  "version": 1,
+  "bucket_name": "security-autopilot-access-logs-696505809372-r221001",
+  "region": "eu-north-1",
+  "policy_exists": true,
+  "policy_json": "{\"Version\":\"2012-10-17\",\"Statement\":[{\"Sid\":\"AllowImportRoleBucketReadinessChecksExceptPolicyRead\",\"Effect\":\"Allow\",\"Principal\":{\"AWS\":\"arn:aws:iam::696505809372:role/CodexP2SecurityHubImportRole\"},\"Action\":[\"s3:ListBucket\",\"s3:GetBucketAcl\",\"s3:GetBucketLocation\",\"s3:GetBucketPolicyStatus\",\"s3:GetBucketWebsite\"],\"Resource\":\"arn:aws:s3:::security-autopilot-access-logs-696505809372-r221001\"},{\"Sid\":\"DenyImportRoleGetBucketPolicy\",\"Effect\":\"Deny\",\"Principal\":{\"AWS\":\"arn:aws:iam::696505809372:role/CodexP2SecurityHubImportRole\"},\"Action\":\"s3:GetBucketPolicy\",\"Resource\":\"arn:aws:s3:::security-autopilot-access-logs-696505809372-r221001\"},{\"Sid\":\"DenyLiveReadRoleGetBucketPolicy\",\"Effect\":\"Deny\",\"Principal\":{\"AWS\":\"arn:aws:iam::696505809372:role/SecurityAutopilotReadRole\"},\"Action\":\"s3:GetBucketPolicy\",\"Resource\":\"arn:aws:s3:::security-autopilot-access-logs-696505809372-r221001\"}]}"
+}

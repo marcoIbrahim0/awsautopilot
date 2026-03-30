@@ -1,0 +1,17 @@
+{
+  "name": "finding-managed-account-scope",
+  "url": "https://ocypheris.com/findings/451488ac-8ce5-45d3-8831-162228242381",
+  "currentUrl": "https://ocypheris.com/findings/451488ac-8ce5-45d3-8831-162228242381",
+  "title": "AWS Security Autopilot",
+  "found": [
+    {
+      "text": "Managed at account scope",
+      "found": false
+    },
+    {
+      "text": "This finding family is remediated at account scope. Open the account-level row for the runnable fix.",
+      "found": true
+    }
+  ],
+  "bodySnippet": "Findings\nAccounts\nSettings\nTop Risks\nExports\nHelp\nAudit Log\nFinding Detail\n28\nM\nBack to Findings\nNeed help with this finding?\nS3 general purpose buckets should require requests to use SSL\nSECURITY HUB\nINFORMATIONAL\nRESOLVED\nS3.5\n696505809372\nEU-NORTH-1\nMANAGED AT ACCOUNT SCOPE\nFix this finding\n\nThis finding family is remediated at account scope. Open the account-level row for the runnable fix. Open settings\n\nView PR bundle group\nSuppress Finding\n\nThis control checks whether an Amazon S3 general purpose bucket has a policy that requires requests to use SSL. The control fails if the bucket policy doesn't require requests to use SSL.\n\nRESOURCE\n\nResource ID\n\narn:aws:s3:::security-autopilot-w6-strict-s315-exec-696505809372\n\nResource Type\n\nAwsS3Bucket\n\nCOMPLIANCE\n\nSource\n\nSecurity Hub\n\nControl ID\n\nS3.5\n\nStandard\n\nstandards/aws-foundational-security-best-practices/v/1.0.0\n\nTIMELINE\n\nFirst Observed\n\n3/16/2026, 1:31:41 AM\n\nLast Observed\n\n3/25/2026, 4:27:23 AM\n\nLast Updated\n\n3/25/2026, 4:27:35 AM\n\nCONTROL PLANE\n\nShadow Status\n\nRESOLVED\ninventory_confirmed_compliant\n\nShadow Event Time\n\n3/25/2026, 4:28:20 AM\n\nShadow Evaluated At\n\n3/25/2026, 4:31:07 AM\n\nFingerprint\n\n696505809372|eu-north-1|arn:aws:s3:::security-autopilot-w6-strict-s315-exec-696505809372|S3.5\n\nIDENTIFIERS\n\nFinding ID\n\narn:aws:securityhub:eu-north-1:696505809372:security-control/S3.5/finding/9f570e6f-af87-49a0-98d1-547ae7f96370\n\nInternal ID\n\n451488ac-8ce5-45d3-8831-162228242381\n\nRAW SECURITY HUB JSON\n\nOCYPHERIS\n\nAsk AI"
+}

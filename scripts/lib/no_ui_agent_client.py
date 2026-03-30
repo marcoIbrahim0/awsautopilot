@@ -104,6 +104,23 @@ class SaaSApiClient:
     def get_remediation_options(self, action_id: str) -> dict[str, Any]:
         return self._request_json("GET", f"/api/actions/{action_id}/remediation-options")
 
+    def get_remediation_preview(
+        self,
+        action_id: str,
+        *,
+        strategy_id: str | None = None,
+        profile_id: str | None = None,
+        strategy_inputs: dict[str, Any] | None = None,
+    ) -> dict[str, Any]:
+        query: dict[str, Any] = {"mode": "pr_only"}
+        if strategy_id:
+            query["strategy_id"] = strategy_id
+        if profile_id:
+            query["profile_id"] = profile_id
+        if strategy_inputs:
+            query["strategy_inputs"] = json.dumps(strategy_inputs, separators=(",", ":"))
+        return self._request_json("GET", f"/api/actions/{action_id}/remediation-preview", query=query)
+
     def list_actions(
         self,
         *,
@@ -127,14 +144,29 @@ class SaaSApiClient:
             query["status"] = status
         return self._request_json("GET", "/api/actions", query=query)
 
-    def create_pr_bundle_run(self, action_id: str, strategy_id: str | None = None) -> dict[str, Any]:
+    def create_pr_bundle_run(
+        self,
+        action_id: str,
+        strategy_id: str | None = None,
+        *,
+        profile_id: str | None = None,
+        strategy_inputs: dict[str, Any] | None = None,
+        risk_acknowledged: bool = True,
+        bucket_creation_acknowledged: bool = False,
+    ) -> dict[str, Any]:
         body = {
             "action_id": action_id,
             "mode": "pr_only",
-            "risk_acknowledged": True,
+            "risk_acknowledged": bool(risk_acknowledged),
         }
         if strategy_id:
             body["strategy_id"] = strategy_id
+        if profile_id:
+            body["profile_id"] = profile_id
+        if strategy_inputs:
+            body["strategy_inputs"] = strategy_inputs
+        if bucket_creation_acknowledged:
+            body["bucket_creation_acknowledged"] = True
         return self._request_json("POST", "/api/remediation-runs", body=body)
 
     def create_group_pr_bundle_run(self, body: dict[str, Any]) -> dict[str, Any]:

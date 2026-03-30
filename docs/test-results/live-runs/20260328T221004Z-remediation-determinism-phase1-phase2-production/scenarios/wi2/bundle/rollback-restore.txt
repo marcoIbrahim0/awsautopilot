@@ -1,0 +1,4 @@
+  ERROR restoring rule {'IpProtocol': 'tcp', 'FromPort': 3389, 'ToPort': 3389, 'IpRanges': [{'CidrIp': '0.0.0.0/0', 'Description': 'Wave6 env readiness RDP exposure'}]}: An error occurred (InvalidGroup.NotFound) when calling the AuthorizeSecurityGroupIngress operation: The security group 'sg-06f6252fa8a95b61d' does not exist
+  ERROR restoring rule {'IpProtocol': 'tcp', 'FromPort': 22, 'ToPort': 22, 'IpRanges': [{'CidrIp': '0.0.0.0/0', 'Description': 'Wave6 env readiness SSH exposure'}]}: An error occurred (InvalidGroup.NotFound) when calling the AuthorizeSecurityGroupIngress operation: The security group 'sg-06f6252fa8a95b61d' does not exist
+Restored 0/2 ingress rule(s) to sg-06f6252fa8a95b61d.
+2 rule(s) failed to restore — check stderr above.

@@ -1,0 +1,45 @@
+- generic [active] [ref=e1]:
+  - status [ref=e2]
+  - generic [ref=e4]:
+    - generic [ref=e14]:
+      - generic [ref=e15]:
+        - heading "Welcome back" [level=1] [ref=e16]
+        - paragraph [ref=e17]: We empower developers and technical teams to create, simulate, and manage AWS security workflows—findings, actions, and evidence—in one place.
+      - generic [ref=e18]:
+        - paragraph [ref=e19]: “What used to take hours every week is now fully automated.”
+        - paragraph [ref=e20]: — Security & DevOps teams
+    - generic [ref=e21]:
+      - button "Switch to light mode" [ref=e23]:
+        - img [ref=e24]
+      - generic [ref=e26]:
+        - generic [ref=e27]:
+          - heading "Sign in to your account" [level=2] [ref=e28]
+          - paragraph [ref=e29]: AWS Security Autopilot
+        - generic [ref=e31]:
+          - generic [ref=e53]:
+            - paragraph [ref=e54]: Verify your email before signing in.
+            - button "Resend verification email" [ref=e55]
+          - generic [ref=e32]:
+            - generic [ref=e33]: Email
+            - textbox "Email" [ref=e35]:
+              - /placeholder: you@company.com
+              - text: maromaher54@gmail.com
+          - generic [ref=e36]:
+            - generic [ref=e37]: Password
+            - generic [ref=e38]:
+              - textbox "Password" [ref=e39]:
+                - /placeholder: ••••••••
+                - text: Maher730
+              - button "Show password" [ref=e41]:
+                - img [ref=e42]
+          - generic [ref=e45]:
+            - generic [ref=e46]:
+              - checkbox "Remember me" [ref=e47]
+              - generic [ref=e48]: Remember me
+            - button "Forgot password?" [ref=e49]
+          - button "Sign in" [ref=e50] [cursor=pointer]
+        - paragraph [ref=e51]:
+          - text: Don't have an account?
+          - link "Sign up" [ref=e52] [cursor=pointer]:
+            - /url: /signup
+  - alert [ref=e10]

@@ -1,0 +1,81 @@
+{
+  "run_id": "20260329T194129Z-remediation-determinism-phase3-production",
+  "date_utc": "2026-03-29",
+  "surface": "https://api.ocypheris.com",
+  "tenant": {
+    "name": "Marco",
+    "id": "e4e07aa8-b8ea-4c1d-9fd7-4362a2fc1195"
+  },
+  "canary_account_id": "696505809372",
+  "region": "eu-north-1",
+  "historical_predecessor_run_id": "20260329T003200Z-remediation-determinism-phase3-production",
+  "gate_status": {
+    "gate_3a_preflight_and_parity": "PASS",
+    "gate_3b_local_regression": "PASS",
+    "gate_3c_required_production_scenarios": "PASS",
+    "gate_3d_grouped_production_proof": "PASS",
+    "gate_3e_retained_evidence": "PASS",
+    "final_decision": "PASS"
+  },
+  "work_items": {
+    "WI-4": {
+      "status": "PASS",
+      "notes": "Authoritative prior production proof remains valid; no new single-run execution was required in this rerun."
+    },
+    "WI-5": {
+      "status": "PASS",
+      "notes": "March 30 completed the real delegated DNS + ACM path, production create run ff6dea42-dbdc-42f1-996f-da437ad48e4c, truthful local apply with CloudFront distribution E3VUPASYW2QL80 and OAC EDLL3VYQR916E, recompute retention, and exact rollback back to the original website, bucket policy, and all-false bucket-level PAB baseline."
+    },
+    "WI-9": {
+      "status": "PASS",
+      "notes": "Full truthful production create/apply/rollback proof retained under scenarios/wi9/ with exact pre-state restoration."
+    },
+    "WI-10": {
+      "status": "PASS",
+      "notes": "Full truthful production public-policy-scrub proof retained under scenarios/wi10/, including approved temporary account-level S3 Public Access Block disablement, seeded public policy, final create/apply/rollback proof, and restoration of both the bucket baseline and the original all-true account-level S3 Public Access Block settings."
+    },
+    "WI-11": {
+      "status": "PASS",
+      "notes": "Authoritative prior production proof remains valid; the preferred grouped S3.11 attempt in this rerun failed only because the live group still contained deleted buckets."
+    }
+  },
+  "local_gate": {
+    "status": "PASS",
+    "transcripts": [
+      "local-gate/01-risk-runtime.txt",
+      "local-gate/02-profile-options.txt",
+      "local-gate/03-run-create.txt",
+      "local-gate/04-grouped-report.txt",
+      "local-gate/05-worker-bundle.txt",
+      "local-gate/06-wi10-public-policy-scrub-regression-fix.txt"
+    ]
+  },
+  "grouped_proof": {
+    "preferred_s3_11_attempt": {
+      "status": "FAILED_STALE_MEMBERS",
+      "group_id": "9a904e6a-3ab8-4eca-be92-b727b0aacf67",
+      "group_run_id": "2bec16bc-99dd-42fd-964c-e4ee4d02467e",
+      "remediation_run_id": "8a093777-89e9-42aa-b71e-e9374d68c263",
+      "notes": "Bundle executed 19 executable members, but 5 deleted buckets caused truthful NoSuchBucket failures and the callback finalized the group run as failed."
+    },
+    "fallback_s3_2_attempt": {
+      "status": "PASS",
+      "group_id": "2990907c-b6bb-4821-9825-a523cb380bf5",
+      "group_run_id": "6a81a863-514f-4ed4-b00a-388682a36cc4",
+      "remediation_run_id": "a2e0069a-cc15-4cbc-8991-9a64080a9deb",
+      "notes": "Mixed-tier grouped bundle finalized successfully with 2 executable members and 8 metadata-only members; both executable members were rolled back to exact pre-run baseline."
+    }
+  },
+  "blocking_requirements": [],
+  "environment_mutations": [
+    "Control-plane freshness for account 696505809372 was refreshed through the production synthetic-event path before live scenario execution.",
+    "Disposable Route53 hosted zone Z089211911JQN783YLH5I and imported test certificate arn:aws:acm:us-east-1:696505809372:certificate/e24f54d8-3a83-4de9-88d4-1dcc3cb9b8eb were created for the WI-5 attempt and then deleted after the CloudFront certificate failure.",
+    "March 30 completed the real WI-5 prerequisite path: Route53 hosted zone Z081885955B6GUR4IL7E for wi5-gate3-696505809372.ocypheris.com was publicly delegated from ocypheris.com, and Amazon-issued ACM certificate arn:aws:acm:us-east-1:696505809372:certificate/509785ff-eef1-4071-bddc-d275f1dfa6ed reached ISSUED.",
+    "WI-5 run ff6dea42-dbdc-42f1-996f-da437ad48e4c applied successfully, creating CloudFront distribution E3VUPASYW2QL80, OAC EDLL3VYQR916E, Route53 A/AAAA aliases to dxxm59bao95gt.cloudfront.net, website disablement, and bucket-level Public Access Block enforcement.",
+    "WI-5 rollback destroyed the generated CloudFront, OAC, and alias records, then manually restored the captured S3 website configuration, the original two-statement bucket policy, and the baseline bucket-level Public Access Block configuration with all four flags false.",
+    "Grouped S3.11 lifecycle changes were applied to 14 live buckets and then removed after the preferred grouped attempt failed on stale deleted members.",
+    "Grouped S3.2 fallback applied two executable members and both were fully rolled back, including CloudFront distribution E2P5LVIEQSCKI7 and OAC E5PPLWFN6FAQK.",
+    "WI-10 temporarily required account-level S3 Public Access Block to be disabled on account 696505809372 so the public-policy-scrub candidate could be seeded truthfully; the original all-true account-level baseline was restored after proof.",
+    "WI-10 surfaced two current-head bundle regressions in production, both fixed minimally in backend/services/pr_bundle.py and redeployed on image tags 20260329T222719Z and 20260329T224217Z before the final corrected rerun succeeded."
+  ]
+}

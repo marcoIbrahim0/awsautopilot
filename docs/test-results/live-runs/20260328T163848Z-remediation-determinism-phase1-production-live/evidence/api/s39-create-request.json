@@ -1,0 +1,10 @@
+{
+  "action_id": "19a9b0f0-de47-4a5b-982f-8d3c876c2064",
+  "mode": "pr_only",
+  "strategy_id": "s3_enable_access_logging_guided",
+  "risk_acknowledged": true,
+  "strategy_inputs": {
+    "log_bucket_name": "security-autopilot-access-logs-696505809372-r221001-access-logs",
+    "create_log_bucket": true
+  }
+}

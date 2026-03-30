@@ -1,0 +1,48 @@
+{
+  "run_id": "20260326T132117Z-phase5-pending-confirmation-repair",
+  "date_utc": "2026-03-26",
+  "tenant_id": "c3351a02-0bc2-4449-beed-d59d7ac937d0",
+  "tenant_name": "Valens Local Backup",
+  "account_id": "696505809372",
+  "region": "eu-north-1",
+  "control_id": "Config.1",
+  "finding_id": "dd46ab79-1ea5-4ea7-a754-0d5e7335cbc1",
+  "action_id": "84f874b0-d2fd-405f-87fb-edc3264601a2",
+  "action_group_id": "03352204-291a-4b40-bfc6-9913c42148ac",
+  "outcome": "PASS",
+  "active_runtime_deploy_tag": "20260326T125504Z",
+  "repair_steps": [
+    {
+      "name": "pending_confirmation_sweep",
+      "status_code": 200,
+      "result": "no_due_legacy_states"
+    },
+    {
+      "name": "manual_ingest_trigger",
+      "status_code": 202,
+      "result": "queued_security_hub_refresh"
+    },
+    {
+      "name": "reconcile_inventory_global",
+      "status_code": 200,
+      "result": "skipped_by_control_plane_prereqs"
+    },
+    {
+      "name": "reconcile_inventory_shard",
+      "status_code": 200,
+      "result": "queued_targeted_config_reconcile"
+    }
+  ],
+  "post_repair": {
+    "status": "RESOLVED",
+    "effective_status": "RESOLVED",
+    "pending_confirmation": false,
+    "followup_kind": null,
+    "shadow_status_normalized": "RESOLVED",
+    "shadow_status_reason": "inventory_confirmed_compliant",
+    "action_group_status_bucket": "run_successful_confirmed",
+    "last_observed_at": "2026-03-26T12:25:03.778000+00:00",
+    "resolved_at": "2026-03-26T12:25:03.778000+00:00",
+    "updated_at_db": "2026-03-26T13:21:17.029766+00:00"
+  }
+}

@@ -1,0 +1,159 @@
+{
+  "id": "19a9b0f0-de47-4a5b-982f-8d3c876c2064",
+  "tenant_id": "e4e07aa8-b8ea-4c1d-9fd7-4362a2fc1195",
+  "action_type": "s3_bucket_access_logging",
+  "target_id": "696505809372|eu-north-1|arn:aws:s3:::security-autopilot-access-logs-696505809372-r221001|S3.9",
+  "account_id": "696505809372",
+  "region": "eu-north-1",
+  "score": 28,
+  "score_components": {
+    "score": 28,
+    "version": 1,
+    "severity": {
+      "points": 18,
+      "signals": [
+        "severity:MEDIUM"
+      ],
+      "normalized": 0.5
+    },
+    "business_impact": {
+      "summary": "Low technical risk intersects with explicit unknown criticality in matrix cell low:unknown.",
+      "criticality": {
+        "tier": "unknown",
+        "score": 0,
+        "status": "unknown",
+        "weight": 1,
+        "dimensions": [
+          {
+            "label": "Customer-facing",
+            "weight": 25,
+            "matched": false,
+            "signals": [],
+            "dimension": "customer_facing",
+            "explanation": "Customer-facing is explicit unknown for this action.",
+            "contribution": 0
+          },
+          {
+            "label": "Revenue-path",
+            "weight": 25,
+            "matched": false,
+            "signals": [],
+            "dimension": "revenue_path",
+            "explanation": "Revenue-path is explicit unknown for this action.",
+            "contribution": 0
+          },
+          {
+            "label": "Regulated-data",
+            "weight": 25,
+            "matched": false,
+            "signals": [],
+            "dimension": "regulated_data",
+            "explanation": "Regulated-data is explicit unknown for this action.",
+            "contribution": 0
+          },
+          {
+            "label": "Identity-boundary",
+            "weight": 15,
+            "matched": false,
+            "signals": [],
+            "dimension": "identity_boundary",
+            "explanation": "Identity-boundary is explicit unknown for this action.",
+            "contribution": 0
+          },
+          {
+            "label": "Production-environment",
+            "weight": 10,
+            "matched": false,
+            "signals": [],
+            "dimension": "production_environment",
+            "explanation": "Production-environment is explicit unknown for this action.",
+            "contribution": 0
+          }
+        ],
+        "explanation": "Criticality remains explicit unknown because no customer-facing, revenue-path, regulated-data, identity-boundary, or production-environment signals were detected."
+      },
+      "matrix_position": {
+        "row": "low",
+        "cell": "low:unknown",
+        "rank": 10128,
+        "column": "unknown",
+        "explanation": "Matrix row uses technical risk tier low from score 28; matrix column uses business criticality tier unknown.",
+        "risk_weight": 1,
+        "criticality_weight": 1
+      },
+      "technical_risk_tier": "low",
+      "technical_risk_score": 28
+    },
+    "exploit_signals": {
+      "points": 0,
+      "signals": [],
+      "normalized": 0.0,
+      "evidence_source": "finding.title + finding.description + selected raw_json exploit metadata + threat intel adapter output",
+      "heuristic_points": 0,
+      "factor_max_points": 15,
+      "applied_threat_signals": [],
+      "threat_intel_max_points": 10,
+      "threat_intel_points_applied": 0,
+      "threat_intel_points_requested": 0
+    },
+    "privilege_level": {
+      "points": 0,
+      "signals": [],
+      "normalized": 0.0
+    },
+    "data_sensitivity": {
+      "points": 10,
+      "signals": [
+        "action_type:s3_bucket_access_logging",
+        "keyword:bucket",
+        "keyword:log"
+      ],
+      "normalized": 0.65
+    },
+    "internet_exposure": {
+      "points": 0,
+      "signals": [],
+      "normalized": 0.0
+    },
+    "context_incomplete": false,
+    "toxic_combinations": {
+      "points": 0,
+      "signals": [
+        "missing:internet_exposure",
+        "missing:sensitive_data"
+      ],
+      "max_boost": 15,
+      "explanation": "Toxic-combination boost not applied because related findings were missing: internet_exposure, sensitive_data.",
+      "evidence_source": "related action neighborhoods (same resource plus account-scoped context)",
+      "missing_signals": [
+        "internet_exposure",
+        "sensitive_data"
+      ],
+      "matched_rule_ids": [],
+      "context_incomplete": false,
+      "context_incomplete_rule_ids": []
+    },
+    "compensating_controls": {
+      "points": 0,
+      "signals": [],
+      "normalized": 0.0
+    },
+    "total_positive_points": 28,
+    "representative_finding_id": "arn:aws:securityhub:eu-north-1:696505809372:security-control/S3.9/finding/810254c8-9127-484b-9252-7807afc28c4f",
+    "total_compensating_points": 0,
+    "representative_finding_db_id": "8bd336b2-ca04-4cc6-a381-b0f67fd2b39c",
+    "score_before_toxic_combinations": 28
+  },
+  "priority": 28,
+  "status": "open",
+  "title": "S3 general purpose buckets should have server access logging enabled",
+  "description": "This control checks whether server access logging is enabled for an Amazon S3 general purpose bucket. The control fails if server access logging isn't enabled. When logging is enabled, Amazon S3 delivers access logs for a source bucket to a chosen target bucket. The target bucket must be in the same AWS Region as the source bucket and must not have a default retention period configured. The target logging bucket does not need to have server access logging enabled, and you should suppress findings for this bucket.",
+  "control_id": "S3.9",
+  "resource_id": "arn:aws:s3:::security-autopilot-access-logs-696505809372-r221001",
+  "resource_type": "AwsS3Bucket",
+  "owner_type": "service",
+  "owner_key": "s3",
+  "owner_label": "Amazon S3",
+  "created_at": "2026-03-28 02:18:19.470676+00:00",
+  "updated_at": "2026-03-28 02:18:19.470676+00:00"
+}

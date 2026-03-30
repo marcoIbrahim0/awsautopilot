@@ -90,6 +90,25 @@ def _write_bundle_files(bundle: dict[str, object], directory: Path) -> None:
         path.write_text(str(item["content"]), encoding="utf-8")
 
 
+def _terraform_env_with_mirror(temp_dir: Path) -> dict[str, str]:
+    plugin_cache_dir = Path.home() / ".terraform.d" / "plugin-cache"
+    plugin_cache_dir.mkdir(parents=True, exist_ok=True)
+    tf_cli_config = temp_dir / "terraform.tfrc"
+    tf_cli_config.write_text(
+        'provider_installation {\n'
+        '  filesystem_mirror {\n'
+        f'    path    = "{plugin_cache_dir}"\n'
+        '    include = ["registry.terraform.io/hashicorp/aws", "registry.terraform.io/hashicorp/null"]\n'
+        "  }\n"
+        "  direct {}\n"
+        "}\n",
+        encoding="utf-8",
+    )
+    terraform_env = dict(os.environ)
+    terraform_env["TF_CLI_CONFIG_FILE"] = str(tf_cli_config)
+    return terraform_env
+
+
 def test_pr_bundle_returns_dict_with_format_files_steps() -> None:
     """generate_pr_bundle returns format, files, steps."""
     action = _make_action(action_type=ACTION_TYPE_S3_BLOCK_PUBLIC_ACCESS)
@@ -811,13 +830,19 @@ def test_pr_bundle_s3_bucket_block_public_policy_scrub_review_bundle_contains_ap
     readme = _bundle_file_content(result, "README.txt")
     assert 'data "aws_s3_bucket_policy" "existing"' in content
     assert 'resource "aws_s3_bucket_policy" "security_autopilot"' in content
+    assert 'count  = length(local.preserved_policy_statements) > 0 ? 1 : 0' in content
+    assert 'resource "terraform_data" "delete_bucket_policy"' in content
+    assert 'count = length(local.preserved_policy_statements) == 0 ? 1 : 0' in content
+    assert 'aws s3api delete-bucket-policy --bucket "public-bucket"' in content
     assert 'resource "aws_s3_bucket_public_access_block" "security_autopilot"' in content
     assert "removed_statement_count" in content
     assert "removed_statement_identifiers" in content
     assert 'lower(trimspace(try(tostring(statement.Effect), ""))) == "allow"' in content
     assert "!can(statement.Condition)" in content
     assert 'trimspace(try(tostring(statement.Principal), "")) == "*"' in content
-    assert "depends_on = [aws_s3_bucket_policy.security_autopilot]" in content
+    assert "depends_on = [" in content
+    assert "aws_s3_bucket_policy.security_autopilot" in content
+    assert "terraform_data.delete_bucket_policy" in content
     assert "public-policy scrub branches remove unconditional public Allow statements" in readme
 
 
@@ -1372,10 +1397,7 @@ def test_pr_bundle_s3_website_cloudfront_private_terraform_validate() -> None:
     with tempfile.TemporaryDirectory() as temp_dir:
         bundle_dir = Path(temp_dir)
         _write_bundle_files(bundle, bundle_dir)
-        plugin_cache_dir = Path.home() / ".terraform.d" / "plugin-cache"
-        plugin_cache_dir.mkdir(parents=True, exist_ok=True)
-        terraform_env = dict(os.environ)
-        terraform_env["TF_PLUGIN_CACHE_DIR"] = str(plugin_cache_dir)
+        terraform_env = _terraform_env_with_mirror(bundle_dir)
         init_result = subprocess.run(
             ["terraform", "init", "-backend=false", "-input=false"],
             cwd=bundle_dir,
@@ -1383,6 +1405,7 @@ def test_pr_bundle_s3_website_cloudfront_private_terraform_validate() -> None:
             text=True,
             check=False,
             env=terraform_env,
+            timeout=120,
         )
         assert init_result.returncode == 0, init_result.stdout + init_result.stderr
 
@@ -1393,6 +1416,7 @@ def test_pr_bundle_s3_website_cloudfront_private_terraform_validate() -> None:
             text=True,
             check=False,
             env=terraform_env,
+            timeout=120,
         )
         assert validate_result.returncode == 0, validate_result.stdout + validate_result.stderr
 
@@ -1427,10 +1451,7 @@ def test_pr_bundle_s3_bucket_block_public_policy_scrub_terraform_validate() -> N
     with tempfile.TemporaryDirectory() as temp_dir:
         bundle_dir = Path(temp_dir)
         _write_bundle_files(bundle, bundle_dir)
-        plugin_cache_dir = Path.home() / ".terraform.d" / "plugin-cache"
-        plugin_cache_dir.mkdir(parents=True, exist_ok=True)
-        terraform_env = dict(os.environ)
-        terraform_env["TF_PLUGIN_CACHE_DIR"] = str(plugin_cache_dir)
+        terraform_env = _terraform_env_with_mirror(bundle_dir)
         init_result = subprocess.run(
             ["terraform", "init", "-backend=false", "-input=false"],
             cwd=bundle_dir,
@@ -1438,6 +1459,7 @@ def test_pr_bundle_s3_bucket_block_public_policy_scrub_terraform_validate() -> N
             text=True,
             check=False,
             env=terraform_env,
+            timeout=120,
         )
         assert init_result.returncode == 0, init_result.stdout + init_result.stderr
 
@@ -1448,8 +1470,67 @@ def test_pr_bundle_s3_bucket_block_public_policy_scrub_terraform_validate() -> N
             text=True,
             check=False,
             env=terraform_env,
+            timeout=120,
         )
         assert validate_result.returncode == 0, validate_result.stdout + validate_result.stderr
+
+
+@pytest.mark.skipif(shutil.which("terraform") is None, reason="terraform is not installed")
+def test_s3_public_policy_scrub_single_statement_shape_plans() -> None:
+    config = """
+terraform {
+  required_version = ">= 1.0"
+}
+
+locals {
+  existing_policy_statements_candidate = [
+    {
+      Sid       = "AllowPublicRead"
+      Effect    = "Allow"
+      Principal = "*"
+      Action    = "s3:GetObject"
+      Resource  = "arn:aws:s3:::example-bucket/*"
+    }
+  ]
+  existing_policy_statements = jsondecode(
+    local.existing_policy_statements_candidate == null ? "[]" : (
+      can(local.existing_policy_statements_candidate.Effect) ? format(
+        "[%s]",
+        jsonencode(local.existing_policy_statements_candidate)
+      ) : jsonencode(local.existing_policy_statements_candidate)
+    )
+  )
+}
+
+output "existing_policy_statements_len" {
+  value = length(local.existing_policy_statements)
+}
+"""
+
+    with tempfile.TemporaryDirectory() as temp_dir:
+        bundle_dir = Path(temp_dir)
+        (bundle_dir / "main.tf").write_text(config)
+
+        init_result = subprocess.run(
+            ["terraform", "init", "-backend=false", "-input=false"],
+            cwd=bundle_dir,
+            capture_output=True,
+            text=True,
+            check=False,
+            timeout=120,
+        )
+        assert init_result.returncode == 0, init_result.stdout + init_result.stderr
+
+        plan_result = subprocess.run(
+            ["terraform", "plan", "-no-color"],
+            cwd=bundle_dir,
+            capture_output=True,
+            text=True,
+            check=False,
+            timeout=120,
+        )
+        assert plan_result.returncode == 0, plan_result.stdout + plan_result.stderr
+        assert "existing_policy_statements_len = 1" in plan_result.stdout
 
 
 def test_s3_bucket_name_from_target_id() -> None:
@@ -1664,6 +1745,117 @@ def test_pr_bundle_s3_bucket_lifecycle_configuration_terraform_preserves_rendera
     assert 'id     = "AbortMultipartUploads"' not in content
 
 
+def test_pr_bundle_s3_bucket_lifecycle_configuration_terraform_preserves_noncurrent_rules() -> None:
+    """S3.11 additive merge keeps renderable noncurrent-version lifecycle rules intact."""
+    action = _make_action(
+        action_type=ACTION_TYPE_S3_BUCKET_LIFECYCLE_CONFIGURATION,
+        target_id="lifecycle-bucket",
+        region="us-east-1",
+        control_id="S3.11",
+    )
+    lifecycle_document = {
+        "Rules": [
+            {
+                "ID": "expire-noncurrent",
+                "Status": "Enabled",
+                "Filter": {"Prefix": ""},
+                "NoncurrentVersionExpiration": {"NoncurrentDays": 30},
+            }
+        ]
+    }
+
+    r = generate_pr_bundle(
+        action,
+        "terraform",
+        risk_snapshot={
+            "evidence": {
+                "existing_lifecycle_configuration_json": json.dumps(lifecycle_document),
+            }
+        },
+    )
+
+    content = _bundle_file_content(r, "s3_bucket_lifecycle_configuration.tf")
+    assert 'id     = "expire-noncurrent"' in content
+    assert "noncurrent_version_expiration" in content
+    assert "noncurrent_days = 30" in content
+    assert content.count('id     = "security-autopilot-abort-incomplete-multipart"') == 1
+
+
+def test_pr_bundle_s3_11_terraform_apply_time_merge_uses_resolution_summary() -> None:
+    """S3.11 Terraform can fetch and merge the live lifecycle document at apply time."""
+    action = _make_action(
+        action_type=ACTION_TYPE_S3_BUCKET_LIFECYCLE_CONFIGURATION,
+        target_id="123456789012|us-east-1|arn:aws:s3:::lifecycle-bucket|S3.11",
+        region="us-east-1",
+        control_id="S3.11",
+    )
+    action.resource_id = "arn:aws:s3:::lifecycle-bucket"
+
+    r = generate_pr_bundle(
+        action,
+        "terraform",
+        resolution={
+            "strategy_id": "s3_enable_abort_incomplete_uploads",
+            "profile_id": "s3_enable_abort_incomplete_uploads",
+            "support_tier": "deterministic_bundle",
+            "blocked_reasons": [],
+            "preservation_summary": {
+                "apply_time_merge": True,
+                "apply_time_merge_reason": "Runtime capture failed (AccessDenied).",
+            },
+            "decision_rationale": "Apply-time lifecycle merge is allowed.",
+        },
+    )
+
+    content = _bundle_file_content(r, "s3_bucket_lifecycle_configuration.tf")
+    paths = [f["path"] for f in r["files"]]
+
+    assert 'resource "terraform_data" "security_autopilot"' in content
+    assert 'python3 ./scripts/s3_lifecycle_merge.py' in content
+    assert "triggers_replace" in content
+    assert "scripts/s3_lifecycle_merge.py" in paths
+    assert "rollback/s3_lifecycle_restore.py" in paths
+    assert any("fetch the current lifecycle configuration at apply time" in step for step in r["steps"])
+    assert any("python3 rollback/s3_lifecycle_restore.py" in step for step in r["steps"])
+    assert r["metadata"]["bundle_rollback_entries"][str(action.id)] == {
+        "path": "rollback/s3_lifecycle_restore.py",
+        "runner": "python3",
+    }
+
+
+def test_pr_bundle_s3_11_apply_time_merge_helpers_snapshot_and_restore_exact_lifecycle() -> None:
+    """S3.11 apply-time fallback should ship exact capture and restore helpers."""
+    action = _make_action(
+        action_type=ACTION_TYPE_S3_BUCKET_LIFECYCLE_CONFIGURATION,
+        target_id="123456789012|us-east-1|arn:aws:s3:::lifecycle-bucket|S3.11",
+        region="us-east-1",
+        control_id="S3.11",
+    )
+    action.resource_id = "arn:aws:s3:::lifecycle-bucket"
+
+    r = generate_pr_bundle(
+        action,
+        "terraform",
+        resolution={
+            "strategy_id": "s3_enable_abort_incomplete_uploads",
+            "profile_id": "s3_enable_abort_incomplete_uploads",
+            "support_tier": "deterministic_bundle",
+            "blocked_reasons": [],
+            "preservation_summary": {"apply_time_merge": True},
+            "decision_rationale": "Apply-time lifecycle merge is allowed.",
+        },
+    )
+
+    apply_script = _bundle_file_content(r, "scripts/s3_lifecycle_merge.py")
+    restore_script = _bundle_file_content(r, "rollback/s3_lifecycle_restore.py")
+
+    assert '"get-bucket-lifecycle-configuration"' in apply_script
+    assert '"put-bucket-lifecycle-configuration"' in apply_script
+    assert ".s3-lifecycle-rollback/lifecycle_snapshot.json" in apply_script
+    assert '"delete-bucket-lifecycle"' in restore_script
+    assert '"put-bucket-lifecycle-configuration"' in restore_script
+
+
 def test_pr_bundle_s3_bucket_lifecycle_configuration_cloudformation_custom_resource() -> None:
     """S3.11: CloudFormation uses Lambda custom resource PutLifecycleConfiguration with delete no-op."""
     action = _make_action(
@@ -1713,6 +1905,33 @@ def test_pr_bundle_s3_bucket_lifecycle_configuration_cloudformation_rejects_addi
                 "evidence": {
                     "existing_lifecycle_configuration_json": json.dumps(lifecycle_document),
                 }
+            },
+        )
+
+    assert exc_info.value.as_dict()["code"] == "cloudformation_lifecycle_additive_merge_unsupported"
+
+
+def test_pr_bundle_s3_bucket_lifecycle_configuration_cloudformation_rejects_apply_time_merge() -> None:
+    """S3.11 CloudFormation stays fail-closed for apply-time lifecycle merge fallback."""
+    action = _make_action(
+        action_type=ACTION_TYPE_S3_BUCKET_LIFECYCLE_CONFIGURATION,
+        target_id="123456789012|us-east-1|arn:aws:s3:::lifecycle-bucket|S3.11",
+        region="us-east-1",
+        control_id="S3.11",
+    )
+    action.resource_id = "arn:aws:s3:::lifecycle-bucket"
+
+    with pytest.raises(PRBundleGenerationError) as exc_info:
+        generate_pr_bundle(
+            action,
+            "cloudformation",
+            resolution={
+                "strategy_id": "s3_enable_abort_incomplete_uploads",
+                "profile_id": "s3_enable_abort_incomplete_uploads",
+                "support_tier": "deterministic_bundle",
+                "blocked_reasons": [],
+                "preservation_summary": {"apply_time_merge": True},
+                "decision_rationale": "Apply-time lifecycle merge is allowed.",
             },
         )
 

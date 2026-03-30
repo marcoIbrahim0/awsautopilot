@@ -1,0 +1,7 @@
+{
+  "strategy_id": "s3_enable_abort_incomplete_uploads",
+  "strategy_inputs": {
+    "abort_days": 7
+  },
+  "risk_acknowledged": true
+}

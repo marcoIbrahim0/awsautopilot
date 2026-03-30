@@ -9,6 +9,7 @@ from sqlalchemy.orm import Session
 
 from backend.models.finding import Finding
 from backend.models.finding_shadow_state import FindingShadowState
+from backend.services.control_scope import ACTION_TYPE_DEFAULT, action_type_from_control
 from backend.workers.services.control_plane_events import build_fingerprint
 from backend.services.canonicalization import build_resource_key, canonicalize_control_id
 from backend.workers.config import settings
@@ -55,6 +56,161 @@ def _pending_shadow_state(
         ):
             return candidate
     return None
+
+
+def _pending_finding(
+    session: Session,
+    *,
+    tenant_id: uuid.UUID,
+    account_id: str,
+    region: str,
+    source: str,
+    canonical_control_id: str,
+    resource_key: str,
+) -> Finding | None:
+    for candidate in getattr(session, "new", ()):
+        if not isinstance(candidate, Finding):
+            continue
+        if (
+            candidate.tenant_id == tenant_id
+            and candidate.account_id == account_id
+            and candidate.region == region
+            and candidate.source == source
+            and candidate.canonical_control_id == canonical_control_id
+            and candidate.resource_key == resource_key
+        ):
+            return candidate
+    return None
+
+
+def _canonical_finding_status(shadow_norm: str) -> str:
+    return "RESOLVED" if shadow_norm == "RESOLVED" else "NEW"
+
+
+def _shadow_materialized_raw_json(
+    *,
+    source: str,
+    fingerprint: str,
+    canonical_control_id: str,
+    resource_key: str,
+    evaluation: Any,
+    shadow_norm: str,
+) -> dict[str, Any]:
+    return {
+        "source": source,
+        "materialized_by": "inventory_reconcile",
+        "shadow_fingerprint": fingerprint,
+        "shadow_status_raw": getattr(evaluation, "status", None),
+        "shadow_status_normalized": shadow_norm,
+        "shadow_status_reason": getattr(evaluation, "status_reason", None),
+        "control_id": getattr(evaluation, "control_id", None),
+        "canonical_control_id": canonical_control_id,
+        "resource_id": getattr(evaluation, "resource_id", None),
+        "resource_type": getattr(evaluation, "resource_type", None),
+        "resource_key": resource_key,
+        "evidence_ref": getattr(evaluation, "evidence_ref", None),
+    }
+
+
+def _materialize_shadow_backed_finding(
+    session: Session,
+    *,
+    tenant_id: uuid.UUID,
+    account_id: str,
+    region: str,
+    source: str,
+    fingerprint: str,
+    event_time: datetime,
+    evaluation: Any,
+    canonical_control_id: str | None,
+    resource_key: str | None,
+    shadow_norm: str,
+) -> None:
+    if not canonical_control_id or not resource_key:
+        return
+
+    action_type = action_type_from_control(getattr(evaluation, "control_id", None))
+    if action_type == ACTION_TYPE_DEFAULT:
+        return
+
+    severity_label = str(getattr(evaluation, "severity_label", None) or "INFORMATIONAL")[:32]
+    status = _canonical_finding_status(shadow_norm)
+    resolved_at = event_time if status == "RESOLVED" else None
+    raw_json = _shadow_materialized_raw_json(
+        source=source,
+        fingerprint=fingerprint,
+        canonical_control_id=canonical_control_id,
+        resource_key=resource_key,
+        evaluation=evaluation,
+        shadow_norm=shadow_norm,
+    )
+    existing = _pending_finding(
+        session,
+        tenant_id=tenant_id,
+        account_id=account_id,
+        region=region,
+        source=source,
+        canonical_control_id=canonical_control_id,
+        resource_key=resource_key,
+    )
+    if existing is not None:
+        existing.severity_label = severity_label
+        existing.severity_normalized = Finding.severity_to_int(severity_label)
+        existing.title = str(getattr(evaluation, "title", None) or "Inventory reconciliation finding")[:512]
+        existing.description = str(getattr(evaluation, "description", None) or "")[:65535] or None
+        existing.resource_id = str(getattr(evaluation, "resource_id", None) or "")[:2048] or None
+        existing.resource_type = str(getattr(evaluation, "resource_type", None) or "")[:256] or None
+        existing.control_id = str(getattr(evaluation, "control_id", None) or "")[:64] or None
+        existing.canonical_control_id = canonical_control_id[:64]
+        existing.resource_key = resource_key[:512]
+        existing.status = status
+        existing.resolved_at = resolved_at
+        existing.in_scope = True
+        existing.first_observed_at = existing.first_observed_at or event_time
+        existing.last_observed_at = event_time
+        existing.sh_updated_at = event_time
+        existing.raw_json = raw_json
+        existing.shadow_status_raw = getattr(evaluation, "status", None)
+        existing.shadow_status_normalized = shadow_norm
+        existing.shadow_status_reason = getattr(evaluation, "status_reason", None)
+        existing.shadow_last_observed_event_time = event_time
+        existing.shadow_last_evaluated_at = datetime.now(timezone.utc)
+        existing.shadow_fingerprint = fingerprint
+        existing.shadow_source = source
+        return
+
+    session.add(
+        Finding(
+            tenant_id=tenant_id,
+            account_id=account_id,
+            region=region,
+            finding_id=f"shadow:{source}:{fingerprint}"[:512],
+            source=source,
+            severity_label=severity_label,
+            severity_normalized=Finding.severity_to_int(severity_label),
+            title=str(getattr(evaluation, "title", None) or "Inventory reconciliation finding")[:512],
+            description=str(getattr(evaluation, "description", None) or "")[:65535] or None,
+            resource_id=str(getattr(evaluation, "resource_id", None) or "")[:2048] or None,
+            resource_type=str(getattr(evaluation, "resource_type", None) or "")[:256] or None,
+            control_id=str(getattr(evaluation, "control_id", None) or "")[:64] or None,
+            canonical_control_id=canonical_control_id[:64],
+            resource_key=resource_key[:512],
+            status=status,
+            in_scope=True,
+            first_observed_at=event_time,
+            last_observed_at=event_time,
+            sh_updated_at=event_time,
+            resolved_at=resolved_at,
+            raw_json=raw_json,
+            shadow_status_raw=getattr(evaluation, "status", None),
+            shadow_status_normalized=shadow_norm,
+            shadow_status_reason=getattr(evaluation, "status_reason", None),
+            shadow_last_observed_event_time=event_time,
+            shadow_last_evaluated_at=datetime.now(timezone.utc),
+            shadow_fingerprint=fingerprint,
+            shadow_source=source,
+        )
+    )
 
 
 def _promotion_block_reasons(
@@ -176,6 +332,19 @@ def upsert_shadow_state(
                 fingerprint,
                 source,
                 getattr(evaluation, "status", None),
+            )
+            _materialize_shadow_backed_finding(
+                session,
+                tenant_id=tenant_id,
+                account_id=account_id,
+                region=region,
+                source=source,
+                fingerprint=fingerprint,
+                event_time=event_time,
+                evaluation=evaluation,
+                canonical_control_id=canonical_control_id,
+                resource_key=resource_key,
+                shadow_norm=shadow_norm,
             )
 
         raw_status = getattr(evaluation, "status", None)

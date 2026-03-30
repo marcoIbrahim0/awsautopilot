@@ -191,11 +191,28 @@ def _mock_group_session(
     session.commit = AsyncMock()
     session._added = added
 
+    async def _flush() -> None:
+        for obj in added:
+            if getattr(obj, "id", None) is None:
+                obj.id = uuid.uuid4()
+
+    session.flush = AsyncMock(side_effect=_flush)
+
     async def _refresh(run_obj: MagicMock) -> None:
         run_obj.created_at = datetime.now(timezone.utc)
         run_obj.updated_at = datetime.now(timezone.utc)
 
     session.refresh = AsyncMock(side_effect=_refresh)
+
+    async def _run_sync(fn):
+        group_id = uuid.uuid4()
+        group_key = (
+            f"{actions[0].action_type}|{actions[0].account_id}|"
+            f"{actions[0].region or 'global'}|{actions[0].status}"
+        )
+        return group_id, group_key, [action.id for action in actions]
+
+    session.run_sync = AsyncMock(side_effect=_run_sync)
     return session
 
 
@@ -208,6 +225,14 @@ def stub_remediation_run_tenant_lookup(monkeypatch: pytest.MonkeyPatch) -> None:
         return tenant
 
     monkeypatch.setattr("backend.routers.remediation_runs.get_tenant", _stub_get_tenant)
+
+
+@pytest.fixture(autouse=True)
+def stub_grouped_reporting_token_issue(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(
+        "backend.routers.remediation_runs.issue_group_run_reporting_token",
+        lambda **_: ("signed-token", "token-jti", datetime.now(timezone.utc)),
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -689,8 +714,7 @@ def test_create_run_different_profile_id_not_treated_as_identical_duplicate(clie
                     app.dependency_overrides.pop(get_current_user, None)
 
     assert r.status_code == 201
-    assert stale_pending_run.status == RemediationRunStatus.failed
-    assert session.commit.await_count == 2
+    assert session.commit.await_count == 1
     assert mock_sqs.send_message.call_count == 1
 
 
@@ -785,8 +809,7 @@ def test_create_run_recent_different_signature_allows_new_run(client: TestClient
                 app.dependency_overrides.pop(get_current_user, None)
 
     assert r.status_code == 201
-    assert stale_pending_run.status == RemediationRunStatus.failed
-    assert session.commit.await_count == 2
+    assert session.commit.await_count == 1
     assert mock_sqs.send_message.call_count == 1
 
 
@@ -811,7 +834,7 @@ def test_resend_run_rate_limited_after_three_attempts_in_window(client: TestClie
         ]
     }
 
-    session = _mock_async_session(tenant, run)
+    session = _mock_async_session(run)
 
     async def mock_get_db() -> AsyncGenerator[MagicMock, None]:
         yield session
@@ -983,6 +1006,7 @@ def test_create_group_pr_bundle_accepts_action_overrides(client: TestClient) -> 
     assert resolutions[str(action1.id)]["strategy_id"] == "config_enable_account_local_delivery"
     assert resolutions[str(action1.id)]["profile_id"] == "config_enable_account_local_delivery"
     assert resolutions[str(action1.id)]["strategy_inputs"] == {
+        "recording_scope": "keep_existing",
         "delivery_bucket_mode": "create_new"
     }
     assert resolutions[str(action2.id)]["strategy_id"] == "config_enable_centralized_delivery"
@@ -1317,8 +1341,8 @@ def test_create_group_pr_bundle_different_override_map_not_duplicate(client: Tes
                         app.dependency_overrides.pop(get_current_user, None)
 
     assert r.status_code == 201
-    assert stale_pending_run.status == RemediationRunStatus.failed
-    assert session.commit.await_count == 2
+    assert pending_run.status == RemediationRunStatus.pending
+    assert session.commit.await_count == 1
     assert mock_sqs.send_message.call_count == 1
     assert r.json()["action_id"] == str(action2.id)
     payload = json.loads(mock_sqs.send_message.call_args.kwargs["MessageBody"])
@@ -1418,8 +1442,8 @@ def test_create_group_pr_bundle_different_repo_target_not_duplicate(client: Test
                         app.dependency_overrides.pop(get_current_user, None)
 
     assert r.status_code == 201
-    assert stale_pending_run.status == RemediationRunStatus.failed
-    assert session.commit.await_count == 2
+    assert pending_run.status == RemediationRunStatus.pending
+    assert session.commit.await_count == 1
     assert mock_sqs.send_message.call_count == 1
     assert r.json()["action_id"] == str(action2.id)
     payload = json.loads(mock_sqs.send_message.call_args.kwargs["MessageBody"])
@@ -1520,7 +1544,10 @@ def test_create_group_pr_bundle_identical_override_map_still_duplicate(client: T
             "action_id": str(action1.id),
             "strategy_id": "config_enable_account_local_delivery",
             "profile_id": "config_enable_account_local_delivery",
-            "strategy_inputs": {"delivery_bucket_mode": "create_new"},
+            "strategy_inputs": {
+                "recording_scope": "keep_existing",
+                "delivery_bucket_mode": "create_new",
+            },
         },
         {
             "action_id": str(action2.id),
@@ -1693,6 +1720,126 @@ def test_create_group_pr_bundle_rejects_identical_successful_run(client: TestCli
     assert mock_boto_client.call_count == 0
 
 
+def test_list_remediation_runs_include_group_related_requires_action_id(client: TestClient) -> None:
+    tenant = _mock_tenant()
+    user = _mock_user(tenant.id)
+
+    async def mock_get_db() -> AsyncGenerator[MagicMock, None]:
+        yield MagicMock()
+
+    async def mock_get_optional_user() -> MagicMock:
+        return user
+
+    app.dependency_overrides[get_db] = mock_get_db
+    app.dependency_overrides[get_optional_user] = mock_get_optional_user
+    try:
+        r = client.get("/api/remediation-runs?include_group_related=true")
+    finally:
+        app.dependency_overrides.pop(get_db, None)
+        app.dependency_overrides.pop(get_optional_user, None)
+
+    assert r.status_code == 400
+    assert r.json()["detail"]["error"] == "include_group_related requires action_id"
+
+
+def test_list_remediation_runs_include_group_related_returns_grouped_runs_for_member_action(
+    client: TestClient,
+) -> None:
+    tenant = _mock_tenant()
+    user = _mock_user(tenant.id)
+    member_action_id = uuid.uuid4()
+    representative_action_id = uuid.uuid4()
+    run = MagicMock()
+    run.id = uuid.uuid4()
+    run.action_id = representative_action_id
+    run.mode = RemediationRunMode.pr_only
+    run.status = RemediationRunStatus.success
+    run.outcome = "Bundle created"
+    run.started_at = None
+    run.completed_at = None
+    run.created_at = datetime.now(timezone.utc)
+    run.artifacts = {"group_bundle": {"group_run_id": str(uuid.uuid4())}}
+    run.approved_by_user_id = None
+
+    count_result = MagicMock()
+    count_result.scalar.return_value = 1
+    list_result = MagicMock()
+    list_scalars = MagicMock()
+    list_scalars.unique.return_value.all.return_value = [run]
+    list_result.scalars.return_value = list_scalars
+    session = MagicMock()
+    session.execute = AsyncMock(side_effect=[count_result, list_result])
+
+    async def mock_get_db() -> AsyncGenerator[MagicMock, None]:
+        yield session
+
+    async def mock_get_optional_user() -> MagicMock:
+        return user
+
+    app.dependency_overrides[get_db] = mock_get_db
+    app.dependency_overrides[get_optional_user] = mock_get_optional_user
+    try:
+        r = client.get(
+            f"/api/remediation-runs?action_id={member_action_id}&include_group_related=true"
+        )
+    finally:
+        app.dependency_overrides.pop(get_db, None)
+        app.dependency_overrides.pop(get_optional_user, None)
+
+    assert r.status_code == 200
+    payload = r.json()
+    assert payload["total"] == 1
+    assert payload["items"][0]["id"] == str(run.id)
+    query_text = str(session.execute.call_args_list[1].args[0])
+    assert "action_group_memberships" in query_text
+    assert "action_group_runs" in query_text
+
+
+def test_list_remediation_runs_default_action_filter_omits_group_related_lookup(client: TestClient) -> None:
+    tenant = _mock_tenant()
+    user = _mock_user(tenant.id)
+    action_id = uuid.uuid4()
+    run = MagicMock()
+    run.id = uuid.uuid4()
+    run.action_id = action_id
+    run.mode = RemediationRunMode.pr_only
+    run.status = RemediationRunStatus.pending
+    run.outcome = None
+    run.started_at = None
+    run.completed_at = None
+    run.created_at = datetime.now(timezone.utc)
+    run.artifacts = {}
+    run.approved_by_user_id = None
+
+    count_result = MagicMock()
+    count_result.scalar.return_value = 1
+    list_result = MagicMock()
+    list_scalars = MagicMock()
+    list_scalars.unique.return_value.all.return_value = [run]
+    list_result.scalars.return_value = list_scalars
+    session = MagicMock()
+    session.execute = AsyncMock(side_effect=[count_result, list_result])
+
+    async def mock_get_db() -> AsyncGenerator[MagicMock, None]:
+        yield session
+
+    async def mock_get_optional_user() -> MagicMock:
+        return user
+
+    app.dependency_overrides[get_db] = mock_get_db
+    app.dependency_overrides[get_optional_user] = mock_get_optional_user
+    try:
+        r = client.get(f"/api/remediation-runs?action_id={action_id}")
+    finally:
+        app.dependency_overrides.pop(get_db, None)
+        app.dependency_overrides.pop(get_optional_user, None)
+
+    assert r.status_code == 200
+    query_text = str(session.execute.call_args_list[1].args[0])
+    assert "action_group_memberships" not in query_text
+    assert "action_group_runs" not in query_text
+
+
 def test_resend_run_legacy_grouped_artifacts_requeue_schema_v1(client: TestClient) -> None:
     """Legacy grouped runs should still reconstruct resend payloads without schema-v2 emission."""
     from backend.auth import get_optional_user
@@ -1717,7 +1864,7 @@ def test_resend_run_legacy_grouped_artifacts_requeue_schema_v1(client: TestClien
         },
     }
 
-    session = _mock_async_session(tenant, run)
+    session = _mock_async_session(run)
 
     async def mock_get_db() -> AsyncGenerator[MagicMock, None]:
         yield session
@@ -1784,7 +1931,7 @@ def test_resend_run_canonical_single_resolution_requeues_schema_v2(client: TestC
         "resolution": resolution,
     }
 
-    session = _mock_async_session(tenant, run)
+    session = _mock_async_session(run)
 
     async def mock_get_db() -> AsyncGenerator[MagicMock, None]:
         yield session
@@ -1883,7 +2030,7 @@ def test_resend_run_canonical_grouped_resolutions_requeue_schema_v2(client: Test
         },
     }
 
-    session = _mock_async_session(tenant, run)
+    session = _mock_async_session(run)
 
     async def mock_get_db() -> AsyncGenerator[MagicMock, None]:
         yield session
@@ -1912,7 +2059,7 @@ def test_resend_run_canonical_grouped_resolutions_requeue_schema_v2(client: Test
     assert payload["schema_version"] == REMEDIATION_RUN_QUEUE_SCHEMA_VERSION_V2
     assert payload["group_action_ids"] == [action_one, action_two]
     assert payload["repo_target"] == {"repository": "acme/live", "base_branch": "main"}
-    assert payload["action_resolutions"] == action_resolutions
+    assert payload["action_resolutions"] == sorted(action_resolutions, key=lambda item: item["action_id"])
     assert "resolution" not in payload
 
 
@@ -1935,6 +2082,13 @@ def test_create_group_pr_bundle_exception_only_strategy_rejected_400(client: Tes
     session.execute = AsyncMock(side_effect=[actions_result, account_result])
     session.add = MagicMock()
     session.commit = AsyncMock()
+    session.run_sync = AsyncMock(
+        return_value=(
+            uuid.uuid4(),
+            f"{action.action_type}|{action.account_id}|{action.region or 'global'}|{action.status}",
+            [action.id],
+        )
+    )
 
     async def mock_get_db() -> AsyncGenerator[MagicMock, None]:
         yield session
@@ -3132,11 +3286,13 @@ def test_remediation_options_root_delete_strategy_exposes_delete_specific_rollba
 
 
 def test_trigger_reeval_enqueues_reconcile_jobs(client: TestClient) -> None:
-    """Task 14: POST trigger-reeval enqueues inventory shard jobs for the action scope."""
+    """Task 14: POST trigger-reeval prefers targeted reconcile when action scope is derivable."""
     tenant = _mock_tenant()
     user = _mock_user(tenant.id)
     action = _mock_action(action_type="sg_restrict_public_ports")
     action.tenant_id = tenant.id
+    action.resource_id = "arn:aws:ec2:us-east-1:123456789012:security-group/sg-0123456789abcdef0"
+    action.target_id = f"{action.account_id}|{action.region}|{action.resource_id}|EC2.53"
     account = _mock_account(role_write_arn="arn:aws:iam::123456789012:role/WriteRole")
     account.regions = ["us-east-1"]
 
@@ -3174,12 +3330,62 @@ def test_trigger_reeval_enqueues_reconcile_jobs(client: TestClient) -> None:
     assert body["strategy_id"] == "sg_restrict_public_ports_guided"
     assert body["estimated_resolution_time"] == "12-24 hours"
     assert body["supports_immediate_reeval"] is True
-    assert body["enqueued_jobs"] == 2
-    assert mock_sqs.send_message.call_count == 2
+    assert body["enqueued_jobs"] == 1
+    assert mock_sqs.send_message.call_count == 1
     first_payload = json.loads(mock_sqs.send_message.call_args_list[0].kwargs["MessageBody"])
     assert first_payload["job_type"] == "reconcile_inventory_shard"
     assert first_payload["account_id"] == action.account_id
     assert first_payload["region"] == action.region
+    assert first_payload["service"] == "ec2"
+    assert first_payload["sweep_mode"] == "targeted"
+    assert first_payload["resource_ids"] == [action.resource_id]
+
+
+def test_trigger_reeval_falls_back_to_global_reconcile_when_action_scope_not_derivable(client: TestClient) -> None:
+    tenant = _mock_tenant()
+    user = _mock_user(tenant.id)
+    action = _mock_action(action_type="sg_restrict_public_ports")
+    action.tenant_id = tenant.id
+    action.resource_id = None
+    action.target_id = None
+    account = _mock_account(role_write_arn="arn:aws:iam::123456789012:role/WriteRole")
+    account.regions = ["us-east-1"]
+
+    async def mock_get_db() -> AsyncGenerator[MagicMock, None]:
+        yield _mock_async_session(tenant, action, account)
+
+    async def mock_get_optional_user() -> MagicMock:
+        return user
+
+    from backend.auth import get_optional_user
+
+    app.dependency_overrides[get_db] = mock_get_db
+    app.dependency_overrides[get_optional_user] = mock_get_optional_user
+    mock_sqs = MagicMock()
+    mock_sqs.send_message.return_value = {"MessageId": "reeval-msg-1"}
+    with patch("backend.routers.actions.boto3.client", return_value=mock_sqs):
+        with patch("backend.routers.actions.settings") as mock_settings:
+            mock_settings.has_inventory_reconcile_queue = True
+            mock_settings.SQS_INVENTORY_RECONCILE_QUEUE_URL = "https://sqs.us-east-1.amazonaws.com/123/reconcile"
+            mock_settings.control_plane_inventory_services_list = ["ec2", "s3"]
+            mock_settings.CONTROL_PLANE_INVENTORY_MAX_RESOURCES_PER_SHARD = 500
+            mock_settings.AWS_REGION = "us-east-1"
+            try:
+                r = client.post(
+                    f"/api/actions/{action.id}/trigger-reeval",
+                    json={"strategy_id": "sg_restrict_public_ports_guided"},
+                )
+            finally:
+                app.dependency_overrides.pop(get_db, None)
+                app.dependency_overrides.pop(get_optional_user, None)
+
+    assert r.status_code == 202
+    body = r.json()
+    assert body["enqueued_jobs"] == 2
+    assert mock_sqs.send_message.call_count == 2
+    first_payload = json.loads(mock_sqs.send_message.call_args_list[0].kwargs["MessageBody"])
+    assert first_payload["sweep_mode"] == "global"
+    assert "resource_ids" not in first_payload
 
 
 def test_trigger_reeval_rejects_unsupported_strategy(client: TestClient) -> None:
@@ -3387,6 +3593,117 @@ def test_remediation_preview_pr_only_includes_choice_impact_summary(client: Test
     )
     assert any(
         line.get("type") == "add" and line.get("label") == "Restricted admin ingress (IPv4)"
+        for line in data["diff_lines"]
+    )
+
+
+def test_remediation_preview_pr_only_ssm_only_simulation_is_truthful(client: TestClient) -> None:
+    tenant = _mock_tenant()
+    user = _mock_user(tenant.id)
+    action = _mock_action(action_type="sg_restrict_public_ports")
+    action.tenant_id = tenant.id
+    account = _mock_account(role_write_arn="arn:aws:iam::123456789012:role/WriteRole")
+
+    async def mock_get_db() -> AsyncGenerator[MagicMock, None]:
+        yield _mock_async_session(tenant, action, account)
+
+    async def mock_get_optional_user() -> MagicMock:
+        return user
+
+    from backend.auth import get_optional_user
+
+    app.dependency_overrides[get_db] = mock_get_db
+    app.dependency_overrides[get_optional_user] = mock_get_optional_user
+    with patch(
+        "backend.routers.actions.collect_runtime_risk_signals",
+        return_value={
+            "evidence": {
+                "security_group_id": "sg-0123456789abcdef0",
+                "public_admin_ipv4_ports": [22, 3389],
+                "public_admin_ipv6_ports": [22],
+            }
+        },
+    ):
+        try:
+            r = client.get(
+                f"/api/actions/{action.id}/remediation-preview",
+                params={
+                    "mode": "pr_only",
+                    "tenant_id": str(tenant.id),
+                    "strategy_id": "sg_restrict_public_ports_guided",
+                    "strategy_inputs": json.dumps({"access_mode": "ssm_only"}),
+                },
+            )
+        finally:
+            app.dependency_overrides.pop(get_db, None)
+            app.dependency_overrides.pop(get_optional_user, None)
+
+    assert r.status_code == 200
+    data = r.json()
+    assert "Instances must already be reachable through SSM Session Manager" in data["impact_summary"]
+    assert data["after_state"]["public_admin_ipv4_ports"] == []
+    assert data["after_state"]["public_admin_ipv6_ports"] == []
+    assert data["after_state"]["operator_access_path"] == "ssm_session_manager"
+    assert data["after_state"]["restricted_ipv4_cidr"] is None
+    assert not any(line.get("label") == "Restricted admin ingress (IPv4)" for line in data["diff_lines"])
+    assert any(line.get("label") == "Operator access path" for line in data["diff_lines"])
+
+
+def test_remediation_preview_pr_only_bastion_simulation_is_truthful(client: TestClient) -> None:
+    tenant = _mock_tenant()
+    tenant.remediation_settings = {"approved_bastion_security_group_ids": ["sg-bastion-1", "sg-bastion-2"]}
+    user = _mock_user(tenant.id)
+    action = _mock_action(action_type="sg_restrict_public_ports")
+    action.tenant_id = tenant.id
+    account = _mock_account(role_write_arn="arn:aws:iam::123456789012:role/WriteRole")
+
+    async def mock_get_db() -> AsyncGenerator[MagicMock, None]:
+        yield _mock_async_session(tenant, action, account)
+
+    async def mock_get_optional_user() -> MagicMock:
+        return user
+
+    from backend.auth import get_optional_user
+
+    app.dependency_overrides[get_db] = mock_get_db
+    app.dependency_overrides[get_optional_user] = mock_get_optional_user
+    with patch(
+        "backend.routers.actions.collect_runtime_risk_signals",
+        return_value={
+            "evidence": {
+                "security_group_id": "sg-0123456789abcdef0",
+                "public_admin_ipv4_ports": [22, 3389],
+                "public_admin_ipv6_ports": [22],
+            }
+        },
+    ):
+        try:
+            r = client.get(
+                f"/api/actions/{action.id}/remediation-preview",
+                params={
+                    "mode": "pr_only",
+                    "tenant_id": str(tenant.id),
+                    "strategy_id": "sg_restrict_public_ports_guided",
+                    "strategy_inputs": json.dumps({"access_mode": "bastion_sg_reference"}),
+                },
+            )
+        finally:
+            app.dependency_overrides.pop(get_db, None)
+            app.dependency_overrides.pop(get_optional_user, None)
+
+    assert r.status_code == 200
+    data = r.json()
+    assert "approved bastion security groups" in data["impact_summary"]
+    assert data["after_state"]["public_admin_ipv4_ports"] == []
+    assert data["after_state"]["public_admin_ipv6_ports"] == []
+    assert data["after_state"]["operator_access_path"] == "approved_bastion_security_groups"
+    assert data["after_state"]["approved_bastion_security_group_ids"] == ["sg-bastion-1", "sg-bastion-2"]
+    assert data["after_state"]["restricted_ipv4_cidr"] is None
+    assert not any(line.get("label") == "Restricted admin ingress (IPv4)" for line in data["diff_lines"])
+    assert any(
+        line.get("label") == "Operator access path"
+        and "sg-bastion-1" in line.get("value", "")
+        and "sg-bastion-2" in line.get("value", "")
         for line in data["diff_lines"]
     )
 
@@ -3612,7 +3929,7 @@ def test_patch_cancel_pending_run_200(client: TestClient) -> None:
 
     async def mock_get_db() -> AsyncGenerator[MagicMock, None]:
         # get_tenant needs tenant; patch_remediation_run select needs run
-        session = _mock_async_session(tenant, run)
+        session = _mock_async_session(run)
         session.flush = MagicMock()
         yield session
 
@@ -3696,7 +4013,7 @@ def test_get_run_detail_includes_artifact_metadata_and_closure_links(client: Tes
     }
 
     async def mock_get_db() -> AsyncGenerator[MagicMock, None]:
-        session = _mock_async_session(tenant, run)
+        session = _mock_async_session(run)
         yield session
 
     async def mock_get_optional_user() -> MagicMock:
@@ -3760,7 +4077,7 @@ def test_get_pr_bundle_zip_200(client: TestClient) -> None:
 
     async def mock_get_db() -> AsyncGenerator[MagicMock, None]:
         # get_tenant query, then get run query (no selectinload for pr-bundle.zip)
-        session = _mock_async_session(tenant, run)
+        session = _mock_async_session(run)
         yield session
 
     from backend.auth import get_optional_user
@@ -3805,7 +4122,7 @@ def test_get_pr_bundle_zip_is_deterministic_for_same_artifacts(client: TestClien
     }
 
     async def mock_get_db() -> AsyncGenerator[MagicMock, None]:
-        session = _mock_async_session(tenant, run)
+        session = _mock_async_session(run)
         yield session
 
     from backend.auth import get_optional_user
@@ -3840,7 +4157,7 @@ def test_get_pr_bundle_zip_404_no_artifacts(client: TestClient) -> None:
     run.artifacts = None
 
     async def mock_get_db() -> AsyncGenerator[MagicMock, None]:
-        session = _mock_async_session(tenant, run)
+        session = _mock_async_session(run)
         yield session
 
     async def mock_get_optional_user() -> MagicMock:

@@ -4,6 +4,8 @@ from __future__ import annotations
 from textwrap import dedent
 from typing import Any
 
+from backend.services.remediation_support_bucket import SUPPORT_BUCKET_APPLY_SNIPPET
+
 AWS_CONFIG_APPLY_SCRIPT_PATH = "scripts/aws_config_apply.py"
 AWS_CONFIG_ROLLBACK_DIR = ".aws-config-rollback"
 AWS_CONFIG_ROLLBACK_SCRIPT_PATH = "rollback/aws_config_restore.py"
@@ -92,8 +94,9 @@ def _apply_header() -> str:
 
 
 def _apply_helpers() -> str:
-    return dedent(
-        """\
+    return (
+        dedent(
+            """\
 
         def env_text(name: str, default: str = "") -> str:
             value = os.environ.get(name, "").strip()
@@ -315,6 +318,10 @@ def _apply_helpers() -> str:
             version = (existing or {}).get("Version") or "2012-10-17"
             return {"Version": version, "Statement": list(merged.values())}
         """
+        )
+        + "\n"
+        + dedent(SUPPORT_BUCKET_APPLY_SNIPPET).strip()
+        + "\n"
     )
 
 
@@ -441,6 +448,7 @@ def _apply_main() -> str:
             if create_local_bucket:
                 if not bucket_exists(bucket, region):
                     create_bucket(bucket, region)
+                apply_support_bucket_baseline(bucket, region)
                 original_policy = load_json(snapshot_dir / "pre_target_bucket_state.json").get("policy_json")
                 merged_policy = merge_bucket_policies(
                     original_policy,

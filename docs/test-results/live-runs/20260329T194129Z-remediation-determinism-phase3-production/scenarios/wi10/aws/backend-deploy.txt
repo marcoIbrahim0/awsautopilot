@@ -1,0 +1,68 @@
+Region: eu-north-1
+Build stack: security-autopilot-saas-serverless-build
+Runtime stack: security-autopilot-saas-serverless-runtime
+Name prefix: security-autopilot-dev
+Image tag: 20260329T222719Z
+Enable worker mappings: true
+
+0) Verifying runtime/DB alignment before build...
+database_failover selected source=fallback host=ep-curly-butterfly-al0pzr9w-pooler.c-3.eu-central-1.aws.neon.tech after primary probe failure
+Runtime/DB alignment passed: relation=at_head current=['0053_action_group_pending_confirmation_refresh'] expected=['0053_action_group_pending_confirmation_refresh']
+
+1) Deploying build stack (ECR + S3 + CodeBuild)...
+
+Waiting for changeset to be created..
+
+No changes to deploy. Stack security-autopilot-saas-serverless-build is up to date
+
+2) Creating source zip (excluding .env) for CodeBuild...
+Uploading: s3://security-autopilot-dev-serverless-src-029037611564-eu-north-1/sources/security-autopilot-dev/serverless-20260329T222719Z.zip
+
+3) Building/pushing images in CodeBuild...
+Build ID: security-autopilot-dev-serverless-image-builder:4298bf2f-6621-470c-bca7-b9247abe7755
+
+4) Deploying runtime stack (API Gateway + Lambdas)...
+
+Waiting for changeset to be created..
+Waiting for stack create/update to complete
+Successfully created/updated stack - security-autopilot-saas-serverless-runtime
+
+5) Normalizing Lambda runtime/helper state drift...
+Region: eu-north-1
+Name prefix: security-autopilot-dev
+Enable worker: true
+Worker reserved concurrency: 10
+reserved concurrency already clear: security-autopilot-dev-api
+reserved concurrency already 10: security-autopilot-dev-worker
+worker mapping already enabled: 1a8946b6-7673-4533-be3f-93599901aa78
+worker mapping already enabled: cbc06570-74c1-4deb-bafd-117a1ce4b3b2
+worker mapping already enabled: 5dd3132b-f2ef-451a-b4e6-10a28b58e7c8
+worker mapping already enabled: f5de3fa1-19e6-42d1-b1c9-307a0bef9455
+
+Deployed: security-autopilot-saas-serverless-runtime (eu-north-1)
+----------------------------------------------------------------------------------------------------------------------------------------------
+|                                                               DescribeStacks                                                               |
++--------------------------------------------------+---------------------+-------------------------------------------------------------------+
+|                    Description                   |      OutputKey      |                            OutputValue                            |
++--------------------------------------------------+---------------------+-------------------------------------------------------------------+
+|  Stage ARN for WAF association (HTTP API).       |  ApiGatewayStageArn |  arn:aws:apigateway:eu-north-1::/apis/7ti19t61e6/stages/$default  |
+|  Public base URL for the API (no trailing /api). |  ApiBaseUrl         |  https://7ti19t61e6.execute-api.eu-north-1.amazonaws.com          |
+|  API Gateway HTTP API ID.                        |  ApiId              |  7ti19t61e6                                                       |
++--------------------------------------------------+---------------------+-------------------------------------------------------------------+
+
+6) Waiting for Lambda image rollout...
+lambda image active: security-autopilot-dev-api -> 029037611564.dkr.ecr.eu-north-1.amazonaws.com/security-autopilot-dev-saas-api:20260329T222719Z
+lambda image active: security-autopilot-dev-worker -> 029037611564.dkr.ecr.eu-north-1.amazonaws.com/security-autopilot-dev-saas-worker:20260329T222719Z
+
+7) Verifying runtime/DB alignment before database upgrade...
+database_failover selected source=fallback host=ep-curly-butterfly-al0pzr9w-pooler.c-3.eu-central-1.aws.neon.tech after primary probe failure
+Runtime/DB alignment passed: relation=at_head current=['0053_action_group_pending_confirmation_refresh'] expected=['0053_action_group_pending_confirmation_refresh']
+
+8) Applying database migrations...
+database_failover selected source=fallback host=ep-curly-butterfly-al0pzr9w-pooler.c-3.eu-central-1.aws.neon.tech after primary probe failure
+INFO  [alembic.runtime.migration] Context impl PostgresqlImpl.
+INFO  [alembic.runtime.migration] Will assume transactional DDL.
+
+9) Verifying runtime/DB alignment after database upgrade...
+database_failover selected source=fallback host=ep-curly-butterfly-al0pzr9w-pooler.c-3.eu-central-1.aws.neon.tech after primary probe failure
+Runtime/DB alignment passed: relation=at_head current=['0053_action_group_pending_confirmation_refresh'] expected=['0053_action_group_pending_confirmation_refresh']

@@ -1,0 +1,348 @@
+{
+  "action": {
+    "account_id": "696505809372",
+    "id": "5f5d8617-4da8-4830-a1dc-6b4e98f6b0b0",
+    "region": "eu-north-1",
+    "status": "open",
+    "title": "S3 general purpose buckets should have server access logging enabled"
+  },
+  "action_id": "5f5d8617-4da8-4830-a1dc-6b4e98f6b0b0",
+  "approved_by_user_id": "896bbef7-0afe-4a5a-b849-3ff1c4cdcd6e",
+  "artifact_metadata": {
+    "closure_checklist": [
+      {
+        "detail": "Implementation artifact linked for engineering handoff.",
+        "evidence_keys": [
+          "pr_bundle"
+        ],
+        "id": "artifact_recorded",
+        "status": "complete",
+        "title": "Implementation artifact recorded"
+      },
+      {
+        "detail": "Evidence pointers are attached to this run.",
+        "evidence_keys": [
+          "pr_bundle",
+          "risk_snapshot",
+          "diff_summary",
+          "rollback_notes",
+          "control_mapping_context",
+          "activity_log"
+        ],
+        "id": "evidence_attached",
+        "status": "complete",
+        "title": "Evidence pointers attached"
+      },
+      {
+        "detail": "Refresh or recompute the parent action to confirm closure.",
+        "evidence_keys": [],
+        "id": "action_closure_verified",
+        "status": "pending",
+        "title": "Action closure verified"
+      }
+    ],
+    "evidence_pointers": [
+      {
+        "description": "Terraform remediation bundle with 6 files.",
+        "href": "/remediation-runs/7fe2766d-7c8e-41de-b0ab-bc616b53978a#run-generated-files",
+        "key": "pr_bundle",
+        "kind": "bundle",
+        "label": "Engineering PR bundle",
+        "metadata": {
+          "file_count": 6,
+          "format": "terraform",
+          "generated_action_count": null,
+          "has_readme": true,
+          "skipped_action_count": null,
+          "step_count": 7
+        }
+      },
+      {
+        "description": "2 dependency checks captured for this run.",
+        "href": "/remediation-runs/7fe2766d-7c8e-41de-b0ab-bc616b53978a#run-generated-files",
+        "key": "risk_snapshot",
+        "kind": "risk_snapshot",
+        "label": "Dependency review snapshot",
+        "metadata": {
+          "check_count": 2,
+          "recommendation": "safe_to_proceed"
+        }
+      },
+      {
+        "description": "3 mapped file(s) captured with reproducible hashes.",
+        "href": "/remediation-runs/7fe2766d-7c8e-41de-b0ab-bc616b53978a#run-generated-files",
+        "key": "diff_summary",
+        "kind": "diff_summary",
+        "label": "Generated diff summary",
+        "metadata": {
+          "file_count": 3,
+          "fingerprint_sha256": "51c9fd46e941fc5ce454f071ce8827ee7b32bdac11f16cf32016845a03207921"
+        }
+      },
+      {
+        "description": "1 rollback note(s) prepared for this run.",
+        "href": "/remediation-runs/7fe2766d-7c8e-41de-b0ab-bc616b53978a#run-generated-files",
+        "key": "rollback_notes",
+        "kind": "rollback_notes",
+        "label": "Rollback notes",
+        "metadata": {
+          "entry_count": 1
+        }
+      },
+      {
+        "description": "1 control ID(s) and 0 framework mapping row(s) attached.",
+        "href": "/remediation-runs/7fe2766d-7c8e-41de-b0ab-bc616b53978a#run-generated-files",
+        "key": "control_mapping_context",
+        "kind": "control_mapping_context",
+        "label": "Control mapping context",
+        "metadata": {
+          "control_count": 1,
+          "mapping_count": 0
+        }
+      },
+      {
+        "description": "3 execution log lines recorded for this run.",
+        "href": "/remediation-runs/7fe2766d-7c8e-41de-b0ab-bc616b53978a#run-activity",
+        "key": "activity_log",
+        "kind": "activity_log",
+        "label": "Run activity log",
+        "metadata": {
+          "line_count": 3
+        }
+      }
+    ],
+    "implementation_artifacts": [
+      {
+        "description": "Terraform remediation bundle with 6 files.",
+        "executable": true,
+        "href": "/remediation-runs/7fe2766d-7c8e-41de-b0ab-bc616b53978a#run-generated-files",
+        "key": "pr_bundle",
+        "kind": "bundle",
+        "label": "Engineering PR bundle",
+        "metadata": {
+          "file_count": 6,
+          "format": "terraform",
+          "generated_action_count": null,
+          "has_readme": true,
+          "skipped_action_count": null,
+          "step_count": 7
+        }
+      }
+    ]
+  },
+  "artifacts": {
+    "cloudtrail_bucket_creation_approval": {
+      "approved": true,
+      "approved_at": "2026-03-26T05:06:24.619690+00:00",
+      "approved_by_user_id": "896bbef7-0afe-4a5a-b849-3ff1c4cdcd6e"
+    },
+    "control_mapping_context": {
+      "artifact_type": "control_mapping_context",
+      "control_ids": [
+        "S3.9"
+      ],
+      "mapped_control_ids": [],
+      "mappings": [],
+      "unmapped_control_ids": [
+        "S3.9"
+      ],
+      "version": 1
+    },
+    "diff_summary": {
+      "artifact_type": "generated_diff_summary",
+      "file_count": 3,
+      "files": [
+        {
+          "bundle_path": "providers.tf",
+          "byte_count": 479,
+          "change_type": "create_or_update",
+          "content_sha256": "9a0536e0e9790c63a892e3b288fc6b299b5f7a1ea52e004cf4a0a8833e7227f3",
+          "line_count": 18,
+          "repo_path": "providers.tf"
+        },
+        {
+          "bundle_path": "s3_bucket_access_logging.tf",
+          "byte_count": 3178,
+          "change_type": "create_or_update",
+          "content_sha256": "43483c558b3264ea0a09760bfe49ddeb992997617b86673dfa2e762a86329a79",
+          "line_count": 114,
+          "repo_path": "s3_bucket_access_logging.tf"
+        },
+        {
+          "bundle_path": "README.txt",
+          "byte_count": 1317,
+          "change_type": "create_or_update",
+          "content_sha256": "462730cdcbe8e44746f7f130695eaa83900fd68de4f5a84fd53da87cd67220d6",
+          "line_count": 32,
+          "repo_path": "README.txt"
+        }
+      ],
+      "fingerprint_sha256": "51c9fd46e941fc5ce454f071ce8827ee7b32bdac11f16cf32016845a03207921",
+      "repo_target_configured": false,
+      "summary_lines": [
+        "`providers.tf` <- `providers.tf` (18 lines, sha256:9a0536e0e979)",
+        "`s3_bucket_access_logging.tf` <- `s3_bucket_access_logging.tf` (114 lines, sha256:43483c558b32)",
+        "`README.txt` <- `README.txt` (32 lines, sha256:462730cdcbe8)"
+      ],
+      "version": 1
+    },
+    "pr_bundle": {
+      "files": [
+        {
+          "content": "# Configure AWS provider for account 696505809372 and region eu-north-1.\n# Credentials: default chain (AWS_ACCESS_KEY_ID/AWS_SECRET_ACCESS_KEY, or ~/.aws/credentials [default]).\n# If you use a named profile, add: profile = \"your-profile-name\" (do not use account ID as profile name).\n\nterraform {\n  required_version = \">= 1.0\"\n\n  required_providers {\n    aws = {\n      source  = \"hashicorp/aws\"\n      version = \"= 5.100.0\"\n    }\n  }\n}\n\nprovider \"aws\" {\n  region = \"eu-north-1\"\n}\n",
+          "path": "providers.tf"
+        },
+        {
+          "content": "# S3 bucket access logging - Action: 5f5d8617-4da8-4830-a1dc-6b4e98f6b0b0\n# Remediation for: S3 general purpose buckets should have server access logging enabled\n# Account: 696505809372 | Region: eu-north-1 | Bucket: security-autopilot-access-logs-696505809372\n# Control: S3.9\n\nvariable \"source_bucket_name\" {\n  type        = string\n  description = \"S3 source bucket where server access logging is enabled\"\n  default     = \"security-autopilot-access-logs-696505809372\"\n}\n\nvariable \"log_bucket_name\" {\n  type        = string\n  description = \"S3 bucket that will receive access logs\"\n  default     = \"security-autopilot-phase5-access-logs-696505809372-050614\"\n}\n\nvariable \"create_log_bucket\" {\n  type        = bool\n  description = \"When true, create the destination bucket with the shared support-bucket baseline.\"\n  default     = true\n}\n\nvariable \"log_prefix\" {\n  type        = string\n  description = \"Prefix for delivered access logs\"\n  default     = \"s3-access-logs/\"\n}\n\nresource \"aws_s3_bucket\" \"access_logs\" {\n  count  = var.create_log_bucket ? 1 : 0\n  bucket = var.log_bucket_name\n}\n\n\nresource \"aws_s3_bucket_public_access_block\" \"access_logs\" {\n  count      = var.create_log_bucket ? 1 : 0\n  bucket                  = aws_s3_bucket.access_logs[0].id\n  block_public_acls       = true\n  block_public_policy     = true\n  ignore_public_acls      = true\n  restrict_public_buckets = true\n  depends_on = [aws_s3_bucket.access_logs]\n}\n\nresource \"aws_s3_bucket_server_side_encryption_configuration\" \"access_logs\" {\n  count      = var.create_log_bucket ? 1 : 0\n  bucket = aws_s3_bucket.access_logs[0].id\n\n  rule {\n    apply_server_side_encryption_by_default {\n      sse_algorithm     = \"aws:kms\"\n      kms_master_key_id = \"alias/aws/s3\"\n    }\n    bucket_key_enabled = true\n  }\n  depends_on = [aws_s3_bucket.access_logs]\n}\n\nresource \"aws_s3_bucket_lifecycle_configuration\" \"access_logs\" {\n  count      = var.create_log_bucket ? 1 : 0\n  bucket = aws_s3_bucket.access_logs[0].id\n\n  rule {\n    id     = \"abort-incomplete-multipart\"\n    status = \"Enabled\"\n    filter {}\n    abort_incomplete_multipart_upload {\n      days_after_initiation = 7\n    }\n  }\n  depends_on = [aws_s3_bucket.access_logs]\n}\n\ndata \"aws_iam_policy_document\" \"ssl_only_access_logs\" {\n\n  statement {\n    sid     = \"DenyInsecureTransport\"\n    effect  = \"Deny\"\n    actions = [\"s3:*\"]\n    resources = [\n      \"${arn_prefix_access_logs}\",\n      \"${arn_prefix_access_logs}/*\",\n    ]\n    principals {\n      type        = \"*\"\n      identifiers = [\"*\"]\n    }\n    condition {\n      test     = \"Bool\"\n      variable = \"aws:SecureTransport\"\n      values   = [\"false\"]\n    }\n  }\n}\n\nlocals {\n  arn_prefix_access_logs = \"arn:aws:s3:::${var.log_bucket_name}\"\n}\n\nresource \"aws_s3_bucket_policy\" \"access_logs\" {\n  count      = var.create_log_bucket ? 1 : 0\n  bucket = aws_s3_bucket.access_logs[0].id\n  policy = data.aws_iam_policy_document.ssl_only_access_logs.json\n  depends_on = [aws_s3_bucket.access_logs]\n}\n\n\nresource \"aws_s3_bucket_logging\" \"security_autopilot\" {\n  bucket        = var.source_bucket_name\n  target_bucket = var.log_bucket_name\n  target_prefix = var.log_prefix\n  depends_on    = [aws_s3_bucket_policy.access_logs]\n}\n",
+          "path": "s3_bucket_access_logging.tf"
+        },
+        {
+          "content": "AWS Security Autopilot \u2014 Terraform bundle\n\nCredentials and region\n--------------------\n- Use your normal AWS credentials: a named profile from ~/.aws/config (e.g. default) or environment variables (AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY).\n- Do NOT set AWS_PROFILE to your account ID. Use a profile name (e.g. default) or leave unset to use the default profile.\n- Set the region: export AWS_REGION=eu-north-1 (or your action's region).\n\nCommands\n--------\nterraform init\nterraform plan\nterraform apply\n\nTerraform proof metadata (C2/C5)\n-------------------------------\n- terraform_plan_timestamp_utc: 2026-03-26T05:06:39+00:00\n- preserved_configuration_statement: The generated IaC is scoped to this control and is expected to preserve unrelated existing configuration unless a generated diff explicitly changes it.\n\n\nSelected strategy\n-----------------\n- strategy_id: s3_enable_access_logging_guided\n\nRisk recommendation\n-------------------\n- safe_to_proceed\n\nDependency review checklist\n---------------------------\n- [pass] s3_access_logging_bucket_scope_confirmed: Bucket-scoped target was identified for S3 access logging. This action can stay executable once destination safety is proven.\n- [pass] s3_access_logging_destination_safety_proven: Destination safety is proven for the selected S3 access-log bucket.\n",
+          "path": "README.txt"
+        },
+        {
+          "content": "{\n  \"artifact_type\": \"generated_diff_summary\",\n  \"file_count\": 3,\n  \"files\": [\n    {\n      \"bundle_path\": \"providers.tf\",\n      \"byte_count\": 479,\n      \"change_type\": \"create_or_update\",\n      \"content_sha256\": \"9a0536e0e9790c63a892e3b288fc6b299b5f7a1ea52e004cf4a0a8833e7227f3\",\n      \"line_count\": 18,\n      \"repo_path\": \"providers.tf\"\n    },\n    {\n      \"bundle_path\": \"s3_bucket_access_logging.tf\",\n      \"byte_count\": 3178,\n      \"change_type\": \"create_or_update\",\n      \"content_sha256\": \"43483c558b3264ea0a09760bfe49ddeb992997617b86673dfa2e762a86329a79\",\n      \"line_count\": 114,\n      \"repo_path\": \"s3_bucket_access_logging.tf\"\n    },\n    {\n      \"bundle_path\": \"README.txt\",\n      \"byte_count\": 1317,\n      \"change_type\": \"create_or_update\",\n      \"content_sha256\": \"462730cdcbe8e44746f7f130695eaa83900fd68de4f5a84fd53da87cd67220d6\",\n      \"line_count\": 32,\n      \"repo_path\": \"README.txt\"\n    }\n  ],\n  \"fingerprint_sha256\": \"51c9fd46e941fc5ce454f071ce8827ee7b32bdac11f16cf32016845a03207921\",\n  \"repo_target_configured\": false,\n  \"summary_lines\": [\n    \"`providers.tf` <- `providers.tf` (18 lines, sha256:9a0536e0e979)\",\n    \"`s3_bucket_access_logging.tf` <- `s3_bucket_access_logging.tf` (114 lines, sha256:43483c558b32)\",\n    \"`README.txt` <- `README.txt` (32 lines, sha256:462730cdcbe8)\"\n  ],\n  \"version\": 1\n}\n",
+          "path": "pr_automation/diff_summary.json"
+        },
+        {
+          "content": "# Rollback notes\n\nPrefer reverting through version control and the same reviewed deployment workflow.\n\n## S3 general purpose buckets should have server access logging enabled\n- Action ID: `5f5d8617-4da8-4830-a1dc-6b4e98f6b0b0`\n- Control ID: `S3.9`\n- Target: `696505809372|eu-north-1|arn:aws:s3:::security-autopilot-access-logs-696505809372|S3.9`\n- Rollback command: `aws s3api put-bucket-logging --bucket security-autopilot-access-logs-696505809372 --bucket-logging-status '{}'`\n",
+          "path": "pr_automation/rollback_notes.md"
+        },
+        {
+          "content": "{\n  \"artifact_type\": \"control_mapping_context\",\n  \"control_ids\": [\n    \"S3.9\"\n  ],\n  \"mapped_control_ids\": [],\n  \"mappings\": [],\n  \"unmapped_control_ids\": [\n    \"S3.9\"\n  ],\n  \"version\": 1\n}\n",
+          "path": "pr_automation/control_mapping_context.json"
+        }
+      ],
+      "format": "terraform",
+      "metadata": {
+        "automation_file_count": 3,
+        "diff_fingerprint_sha256": "51c9fd46e941fc5ce454f071ce8827ee7b32bdac11f16cf32016845a03207921",
+        "repo_target_configured": false
+      },
+      "steps": [
+        "Configure AWS provider for account 696505809372 and region eu-north-1.",
+        "Set log_bucket_name to a dedicated destination bucket.",
+        "This bundle will create the destination bucket with the shared support-bucket baseline before enabling access logging.",
+        "Do not use the source bucket as the log destination.",
+        "Run `terraform init` and `terraform plan`.",
+        "Run `terraform apply` to enable S3 server access logging.",
+        "Return to the action and click **Recompute actions** or trigger ingest to verify."
+      ]
+    },
+    "resolution": {
+      "blocked_reasons": [],
+      "decision_rationale": "Family resolver kept S3.9 executable because bucket scope and destination safety are proven. Run creation did not require additional risk-only acceptance.",
+      "decision_version": "resolver/v1",
+      "finding_coverage": {},
+      "missing_defaults": [],
+      "missing_inputs": [],
+      "preservation_summary": {
+        "ambiguous_source_destination_relationship": false,
+        "destination_bucket_name": "security-autopilot-phase5-access-logs-696505809372-050614",
+        "destination_bucket_reachable": false,
+        "destination_safety_proven": true,
+        "executable_destination_allowed": true,
+        "family": "s3_bucket_access_logging",
+        "family_strategy": "s3_enable_access_logging_guided",
+        "selected_branch": "s3_enable_access_logging_guided",
+        "single_profile_compatible": true,
+        "source_bucket_name": "security-autopilot-access-logs-696505809372",
+        "source_bucket_scope_proven": true,
+        "strategy_only_supported": true
+      },
+      "profile_id": "s3_enable_access_logging_guided",
+      "rejected_profiles": [],
+      "resolved_inputs": {
+        "create_log_bucket": true,
+        "log_bucket_name": "security-autopilot-phase5-access-logs-696505809372-050614"
+      },
+      "strategy_id": "s3_enable_access_logging_guided",
+      "support_tier": "deterministic_bundle"
+    },
+    "risk_acknowledged": true,
+    "risk_snapshot": {
+      "checks": [
+        {
+          "code": "s3_access_logging_bucket_scope_confirmed",
+          "message": "Bucket-scoped target was identified for S3 access logging. This action can stay executable once destination safety is proven.",
+          "status": "pass"
+        },
+        {
+          "code": "s3_access_logging_destination_safety_proven",
+          "message": "Destination safety is proven for the selected S3 access-log bucket.",
+          "status": "pass"
+        }
+      ],
+      "evidence": {
+        "collected_at": "2026-03-26T05:06:24.369998+00:00",
+        "log_bucket_name": "security-autopilot-phase5-access-logs-696505809372-050614",
+        "strategy_id": "s3_enable_access_logging_guided",
+        "target_bucket": "security-autopilot-access-logs-696505809372"
+      },
+      "recommendation": "safe_to_proceed",
+      "warnings": [
+        "Do not use the source bucket as the logging destination."
+      ]
+    },
+    "rollback_notes": {
+      "artifact_type": "rollback_notes",
+      "entries": [
+        {
+          "action_id": "5f5d8617-4da8-4830-a1dc-6b4e98f6b0b0",
+          "action_type": "s3_bucket_access_logging",
+          "control_id": "S3.9",
+          "rollback_command": "aws s3api put-bucket-logging --bucket security-autopilot-access-logs-696505809372 --bucket-logging-status '{}'",
+          "target_id": "696505809372|eu-north-1|arn:aws:s3:::security-autopilot-access-logs-696505809372|S3.9",
+          "title": "S3 general purpose buckets should have server access logging enabled"
+        }
+      ],
+      "entry_count": 1,
+      "recommended_path": "Prefer reverting through version control and the same reviewed deployment workflow.",
+      "version": 1
+    },
+    "selected_strategy": "s3_enable_access_logging_guided",
+    "strategy_inputs": {
+      "create_log_bucket": true,
+      "log_bucket_name": "security-autopilot-phase5-access-logs-696505809372-050614"
+    }
+  },
+  "completed_at": "2026-03-26T05:06:39.551341+00:00",
+  "created_at": "2026-03-26T05:06:24.199552+00:00",
+  "id": "7fe2766d-7c8e-41de-b0ab-bc616b53978a",
+  "logs": "Run started at 2026-03-26T05:06:39.462996+00:00.\nPR bundle generated for action_type=s3_bucket_access_logging strategy=s3_enable_access_logging_guided.\nRun completed at 2026-03-26T05:06:39.551341+00:00.",
+  "mode": "pr_only",
+  "outcome": "PR bundle generated",
+  "resolution": {
+    "blocked_reasons": [],
+    "decision_rationale": "Family resolver kept S3.9 executable because bucket scope and destination safety are proven. Run creation did not require additional risk-only acceptance.",
+    "decision_version": "resolver/v1",
+    "finding_coverage": {},
+    "missing_defaults": [],
+    "missing_inputs": [],
+    "preservation_summary": {
+      "ambiguous_source_destination_relationship": false,
+      "destination_bucket_name": "security-autopilot-phase5-access-logs-696505809372-050614",
+      "destination_bucket_reachable": false,
+      "destination_safety_proven": true,
+      "executable_destination_allowed": true,
+      "family": "s3_bucket_access_logging",
+      "family_strategy": "s3_enable_access_logging_guided",
+      "selected_branch": "s3_enable_access_logging_guided",
+      "single_profile_compatible": true,
+      "source_bucket_name": "security-autopilot-access-logs-696505809372",
+      "source_bucket_scope_proven": true,
+      "strategy_only_supported": true
+    },
+    "profile_id": "s3_enable_access_logging_guided",
+    "rejected_profiles": [],
+    "resolved_inputs": {
+      "create_log_bucket": true,
+      "log_bucket_name": "security-autopilot-phase5-access-logs-696505809372-050614"
+    },
+    "strategy_id": "s3_enable_access_logging_guided",
+    "support_tier": "deterministic_bundle"
+  },
+  "started_at": "2026-03-26T05:06:39.462996+00:00",
+  "status": "success",
+  "updated_at": "2026-03-26T05:06:39.306949+00:00"
+}

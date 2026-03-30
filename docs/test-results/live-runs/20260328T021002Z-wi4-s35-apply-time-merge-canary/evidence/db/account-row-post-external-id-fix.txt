@@ -1,0 +1,5 @@
+                  id                  |  account_id  |        external_id        |                        role_read_arn                        |  status   
+--------------------------------------+--------------+---------------------------+-------------------------------------------------------------+-----------
+ 1be48ee9-e9cb-437d-802e-19c4e672083c | 696505809372 | ocypheris-p2-e2e-20260312 | arn:aws:iam::696505809372:role/CodexP2SecurityHubImportRole | validated
+(1 row)
+

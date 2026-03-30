@@ -1,0 +1,8 @@
+2026-03-28 04:16:31 | INFO     | alembic.runtime.migration | Context impl PostgresqlImpl.
+2026-03-28 04:16:31 | INFO     | alembic.runtime.migration | Will assume transactional DDL.
+2026-03-28 04:16:31 | INFO     | worker | Starting worker pool=all queue=events url=https://sqs.eu-north-1.amazonaws.com/029037611564/security-autopilot-wi4s3503280216-fastlane region=eu-north-1
+2026-03-28 04:16:31 | INFO     | botocore.credentials | Found credentials in shared credentials file: ~/.aws/credentials
+2026-03-28 04:16:32 | INFO     | worker | Starting worker pool=all queue=inventory url=https://sqs.eu-north-1.amazonaws.com/029037611564/security-autopilot-wi4s3503280216-reconcile region=eu-north-1
+2026-03-28 04:16:32 | INFO     | worker | Starting worker pool=all queue=export url=https://sqs.eu-north-1.amazonaws.com/029037611564/security-autopilot-wi4s3503280216-export region=eu-north-1
+2026-03-28 04:16:32 | INFO     | worker | Starting worker pool=all queue=legacy url=https://sqs.eu-north-1.amazonaws.com/029037611564/security-autopilot-wi4s3503280216-ingest region=eu-north-1
+2026-03-28 04:16:32 | INFO     | worker | Worker concurrency guardrail max_in_flight_per_queue=10

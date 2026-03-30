@@ -1,0 +1,92 @@
+[
+  {
+    "control": "EC2.53",
+    "region": "eu-north-1",
+    "run_id": "d5d01a2b-fd75-420a-b026-f0ba40a774bd",
+    "exit_code": 0,
+    "support_tier": null,
+    "runnable_action_count": 4,
+    "log_path": "docs/test-results/live-runs/20260324T223645Z-all-controls-live-e2e/evidence/bundles/pr-bundle-d5d01a2b-fd75-420a-b026-f0ba40a774bd-run.log",
+    "extract_dir": "docs/test-results/live-runs/20260324T223645Z-all-controls-live-e2e/evidence/bundles/pr-bundle-d5d01a2b-fd75-420a-b026-f0ba40a774bd"
+  },
+  {
+    "control": "SSM.7",
+    "region": "eu-north-1",
+    "run_id": "2ed2c2b7-ff4a-4950-8a7f-18ffc7ff8c1d",
+    "exit_code": 0,
+    "support_tier": null,
+    "runnable_action_count": 0,
+    "log_path": "docs/test-results/live-runs/20260324T223645Z-all-controls-live-e2e/evidence/bundles/pr-bundle-2ed2c2b7-ff4a-4950-8a7f-18ffc7ff8c1d-run.log",
+    "extract_dir": "docs/test-results/live-runs/20260324T223645Z-all-controls-live-e2e/evidence/bundles/pr-bundle-2ed2c2b7-ff4a-4950-8a7f-18ffc7ff8c1d"
+  },
+  {
+    "control": "EC2.7",
+    "region": "us-east-1",
+    "run_id": "e87ac6a1-ab69-4198-9d62-36bb2f4dd2b7",
+    "exit_code": 0,
+    "support_tier": null,
+    "runnable_action_count": 1,
+    "log_path": "docs/test-results/live-runs/20260324T223645Z-all-controls-live-e2e/evidence/bundles/pr-bundle-e87ac6a1-ab69-4198-9d62-36bb2f4dd2b7-run.log",
+    "extract_dir": "docs/test-results/live-runs/20260324T223645Z-all-controls-live-e2e/evidence/bundles/pr-bundle-e87ac6a1-ab69-4198-9d62-36bb2f4dd2b7"
+  },
+  {
+    "control": "EC2.7",
+    "region": "eu-north-1",
+    "run_id": "e3845d2f-3fd2-4cda-8493-6e03db566801",
+    "exit_code": 0,
+    "support_tier": null,
+    "runnable_action_count": 1,
+    "log_path": "docs/test-results/live-runs/20260324T223645Z-all-controls-live-e2e/evidence/bundles/pr-bundle-e3845d2f-3fd2-4cda-8493-6e03db566801-run.log",
+    "extract_dir": "docs/test-results/live-runs/20260324T223645Z-all-controls-live-e2e/evidence/bundles/pr-bundle-e3845d2f-3fd2-4cda-8493-6e03db566801"
+  },
+  {
+    "control": "S3.5",
+    "region": "eu-north-1",
+    "run_id": "e66f3760-1b25-420d-b476-3a175f49b4d2",
+    "exit_code": 0,
+    "support_tier": null,
+    "runnable_action_count": 2,
+    "log_path": "docs/test-results/live-runs/20260324T223645Z-all-controls-live-e2e/evidence/bundles/pr-bundle-e66f3760-1b25-420d-b476-3a175f49b4d2-run.log",
+    "extract_dir": "docs/test-results/live-runs/20260324T223645Z-all-controls-live-e2e/evidence/bundles/pr-bundle-e66f3760-1b25-420d-b476-3a175f49b4d2"
+  },
+  {
+    "control": "S3.1",
+    "region": "us-east-1",
+    "run_id": "c92b268f-3d75-4b46-8e2c-8e761e67da5c",
+    "exit_code": 0,
+    "support_tier": null,
+    "runnable_action_count": 1,
+    "log_path": "docs/test-results/live-runs/20260324T223645Z-all-controls-live-e2e/evidence/bundles/pr-bundle-c92b268f-3d75-4b46-8e2c-8e761e67da5c-run.log",
+    "extract_dir": "docs/test-results/live-runs/20260324T223645Z-all-controls-live-e2e/evidence/bundles/pr-bundle-c92b268f-3d75-4b46-8e2c-8e761e67da5c"
+  },
+  {
+    "control": "S3.11",
+    "region": "eu-north-1",
+    "run_id": "14cbe174-7e4c-4013-9ae4-3e84b014509a",
+    "exit_code": 143,
+    "support_tier": null,
+    "runnable_action_count": 12,
+    "log_path": "docs/test-results/live-runs/20260324T223645Z-all-controls-live-e2e/evidence/bundles/pr-bundle-14cbe174-7e4c-4013-9ae4-3e84b014509a-run.log",
+    "extract_dir": "docs/test-results/live-runs/20260324T223645Z-all-controls-live-e2e/evidence/bundles/pr-bundle-14cbe174-7e4c-4013-9ae4-3e84b014509a"
+  },
+  {
+    "control": "S3.5",
+    "region": "us-east-1",
+    "run_id": "0aa82e8a-e964-40b7-ae87-4a8a05433494",
+    "exit_code": 0,
+    "support_tier": null,
+    "runnable_action_count": 1,
+    "log_path": "docs/test-results/live-runs/20260324T223645Z-all-controls-live-e2e/evidence/bundles/pr-bundle-0aa82e8a-e964-40b7-ae87-4a8a05433494-run.log",
+    "extract_dir": "docs/test-results/live-runs/20260324T223645Z-all-controls-live-e2e/evidence/bundles/pr-bundle-0aa82e8a-e964-40b7-ae87-4a8a05433494"
+  },
+  {
+    "control": "S3.11",
+    "region": "us-east-1",
+    "run_id": "2973369f-902c-4f25-8c3c-be33569353d1",
+    "exit_code": 0,
+    "support_tier": null,
+    "runnable_action_count": 1,
+    "log_path": "docs/test-results/live-runs/20260324T223645Z-all-controls-live-e2e/evidence/bundles/pr-bundle-2973369f-902c-4f25-8c3c-be33569353d1-run.log",
+    "extract_dir": "docs/test-results/live-runs/20260324T223645Z-all-controls-live-e2e/evidence/bundles/pr-bundle-2973369f-902c-4f25-8c3c-be33569353d1"
+  }
+]

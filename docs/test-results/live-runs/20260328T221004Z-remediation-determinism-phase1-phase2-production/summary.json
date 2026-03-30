@@ -1,0 +1,105 @@
+{
+  "run_id": "20260328T221004Z-remediation-determinism-phase1-phase2-production",
+  "created_at_utc": "2026-03-28T22:10:04Z",
+  "completed_at_utc": "2026-03-28T23:12:23Z",
+  "branch": "master",
+  "commit": "481b5a00f8ec00f26174d20350e2bf740e5d856e",
+  "api_base": "https://api.ocypheris.com",
+  "tenant": {
+    "name": "Marco",
+    "id": "e4e07aa8-b8ea-4c1d-9fd7-4362a2fc1195"
+  },
+  "canary": {
+    "account_id": "696505809372",
+    "region": "eu-north-1",
+    "aws_profile": "test28-root"
+  },
+  "gate_status": {
+    "phase_1": "blocked",
+    "phase_2_local_gate": "pass",
+    "phase_2_live_gate": "blocked",
+    "overall": "no_go"
+  },
+  "grouped_phase_2_run": {
+    "status": "pass",
+    "group_id": "9a904e6a-3ab8-4eca-be92-b727b0aacf67",
+    "group_run_id": "cfe0eaa2-0be2-4ff9-a907-2f56aaf336b0",
+    "remediation_run_id": "864fe109-17e9-4e3b-b752-5bc31de86957",
+    "executable_actions": [
+      "4b97cf9a-f514-4033-b54e-dd679c427cd9",
+      "8ab29997-bb6c-41fe-ba0c-26f03523f0ed"
+    ],
+    "manual_actions": [
+      "cbe0d2c3-c609-4aa2-a12f-6afb336cd507",
+      "176c29ed-fcec-4934-a1ab-344bb4b6f444",
+      "a9e5a989-3dba-4114-aeaf-2ddac120ac0c",
+      "37e0f71d-4805-46d0-9f9f-bf4342d7e63c",
+      "abaa9de7-ac08-4b7c-8660-93695e992c1a"
+    ]
+  },
+  "work_items": [
+    {
+      "wi": "WI-1",
+      "control": "S3.11",
+      "status": "blocked",
+      "scenario": "captured additive lifecycle merge",
+      "production_proof": false,
+      "notes": "No truthful live candidate surfaced for the seeded renderable lifecycle bucket after production ingest plus scoped recompute. No additive-merge proof claimed."
+    },
+    {
+      "wi": "WI-2",
+      "control": "EC2.53",
+      "status": "pass",
+      "scenario": "ssm_only",
+      "action_id": "58a22607-666e-4016-8fe3-4ce62a235a6e",
+      "remediation_run_id": "0f96058b-40a5-4bee-b084-52302d5b8235",
+      "production_proof": true,
+      "lag_reproduced": true,
+      "notes": "Bundle generation, download, local Terraform init/validate/plan/apply, AWS revoke-only mutation proof, completed-ingest follow-up, and rollback all retained."
+    },
+    {
+      "wi": "WI-8",
+      "control": "EC2.53",
+      "status": "pass",
+      "scenario": "bastion_sg_reference",
+      "action_id": "dfa0a526-87b8-4670-92d7-401a611f58f5",
+      "remediation_run_id": "1988eb39-8dc8-41dc-8acf-2d1e21937974",
+      "production_proof": true,
+      "lag_reproduced": true,
+      "notes": "Tenant remediation settings were patched with approved bastion SG sg-085d69a76707542b2, the bundle proved the SG-reference replacement path on AWS, and rollback plus settings restore were retained."
+    },
+    {
+      "wi": "WI-7",
+      "control": "S3 family resource_id fallback",
+      "status": "waived_deferred",
+      "production_proof": false,
+      "notes": "Retained March 28 authoritative production-path investigation reclassified WI-7 to WAIVED / DEFERRED."
+    },
+    {
+      "wi": "WI-12",
+      "control": "Config.1",
+      "status": "blocked",
+      "production_proof": false,
+      "notes": "Still lacks a truthful production candidate."
+    },
+    {
+      "wi": "WI-13",
+      "control": "S3.2",
+      "status": "pass",
+      "production_proof": true,
+      "notes": "Already proven live on March 28, 2026."
+    },
+    {
+      "wi": "WI-14",
+      "control": "S3.5",
+      "status": "pass",
+      "production_proof": true,
+      "notes": "Already proven live on March 28, 2026."
+    }
+  ],
+  "retained_blockers": [
+    "WI-1 additive-merge live candidate did not materialize on production",
+    "WI-12 truthful production candidate is still missing",
+    "Post-apply production finding/action lag reproduced again after WI-2, WI-8, and grouped S3 execution"
+  ]
+}

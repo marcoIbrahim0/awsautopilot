@@ -1,0 +1,9 @@
+{
+  "bucket_name": "sa-wi5-site-696505809372-20260328t164043z",
+  "zone_name": "wi5-canary-696505809372-164043.net",
+  "alias_name": "wi5-canary-696505809372-164043.net",
+  "hosted_zone_id": "Z00329292COTYL3PXC81O",
+  "certificate_arn": "arn:aws:acm:us-east-1:696505809372:certificate/d03de4ad-4330-417f-9fe6-dfaa795e8506",
+  "bucket_policy_capture": "missing",
+  "bucket_policy_error": "An error occurred (NoSuchBucketPolicy) when calling the GetBucketPolicy operation: The bucket policy does not exist"
+}

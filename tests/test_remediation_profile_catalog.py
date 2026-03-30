@@ -30,6 +30,7 @@ IAM_4_ACTION_TYPE = "iam_root_access_key_absent"
 S3_2_ACTION_TYPE = "s3_bucket_block_public_access"
 S3_2_STANDARD_STRATEGY_ID = "s3_bucket_block_public_access_standard"
 S3_2_OAC_STRATEGY_ID = "s3_migrate_cloudfront_oac_private"
+S3_2_WEBSITE_STRATEGY_ID = "s3_migrate_website_cloudfront_private"
 EC2_53_PROFILE_IDS = [
     "close_public",
     "close_and_revoke",
@@ -41,10 +42,15 @@ EC2_53_PROFILE_IDS = [
 S3_2_STANDARD_PROFILE_IDS = [
     "s3_bucket_block_public_access_standard",
     "s3_bucket_block_public_access_manual_preservation",
+    "s3_bucket_block_public_access_review_public_policy_scrub",
 ]
 S3_2_OAC_PROFILE_IDS = [
     "s3_migrate_cloudfront_oac_private",
     "s3_migrate_cloudfront_oac_private_manual_preservation",
+]
+S3_2_WEBSITE_PROFILE_IDS = [
+    "s3_migrate_website_cloudfront_private",
+    "s3_migrate_website_cloudfront_private_review_required",
 ]
 S3_9_PROFILE_IDS = [
     "s3_enable_access_logging_guided",
@@ -71,6 +77,8 @@ def _expected_profile_ids(action_type: str, strategy: RemediationStrategy) -> li
         return list(S3_2_STANDARD_PROFILE_IDS)
     if action_type == S3_2_ACTION_TYPE and strategy["strategy_id"] == S3_2_OAC_STRATEGY_ID:
         return list(S3_2_OAC_PROFILE_IDS)
+    if action_type == S3_2_ACTION_TYPE and strategy["strategy_id"] == S3_2_WEBSITE_STRATEGY_ID:
+        return list(S3_2_WEBSITE_PROFILE_IDS)
     if action_type == "s3_bucket_access_logging" and strategy["strategy_id"] == "s3_enable_access_logging_guided":
         return list(S3_9_PROFILE_IDS)
     if action_type == "s3_bucket_encryption_kms" and strategy["strategy_id"] == "s3_enable_sse_kms_guided":
@@ -93,9 +101,18 @@ def _profile_expected_support_tier(
 ) -> str:
     if profile_id in {
         "s3_bucket_block_public_access_manual_preservation",
+        "s3_bucket_block_public_access_review_public_policy_scrub",
         "s3_migrate_cloudfront_oac_private_manual_preservation",
+        "s3_migrate_website_cloudfront_private_review_required",
     }:
-        return "manual_guidance_only"
+        return (
+            "review_required_bundle"
+            if profile_id in {
+                "s3_bucket_block_public_access_review_public_policy_scrub",
+                "s3_migrate_website_cloudfront_private_review_required",
+            }
+            else "manual_guidance_only"
+        )
     if profile_id in {
         "s3_enable_access_logging_review_destination_safety",
         S3_15_CUSTOMER_MANAGED_PROFILE_ID,
@@ -107,11 +124,15 @@ def _profile_expected_support_tier(
 def _profile_expected_recommended(strategy: RemediationStrategy, profile_id: str) -> bool:
     if profile_id in {
         "s3_bucket_block_public_access_manual_preservation",
+        "s3_bucket_block_public_access_review_public_policy_scrub",
         "s3_migrate_cloudfront_oac_private_manual_preservation",
+        "s3_migrate_website_cloudfront_private_review_required",
         "s3_enable_access_logging_review_destination_safety",
         S3_15_CUSTOMER_MANAGED_PROFILE_ID,
     }:
         return False
+    if profile_id == S3_2_WEBSITE_STRATEGY_ID:
+        return True
     return strategy["recommended"]
 
 
@@ -179,8 +200,12 @@ def test_ec2_53_family_profiles_expose_expected_support_tiers() -> None:
     assert profiles["close_and_revoke"].default_support_tier == "deterministic_bundle"
     assert profiles["restrict_to_ip"].default_support_tier == "deterministic_bundle"
     assert profiles["restrict_to_cidr"].default_support_tier == "deterministic_bundle"
-    assert profiles["ssm_only"].default_support_tier == "manual_guidance_only"
-    assert profiles["bastion_sg_reference"].default_support_tier == "review_required_bundle"
+    assert profiles["ssm_only"].default_support_tier == "deterministic_bundle"
+    assert profiles["ssm_only"].default_inputs == {"access_mode": "ssm_only"}
+    assert profiles["ssm_only"].legacy_input_hints == {"access_mode": "ssm_only"}
+    assert profiles["bastion_sg_reference"].default_support_tier == "deterministic_bundle"
+    assert profiles["bastion_sg_reference"].default_inputs == {"access_mode": "bastion_sg_reference"}
+    assert profiles["bastion_sg_reference"].legacy_input_hints == {"access_mode": "bastion_sg_reference"}
     assert profiles["close_public"].recommended is True
     assert profiles["close_public"].family_resolver_kind == "ec2_53_access_path"
 
@@ -205,6 +230,7 @@ def test_s3_family_profiles_use_resolver_owned_family_kinds() -> None:
 
     assert [profile.profile_id for profile in s3_2_standard] == S3_2_STANDARD_PROFILE_IDS
     assert [profile.family_resolver_kind for profile in s3_2_standard] == [
+        S3_2_FAMILY_RESOLVER_KIND,
         S3_2_FAMILY_RESOLVER_KIND,
         S3_2_FAMILY_RESOLVER_KIND,
     ]

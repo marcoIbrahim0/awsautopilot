@@ -1,0 +1,346 @@
+
+=== Running terraform in executable/actions/01-arn-aws-s3-ocypheris-live-ct-20260323162333-eu-n-4fc6db43 ===
+[0m[1mInitializing the backend...[0m
+[0m[1mInitializing provider plugins...[0m
+- Reusing previous version of hashicorp/aws from the dependency lock file
+- Using hashicorp/aws v5.100.0 from the shared cache directory
+
+[0m[1m[32mTerraform has been successfully initialized![0m[32m[0m
+[0m[32m
+You may now begin working with Terraform. Try running "terraform plan" to see
+any changes that are required for your infrastructure. All Terraform commands
+should now work.
+
+If you ever set or change modules or backend configuration for Terraform,
+rerun this command to reinitialize your working directory. If you forget, other
+commands will detect it and remind you to do so if necessary.[0m
+[0m[1mdata.aws_iam_policy_document.required_ssl: Reading...[0m[0m
+[0m[1mdata.aws_iam_policy_document.required_ssl: Read complete after 0s [id=946787445][0m
+[0m[1mdata.aws_iam_policy_document.merged_policy: Reading...[0m[0m
+[0m[1mdata.aws_iam_policy_document.merged_policy: Read complete after 0s [id=2182019229][0m
+
+Terraform used the selected providers to generate the following execution
+plan. Resource actions are indicated with the following symbols:
+  [32m+[0m create[0m
+
+Terraform will perform the following actions:
+
+[1m  # aws_s3_bucket_policy.security_autopilot[0m will be created
+[0m  [32m+[0m[0m resource "aws_s3_bucket_policy" "security_autopilot" {
+      [32m+[0m[0m bucket = "ocypheris-live-ct-20260323162333-eu-north-1"
+      [32m+[0m[0m id     = (known after apply)
+      [32m+[0m[0m policy = jsonencode(
+            {
+              [32m+[0m[0m Statement = [
+                  [32m+[0m[0m {
+                      [32m+[0m[0m Action    = "s3:GetBucketAcl"
+                      [32m+[0m[0m Effect    = "Allow"
+                      [32m+[0m[0m Principal = {
+                          [32m+[0m[0m Service = "cloudtrail.amazonaws.com"
+                        }
+                      [32m+[0m[0m Resource  = "arn:aws:s3:::ocypheris-live-ct-20260323162333-eu-north-1"
+                      [32m+[0m[0m Sid       = "AWSCloudTrailAclCheck"
+                    },
+                  [32m+[0m[0m {
+                      [32m+[0m[0m Action    = "s3:PutObject"
+                      [32m+[0m[0m Condition = {
+                          [32m+[0m[0m StringEquals = {
+                              [32m+[0m[0m "s3:x-amz-acl" = "bucket-owner-full-control"
+                            }
+                        }
+                      [32m+[0m[0m Effect    = "Allow"
+                      [32m+[0m[0m Principal = {
+                          [32m+[0m[0m Service = "cloudtrail.amazonaws.com"
+                        }
+                      [32m+[0m[0m Resource  = "arn:aws:s3:::ocypheris-live-ct-20260323162333-eu-north-1/AWSLogs/696505809372/CloudTrail/*"
+                      [32m+[0m[0m Sid       = "AWSCloudTrailWrite"
+                    },
+                  [32m+[0m[0m {
+                      [32m+[0m[0m Action    = "s3:*"
+                      [32m+[0m[0m Condition = {
+                          [32m+[0m[0m Bool = {
+                              [32m+[0m[0m "aws:SecureTransport" = "false"
+                            }
+                        }
+                      [32m+[0m[0m Effect    = "Deny"
+                      [32m+[0m[0m Principal = "*"
+                      [32m+[0m[0m Resource  = [
+                          [32m+[0m[0m "arn:aws:s3:::ocypheris-live-ct-20260323162333-eu-north-1/*",
+                          [32m+[0m[0m "arn:aws:s3:::ocypheris-live-ct-20260323162333-eu-north-1",
+                        ]
+                      [32m+[0m[0m Sid       = "DenyInsecureTransport"
+                    },
+                ]
+              [32m+[0m[0m Version   = "2012-10-17"
+            }
+        )
+    }
+
+[1mPlan:[0m [0m1 to add, 0 to change, 0 to destroy.
+[90m
+─────────────────────────────────────────────────────────────────────────────[0m
+
+Note: You didn't use the -out option to save this plan, so Terraform can't
+guarantee to take exactly these actions if you run "terraform apply" now.
+[0m[1mdata.aws_iam_policy_document.required_ssl: Reading...[0m[0m
+[0m[1mdata.aws_iam_policy_document.required_ssl: Read complete after 0s [id=946787445][0m
+[0m[1mdata.aws_iam_policy_document.merged_policy: Reading...[0m[0m
+[0m[1mdata.aws_iam_policy_document.merged_policy: Read complete after 0s [id=2182019229][0m
+
+Terraform used the selected providers to generate the following execution
+plan. Resource actions are indicated with the following symbols:
+  [32m+[0m create[0m
+
+Terraform will perform the following actions:
+
+[1m  # aws_s3_bucket_policy.security_autopilot[0m will be created
+[0m  [32m+[0m[0m resource "aws_s3_bucket_policy" "security_autopilot" {
+      [32m+[0m[0m bucket = "ocypheris-live-ct-20260323162333-eu-north-1"
+      [32m+[0m[0m id     = (known after apply)
+      [32m+[0m[0m policy = jsonencode(
+            {
+              [32m+[0m[0m Statement = [
+                  [32m+[0m[0m {
+                      [32m+[0m[0m Action    = "s3:GetBucketAcl"
+                      [32m+[0m[0m Effect    = "Allow"
+                      [32m+[0m[0m Principal = {
+                          [32m+[0m[0m Service = "cloudtrail.amazonaws.com"
+                        }
+                      [32m+[0m[0m Resource  = "arn:aws:s3:::ocypheris-live-ct-20260323162333-eu-north-1"
+                      [32m+[0m[0m Sid       = "AWSCloudTrailAclCheck"
+                    },
+                  [32m+[0m[0m {
+                      [32m+[0m[0m Action    = "s3:PutObject"
+                      [32m+[0m[0m Condition = {
+                          [32m+[0m[0m StringEquals = {
+                              [32m+[0m[0m "s3:x-amz-acl" = "bucket-owner-full-control"
+                            }
+                        }
+                      [32m+[0m[0m Effect    = "Allow"
+                      [32m+[0m[0m Principal = {
+                          [32m+[0m[0m Service = "cloudtrail.amazonaws.com"
+                        }
+                      [32m+[0m[0m Resource  = "arn:aws:s3:::ocypheris-live-ct-20260323162333-eu-north-1/AWSLogs/696505809372/CloudTrail/*"
+                      [32m+[0m[0m Sid       = "AWSCloudTrailWrite"
+                    },
+                  [32m+[0m[0m {
+                      [32m+[0m[0m Action    = "s3:*"
+                      [32m+[0m[0m Condition = {
+                          [32m+[0m[0m Bool = {
+                              [32m+[0m[0m "aws:SecureTransport" = "false"
+                            }
+                        }
+                      [32m+[0m[0m Effect    = "Deny"
+                      [32m+[0m[0m Principal = "*"
+                      [32m+[0m[0m Resource  = [
+                          [32m+[0m[0m "arn:aws:s3:::ocypheris-live-ct-20260323162333-eu-north-1/*",
+                          [32m+[0m[0m "arn:aws:s3:::ocypheris-live-ct-20260323162333-eu-north-1",
+                        ]
+                      [32m+[0m[0m Sid       = "DenyInsecureTransport"
+                    },
+                ]
+              [32m+[0m[0m Version   = "2012-10-17"
+            }
+        )
+    }
+
+[1mPlan:[0m [0m1 to add, 0 to change, 0 to destroy.
+[0m[1maws_s3_bucket_policy.security_autopilot: Creating...[0m[0m
+[0m[1maws_s3_bucket_policy.security_autopilot: Creation complete after 1s [id=ocypheris-live-ct-20260323162333-eu-north-1][0m
+[0m[1m[32m
+Apply complete! Resources: 1 added, 0 changed, 0 destroyed.[0m
+
+=== Running terraform in executable/actions/02-arn-aws-s3-security-autopilot-config-69650580937-b9d3ffd9 ===
+[0m[1mInitializing the backend...[0m
+[0m[1mInitializing provider plugins...[0m
+- Reusing previous version of hashicorp/aws from the dependency lock file
+- Using hashicorp/aws v5.100.0 from the shared cache directory
+
+[0m[1m[32mTerraform has been successfully initialized![0m[32m[0m
+[0m[32m
+You may now begin working with Terraform. Try running "terraform plan" to see
+any changes that are required for your infrastructure. All Terraform commands
+should now work.
+
+If you ever set or change modules or backend configuration for Terraform,
+rerun this command to reinitialize your working directory. If you forget, other
+commands will detect it and remind you to do so if necessary.[0m
+[0m[1mdata.aws_iam_policy_document.required_ssl: Reading...[0m[0m
+[0m[1mdata.aws_iam_policy_document.required_ssl: Read complete after 0s [id=1646236284][0m
+[0m[1mdata.aws_iam_policy_document.merged_policy: Reading...[0m[0m
+[0m[1mdata.aws_iam_policy_document.merged_policy: Read complete after 0s [id=1676275310][0m
+
+Terraform used the selected providers to generate the following execution
+plan. Resource actions are indicated with the following symbols:
+  [32m+[0m create[0m
+
+Terraform will perform the following actions:
+
+[1m  # aws_s3_bucket_policy.security_autopilot[0m will be created
+[0m  [32m+[0m[0m resource "aws_s3_bucket_policy" "security_autopilot" {
+      [32m+[0m[0m bucket = "security-autopilot-config-696505809372-eu-north-1"
+      [32m+[0m[0m id     = (known after apply)
+      [32m+[0m[0m policy = jsonencode(
+            {
+              [32m+[0m[0m Statement = [
+                  [32m+[0m[0m {
+                      [32m+[0m[0m Action    = "s3:GetBucketAcl"
+                      [32m+[0m[0m Condition = {
+                          [32m+[0m[0m StringEquals = {
+                              [32m+[0m[0m "AWS:SourceAccount" = "696505809372"
+                            }
+                        }
+                      [32m+[0m[0m Effect    = "Allow"
+                      [32m+[0m[0m Principal = {
+                          [32m+[0m[0m Service = "config.amazonaws.com"
+                        }
+                      [32m+[0m[0m Resource  = "arn:aws:s3:::security-autopilot-config-696505809372-eu-north-1"
+                      [32m+[0m[0m Sid       = "AWSConfigBucketPermissionsCheck"
+                    },
+                  [32m+[0m[0m {
+                      [32m+[0m[0m Action    = "s3:ListBucket"
+                      [32m+[0m[0m Condition = {
+                          [32m+[0m[0m StringEquals = {
+                              [32m+[0m[0m "AWS:SourceAccount" = "696505809372"
+                            }
+                        }
+                      [32m+[0m[0m Effect    = "Allow"
+                      [32m+[0m[0m Principal = {
+                          [32m+[0m[0m Service = "config.amazonaws.com"
+                        }
+                      [32m+[0m[0m Resource  = "arn:aws:s3:::security-autopilot-config-696505809372-eu-north-1"
+                      [32m+[0m[0m Sid       = "AWSConfigBucketExistenceCheck"
+                    },
+                  [32m+[0m[0m {
+                      [32m+[0m[0m Action    = "s3:PutObject"
+                      [32m+[0m[0m Condition = {
+                          [32m+[0m[0m StringEquals = {
+                              [32m+[0m[0m "AWS:SourceAccount" = "696505809372"
+                              [32m+[0m[0m "s3:x-amz-acl"      = "bucket-owner-full-control"
+                            }
+                        }
+                      [32m+[0m[0m Effect    = "Allow"
+                      [32m+[0m[0m Principal = {
+                          [32m+[0m[0m Service = "config.amazonaws.com"
+                        }
+                      [32m+[0m[0m Resource  = "arn:aws:s3:::security-autopilot-config-696505809372-eu-north-1/AWSLogs/696505809372/Config/*"
+                      [32m+[0m[0m Sid       = "AWSConfigBucketDelivery"
+                    },
+                  [32m+[0m[0m {
+                      [32m+[0m[0m Action    = "s3:*"
+                      [32m+[0m[0m Condition = {
+                          [32m+[0m[0m Bool = {
+                              [32m+[0m[0m "aws:SecureTransport" = "false"
+                            }
+                        }
+                      [32m+[0m[0m Effect    = "Deny"
+                      [32m+[0m[0m Principal = "*"
+                      [32m+[0m[0m Resource  = [
+                          [32m+[0m[0m "arn:aws:s3:::security-autopilot-config-696505809372-eu-north-1/*",
+                          [32m+[0m[0m "arn:aws:s3:::security-autopilot-config-696505809372-eu-north-1",
+                        ]
+                      [32m+[0m[0m Sid       = "DenyInsecureTransport"
+                    },
+                ]
+              [32m+[0m[0m Version   = "2012-10-17"
+            }
+        )
+    }
+
+[1mPlan:[0m [0m1 to add, 0 to change, 0 to destroy.
+[90m
+─────────────────────────────────────────────────────────────────────────────[0m
+
+Note: You didn't use the -out option to save this plan, so Terraform can't
+guarantee to take exactly these actions if you run "terraform apply" now.
+[0m[1mdata.aws_iam_policy_document.required_ssl: Reading...[0m[0m
+[0m[1mdata.aws_iam_policy_document.required_ssl: Read complete after 0s [id=1646236284][0m
+[0m[1mdata.aws_iam_policy_document.merged_policy: Reading...[0m[0m
+[0m[1mdata.aws_iam_policy_document.merged_policy: Read complete after 0s [id=1676275310][0m
+
+Terraform used the selected providers to generate the following execution
+plan. Resource actions are indicated with the following symbols:
+  [32m+[0m create[0m
+
+Terraform will perform the following actions:
+
+[1m  # aws_s3_bucket_policy.security_autopilot[0m will be created
+[0m  [32m+[0m[0m resource "aws_s3_bucket_policy" "security_autopilot" {
+      [32m+[0m[0m bucket = "security-autopilot-config-696505809372-eu-north-1"
+      [32m+[0m[0m id     = (known after apply)
+      [32m+[0m[0m policy = jsonencode(
+            {
+              [32m+[0m[0m Statement = [
+                  [32m+[0m[0m {
+                      [32m+[0m[0m Action    = "s3:GetBucketAcl"
+                      [32m+[0m[0m Condition = {
+                          [32m+[0m[0m StringEquals = {
+                              [32m+[0m[0m "AWS:SourceAccount" = "696505809372"
+                            }
+                        }
+                      [32m+[0m[0m Effect    = "Allow"
+                      [32m+[0m[0m Principal = {
+                          [32m+[0m[0m Service = "config.amazonaws.com"
+                        }
+                      [32m+[0m[0m Resource  = "arn:aws:s3:::security-autopilot-config-696505809372-eu-north-1"
+                      [32m+[0m[0m Sid       = "AWSConfigBucketPermissionsCheck"
+                    },
+                  [32m+[0m[0m {
+                      [32m+[0m[0m Action    = "s3:ListBucket"
+                      [32m+[0m[0m Condition = {
+                          [32m+[0m[0m StringEquals = {
+                              [32m+[0m[0m "AWS:SourceAccount" = "696505809372"
+                            }
+                        }
+                      [32m+[0m[0m Effect    = "Allow"
+                      [32m+[0m[0m Principal = {
+                          [32m+[0m[0m Service = "config.amazonaws.com"
+                        }
+                      [32m+[0m[0m Resource  = "arn:aws:s3:::security-autopilot-config-696505809372-eu-north-1"
+                      [32m+[0m[0m Sid       = "AWSConfigBucketExistenceCheck"
+                    },
+                  [32m+[0m[0m {
+                      [32m+[0m[0m Action    = "s3:PutObject"
+                      [32m+[0m[0m Condition = {
+                          [32m+[0m[0m StringEquals = {
+                              [32m+[0m[0m "AWS:SourceAccount" = "696505809372"
+                              [32m+[0m[0m "s3:x-amz-acl"      = "bucket-owner-full-control"
+                            }
+                        }
+                      [32m+[0m[0m Effect    = "Allow"
+                      [32m+[0m[0m Principal = {
+                          [32m+[0m[0m Service = "config.amazonaws.com"
+                        }
+                      [32m+[0m[0m Resource  = "arn:aws:s3:::security-autopilot-config-696505809372-eu-north-1/AWSLogs/696505809372/Config/*"
+                      [32m+[0m[0m Sid       = "AWSConfigBucketDelivery"
+                    },
+                  [32m+[0m[0m {
+                      [32m+[0m[0m Action    = "s3:*"
+                      [32m+[0m[0m Condition = {
+                          [32m+[0m[0m Bool = {
+                              [32m+[0m[0m "aws:SecureTransport" = "false"
+                            }
+                        }
+                      [32m+[0m[0m Effect    = "Deny"
+                      [32m+[0m[0m Principal = "*"
+                      [32m+[0m[0m Resource  = [
+                          [32m+[0m[0m "arn:aws:s3:::security-autopilot-config-696505809372-eu-north-1/*",
+                          [32m+[0m[0m "arn:aws:s3:::security-autopilot-config-696505809372-eu-north-1",
+                        ]
+                      [32m+[0m[0m Sid       = "DenyInsecureTransport"
+                    },
+                ]
+              [32m+[0m[0m Version   = "2012-10-17"
+            }
+        )
+    }
+
+[1mPlan:[0m [0m1 to add, 0 to change, 0 to destroy.
+[0m[1maws_s3_bucket_policy.security_autopilot: Creating...[0m[0m
+[0m[1maws_s3_bucket_policy.security_autopilot: Creation complete after 1s [id=security-autopilot-config-696505809372-eu-north-1][0m
+[0m[1m[32m
+Apply complete! Resources: 1 added, 0 changed, 0 destroyed.[0m
+Bundle run completed.
+  Successful action folders: 2/2
+  Failed action folders: 0/2
+All action folders completed successfully.

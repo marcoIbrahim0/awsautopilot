@@ -248,12 +248,20 @@ def _s3_bucket_logging_enabled(s3_client: Any, bucket: str) -> bool:
 
 
 def _rule_has_meaningful_lifecycle_action(rule: dict[str, Any]) -> bool:
-    expiration = rule.get("Expiration")
-    if isinstance(expiration, dict) and expiration:
-        return True
-    transitions = rule.get("Transitions")
-    transition_items = transitions if isinstance(transitions, list) else [transitions]
-    return any(isinstance(item, dict) and item for item in transition_items)
+    action_keys = (
+        "Expiration",
+        "Transitions",
+        "NoncurrentVersionExpiration",
+        "NoncurrentVersionTransitions",
+        "AbortIncompleteMultipartUpload",
+    )
+    for key in action_keys:
+        value = rule.get(key)
+        if isinstance(value, dict) and value:
+            return True
+        if isinstance(value, list) and any(isinstance(item, dict) and item for item in value):
+            return True
+    return False
 
 
 def _s3_bucket_has_valid_lifecycle_rule(s3_client: Any, bucket: str) -> bool:
@@ -528,7 +536,12 @@ def _collect_s3_buckets(
     ]
 
     if resource_ids:
-        bucket_names = [_bucket_name_from_any(str(v)) for v in resource_ids if str(v).strip()]
+        bucket_names = []
+        for value in resource_ids:
+            raw_value = str(value).strip()
+            if not raw_value or raw_value.startswith("AWS::::Account:"):
+                continue
+            bucket_names.append(_bucket_name_from_any(raw_value))
     else:
         resp = s3.list_buckets()
         bucket_names = [str((b or {}).get("Name") or "") for b in _as_list(resp.get("Buckets"))]
@@ -538,7 +551,82 @@ def _collect_s3_buckets(
         if not bucket:
             continue
         bucket_region = _s3_bucket_region(s3, bucket)
-        if bucket_region is None or bucket_region != region:
+        resource_id = f"arn:aws:s3:::{bucket}"
+        if bucket_region is None:
+            snapshots.append(
+                InventorySnapshot(
+                    service="s3",
+                    resource_id=resource_id,
+                    resource_type="AwsS3Bucket",
+                    key_fields={"bucket_name": bucket, "deleted": True},
+                    state_for_hash={"bucket_name": bucket, "deleted": True},
+                    metadata_json={"bucket_name": "DELETED"},
+                    evaluations=[
+                        _control_eval(
+                            control_id="S3.2",
+                            resource_id=resource_id,
+                            resource_type="AwsS3Bucket",
+                            status=SHADOW_STATUS_RESOLVED,
+                            title="S3 bucket public access posture",
+                            description="Inventory reconciliation for public access posture.",
+                            status_reason="inventory_resource_deleted",
+                            evidence_ref={"source": "inventory", "resource_deleted": True},
+                        ),
+                        _control_eval(
+                            control_id="S3.4",
+                            resource_id=resource_id,
+                            resource_type="AwsS3Bucket",
+                            status=SHADOW_STATUS_RESOLVED,
+                            title="S3 bucket default encryption enabled",
+                            description="Inventory reconciliation for default encryption.",
+                            status_reason="inventory_resource_deleted",
+                            evidence_ref={"source": "inventory", "resource_deleted": True},
+                        ),
+                        _control_eval(
+                            control_id="S3.15",
+                            resource_id=resource_id,
+                            resource_type="AwsS3Bucket",
+                            status=SHADOW_STATUS_RESOLVED,
+                            title="S3 bucket default encryption uses AWS KMS",
+                            description="Inventory reconciliation for KMS default encryption.",
+                            status_reason="inventory_resource_deleted",
+                            evidence_ref={"source": "inventory", "resource_deleted": True},
+                        ),
+                        _control_eval(
+                            control_id="S3.9",
+                            resource_id=resource_id,
+                            resource_type="AwsS3Bucket",
+                            status=SHADOW_STATUS_RESOLVED,
+                            title="S3 bucket server access logging enabled",
+                            description="Inventory reconciliation for logging coverage.",
+                            status_reason="inventory_resource_deleted",
+                            evidence_ref={"source": "inventory", "resource_deleted": True},
+                        ),
+                        _control_eval(
+                            control_id="S3.11",
+                            resource_id=resource_id,
+                            resource_type="AwsS3Bucket",
+                            status=SHADOW_STATUS_RESOLVED,
+                            title="S3 bucket lifecycle rules configured",
+                            description="Inventory reconciliation for lifecycle policy coverage.",
+                            status_reason="inventory_resource_deleted",
+                            evidence_ref={"source": "inventory", "resource_deleted": True},
+                        ),
+                        _control_eval(
+                            control_id="S3.5",
+                            resource_id=resource_id,
+                            resource_type="AwsS3Bucket",
+                            status=SHADOW_STATUS_RESOLVED,
+                            title="S3 bucket enforces SSL-only access",
+                            description="Inventory reconciliation for SSL-only bucket policy.",
+                            status_reason="inventory_resource_deleted",
+                            evidence_ref={"source": "inventory", "resource_deleted": True},
+                        ),
+                    ],
+                )
+            )
+            continue
+        if bucket_region != region:
             continue
 
         pab: dict[str, Any] = {}
@@ -701,7 +789,6 @@ def _collect_s3_buckets(
             s35_confidence = 95
             s35_branch = "normal"
 
-        resource_id = f"arn:aws:s3:::{bucket}"
         evals = [
             _control_eval(
                 control_id="S3.2",
@@ -1059,6 +1146,7 @@ def _collect_config_account(
     recorder_all_supported = False
     recorder_has_explicit_resource_types = False
     recorder_has_resource_coverage = False
+    recorder_captures_required_scope = False
     for recorder in recorders:
         name = str(recorder.get("name") or "").strip()
         role_arn_present = bool(str(recorder.get("roleARN") or "").strip())
@@ -1068,6 +1156,7 @@ def _collect_config_account(
         explicit_resource_type_count = len(resource_types)
         explicit_resource_types_present = explicit_resource_type_count > 0
         has_resource_coverage = all_supported or explicit_resource_types_present
+        captures_required_scope = all_supported
         if name and name in status_by_name:
             recording_for_recorder = bool(status_by_name.get(name))
         elif len(recorders) == 1:
@@ -1079,8 +1168,9 @@ def _collect_config_account(
         recorder_all_supported = recorder_all_supported or all_supported
         recorder_has_explicit_resource_types = recorder_has_explicit_resource_types or explicit_resource_types_present
         recorder_has_resource_coverage = recorder_has_resource_coverage or has_resource_coverage
+        recorder_captures_required_scope = recorder_captures_required_scope or captures_required_scope
 
-        quality_ok = recording_for_recorder and role_arn_present and has_resource_coverage
+        quality_ok = recording_for_recorder and role_arn_present and captures_required_scope
         recorder_quality_passed = recorder_quality_passed or quality_ok
         recorders_evaluated.append(
             {
@@ -1090,6 +1180,7 @@ def _collect_config_account(
                 "all_supported": all_supported,
                 "explicit_resource_type_count": explicit_resource_type_count,
                 "has_resource_coverage": has_resource_coverage,
+                "captures_required_scope": captures_required_scope,
             }
         )
 
@@ -1165,6 +1256,7 @@ def _collect_config_account(
                 "recorder_all_supported": recorder_all_supported,
                 "recorder_has_explicit_resource_types": recorder_has_explicit_resource_types,
                 "recorder_has_resource_coverage": recorder_has_resource_coverage,
+                "recorder_captures_required_scope": recorder_captures_required_scope,
                 "delivery_channel_count": delivery_channel_count,
                 "delivery_channel_present": delivery_channel_present,
                 "delivery_channel_configured": delivery_channel_configured,
@@ -1187,6 +1279,7 @@ def _collect_config_account(
         "recorder_count": len(recorders),
         "recording": recording,
         "recorder_quality_passed": recorder_quality_passed,
+        "recorder_captures_required_scope": recorder_captures_required_scope,
         "delivery_channel_present": delivery_channel_present,
         "delivery_channel_configured": delivery_channel_configured,
         "recorders_access_denied": recorders_access_denied,

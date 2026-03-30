@@ -1,0 +1,264 @@
+[
+  {
+    "bucket": "config-bucket-696505809372",
+    "returncode": 254,
+    "lifecycle_present": false,
+    "error": "An error occurred (NoSuchLifecycleConfiguration) when calling the GetBucketLifecycleConfiguration operation: The lifecycle configuration does not exist"
+  },
+  {
+    "bucket": "sa-access-logs-696505809372-use1-r0325223457",
+    "returncode": 0,
+    "lifecycle_present": true,
+    "rule_count": 1,
+    "valid_under_inventory": true,
+    "rules": [
+      {
+        "id": "expire-access-logs",
+        "status": "Enabled",
+        "has_expiration": true,
+        "has_transitions": false,
+        "has_abort_incomplete": false,
+        "has_noncurrent": false,
+        "keys": [
+          "Expiration",
+          "Filter",
+          "ID",
+          "Status"
+        ]
+      }
+    ]
+  },
+  {
+    "bucket": "sa-access-logs-696505809372-use1-r0325225420",
+    "returncode": 0,
+    "lifecycle_present": true,
+    "rule_count": 1,
+    "valid_under_inventory": true,
+    "rules": [
+      {
+        "id": "expire-access-logs",
+        "status": "Enabled",
+        "has_expiration": true,
+        "has_transitions": false,
+        "has_abort_incomplete": false,
+        "has_noncurrent": false,
+        "keys": [
+          "Expiration",
+          "Filter",
+          "ID",
+          "Status"
+        ]
+      }
+    ]
+  },
+  {
+    "bucket": "sa-wi13-14-nopolicy-696505809372-20260328201935",
+    "returncode": 254,
+    "lifecycle_present": false,
+    "error": "An error occurred (NoSuchLifecycleConfiguration) when calling the GetBucketLifecycleConfiguration operation: The lifecycle configuration does not exist"
+  },
+  {
+    "bucket": "security-autopilot-access-logs-696505809372",
+    "returncode": 0,
+    "lifecycle_present": true,
+    "rule_count": 1,
+    "valid_under_inventory": true,
+    "rules": [
+      {
+        "id": "expire-access-logs",
+        "status": "Enabled",
+        "has_expiration": true,
+        "has_transitions": false,
+        "has_abort_incomplete": false,
+        "has_noncurrent": false,
+        "keys": [
+          "Expiration",
+          "Filter",
+          "ID",
+          "Status"
+        ]
+      }
+    ]
+  },
+  {
+    "bucket": "security-autopilot-access-logs-696505809372-r221001",
+    "returncode": 254,
+    "lifecycle_present": false,
+    "error": "An error occurred (NoSuchLifecycleConfiguration) when calling the GetBucketLifecycleConfiguration operation: The lifecycle configuration does not exist"
+  },
+  {
+    "bucket": "security-autopilot-access-logs-696505809372-r222018",
+    "returncode": 0,
+    "lifecycle_present": true,
+    "rule_count": 1,
+    "valid_under_inventory": true,
+    "rules": [
+      {
+        "id": "expire-access-logs",
+        "status": "Enabled",
+        "has_expiration": true,
+        "has_transitions": false,
+        "has_abort_incomplete": false,
+        "has_noncurrent": false,
+        "keys": [
+          "Expiration",
+          "Filter",
+          "ID",
+          "Status"
+        ]
+      }
+    ]
+  },
+  {
+    "bucket": "security-autopilot-access-logs-696505809372-r94854",
+    "returncode": 0,
+    "lifecycle_present": true,
+    "rule_count": 1,
+    "valid_under_inventory": true,
+    "rules": [
+      {
+        "id": "expire-access-logs",
+        "status": "Enabled",
+        "has_expiration": true,
+        "has_transitions": false,
+        "has_abort_incomplete": false,
+        "has_noncurrent": false,
+        "keys": [
+          "Expiration",
+          "Filter",
+          "ID",
+          "Status"
+        ]
+      }
+    ]
+  },
+  {
+    "bucket": "security-autopilot-access-logs-696505809372-s9fix1",
+    "returncode": 0,
+    "lifecycle_present": true,
+    "rule_count": 1,
+    "valid_under_inventory": true,
+    "rules": [
+      {
+        "id": "expire-access-logs",
+        "status": "Enabled",
+        "has_expiration": true,
+        "has_transitions": false,
+        "has_abort_incomplete": false,
+        "has_noncurrent": false,
+        "keys": [
+          "Expiration",
+          "Filter",
+          "ID",
+          "Status"
+        ]
+      }
+    ]
+  },
+  {
+    "bucket": "security-autopilot-config-696505809372-eu-north-1",
+    "returncode": 254,
+    "lifecycle_present": false,
+    "error": "An error occurred (NoSuchLifecycleConfiguration) when calling the GetBucketLifecycleConfiguration operation: The lifecycle configuration does not exist"
+  },
+  {
+    "bucket": "security-autopilot-config-696505809372-us-east-1",
+    "returncode": 0,
+    "lifecycle_present": true,
+    "rule_count": 1,
+    "valid_under_inventory": false,
+    "rules": [
+      {
+        "id": "security-autopilot-abort-incomplete-multipart",
+        "status": "Enabled",
+        "has_expiration": false,
+        "has_transitions": false,
+        "has_abort_incomplete": true,
+        "has_noncurrent": false,
+        "keys": [
+          "AbortIncompleteMultipartUpload",
+          "Filter",
+          "ID",
+          "Status"
+        ]
+      }
+    ]
+  },
+  {
+    "bucket": "security-autopilot-w6-envready-accesslogs-696505809372",
+    "returncode": 254,
+    "lifecycle_present": false,
+    "error": "An error occurred (NoSuchLifecycleConfiguration) when calling the GetBucketLifecycleConfiguration operation: The lifecycle configuration does not exist"
+  },
+  {
+    "bucket": "security-autopilot-w6-envready-cloudtrail-696505809372",
+    "returncode": 254,
+    "lifecycle_present": false,
+    "error": "An error occurred (NoSuchLifecycleConfiguration) when calling the GetBucketLifecycleConfiguration operation: The lifecycle configuration does not exist"
+  },
+  {
+    "bucket": "security-autopilot-w6-envready-config-696505809372",
+    "returncode": 254,
+    "lifecycle_present": false,
+    "error": "An error occurred (NoSuchLifecycleConfiguration) when calling the GetBucketLifecycleConfiguration operation: The lifecycle configuration does not exist"
+  },
+  {
+    "bucket": "security-autopilot-w6-envready-s311-exec-696505809372",
+    "returncode": 254,
+    "lifecycle_present": false,
+    "error": "An error occurred (NoSuchLifecycleConfiguration) when calling the GetBucketLifecycleConfiguration operation: The lifecycle configuration does not exist"
+  },
+  {
+    "bucket": "security-autopilot-w6-envready-s311-review-696505809372",
+    "returncode": 0,
+    "lifecycle_present": true,
+    "rule_count": 1,
+    "valid_under_inventory": true,
+    "rules": [
+      {
+        "id": "expire-temp-review",
+        "status": "Enabled",
+        "has_expiration": true,
+        "has_transitions": false,
+        "has_abort_incomplete": false,
+        "has_noncurrent": false,
+        "keys": [
+          "Expiration",
+          "Filter",
+          "ID",
+          "Status"
+        ]
+      }
+    ]
+  },
+  {
+    "bucket": "security-autopilot-w6-envready-s315-exec-696505809372",
+    "returncode": 254,
+    "lifecycle_present": false,
+    "error": "An error occurred (NoSuchLifecycleConfiguration) when calling the GetBucketLifecycleConfiguration operation: The lifecycle configuration does not exist"
+  },
+  {
+    "bucket": "security-autopilot-w6-strict-s311-exec-696505809372",
+    "returncode": 254,
+    "lifecycle_present": false,
+    "error": "An error occurred (NoSuchLifecycleConfiguration) when calling the GetBucketLifecycleConfiguration operation: The lifecycle configuration does not exist"
+  },
+  {
+    "bucket": "security-autopilot-w6-strict-s311-manual-696505809372",
+    "returncode": 254,
+    "lifecycle_present": false,
+    "error": "An error occurred (NoSuchLifecycleConfiguration) when calling the GetBucketLifecycleConfiguration operation: The lifecycle configuration does not exist"
+  },
+  {
+    "bucket": "security-autopilot-w6-strict-s315-exec-696505809372",
+    "returncode": 254,
+    "lifecycle_present": false,
+    "error": "An error occurred (NoSuchLifecycleConfiguration) when calling the GetBucketLifecycleConfiguration operation: The lifecycle configuration does not exist"
+  },
+  {
+    "bucket": "security-autopilot-w6-strict-s315-manual-696505809372",
+    "returncode": 254,
+    "lifecycle_present": false,
+    "error": "An error occurred (NoSuchLifecycleConfiguration) when calling the GetBucketLifecycleConfiguration operation: The lifecycle configuration does not exist"
+  }
+]

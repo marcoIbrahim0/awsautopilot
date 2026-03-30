@@ -1,0 +1,8 @@
+{
+  "action_id": "58a22607-666e-4016-8fe3-4ce62a235a6e",
+  "mode": "pr_only",
+  "strategy_id": "sg_restrict_public_ports_guided",
+  "profile_id": "ssm_only",
+  "strategy_inputs": {"access_mode": "ssm_only"},
+  "risk_acknowledged": true
+}

@@ -1,0 +1,2 @@
+
+An error occurred (ResourceNotFoundException) when calling the DescribeCertificate operation: Could not find certificate arn:aws:acm:us-east-1:696505809372:certificate/d03de4ad-4330-417f-9fe6-dfaa795e8506.

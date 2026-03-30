@@ -1,0 +1,29 @@
+{
+  "artifact_type": "generated_diff_summary",
+  "file_count": 2,
+  "files": [
+    {
+      "bundle_path": "decision.json",
+      "byte_count": 1683,
+      "change_type": "create_or_update",
+      "content_sha256": "b7424b9930e5ca03b569c16d9f567c9c7d856f041e17616e5c318a4d9ec45f11",
+      "line_count": 33,
+      "repo_path": "decision.json"
+    },
+    {
+      "bundle_path": "README.txt",
+      "byte_count": 1407,
+      "change_type": "create_or_update",
+      "content_sha256": "c2aa73fae38294a064aa322f18dfa7e101427c156309b20e68ad2f43c37ed584",
+      "line_count": 26,
+      "repo_path": "README.txt"
+    }
+  ],
+  "fingerprint_sha256": "6e0b8c9f5977770e6cbd63d5912d6bb8f8275573e3048172072506e3b018fc11",
+  "repo_target_configured": false,
+  "summary_lines": [
+    "`decision.json` <- `decision.json` (33 lines, sha256:b7424b9930e5)",
+    "`README.txt` <- `README.txt` (26 lines, sha256:c2aa73fae382)"
+  ],
+  "version": 1
+}

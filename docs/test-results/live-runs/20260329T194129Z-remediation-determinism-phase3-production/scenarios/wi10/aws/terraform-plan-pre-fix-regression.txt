@@ -1,0 +1,19 @@
+data.aws_s3_bucket_policy.existing: Reading...
+data.aws_s3_bucket_policy.existing: Read complete after 1s [id=sa-wi13-14-nopolicy-696505809372-20260328201935]
+
+Planning failed. Terraform encountered an error while generating this plan.
+
+
+Error: Inconsistent conditional result types
+
+  on s3_bucket_block_public_access.tf line 23, in locals:
+  23:   existing_policy_statements = can(local.existing_policy_statements_candidate.Effect) ? [
+  24:     local.existing_policy_statements_candidate
+  25:   ] : (
+  26:     local.existing_policy_statements_candidate == null ? [] : local.existing_policy_statements_candidate
+  27:   )
+    ├────────────────
+    │ local.existing_policy_statements_candidate is tuple with 1 element
+
+The true and false result expressions must have consistent types. The 'true'
+value is tuple, but the 'false' value is list of object.

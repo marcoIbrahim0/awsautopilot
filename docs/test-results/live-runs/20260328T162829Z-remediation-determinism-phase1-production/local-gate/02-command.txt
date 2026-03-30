@@ -1,0 +1,3 @@
+$ PYTHONPATH=. ./venv/bin/pytest tests/test_remediation_runtime_checks.py tests/test_remediation_profile_options_preview.py tests/test_remediation_run_resolution_create.py tests/test_grouped_remediation_run_service.py tests/test_grouped_remediation_run_routes.py tests/test_action_groups_bundle_run.py tests/test_step7_components.py -q -k 's3_9 or s3_access_logging'
+..................                                                       [100%]
+18 passed, 285 deselected in 0.35s

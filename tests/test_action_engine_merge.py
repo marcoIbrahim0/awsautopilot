@@ -153,6 +153,24 @@ def test_target_id_uses_canonical_control_for_equivalent_s3_lifecycle_controls()
     assert target_s311 == target_s313
 
 
+def test_target_id_keeps_bucket_scoped_s3_lifecycle_actions_distinct_from_legacy_account_scope() -> None:
+    """A bucket-scoped lifecycle action must not dedupe against an older account-scoped S3.11 action."""
+    bucket_target = _build_target_id(
+        "696505809372",
+        "eu-north-1",
+        "arn:aws:s3:::phase2-wi1-lifecycle-696505809372",
+        "S3.11",
+    )
+    account_target = _build_target_id(
+        "696505809372",
+        "eu-north-1",
+        "AWS::::Account:696505809372",
+        "S3.11",
+    )
+
+    assert bucket_target != account_target
+
+
 def test_target_id_uses_canonical_control_for_equivalent_s3_kms_controls() -> None:
     """Live AWS S3.17 SSE-KMS findings should dedupe to canonical product family S3.15."""
     action_type_s315 = _action_type_from_control("S3.15")

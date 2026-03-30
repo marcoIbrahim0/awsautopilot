@@ -1,0 +1,38 @@
+{
+  "artifact_type": "generated_diff_summary",
+  "file_count": 3,
+  "files": [
+    {
+      "bundle_path": "providers.tf",
+      "byte_count": 479,
+      "change_type": "create_or_update",
+      "content_sha256": "9a0536e0e9790c63a892e3b288fc6b299b5f7a1ea52e004cf4a0a8833e7227f3",
+      "line_count": 18,
+      "repo_path": "providers.tf"
+    },
+    {
+      "bundle_path": "s3_cloudfront_oac_private_s3.tf",
+      "byte_count": 5716,
+      "change_type": "create_or_update",
+      "content_sha256": "a61137522dbb64fd8b614b4134641354d484612db25711737ebbef02af79e48d",
+      "line_count": 177,
+      "repo_path": "s3_cloudfront_oac_private_s3.tf"
+    },
+    {
+      "bundle_path": "README.txt",
+      "byte_count": 2266,
+      "change_type": "create_or_update",
+      "content_sha256": "dcae6a2e8c42b1fcdbf06726af74328394c77cc52a26870745bae7609900bfc3",
+      "line_count": 53,
+      "repo_path": "README.txt"
+    }
+  ],
+  "fingerprint_sha256": "522c4de023689cccc2364140dc4bb2744a3c28a471e02fb5e1f970c01c486e29",
+  "repo_target_configured": false,
+  "summary_lines": [
+    "`providers.tf` <- `providers.tf` (18 lines, sha256:9a0536e0e979)",
+    "`s3_cloudfront_oac_private_s3.tf` <- `s3_cloudfront_oac_private_s3.tf` (177 lines, sha256:a61137522dbb)",
+    "`README.txt` <- `README.txt` (53 lines, sha256:dcae6a2e8c42)"
+  ],
+  "version": 1
+}

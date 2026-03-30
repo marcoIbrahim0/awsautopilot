@@ -64,3 +64,15 @@ def test_serverless_deploy_script_enforces_runtime_db_alignment_sequence() -> No
 
     for token in required_tokens:
         assert token in text
+
+
+def test_serverless_deploy_script_passes_database_fallback_inputs() -> None:
+    text = _read("scripts/deploy_saas_serverless.sh")
+
+    required_tokens = (
+        "DATABASE_URL_FALLBACK=",
+        "DatabaseUrlFallback=${DATABASE_URL_FALLBACK}",
+    )
+
+    for token in required_tokens:
+        assert token in text

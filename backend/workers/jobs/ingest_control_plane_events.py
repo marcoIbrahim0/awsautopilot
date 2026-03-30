@@ -55,8 +55,10 @@ def _maybe_enqueue_compute_actions(
     tenant_id: uuid.UUID,
     account_id: str,
     region: str,
+    *,
+    changed_any: bool,
 ) -> None:
-    if settings.CONTROL_PLANE_SHADOW_MODE:
+    if not changed_any:
         return
     if not settings.has_ingest_queue:
         return
@@ -213,6 +215,7 @@ def execute_ingest_control_plane_events_job(job: dict) -> None:
 
         applied_any = False
         resolved_any = False
+        changed_any = False
         impacted_action_ids: set[uuid.UUID] = set()
         for evaluation in evaluations:
             applied, changed = upsert_shadow_state(
@@ -225,6 +228,7 @@ def execute_ingest_control_plane_events_job(job: dict) -> None:
                 evaluation=evaluation,
             )
             applied_any = applied_any or applied
+            changed_any = changed_any or changed
             if applied and changed and evaluation.status == SHADOW_STATUS_RESOLVED:
                 resolved_any = True
             if not applied:
@@ -287,4 +291,9 @@ def execute_ingest_control_plane_events_job(job: dict) -> None:
             len(evaluations),
         )
 
-    _maybe_enqueue_compute_actions(tenant_id=tenant_id, account_id=account_id, region=region)
+    _maybe_enqueue_compute_actions(
+        tenant_id=tenant_id,
+        account_id=account_id,
+        region=region,
+        changed_any=changed_any,
+    )

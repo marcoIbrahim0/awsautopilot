@@ -82,8 +82,17 @@ class FakeClient:
             ]
         }
 
-    def create_pr_bundle_run(self, action_id: str, strategy_id: str):
-        del action_id, strategy_id
+    def create_pr_bundle_run(
+        self,
+        action_id: str,
+        strategy_id: str | None = None,
+        *,
+        profile_id: str | None = None,
+        strategy_inputs: dict | None = None,
+        risk_acknowledged: bool = True,
+        bucket_creation_acknowledged: bool = False,
+    ):
+        del action_id, strategy_id, profile_id, strategy_inputs, risk_acknowledged, bucket_creation_acknowledged
         return {"id": "run-1"}
 
     def get_remediation_run(self, run_id: str):
@@ -155,8 +164,17 @@ class FakeClientStrategyFallback(FakeClient):
             ],
         }
 
-    def create_pr_bundle_run(self, action_id: str, strategy_id: str | None = None):
-        del action_id
+    def create_pr_bundle_run(
+        self,
+        action_id: str,
+        strategy_id: str | None = None,
+        *,
+        profile_id: str | None = None,
+        strategy_inputs: dict | None = None,
+        risk_acknowledged: bool = True,
+        bucket_creation_acknowledged: bool = False,
+    ):
+        del action_id, profile_id, strategy_inputs, risk_acknowledged, bucket_creation_acknowledged
         if strategy_id == "recommended_blocked":
             raise ApiError(
                 "One or more dependency checks blocked this remediation strategy.",
@@ -369,6 +387,87 @@ def test_no_ui_agent_dry_run_smoke_strategy_fallback(tmp_path: Path) -> None:
     assert "fallback_ok" in run_create
 
 
+def test_no_ui_agent_guided_strategy_uses_preview_resolution_inputs(tmp_path: Path) -> None:
+    settings = {
+        "api_base": "https://api.ocypheris.com",
+        "account_id": "029037611564",
+        "region": "eu-north-1",
+        "output_dir": str(tmp_path),
+        "control_preference": ["CloudTrail.1"],
+        "poll_interval_sec": 0,
+        "phase_timeout_sec": 300,
+        "run_timeout_sec": 5,
+        "verify_timeout_sec": 5,
+        "terraform_timeout_sec": 5,
+        "stale_resend_sec": 120,
+        "resume_from_checkpoint": False,
+        "dry_run": True,
+        "keep_workdir": True,
+        "allow_insecure_http": False,
+        "client_timeout_sec": 30,
+    }
+    fake_client = FakeClientGuidedInputs()
+
+    agent = NoUiPrBundleAgent(
+        settings=settings,
+        output_dir=tmp_path,
+        email="user@example.com",
+        password="pass",
+        client_factory=lambda *args, **kwargs: fake_client,
+    )
+    code = agent.run()
+
+    assert code == 0
+    strategy_selection = json.loads((tmp_path / "strategy_selection.json").read_text(encoding="utf-8"))
+    assert strategy_selection["strategy_id"] == "cloudtrail_enable_guided"
+    assert strategy_selection["profile_id"] == "cloudtrail_enable_guided"
+    assert strategy_selection["strategy_inputs"]["trail_bucket_name"] == (
+        "security-autopilot-trail-logs-029037611564-eu-north-1"
+    )
+    assert strategy_selection["strategy_inputs"]["create_bucket_if_missing"] is True
+    assert fake_client.last_create_payload is not None
+    assert fake_client.last_create_payload["strategy_id"] == "cloudtrail_enable_guided"
+    assert fake_client.last_create_payload["profile_id"] == "cloudtrail_enable_guided"
+    assert fake_client.last_create_payload["strategy_inputs"] == strategy_selection["strategy_inputs"]
+    assert fake_client.last_create_payload["bucket_creation_acknowledged"] is True
+
+
+def test_no_ui_agent_uses_provided_access_token_without_login(tmp_path: Path) -> None:
+    settings = {
+        "api_base": "https://api.ocypheris.com",
+        "account_id": "029037611564",
+        "region": "eu-north-1",
+        "output_dir": str(tmp_path),
+        "control_preference": ["EC2.53"],
+        "poll_interval_sec": 0,
+        "phase_timeout_sec": 300,
+        "run_timeout_sec": 5,
+        "verify_timeout_sec": 5,
+        "terraform_timeout_sec": 5,
+        "stale_resend_sec": 120,
+        "resume_from_checkpoint": False,
+        "dry_run": True,
+        "keep_workdir": True,
+        "allow_insecure_http": False,
+        "client_timeout_sec": 30,
+    }
+    fake_client = FakeClientAccessToken()
+
+    agent = NoUiPrBundleAgent(
+        settings=settings,
+        output_dir=tmp_path,
+        email="",
+        password="",
+        access_token="token-from-env",
+        client_factory=lambda *args, **kwargs: fake_client,
+    )
+    code = agent.run()
+
+    assert code == 0
+    assert fake_client.login_called is False
+    assert fake_client.access_token == "token-from-env"
+
+
 def test_refresh_phase_timeout_budget_uses_reconcile_window(tmp_path: Path) -> None:
     settings = {
         "api_base": "https://api.ocypheris.com",
@@ -525,6 +624,113 @@ class FakeClientRemediated(FakeClient):
             ],
             "total": 1,
         }
+
+
+class FakeClientGuidedInputs(FakeClient):
+    def __init__(self) -> None:
+        super().__init__()
+        self.last_create_payload: dict[str, object] | None = None
+
+    def list_findings(
+        self,
+        account_id: str,
+        region: str | None,
+        limit: int,
+        offset: int,
+        status_filter: str | None = None,
+    ):
+        del account_id, region, limit, status_filter
+        if offset > 0:
+            return {"items": [], "total": 1}
+        return {
+            "items": [
+                {
+                    "id": "finding-cloudtrail-1",
+                    "status": "NEW",
+                    "severity_label": "HIGH",
+                    "control_id": "CloudTrail.1",
+                    "resource_id": "trail-1",
+                    "remediation_action_id": "action-cloudtrail-1",
+                    "updated_at_db": "2026-03-26T10:00:00Z",
+                    "source": "security_hub",
+                }
+            ],
+            "total": 1,
+        }
+
+    def get_remediation_options(self, action_id: str):
+        del action_id
+        return {
+            "strategies": [
+                {
+                    "strategy_id": "cloudtrail_enable_guided",
+                    "mode": "pr_only",
+                    "requires_inputs": True,
+                    "recommended": True,
+                    "supports_exception_flow": False,
+                }
+            ]
+        }
+
+    def get_remediation_preview(
+        self,
+        action_id: str,
+        *,
+        strategy_id: str | None = None,
+        profile_id: str | None = None,
+        strategy_inputs: dict | None = None,
+    ):
+        del action_id, strategy_id, profile_id, strategy_inputs
+        return {
+            "resolution": {
+                "strategy_id": "cloudtrail_enable_guided",
+                "profile_id": "cloudtrail_enable_guided",
+                "support_tier": "deterministic_bundle",
+                "resolved_inputs": {
+                    "trail_name": "security-autopilot-trail",
+                    "trail_bucket_name": "security-autopilot-trail-logs-029037611564-eu-north-1",
+                    "create_bucket_if_missing": True,
+                    "create_bucket_policy": True,
+                    "multi_region": True,
+                },
+                "blocked_reasons": [],
+                "missing_defaults": [],
+            }
+        }
+
+    def create_pr_bundle_run(
+        self,
+        action_id: str,
+        strategy_id: str | None = None,
+        *,
+        profile_id: str | None = None,
+        strategy_inputs: dict | None = None,
+        risk_acknowledged: bool = True,
+        bucket_creation_acknowledged: bool = False,
+    ):
+        self.last_create_payload = {
+            "action_id": action_id,
+            "strategy_id": strategy_id,
+            "profile_id": profile_id,
+            "strategy_inputs": strategy_inputs,
+            "risk_acknowledged": risk_acknowledged,
+            "bucket_creation_acknowledged": bucket_creation_acknowledged,
+        }
+        return {"id": "run-guided-1"}
+
+
+class FakeClientAccessToken(FakeClient):
+    def __init__(self) -> None:
+        super().__init__()
+        self.login_called = False
+        self.access_token: str | None = None
+
+    def login(self, email: str, password: str):
+        self.login_called = True
+        return super().login(email, password)
+
+    def set_access_token(self, token: str) -> None:
+        self.access_token = token
 
 
 def test_target_select_noops_when_preferred_control_has_no_eligible_finding(tmp_path: Path) -> None:

@@ -1,0 +1,283 @@
+2026-03-30T01:42:01.712000+00:00 2026/03/30/[$LATEST]82599d5bf9bd4180a8acbde40ef08f6f END RequestId: 78a84ab1-7eb7-5266-a33e-28f2a9ba03b4
+2026-03-30T01:42:01.712000+00:00 2026/03/30/[$LATEST]82599d5bf9bd4180a8acbde40ef08f6f REPORT RequestId: 78a84ab1-7eb7-5266-a33e-28f2a9ba03b4	Duration: 21635.34 ms	Billed Duration: 21636 ms	Memory Size: 1024 MB	Max Memory Used: 295 MB
+2026-03-30T01:42:01.750000+00:00 2026/03/30/[$LATEST]82599d5bf9bd4180a8acbde40ef08f6f START RequestId: 2bfbe87f-caa1-52de-8543-8a3c1d81b98d Version: $LATEST
+2026-03-30T01:42:11.191000+00:00 2026/03/30/[$LATEST]82599d5bf9bd4180a8acbde40ef08f6f END RequestId: 2bfbe87f-caa1-52de-8543-8a3c1d81b98d
+2026-03-30T01:42:11.192000+00:00 2026/03/30/[$LATEST]82599d5bf9bd4180a8acbde40ef08f6f REPORT RequestId: 2bfbe87f-caa1-52de-8543-8a3c1d81b98d	Duration: 9441.48 ms	Billed Duration: 9442 ms	Memory Size: 1024 MB	Max Memory Used: 295 MB
+2026-03-30T01:42:11.232000+00:00 2026/03/30/[$LATEST]82599d5bf9bd4180a8acbde40ef08f6f START RequestId: 499646a6-09a1-53de-9a9a-24e5de80f60c Version: $LATEST
+2026-03-30T01:42:34.603000+00:00 2026/03/30/[$LATEST]82599d5bf9bd4180a8acbde40ef08f6f END RequestId: 499646a6-09a1-53de-9a9a-24e5de80f60c
+2026-03-30T01:42:34.603000+00:00 2026/03/30/[$LATEST]82599d5bf9bd4180a8acbde40ef08f6f REPORT RequestId: 499646a6-09a1-53de-9a9a-24e5de80f60c	Duration: 23370.31 ms	Billed Duration: 23371 ms	Memory Size: 1024 MB	Max Memory Used: 295 MB
+2026-03-30T01:43:52.796000+00:00 2026/03/30/[$LATEST]0c9fdf0cf54e4efd97e872074568a46a [WARNING]	2026-03-30T01:43:52.796Z		database_failover selected source=fallback host=ep-curly-butterfly-al0pzr9w-pooler.c-3.eu-central-1.aws.neon.tech after primary probe failure
+2026-03-30T01:43:52.827000+00:00 2026/03/30/[$LATEST]1419df88df9e48dda1874df349a36cd7 [WARNING]	2026-03-30T01:43:52.827Z		database_failover selected source=fallback host=ep-curly-butterfly-al0pzr9w-pooler.c-3.eu-central-1.aws.neon.tech after primary probe failure
+2026-03-30T01:43:53.386000+00:00 2026/03/30/[$LATEST]0c9fdf0cf54e4efd97e872074568a46a INIT_REPORT Init Duration: 9999.24 ms	Phase: init	Status: timeout
+2026-03-30T01:43:54.698000+00:00 2026/03/30/[$LATEST]3d3f03ddb0ca4e09a5a55271ab627b99 [WARNING]	2026-03-30T01:43:54.698Z		database_failover selected source=fallback host=ep-curly-butterfly-al0pzr9w-pooler.c-3.eu-central-1.aws.neon.tech after primary probe failure
+2026-03-30T01:43:54.735000+00:00 2026/03/30/[$LATEST]1419df88df9e48dda1874df349a36cd7 START RequestId: 1d9f7072-8d07-5fe0-974e-12315a86212e Version: $LATEST
+2026-03-30T01:43:54.736000+00:00 2026/03/30/[$LATEST]1419df88df9e48dda1874df349a36cd7 [WARNING]	2026-03-30T01:43:54.736Z	1d9f7072-8d07-5fe0-974e-12315a86212e	[42dc076c-537a-4d89-8efe-d674a0e94b64] Retried message queue=security-autopilot-ingest-queue receive_count=2 job_type=attack_path_materialization schema_version=1 tenant=e4e07aa8-b8ea-4c1d-9fd7-4362a2fc1195 account=696505809372 region=eu-north-1
+2026-03-30T01:43:55.101000+00:00 2026/03/30/[$LATEST]0c9fdf0cf54e4efd97e872074568a46a [WARNING]	2026-03-30T01:43:55.100Z		database_failover selected source=fallback host=ep-curly-butterfly-al0pzr9w-pooler.c-3.eu-central-1.aws.neon.tech after primary probe failure
+2026-03-30T01:43:56.233000+00:00 2026/03/30/[$LATEST]3d3f03ddb0ca4e09a5a55271ab627b99 START RequestId: 8cd6554b-fc17-50fd-8c5b-37082b83d476 Version: $LATEST
+2026-03-30T01:43:56.366000+00:00 2026/03/30/[$LATEST]0c9fdf0cf54e4efd97e872074568a46a START RequestId: de8e0706-aa8c-5153-8dfd-65457d0bc081 Version: $LATEST
+2026-03-30T01:44:08.439000+00:00 2026/03/30/[$LATEST]3d3f03ddb0ca4e09a5a55271ab627b99 END RequestId: 8cd6554b-fc17-50fd-8c5b-37082b83d476
+2026-03-30T01:44:08.440000+00:00 2026/03/30/[$LATEST]3d3f03ddb0ca4e09a5a55271ab627b99 REPORT RequestId: 8cd6554b-fc17-50fd-8c5b-37082b83d476	Duration: 12206.18 ms	Billed Duration: 16140 ms	Memory Size: 1024 MB	Max Memory Used: 234 MB	Init Duration: 3933.39 ms
+2026-03-30T01:44:08.475000+00:00 2026/03/30/[$LATEST]3d3f03ddb0ca4e09a5a55271ab627b99 START RequestId: 665ae6ce-438c-5869-8ba1-848d94181bf1 Version: $LATEST
+2026-03-30T01:44:17.500000+00:00 2026/03/30/[$LATEST]3d3f03ddb0ca4e09a5a55271ab627b99 END RequestId: 665ae6ce-438c-5869-8ba1-848d94181bf1
+2026-03-30T01:44:17.500000+00:00 2026/03/30/[$LATEST]3d3f03ddb0ca4e09a5a55271ab627b99 REPORT RequestId: 665ae6ce-438c-5869-8ba1-848d94181bf1	Duration: 9025.29 ms	Billed Duration: 9026 ms	Memory Size: 1024 MB	Max Memory Used: 247 MB
+2026-03-30T01:44:17.540000+00:00 2026/03/30/[$LATEST]3d3f03ddb0ca4e09a5a55271ab627b99 START RequestId: 3faa0a20-5c78-5ee5-97fe-68638bd2a04d Version: $LATEST
+2026-03-30T01:44:18.250000+00:00 2026/03/30/[$LATEST]0c9fdf0cf54e4efd97e872074568a46a END RequestId: de8e0706-aa8c-5153-8dfd-65457d0bc081
+2026-03-30T01:44:18.250000+00:00 2026/03/30/[$LATEST]0c9fdf0cf54e4efd97e872074568a46a REPORT RequestId: de8e0706-aa8c-5153-8dfd-65457d0bc081	Duration: 24807.99 ms	Billed Duration: 24808 ms	Memory Size: 1024 MB	Max Memory Used: 234 MB
+2026-03-30T01:44:18.285000+00:00 2026/03/30/[$LATEST]0c9fdf0cf54e4efd97e872074568a46a START RequestId: 42326d57-2113-5864-aa9b-0f14f68d391d Version: $LATEST
+2026-03-30T01:44:18.706000+00:00 2026/03/30/[$LATEST]1419df88df9e48dda1874df349a36cd7 END RequestId: 1d9f7072-8d07-5fe0-974e-12315a86212e
+2026-03-30T01:44:18.706000+00:00 2026/03/30/[$LATEST]1419df88df9e48dda1874df349a36cd7 REPORT RequestId: 1d9f7072-8d07-5fe0-974e-12315a86212e	Duration: 23970.19 ms	Billed Duration: 33429 ms	Memory Size: 1024 MB	Max Memory Used: 204 MB	Init Duration: 9458.54 ms
+2026-03-30T01:44:21.491000+00:00 2026/03/30/[$LATEST]1419df88df9e48dda1874df349a36cd7 START RequestId: ca464c32-e3ed-5e27-92f5-2e7134469dbf Version: $LATEST
+2026-03-30T01:44:21.492000+00:00 2026/03/30/[$LATEST]1419df88df9e48dda1874df349a36cd7 [WARNING]	2026-03-30T01:44:21.491Z	ca464c32-e3ed-5e27-92f5-2e7134469dbf	[8492ffb6-752a-43f1-968a-07039c10f337] Retried message queue=security-autopilot-ingest-queue receive_count=2 job_type=attack_path_materialization schema_version=1 tenant=e4e07aa8-b8ea-4c1d-9fd7-4362a2fc1195 account=696505809372 region=eu-north-1
+2026-03-30T01:44:26.948000+00:00 2026/03/30/[$LATEST]0c9fdf0cf54e4efd97e872074568a46a END RequestId: 42326d57-2113-5864-aa9b-0f14f68d391d
+2026-03-30T01:44:26.948000+00:00 2026/03/30/[$LATEST]0c9fdf0cf54e4efd97e872074568a46a REPORT RequestId: 42326d57-2113-5864-aa9b-0f14f68d391d	Duration: 8663.21 ms	Billed Duration: 8664 ms	Memory Size: 1024 MB	Max Memory Used: 246 MB
+2026-03-30T01:44:26.983000+00:00 2026/03/30/[$LATEST]0c9fdf0cf54e4efd97e872074568a46a START RequestId: 2f8b20d2-5825-5afb-89e6-42918f8fe06c Version: $LATEST
+2026-03-30T01:44:45.893000+00:00 2026/03/30/[$LATEST]1419df88df9e48dda1874df349a36cd7 END RequestId: ca464c32-e3ed-5e27-92f5-2e7134469dbf
+2026-03-30T01:44:45.893000+00:00 2026/03/30/[$LATEST]1419df88df9e48dda1874df349a36cd7 REPORT RequestId: ca464c32-e3ed-5e27-92f5-2e7134469dbf	Duration: 24401.73 ms	Billed Duration: 24402 ms	Memory Size: 1024 MB	Max Memory Used: 207 MB
+2026-03-30T01:44:45.943000+00:00 2026/03/30/[$LATEST]3d3f03ddb0ca4e09a5a55271ab627b99 [ERROR]	2026-03-30T01:44:45.918Z	3faa0a20-5c78-5ee5-97fe-68638bd2a04d	[e38e4a40-18de-4fee-8f28-26562d969572] Handler failed (IntegrityError) job_type=attack_path_materialization. Message will retry/DLQ.
+2026-03-30T01:44:45.943000+00:00 2026/03/30/[$LATEST]3d3f03ddb0ca4e09a5a55271ab627b99 Traceback (most recent call last):
+2026-03-30T01:44:45.943000+00:00 2026/03/30/[$LATEST]3d3f03ddb0ca4e09a5a55271ab627b99 File "/var/task/sqlalchemy/dialects/postgresql/asyncpg.py", line 550, in _prepare_and_execute
+2026-03-30T01:44:45.943000+00:00 2026/03/30/[$LATEST]3d3f03ddb0ca4e09a5a55271ab627b99 self._rows = deque(await prepared_stmt.fetch(*parameters))
+2026-03-30T01:44:45.943000+00:00 2026/03/30/[$LATEST]3d3f03ddb0ca4e09a5a55271ab627b99 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+2026-03-30T01:44:45.943000+00:00 2026/03/30/[$LATEST]3d3f03ddb0ca4e09a5a55271ab627b99 File "/var/task/asyncpg/prepared_stmt.py", line 177, in fetch
+2026-03-30T01:44:45.943000+00:00 2026/03/30/[$LATEST]3d3f03ddb0ca4e09a5a55271ab627b99 data = await self.__bind_execute(args, 0, timeout)
+2026-03-30T01:44:45.943000+00:00 2026/03/30/[$LATEST]3d3f03ddb0ca4e09a5a55271ab627b99 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+2026-03-30T01:44:45.943000+00:00 2026/03/30/[$LATEST]3d3f03ddb0ca4e09a5a55271ab627b99 File "/var/task/asyncpg/prepared_stmt.py", line 268, in __bind_execute
+2026-03-30T01:44:45.943000+00:00 2026/03/30/[$LATEST]3d3f03ddb0ca4e09a5a55271ab627b99 data, status, _ = await self.__do_execute(
+2026-03-30T01:44:45.943000+00:00 2026/03/30/[$LATEST]3d3f03ddb0ca4e09a5a55271ab627b99 ^^^^^^^^^^^^^^^^^^^^^^^^
+2026-03-30T01:44:45.943000+00:00 2026/03/30/[$LATEST]3d3f03ddb0ca4e09a5a55271ab627b99 File "/var/task/asyncpg/prepared_stmt.py", line 257, in __do_execute
+2026-03-30T01:44:45.943000+00:00 2026/03/30/[$LATEST]3d3f03ddb0ca4e09a5a55271ab627b99 return await executor(protocol)
+2026-03-30T01:44:45.943000+00:00 2026/03/30/[$LATEST]3d3f03ddb0ca4e09a5a55271ab627b99 ^^^^^^^^^^^^^^^^^^^^^^^^
+2026-03-30T01:44:45.943000+00:00 2026/03/30/[$LATEST]3d3f03ddb0ca4e09a5a55271ab627b99 File "asyncpg/protocol/protocol.pyx", line 205, in bind_execute
+2026-03-30T01:44:45.943000+00:00 2026/03/30/[$LATEST]3d3f03ddb0ca4e09a5a55271ab627b99 return await waiter
+2026-03-30T01:44:45.943000+00:00 2026/03/30/[$LATEST]3d3f03ddb0ca4e09a5a55271ab627b99 asyncpg.exceptions.UniqueViolationError: duplicate key value violates unique constraint "uq_attack_path_materialized_summaries_tenant_path"
+2026-03-30T01:44:45.943000+00:00 2026/03/30/[$LATEST]3d3f03ddb0ca4e09a5a55271ab627b99 DETAIL:  Key (tenant_id, path_id)=(e4e07aa8-b8ea-4c1d-9fd7-4362a2fc1195, path:96bdb7a6b4e43c63343c) already exists.
+2026-03-30T01:44:45.943000+00:00 2026/03/30/[$LATEST]3d3f03ddb0ca4e09a5a55271ab627b99 The above exception was the direct cause of the following exception:
+2026-03-30T01:44:45.943000+00:00 2026/03/30/[$LATEST]3d3f03ddb0ca4e09a5a55271ab627b99 Traceback (most recent call last):
+2026-03-30T01:44:45.943000+00:00 2026/03/30/[$LATEST]3d3f03ddb0ca4e09a5a55271ab627b99 File "/var/task/sqlalchemy/engine/base.py", line 1967, in _exec_single_context
+2026-03-30T01:44:45.943000+00:00 2026/03/30/[$LATEST]3d3f03ddb0ca4e09a5a55271ab627b99 self.dialect.do_execute(
+2026-03-30T01:44:45.943000+00:00 2026/03/30/[$LATEST]3d3f03ddb0ca4e09a5a55271ab627b99 File "/var/task/sqlalchemy/engine/default.py", line 952, in do_execute
+2026-03-30T01:44:45.943000+00:00 2026/03/30/[$LATEST]3d3f03ddb0ca4e09a5a55271ab627b99 cursor.execute(statement, parameters)
+2026-03-30T01:44:45.943000+00:00 2026/03/30/[$LATEST]3d3f03ddb0ca4e09a5a55271ab627b99 File "/var/task/sqlalchemy/dialects/postgresql/asyncpg.py", line 585, in execute
+2026-03-30T01:44:45.943000+00:00 2026/03/30/[$LATEST]3d3f03ddb0ca4e09a5a55271ab627b99 self._adapt_connection.await_(
+2026-03-30T01:44:45.943000+00:00 2026/03/30/[$LATEST]3d3f03ddb0ca4e09a5a55271ab627b99 File "/var/task/sqlalchemy/util/_concurrency_py3k.py", line 132, in await_only
+2026-03-30T01:44:45.943000+00:00 2026/03/30/[$LATEST]3d3f03ddb0ca4e09a5a55271ab627b99 return current.parent.switch(awaitable)  # type: ignore[no-any-return,attr-defined] # noqa: E501
+2026-03-30T01:44:45.943000+00:00 2026/03/30/[$LATEST]3d3f03ddb0ca4e09a5a55271ab627b99 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+2026-03-30T01:44:45.943000+00:00 2026/03/30/[$LATEST]3d3f03ddb0ca4e09a5a55271ab627b99 File "/var/task/sqlalchemy/util/_concurrency_py3k.py", line 196, in greenlet_spawn
+2026-03-30T01:44:45.943000+00:00 2026/03/30/[$LATEST]3d3f03ddb0ca4e09a5a55271ab627b99 value = await result
+2026-03-30T01:44:45.943000+00:00 2026/03/30/[$LATEST]3d3f03ddb0ca4e09a5a55271ab627b99 ^^^^^^^^^^^^
+2026-03-30T01:44:45.943000+00:00 2026/03/30/[$LATEST]3d3f03ddb0ca4e09a5a55271ab627b99 File "/var/task/sqlalchemy/dialects/postgresql/asyncpg.py", line 563, in _prepare_and_execute
+2026-03-30T01:44:45.943000+00:00 2026/03/30/[$LATEST]3d3f03ddb0ca4e09a5a55271ab627b99 self._handle_exception(error)
+2026-03-30T01:44:45.943000+00:00 2026/03/30/[$LATEST]3d3f03ddb0ca4e09a5a55271ab627b99 File "/var/task/sqlalchemy/dialects/postgresql/asyncpg.py", line 513, in _handle_exception
+2026-03-30T01:44:45.943000+00:00 2026/03/30/[$LATEST]3d3f03ddb0ca4e09a5a55271ab627b99 self._adapt_connection._handle_exception(error)
+2026-03-30T01:44:45.943000+00:00 2026/03/30/[$LATEST]3d3f03ddb0ca4e09a5a55271ab627b99 File "/var/task/sqlalchemy/dialects/postgresql/asyncpg.py", line 797, in _handle_exception
+2026-03-30T01:44:45.943000+00:00 2026/03/30/[$LATEST]3d3f03ddb0ca4e09a5a55271ab627b99 raise translated_error from error
+2026-03-30T01:44:45.943000+00:00 2026/03/30/[$LATEST]3d3f03ddb0ca4e09a5a55271ab627b99 sqlalchemy.dialects.postgresql.asyncpg.AsyncAdapt_asyncpg_dbapi.IntegrityError: <class 'asyncpg.exceptions.UniqueViolationError'>: duplicate key value violates unique constraint "uq_attack_path_materialized_summaries_tenant_path"
+2026-03-30T01:44:45.943000+00:00 2026/03/30/[$LATEST]3d3f03ddb0ca4e09a5a55271ab627b99 DETAIL:  Key (tenant_id, path_id)=(e4e07aa8-b8ea-4c1d-9fd7-4362a2fc1195, path:96bdb7a6b4e43c63343c) already exists.
+2026-03-30T01:44:45.943000+00:00 2026/03/30/[$LATEST]3d3f03ddb0ca4e09a5a55271ab627b99 The above exception was the direct cause of the following exception:
+2026-03-30T01:44:45.943000+00:00 2026/03/30/[$LATEST]3d3f03ddb0ca4e09a5a55271ab627b99 Traceback (most recent call last):
+2026-03-30T01:44:45.943000+00:00 2026/03/30/[$LATEST]3d3f03ddb0ca4e09a5a55271ab627b99 File "/var/task/backend/workers/lambda_handler.py", line 338, in _process_record
+2026-03-30T01:44:45.943000+00:00 2026/03/30/[$LATEST]3d3f03ddb0ca4e09a5a55271ab627b99 handler_fn(job)
+2026-03-30T01:44:45.943000+00:00 2026/03/30/[$LATEST]3d3f03ddb0ca4e09a5a55271ab627b99 File "/var/task/backend/workers/jobs/attack_path_materialization.py", line 25, in execute_attack_path_materialization_job
+2026-03-30T01:44:45.943000+00:00 2026/03/30/[$LATEST]3d3f03ddb0ca4e09a5a55271ab627b99 result = asyncio.run(_run_refresh(tenant_id=tenant_id, account_id=account_id, region=region))
+2026-03-30T01:44:45.943000+00:00 2026/03/30/[$LATEST]3d3f03ddb0ca4e09a5a55271ab627b99 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+2026-03-30T01:44:45.943000+00:00 2026/03/30/[$LATEST]3d3f03ddb0ca4e09a5a55271ab627b99 File "/var/lang/lib/python3.12/asyncio/runners.py", line 195, in run
+2026-03-30T01:44:45.943000+00:00 2026/03/30/[$LATEST]3d3f03ddb0ca4e09a5a55271ab627b99 return runner.run(main)
+2026-03-30T01:44:45.943000+00:00 2026/03/30/[$LATEST]3d3f03ddb0ca4e09a5a55271ab627b99 ^^^^^^^^^^^^^^^^
+2026-03-30T01:44:45.943000+00:00 2026/03/30/[$LATEST]3d3f03ddb0ca4e09a5a55271ab627b99 File "/var/lang/lib/python3.12/asyncio/runners.py", line 118, in run
+2026-03-30T01:44:45.943000+00:00 2026/03/30/[$LATEST]3d3f03ddb0ca4e09a5a55271ab627b99 return self._loop.run_until_complete(task)
+2026-03-30T01:44:45.943000+00:00 2026/03/30/[$LATEST]3d3f03ddb0ca4e09a5a55271ab627b99 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+2026-03-30T01:44:45.943000+00:00 2026/03/30/[$LATEST]3d3f03ddb0ca4e09a5a55271ab627b99 File "/var/lang/lib/python3.12/asyncio/base_events.py", line 691, in run_until_complete
+2026-03-30T01:44:45.943000+00:00 2026/03/30/[$LATEST]3d3f03ddb0ca4e09a5a55271ab627b99 return future.result()
+2026-03-30T01:44:45.943000+00:00 2026/03/30/[$LATEST]3d3f03ddb0ca4e09a5a55271ab627b99 ^^^^^^^^^^^^^^^
+2026-03-30T01:44:45.943000+00:00 2026/03/30/[$LATEST]3d3f03ddb0ca4e09a5a55271ab627b99 File "/var/task/backend/workers/jobs/attack_path_materialization.py", line 41, in _run_refresh
+2026-03-30T01:44:45.943000+00:00 2026/03/30/[$LATEST]3d3f03ddb0ca4e09a5a55271ab627b99 result = await materialize_attack_paths(session, tenant_id=tenant_id, account_id=account_id, region=region)
+2026-03-30T01:44:45.943000+00:00 2026/03/30/[$LATEST]3d3f03ddb0ca4e09a5a55271ab627b99 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+2026-03-30T01:44:45.943000+00:00 2026/03/30/[$LATEST]3d3f03ddb0ca4e09a5a55271ab627b99 File "/var/task/backend/services/attack_path_materialized.py", line 210, in materialize_attack_paths
+2026-03-30T01:44:45.943000+00:00 2026/03/30/[$LATEST]3d3f03ddb0ca4e09a5a55271ab627b99 await db.flush()
+2026-03-30T01:44:45.943000+00:00 2026/03/30/[$LATEST]3d3f03ddb0ca4e09a5a55271ab627b99 File "/var/task/sqlalchemy/ext/asyncio/session.py", line 787, in flush
+2026-03-30T01:44:45.943000+00:00 2026/03/30/[$LATEST]3d3f03ddb0ca4e09a5a55271ab627b99 await greenlet_spawn(self.sync_session.flush, objects=objects)
+2026-03-30T01:44:45.943000+00:00 2026/03/30/[$LATEST]3d3f03ddb0ca4e09a5a55271ab627b99 File "/var/task/sqlalchemy/util/_concurrency_py3k.py", line 203, in greenlet_spawn
+2026-03-30T01:44:45.943000+00:00 2026/03/30/[$LATEST]3d3f03ddb0ca4e09a5a55271ab627b99 result = context.switch(value)
+2026-03-30T01:44:45.943000+00:00 2026/03/30/[$LATEST]3d3f03ddb0ca4e09a5a55271ab627b99 ^^^^^^^^^^^^^^^^^^^^^
+2026-03-30T01:44:45.943000+00:00 2026/03/30/[$LATEST]3d3f03ddb0ca4e09a5a55271ab627b99 File "/var/task/sqlalchemy/orm/session.py", line 4331, in flush
+2026-03-30T01:44:45.943000+00:00 2026/03/30/[$LATEST]3d3f03ddb0ca4e09a5a55271ab627b99 self._flush(objects)
+2026-03-30T01:44:45.943000+00:00 2026/03/30/[$LATEST]3d3f03ddb0ca4e09a5a55271ab627b99 File "/var/task/sqlalchemy/orm/session.py", line 4466, in _flush
+2026-03-30T01:44:45.943000+00:00 2026/03/30/[$LATEST]3d3f03ddb0ca4e09a5a55271ab627b99 with util.safe_reraise():
+2026-03-30T01:44:45.943000+00:00 2026/03/30/[$LATEST]3d3f03ddb0ca4e09a5a55271ab627b99 ^^^^^^^^^^^^^^^^^^^
+2026-03-30T01:44:45.943000+00:00 2026/03/30/[$LATEST]3d3f03ddb0ca4e09a5a55271ab627b99 File "/var/task/sqlalchemy/util/langhelpers.py", line 121, in __exit__
+2026-03-30T01:44:45.943000+00:00 2026/03/30/[$LATEST]3d3f03ddb0ca4e09a5a55271ab627b99 raise exc_value.with_traceback(exc_tb)
+2026-03-30T01:44:45.943000+00:00 2026/03/30/[$LATEST]3d3f03ddb0ca4e09a5a55271ab627b99 File "/var/task/sqlalchemy/orm/session.py", line 4427, in _flush
+2026-03-30T01:44:45.943000+00:00 2026/03/30/[$LATEST]3d3f03ddb0ca4e09a5a55271ab627b99 flush_context.execute()
+2026-03-30T01:44:45.943000+00:00 2026/03/30/[$LATEST]3d3f03ddb0ca4e09a5a55271ab627b99 File "/var/task/sqlalchemy/orm/unitofwork.py", line 466, in execute
+2026-03-30T01:44:45.943000+00:00 2026/03/30/[$LATEST]3d3f03ddb0ca4e09a5a55271ab627b99 rec.execute(self)
+2026-03-30T01:44:45.943000+00:00 2026/03/30/[$LATEST]3d3f03ddb0ca4e09a5a55271ab627b99 File "/var/task/sqlalchemy/orm/unitofwork.py", line 642, in execute
+2026-03-30T01:44:45.943000+00:00 2026/03/30/[$LATEST]3d3f03ddb0ca4e09a5a55271ab627b99 util.preloaded.orm_persistence.save_obj(
+2026-03-30T01:44:45.943000+00:00 2026/03/30/[$LATEST]3d3f03ddb0ca4e09a5a55271ab627b99 File "/var/task/sqlalchemy/orm/persistence.py", line 93, in save_obj
+2026-03-30T01:44:45.943000+00:00 2026/03/30/[$LATEST]3d3f03ddb0ca4e09a5a55271ab627b99 _emit_insert_statements(
+2026-03-30T01:44:45.943000+00:00 2026/03/30/[$LATEST]3d3f03ddb0ca4e09a5a55271ab627b99 File "/var/task/sqlalchemy/orm/persistence.py", line 1233, in _emit_insert_statements
+2026-03-30T01:44:45.943000+00:00 2026/03/30/[$LATEST]3d3f03ddb0ca4e09a5a55271ab627b99 result = connection.execute(
+2026-03-30T01:44:45.943000+00:00 2026/03/30/[$LATEST]3d3f03ddb0ca4e09a5a55271ab627b99 ^^^^^^^^^^^^^^^^^^^
+2026-03-30T01:44:45.943000+00:00 2026/03/30/[$LATEST]3d3f03ddb0ca4e09a5a55271ab627b99 File "/var/task/sqlalchemy/engine/base.py", line 1419, in execute
+2026-03-30T01:44:45.943000+00:00 2026/03/30/[$LATEST]3d3f03ddb0ca4e09a5a55271ab627b99 return meth(
+2026-03-30T01:44:45.943000+00:00 2026/03/30/[$LATEST]3d3f03ddb0ca4e09a5a55271ab627b99 ^^^^^
+2026-03-30T01:44:45.943000+00:00 2026/03/30/[$LATEST]3d3f03ddb0ca4e09a5a55271ab627b99 File "/var/task/sqlalchemy/sql/elements.py", line 527, in _execute_on_connection
+2026-03-30T01:44:45.943000+00:00 2026/03/30/[$LATEST]3d3f03ddb0ca4e09a5a55271ab627b99 return connection._execute_clauseelement(
+2026-03-30T01:44:45.943000+00:00 2026/03/30/[$LATEST]3d3f03ddb0ca4e09a5a55271ab627b99 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+2026-03-30T01:44:45.943000+00:00 2026/03/30/[$LATEST]3d3f03ddb0ca4e09a5a55271ab627b99 File "/var/task/sqlalchemy/engine/base.py", line 1641, in _execute_clauseelement
+2026-03-30T01:44:45.943000+00:00 2026/03/30/[$LATEST]3d3f03ddb0ca4e09a5a55271ab627b99 ret = self._execute_context(
+2026-03-30T01:44:45.943000+00:00 2026/03/30/[$LATEST]3d3f03ddb0ca4e09a5a55271ab627b99 ^^^^^^^^^^^^^^^^^^^^^^
+2026-03-30T01:44:45.943000+00:00 2026/03/30/[$LATEST]3d3f03ddb0ca4e09a5a55271ab627b99 File "/var/task/sqlalchemy/engine/base.py", line 1846, in _execute_context
+2026-03-30T01:44:45.943000+00:00 2026/03/30/[$LATEST]3d3f03ddb0ca4e09a5a55271ab627b99 return self._exec_single_context(
+2026-03-30T01:44:45.943000+00:00 2026/03/30/[$LATEST]3d3f03ddb0ca4e09a5a55271ab627b99 ^^^^^^^^^^^^^^^^^^^^^^^^^^
+2026-03-30T01:44:45.943000+00:00 2026/03/30/[$LATEST]3d3f03ddb0ca4e09a5a55271ab627b99 File "/var/task/sqlalchemy/engine/base.py", line 1986, in _exec_single_context
+2026-03-30T01:44:45.943000+00:00 2026/03/30/[$LATEST]3d3f03ddb0ca4e09a5a55271ab627b99 self._handle_dbapi_exception(
+2026-03-30T01:44:45.943000+00:00 2026/03/30/[$LATEST]3d3f03ddb0ca4e09a5a55271ab627b99 File "/var/task/sqlalchemy/engine/base.py", line 2363, in _handle_dbapi_exception
+2026-03-30T01:44:45.943000+00:00 2026/03/30/[$LATEST]3d3f03ddb0ca4e09a5a55271ab627b99 raise sqlalchemy_exception.with_traceback(exc_info[2]) from e
+2026-03-30T01:44:45.943000+00:00 2026/03/30/[$LATEST]3d3f03ddb0ca4e09a5a55271ab627b99 File "/var/task/sqlalchemy/engine/base.py", line 1967, in _exec_single_context
+2026-03-30T01:44:45.943000+00:00 2026/03/30/[$LATEST]3d3f03ddb0ca4e09a5a55271ab627b99 self.dialect.do_execute(
+2026-03-30T01:44:45.943000+00:00 2026/03/30/[$LATEST]3d3f03ddb0ca4e09a5a55271ab627b99 File "/var/task/sqlalchemy/engine/default.py", line 952, in do_execute
+2026-03-30T01:44:45.943000+00:00 2026/03/30/[$LATEST]3d3f03ddb0ca4e09a5a55271ab627b99 cursor.execute(statement, parameters)
+2026-03-30T01:44:45.943000+00:00 2026/03/30/[$LATEST]3d3f03ddb0ca4e09a5a55271ab627b99 File "/var/task/sqlalchemy/dialects/postgresql/asyncpg.py", line 585, in execute
+2026-03-30T01:44:45.943000+00:00 2026/03/30/[$LATEST]3d3f03ddb0ca4e09a5a55271ab627b99 self._adapt_connection.await_(
+2026-03-30T01:44:45.943000+00:00 2026/03/30/[$LATEST]3d3f03ddb0ca4e09a5a55271ab627b99 File "/var/task/sqlalchemy/util/_concurrency_py3k.py", line 132, in await_only
+2026-03-30T01:44:45.943000+00:00 2026/03/30/[$LATEST]3d3f03ddb0ca4e09a5a55271ab627b99 return current.parent.switch(awaitable)  # type: ignore[no-any-return,attr-defined] # noqa: E501
+2026-03-30T01:44:45.943000+00:00 2026/03/30/[$LATEST]3d3f03ddb0ca4e09a5a55271ab627b99 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+2026-03-30T01:44:45.943000+00:00 2026/03/30/[$LATEST]3d3f03ddb0ca4e09a5a55271ab627b99 File "/var/task/sqlalchemy/util/_concurrency_py3k.py", line 196, in greenlet_spawn
+2026-03-30T01:44:45.943000+00:00 2026/03/30/[$LATEST]3d3f03ddb0ca4e09a5a55271ab627b99 value = await result
+2026-03-30T01:44:45.943000+00:00 2026/03/30/[$LATEST]3d3f03ddb0ca4e09a5a55271ab627b99 ^^^^^^^^^^^^
+2026-03-30T01:44:45.943000+00:00 2026/03/30/[$LATEST]3d3f03ddb0ca4e09a5a55271ab627b99 File "/var/task/sqlalchemy/dialects/postgresql/asyncpg.py", line 563, in _prepare_and_execute
+2026-03-30T01:44:45.943000+00:00 2026/03/30/[$LATEST]3d3f03ddb0ca4e09a5a55271ab627b99 self._handle_exception(error)
+2026-03-30T01:44:45.943000+00:00 2026/03/30/[$LATEST]3d3f03ddb0ca4e09a5a55271ab627b99 File "/var/task/sqlalchemy/dialects/postgresql/asyncpg.py", line 513, in _handle_exception
+2026-03-30T01:44:45.943000+00:00 2026/03/30/[$LATEST]3d3f03ddb0ca4e09a5a55271ab627b99 self._adapt_connection._handle_exception(error)
+2026-03-30T01:44:45.943000+00:00 2026/03/30/[$LATEST]3d3f03ddb0ca4e09a5a55271ab627b99 File "/var/task/sqlalchemy/dialects/postgresql/asyncpg.py", line 797, in _handle_exception
+2026-03-30T01:44:45.943000+00:00 2026/03/30/[$LATEST]3d3f03ddb0ca4e09a5a55271ab627b99 raise translated_error from error
+2026-03-30T01:44:45.943000+00:00 2026/03/30/[$LATEST]3d3f03ddb0ca4e09a5a55271ab627b99 sqlalchemy.exc.IntegrityError: (sqlalchemy.dialects.postgresql.asyncpg.IntegrityError) <class 'asyncpg.exceptions.UniqueViolationError'>: duplicate key value violates unique constraint "uq_attack_path_materialized_summaries_tenant_path"
+2026-03-30T01:44:45.943000+00:00 2026/03/30/[$LATEST]3d3f03ddb0ca4e09a5a55271ab627b99 DETAIL:  Key (tenant_id, path_id)=(e4e07aa8-b8ea-4c1d-9fd7-4362a2fc1195, path:96bdb7a6b4e43c63343c) already exists.
+2026-03-30T01:44:45.943000+00:00 2026/03/30/[$LATEST]3d3f03ddb0ca4e09a5a55271ab627b99 [SQL: INSERT INTO attack_path_materialized_summaries (id, tenant_id, path_id, representative_action_id, account_id, region, status, rank, confidence, has_blast_radius, is_business_critical, is_actively_exploited, has_owners, summary_payload, source_max_updated_at, computed_at, stale_after, refresh_status, refresh_error) VALUES ($1::UUID, $2::UUID, $3::VARCHAR, $4::UUID, $5::VARCHAR, $6::VARCHAR, $7::VARCHAR, $8::INTEGER, $9::FLOAT, $10::BOOLEAN, $11::BOOLEAN, $12::BOOLEAN, $13::BOOLEAN, $14::JSONB, $15::TIMESTAMP WITH TIME ZONE, $16::TIMESTAMP WITH TIME ZONE, $17::TIMESTAMP WITH TIME ZONE, $18::VARCHAR, $19::VARCHAR) RETURNING attack_path_materialized_summaries.created_at, attack_path_materialized_summaries.updated_at]
+2026-03-30T01:44:45.943000+00:00 2026/03/30/[$LATEST]3d3f03ddb0ca4e09a5a55271ab627b99 [parameters: (UUID('7bd30d2f-7afd-44c3-b0e5-6b29ca85593b'), UUID('e4e07aa8-b8ea-4c1d-9fd7-4362a2fc1195'), 'path:96bdb7a6b4e43c63343c', UUID('58a22607-666e-4016-8fe3-4ce62a235a6e'), '696505809372', 'eu-north-1', 'available', 71, 1.0, True, False, True, True, '{"id": "path:96bdb7a6b4e43c63343c", "status": "available", "rank": 71, "confidence": 1.0, "entry_points": [{"node_id": "entry-1", "kind": "entry_poin ... (3830 characters truncated) ... tenant_scoped", "evidence_visibility": "full", "restricted_sections": [], "export_allowed": true}, "computed_at": "2026-03-30T01:44:17.543122+00:00"}', datetime.datetime(2026, 3, 30, 1, 43, 57, 262539, tzinfo=datetime.timezone.utc), datetime.datetime(2026, 3, 30, 1, 44, 17, 543122, tzinfo=datetime.timezone.utc), datetime.datetime(2026, 3, 30, 1, 49, 17, 543122, tzinfo=datetime.timezone.utc), 'ready', None)]
+2026-03-30T01:44:45.945000+00:00 2026/03/30/[$LATEST]3d3f03ddb0ca4e09a5a55271ab627b99 END RequestId: 3faa0a20-5c78-5ee5-97fe-68638bd2a04d
+2026-03-30T01:44:45.945000+00:00 2026/03/30/[$LATEST]3d3f03ddb0ca4e09a5a55271ab627b99 REPORT RequestId: 3faa0a20-5c78-5ee5-97fe-68638bd2a04d	Duration: 28405.00 ms	Billed Duration: 28405 ms	Memory Size: 1024 MB	Max Memory Used: 248 MB
+2026-03-30T01:45:03.849000+00:00 2026/03/30/[$LATEST]0c9fdf0cf54e4efd97e872074568a46a [ERROR]	2026-03-30T01:45:03.823Z	2f8b20d2-5825-5afb-89e6-42918f8fe06c	[93f51c90-f7cd-4ed1-8d16-a0e59b7a195a] Handler failed (IntegrityError) job_type=attack_path_materialization. Message will retry/DLQ.
+2026-03-30T01:45:03.849000+00:00 2026/03/30/[$LATEST]0c9fdf0cf54e4efd97e872074568a46a Traceback (most recent call last):
+2026-03-30T01:45:03.849000+00:00 2026/03/30/[$LATEST]0c9fdf0cf54e4efd97e872074568a46a File "/var/task/sqlalchemy/dialects/postgresql/asyncpg.py", line 550, in _prepare_and_execute
+2026-03-30T01:45:03.849000+00:00 2026/03/30/[$LATEST]0c9fdf0cf54e4efd97e872074568a46a self._rows = deque(await prepared_stmt.fetch(*parameters))
+2026-03-30T01:45:03.849000+00:00 2026/03/30/[$LATEST]0c9fdf0cf54e4efd97e872074568a46a ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+2026-03-30T01:45:03.849000+00:00 2026/03/30/[$LATEST]0c9fdf0cf54e4efd97e872074568a46a File "/var/task/asyncpg/prepared_stmt.py", line 177, in fetch
+2026-03-30T01:45:03.849000+00:00 2026/03/30/[$LATEST]0c9fdf0cf54e4efd97e872074568a46a data = await self.__bind_execute(args, 0, timeout)
+2026-03-30T01:45:03.849000+00:00 2026/03/30/[$LATEST]0c9fdf0cf54e4efd97e872074568a46a ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+2026-03-30T01:45:03.849000+00:00 2026/03/30/[$LATEST]0c9fdf0cf54e4efd97e872074568a46a File "/var/task/asyncpg/prepared_stmt.py", line 268, in __bind_execute
+2026-03-30T01:45:03.849000+00:00 2026/03/30/[$LATEST]0c9fdf0cf54e4efd97e872074568a46a data, status, _ = await self.__do_execute(
+2026-03-30T01:45:03.849000+00:00 2026/03/30/[$LATEST]0c9fdf0cf54e4efd97e872074568a46a ^^^^^^^^^^^^^^^^^^^^^^^^
+2026-03-30T01:45:03.849000+00:00 2026/03/30/[$LATEST]0c9fdf0cf54e4efd97e872074568a46a File "/var/task/asyncpg/prepared_stmt.py", line 257, in __do_execute
+2026-03-30T01:45:03.849000+00:00 2026/03/30/[$LATEST]0c9fdf0cf54e4efd97e872074568a46a return await executor(protocol)
+2026-03-30T01:45:03.849000+00:00 2026/03/30/[$LATEST]0c9fdf0cf54e4efd97e872074568a46a ^^^^^^^^^^^^^^^^^^^^^^^^
+2026-03-30T01:45:03.849000+00:00 2026/03/30/[$LATEST]0c9fdf0cf54e4efd97e872074568a46a File "asyncpg/protocol/protocol.pyx", line 205, in bind_execute
+2026-03-30T01:45:03.849000+00:00 2026/03/30/[$LATEST]0c9fdf0cf54e4efd97e872074568a46a return await waiter
+2026-03-30T01:45:03.849000+00:00 2026/03/30/[$LATEST]0c9fdf0cf54e4efd97e872074568a46a asyncpg.exceptions.UniqueViolationError: duplicate key value violates unique constraint "uq_attack_path_materialized_summaries_tenant_path"
+2026-03-30T01:45:03.849000+00:00 2026/03/30/[$LATEST]0c9fdf0cf54e4efd97e872074568a46a DETAIL:  Key (tenant_id, path_id)=(e4e07aa8-b8ea-4c1d-9fd7-4362a2fc1195, path:96bdb7a6b4e43c63343c) already exists.
+2026-03-30T01:45:03.849000+00:00 2026/03/30/[$LATEST]0c9fdf0cf54e4efd97e872074568a46a The above exception was the direct cause of the following exception:
+2026-03-30T01:45:03.849000+00:00 2026/03/30/[$LATEST]0c9fdf0cf54e4efd97e872074568a46a Traceback (most recent call last):
+2026-03-30T01:45:03.849000+00:00 2026/03/30/[$LATEST]0c9fdf0cf54e4efd97e872074568a46a File "/var/task/sqlalchemy/engine/base.py", line 1967, in _exec_single_context
+2026-03-30T01:45:03.849000+00:00 2026/03/30/[$LATEST]0c9fdf0cf54e4efd97e872074568a46a self.dialect.do_execute(
+2026-03-30T01:45:03.849000+00:00 2026/03/30/[$LATEST]0c9fdf0cf54e4efd97e872074568a46a File "/var/task/sqlalchemy/engine/default.py", line 952, in do_execute
+2026-03-30T01:45:03.849000+00:00 2026/03/30/[$LATEST]0c9fdf0cf54e4efd97e872074568a46a cursor.execute(statement, parameters)
+2026-03-30T01:45:03.849000+00:00 2026/03/30/[$LATEST]0c9fdf0cf54e4efd97e872074568a46a File "/var/task/sqlalchemy/dialects/postgresql/asyncpg.py", line 585, in execute
+2026-03-30T01:45:03.849000+00:00 2026/03/30/[$LATEST]0c9fdf0cf54e4efd97e872074568a46a self._adapt_connection.await_(
+2026-03-30T01:45:03.849000+00:00 2026/03/30/[$LATEST]0c9fdf0cf54e4efd97e872074568a46a File "/var/task/sqlalchemy/util/_concurrency_py3k.py", line 132, in await_only
+2026-03-30T01:45:03.849000+00:00 2026/03/30/[$LATEST]0c9fdf0cf54e4efd97e872074568a46a return current.parent.switch(awaitable)  # type: ignore[no-any-return,attr-defined] # noqa: E501
+2026-03-30T01:45:03.849000+00:00 2026/03/30/[$LATEST]0c9fdf0cf54e4efd97e872074568a46a ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+2026-03-30T01:45:03.849000+00:00 2026/03/30/[$LATEST]0c9fdf0cf54e4efd97e872074568a46a File "/var/task/sqlalchemy/util/_concurrency_py3k.py", line 196, in greenlet_spawn
+2026-03-30T01:45:03.849000+00:00 2026/03/30/[$LATEST]0c9fdf0cf54e4efd97e872074568a46a value = await result
+2026-03-30T01:45:03.849000+00:00 2026/03/30/[$LATEST]0c9fdf0cf54e4efd97e872074568a46a ^^^^^^^^^^^^
+2026-03-30T01:45:03.849000+00:00 2026/03/30/[$LATEST]0c9fdf0cf54e4efd97e872074568a46a File "/var/task/sqlalchemy/dialects/postgresql/asyncpg.py", line 563, in _prepare_and_execute
+2026-03-30T01:45:03.849000+00:00 2026/03/30/[$LATEST]0c9fdf0cf54e4efd97e872074568a46a self._handle_exception(error)
+2026-03-30T01:45:03.849000+00:00 2026/03/30/[$LATEST]0c9fdf0cf54e4efd97e872074568a46a File "/var/task/sqlalchemy/dialects/postgresql/asyncpg.py", line 513, in _handle_exception
+2026-03-30T01:45:03.849000+00:00 2026/03/30/[$LATEST]0c9fdf0cf54e4efd97e872074568a46a self._adapt_connection._handle_exception(error)
+2026-03-30T01:45:03.849000+00:00 2026/03/30/[$LATEST]0c9fdf0cf54e4efd97e872074568a46a File "/var/task/sqlalchemy/dialects/postgresql/asyncpg.py", line 797, in _handle_exception
+2026-03-30T01:45:03.849000+00:00 2026/03/30/[$LATEST]0c9fdf0cf54e4efd97e872074568a46a raise translated_error from error
+2026-03-30T01:45:03.849000+00:00 2026/03/30/[$LATEST]0c9fdf0cf54e4efd97e872074568a46a sqlalchemy.dialects.postgresql.asyncpg.AsyncAdapt_asyncpg_dbapi.IntegrityError: <class 'asyncpg.exceptions.UniqueViolationError'>: duplicate key value violates unique constraint "uq_attack_path_materialized_summaries_tenant_path"
+2026-03-30T01:45:03.849000+00:00 2026/03/30/[$LATEST]0c9fdf0cf54e4efd97e872074568a46a DETAIL:  Key (tenant_id, path_id)=(e4e07aa8-b8ea-4c1d-9fd7-4362a2fc1195, path:96bdb7a6b4e43c63343c) already exists.
+2026-03-30T01:45:03.849000+00:00 2026/03/30/[$LATEST]0c9fdf0cf54e4efd97e872074568a46a The above exception was the direct cause of the following exception:
+2026-03-30T01:45:03.849000+00:00 2026/03/30/[$LATEST]0c9fdf0cf54e4efd97e872074568a46a Traceback (most recent call last):
+2026-03-30T01:45:03.849000+00:00 2026/03/30/[$LATEST]0c9fdf0cf54e4efd97e872074568a46a File "/var/task/backend/workers/lambda_handler.py", line 338, in _process_record
+2026-03-30T01:45:03.849000+00:00 2026/03/30/[$LATEST]0c9fdf0cf54e4efd97e872074568a46a handler_fn(job)
+2026-03-30T01:45:03.849000+00:00 2026/03/30/[$LATEST]0c9fdf0cf54e4efd97e872074568a46a File "/var/task/backend/workers/jobs/attack_path_materialization.py", line 25, in execute_attack_path_materialization_job
+2026-03-30T01:45:03.849000+00:00 2026/03/30/[$LATEST]0c9fdf0cf54e4efd97e872074568a46a result = asyncio.run(_run_refresh(tenant_id=tenant_id, account_id=account_id, region=region))
+2026-03-30T01:45:03.849000+00:00 2026/03/30/[$LATEST]0c9fdf0cf54e4efd97e872074568a46a ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+2026-03-30T01:45:03.849000+00:00 2026/03/30/[$LATEST]0c9fdf0cf54e4efd97e872074568a46a File "/var/lang/lib/python3.12/asyncio/runners.py", line 195, in run
+2026-03-30T01:45:03.849000+00:00 2026/03/30/[$LATEST]0c9fdf0cf54e4efd97e872074568a46a return runner.run(main)
+2026-03-30T01:45:03.849000+00:00 2026/03/30/[$LATEST]0c9fdf0cf54e4efd97e872074568a46a ^^^^^^^^^^^^^^^^
+2026-03-30T01:45:03.849000+00:00 2026/03/30/[$LATEST]0c9fdf0cf54e4efd97e872074568a46a File "/var/lang/lib/python3.12/asyncio/runners.py", line 118, in run
+2026-03-30T01:45:03.849000+00:00 2026/03/30/[$LATEST]0c9fdf0cf54e4efd97e872074568a46a return self._loop.run_until_complete(task)
+2026-03-30T01:45:03.849000+00:00 2026/03/30/[$LATEST]0c9fdf0cf54e4efd97e872074568a46a ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+2026-03-30T01:45:03.849000+00:00 2026/03/30/[$LATEST]0c9fdf0cf54e4efd97e872074568a46a File "/var/lang/lib/python3.12/asyncio/base_events.py", line 691, in run_until_complete
+2026-03-30T01:45:03.849000+00:00 2026/03/30/[$LATEST]0c9fdf0cf54e4efd97e872074568a46a return future.result()
+2026-03-30T01:45:03.849000+00:00 2026/03/30/[$LATEST]0c9fdf0cf54e4efd97e872074568a46a ^^^^^^^^^^^^^^^
+2026-03-30T01:45:03.849000+00:00 2026/03/30/[$LATEST]0c9fdf0cf54e4efd97e872074568a46a File "/var/task/backend/workers/jobs/attack_path_materialization.py", line 41, in _run_refresh
+2026-03-30T01:45:03.849000+00:00 2026/03/30/[$LATEST]0c9fdf0cf54e4efd97e872074568a46a result = await materialize_attack_paths(session, tenant_id=tenant_id, account_id=account_id, region=region)
+2026-03-30T01:45:03.849000+00:00 2026/03/30/[$LATEST]0c9fdf0cf54e4efd97e872074568a46a ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+2026-03-30T01:45:03.849000+00:00 2026/03/30/[$LATEST]0c9fdf0cf54e4efd97e872074568a46a File "/var/task/backend/services/attack_path_materialized.py", line 210, in materialize_attack_paths
+2026-03-30T01:45:03.849000+00:00 2026/03/30/[$LATEST]0c9fdf0cf54e4efd97e872074568a46a await db.flush()
+2026-03-30T01:45:03.849000+00:00 2026/03/30/[$LATEST]0c9fdf0cf54e4efd97e872074568a46a File "/var/task/sqlalchemy/ext/asyncio/session.py", line 787, in flush
+2026-03-30T01:45:03.849000+00:00 2026/03/30/[$LATEST]0c9fdf0cf54e4efd97e872074568a46a await greenlet_spawn(self.sync_session.flush, objects=objects)
+2026-03-30T01:45:03.849000+00:00 2026/03/30/[$LATEST]0c9fdf0cf54e4efd97e872074568a46a File "/var/task/sqlalchemy/util/_concurrency_py3k.py", line 203, in greenlet_spawn
+2026-03-30T01:45:03.849000+00:00 2026/03/30/[$LATEST]0c9fdf0cf54e4efd97e872074568a46a result = context.switch(value)
+2026-03-30T01:45:03.849000+00:00 2026/03/30/[$LATEST]0c9fdf0cf54e4efd97e872074568a46a ^^^^^^^^^^^^^^^^^^^^^
+2026-03-30T01:45:03.849000+00:00 2026/03/30/[$LATEST]0c9fdf0cf54e4efd97e872074568a46a File "/var/task/sqlalchemy/orm/session.py", line 4331, in flush
+2026-03-30T01:45:03.849000+00:00 2026/03/30/[$LATEST]0c9fdf0cf54e4efd97e872074568a46a self._flush(objects)
+2026-03-30T01:45:03.849000+00:00 2026/03/30/[$LATEST]0c9fdf0cf54e4efd97e872074568a46a File "/var/task/sqlalchemy/orm/session.py", line 4466, in _flush
+2026-03-30T01:45:03.849000+00:00 2026/03/30/[$LATEST]0c9fdf0cf54e4efd97e872074568a46a with util.safe_reraise():
+2026-03-30T01:45:03.849000+00:00 2026/03/30/[$LATEST]0c9fdf0cf54e4efd97e872074568a46a ^^^^^^^^^^^^^^^^^^^
+2026-03-30T01:45:03.849000+00:00 2026/03/30/[$LATEST]0c9fdf0cf54e4efd97e872074568a46a File "/var/task/sqlalchemy/util/langhelpers.py", line 121, in __exit__
+2026-03-30T01:45:03.849000+00:00 2026/03/30/[$LATEST]0c9fdf0cf54e4efd97e872074568a46a raise exc_value.with_traceback(exc_tb)
+2026-03-30T01:45:03.849000+00:00 2026/03/30/[$LATEST]0c9fdf0cf54e4efd97e872074568a46a File "/var/task/sqlalchemy/orm/session.py", line 4427, in _flush
+2026-03-30T01:45:03.849000+00:00 2026/03/30/[$LATEST]0c9fdf0cf54e4efd97e872074568a46a flush_context.execute()
+2026-03-30T01:45:03.849000+00:00 2026/03/30/[$LATEST]0c9fdf0cf54e4efd97e872074568a46a File "/var/task/sqlalchemy/orm/unitofwork.py", line 466, in execute
+2026-03-30T01:45:03.849000+00:00 2026/03/30/[$LATEST]0c9fdf0cf54e4efd97e872074568a46a rec.execute(self)
+2026-03-30T01:45:03.849000+00:00 2026/03/30/[$LATEST]0c9fdf0cf54e4efd97e872074568a46a File "/var/task/sqlalchemy/orm/unitofwork.py", line 642, in execute
+2026-03-30T01:45:03.849000+00:00 2026/03/30/[$LATEST]0c9fdf0cf54e4efd97e872074568a46a util.preloaded.orm_persistence.save_obj(
+2026-03-30T01:45:03.849000+00:00 2026/03/30/[$LATEST]0c9fdf0cf54e4efd97e872074568a46a File "/var/task/sqlalchemy/orm/persistence.py", line 93, in save_obj
+2026-03-30T01:45:03.849000+00:00 2026/03/30/[$LATEST]0c9fdf0cf54e4efd97e872074568a46a _emit_insert_statements(
+2026-03-30T01:45:03.849000+00:00 2026/03/30/[$LATEST]0c9fdf0cf54e4efd97e872074568a46a File "/var/task/sqlalchemy/orm/persistence.py", line 1233, in _emit_insert_statements
+2026-03-30T01:45:03.849000+00:00 2026/03/30/[$LATEST]0c9fdf0cf54e4efd97e872074568a46a result = connection.execute(
+2026-03-30T01:45:03.849000+00:00 2026/03/30/[$LATEST]0c9fdf0cf54e4efd97e872074568a46a ^^^^^^^^^^^^^^^^^^^
+2026-03-30T01:45:03.849000+00:00 2026/03/30/[$LATEST]0c9fdf0cf54e4efd97e872074568a46a File "/var/task/sqlalchemy/engine/base.py", line 1419, in execute
+2026-03-30T01:45:03.849000+00:00 2026/03/30/[$LATEST]0c9fdf0cf54e4efd97e872074568a46a return meth(
+2026-03-30T01:45:03.849000+00:00 2026/03/30/[$LATEST]0c9fdf0cf54e4efd97e872074568a46a ^^^^^
+2026-03-30T01:45:03.849000+00:00 2026/03/30/[$LATEST]0c9fdf0cf54e4efd97e872074568a46a File "/var/task/sqlalchemy/sql/elements.py", line 527, in _execute_on_connection
+2026-03-30T01:45:03.849000+00:00 2026/03/30/[$LATEST]0c9fdf0cf54e4efd97e872074568a46a return connection._execute_clauseelement(
+2026-03-30T01:45:03.849000+00:00 2026/03/30/[$LATEST]0c9fdf0cf54e4efd97e872074568a46a ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+2026-03-30T01:45:03.849000+00:00 2026/03/30/[$LATEST]0c9fdf0cf54e4efd97e872074568a46a File "/var/task/sqlalchemy/engine/base.py", line 1641, in _execute_clauseelement
+2026-03-30T01:45:03.849000+00:00 2026/03/30/[$LATEST]0c9fdf0cf54e4efd97e872074568a46a ret = self._execute_context(
+2026-03-30T01:45:03.849000+00:00 2026/03/30/[$LATEST]0c9fdf0cf54e4efd97e872074568a46a ^^^^^^^^^^^^^^^^^^^^^^
+2026-03-30T01:45:03.849000+00:00 2026/03/30/[$LATEST]0c9fdf0cf54e4efd97e872074568a46a File "/var/task/sqlalchemy/engine/base.py", line 1846, in _execute_context
+2026-03-30T01:45:03.849000+00:00 2026/03/30/[$LATEST]0c9fdf0cf54e4efd97e872074568a46a return self._exec_single_context(
+2026-03-30T01:45:03.849000+00:00 2026/03/30/[$LATEST]0c9fdf0cf54e4efd97e872074568a46a ^^^^^^^^^^^^^^^^^^^^^^^^^^
+2026-03-30T01:45:03.849000+00:00 2026/03/30/[$LATEST]0c9fdf0cf54e4efd97e872074568a46a File "/var/task/sqlalchemy/engine/base.py", line 1986, in _exec_single_context
+2026-03-30T01:45:03.849000+00:00 2026/03/30/[$LATEST]0c9fdf0cf54e4efd97e872074568a46a self._handle_dbapi_exception(
+2026-03-30T01:45:03.849000+00:00 2026/03/30/[$LATEST]0c9fdf0cf54e4efd97e872074568a46a File "/var/task/sqlalchemy/engine/base.py", line 2363, in _handle_dbapi_exception
+2026-03-30T01:45:03.849000+00:00 2026/03/30/[$LATEST]0c9fdf0cf54e4efd97e872074568a46a raise sqlalchemy_exception.with_traceback(exc_info[2]) from e
+2026-03-30T01:45:03.849000+00:00 2026/03/30/[$LATEST]0c9fdf0cf54e4efd97e872074568a46a File "/var/task/sqlalchemy/engine/base.py", line 1967, in _exec_single_context
+2026-03-30T01:45:03.849000+00:00 2026/03/30/[$LATEST]0c9fdf0cf54e4efd97e872074568a46a self.dialect.do_execute(
+2026-03-30T01:45:03.849000+00:00 2026/03/30/[$LATEST]0c9fdf0cf54e4efd97e872074568a46a File "/var/task/sqlalchemy/engine/default.py", line 952, in do_execute
+2026-03-30T01:45:03.849000+00:00 2026/03/30/[$LATEST]0c9fdf0cf54e4efd97e872074568a46a cursor.execute(statement, parameters)
+2026-03-30T01:45:03.849000+00:00 2026/03/30/[$LATEST]0c9fdf0cf54e4efd97e872074568a46a File "/var/task/sqlalchemy/dialects/postgresql/asyncpg.py", line 585, in execute
+2026-03-30T01:45:03.849000+00:00 2026/03/30/[$LATEST]0c9fdf0cf54e4efd97e872074568a46a self._adapt_connection.await_(
+2026-03-30T01:45:03.849000+00:00 2026/03/30/[$LATEST]0c9fdf0cf54e4efd97e872074568a46a File "/var/task/sqlalchemy/util/_concurrency_py3k.py", line 132, in await_only
+2026-03-30T01:45:03.849000+00:00 2026/03/30/[$LATEST]0c9fdf0cf54e4efd97e872074568a46a return current.parent.switch(awaitable)  # type: ignore[no-any-return,attr-defined] # noqa: E501
+2026-03-30T01:45:03.849000+00:00 2026/03/30/[$LATEST]0c9fdf0cf54e4efd97e872074568a46a ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+2026-03-30T01:45:03.849000+00:00 2026/03/30/[$LATEST]0c9fdf0cf54e4efd97e872074568a46a File "/var/task/sqlalchemy/util/_concurrency_py3k.py", line 196, in greenlet_spawn
+2026-03-30T01:45:03.849000+00:00 2026/03/30/[$LATEST]0c9fdf0cf54e4efd97e872074568a46a value = await result
+2026-03-30T01:45:03.849000+00:00 2026/03/30/[$LATEST]0c9fdf0cf54e4efd97e872074568a46a ^^^^^^^^^^^^
+2026-03-30T01:45:03.849000+00:00 2026/03/30/[$LATEST]0c9fdf0cf54e4efd97e872074568a46a File "/var/task/sqlalchemy/dialects/postgresql/asyncpg.py", line 563, in _prepare_and_execute
+2026-03-30T01:45:03.849000+00:00 2026/03/30/[$LATEST]0c9fdf0cf54e4efd97e872074568a46a self._handle_exception(error)
+2026-03-30T01:45:03.849000+00:00 2026/03/30/[$LATEST]0c9fdf0cf54e4efd97e872074568a46a File "/var/task/sqlalchemy/dialects/postgresql/asyncpg.py", line 513, in _handle_exception
+2026-03-30T01:45:03.849000+00:00 2026/03/30/[$LATEST]0c9fdf0cf54e4efd97e872074568a46a self._adapt_connection._handle_exception(error)
+2026-03-30T01:45:03.849000+00:00 2026/03/30/[$LATEST]0c9fdf0cf54e4efd97e872074568a46a File "/var/task/sqlalchemy/dialects/postgresql/asyncpg.py", line 797, in _handle_exception
+2026-03-30T01:45:03.849000+00:00 2026/03/30/[$LATEST]0c9fdf0cf54e4efd97e872074568a46a raise translated_error from error
+2026-03-30T01:45:03.849000+00:00 2026/03/30/[$LATEST]0c9fdf0cf54e4efd97e872074568a46a sqlalchemy.exc.IntegrityError: (sqlalchemy.dialects.postgresql.asyncpg.IntegrityError) <class 'asyncpg.exceptions.UniqueViolationError'>: duplicate key value violates unique constraint "uq_attack_path_materialized_summaries_tenant_path"
+2026-03-30T01:45:03.849000+00:00 2026/03/30/[$LATEST]0c9fdf0cf54e4efd97e872074568a46a DETAIL:  Key (tenant_id, path_id)=(e4e07aa8-b8ea-4c1d-9fd7-4362a2fc1195, path:96bdb7a6b4e43c63343c) already exists.
+2026-03-30T01:45:03.849000+00:00 2026/03/30/[$LATEST]0c9fdf0cf54e4efd97e872074568a46a [SQL: INSERT INTO attack_path_materialized_summaries (id, tenant_id, path_id, representative_action_id, account_id, region, status, rank, confidence, has_blast_radius, is_business_critical, is_actively_exploited, has_owners, summary_payload, source_max_updated_at, computed_at, stale_after, refresh_status, refresh_error) VALUES ($1::UUID, $2::UUID, $3::VARCHAR, $4::UUID, $5::VARCHAR, $6::VARCHAR, $7::VARCHAR, $8::INTEGER, $9::FLOAT, $10::BOOLEAN, $11::BOOLEAN, $12::BOOLEAN, $13::BOOLEAN, $14::JSONB, $15::TIMESTAMP WITH TIME ZONE, $16::TIMESTAMP WITH TIME ZONE, $17::TIMESTAMP WITH TIME ZONE, $18::VARCHAR, $19::VARCHAR) RETURNING attack_path_materialized_summaries.created_at, attack_path_materialized_summaries.updated_at]
+2026-03-30T01:45:03.849000+00:00 2026/03/30/[$LATEST]0c9fdf0cf54e4efd97e872074568a46a [parameters: (UUID('b0a3b1fe-19ae-4199-b6ba-01f6b14ef128'), UUID('e4e07aa8-b8ea-4c1d-9fd7-4362a2fc1195'), 'path:96bdb7a6b4e43c63343c', UUID('58a22607-666e-4016-8fe3-4ce62a235a6e'), '696505809372', 'eu-north-1', 'available', 71, 1.0, True, False, True, True, '{"id": "path:96bdb7a6b4e43c63343c", "status": "available", "rank": 71, "confidence": 1.0, "entry_points": [{"node_id": "entry-1", "kind": "entry_poin ... (3830 characters truncated) ... tenant_scoped", "evidence_visibility": "full", "restricted_sections": [], "export_allowed": true}, "computed_at": "2026-03-30T01:44:26.987286+00:00"}', datetime.datetime(2026, 3, 30, 1, 43, 57, 418162, tzinfo=datetime.timezone.utc), datetime.datetime(2026, 3, 30, 1, 44, 26, 987286, tzinfo=datetime.timezone.utc), datetime.datetime(2026, 3, 30, 1, 49, 26, 987286, tzinfo=datetime.timezone.utc), 'ready', None)]
+2026-03-30T01:45:03.851000+00:00 2026/03/30/[$LATEST]0c9fdf0cf54e4efd97e872074568a46a END RequestId: 2f8b20d2-5825-5afb-89e6-42918f8fe06c
+2026-03-30T01:45:03.851000+00:00 2026/03/30/[$LATEST]0c9fdf0cf54e4efd97e872074568a46a REPORT RequestId: 2f8b20d2-5825-5afb-89e6-42918f8fe06c	Duration: 36867.18 ms	Billed Duration: 36868 ms	Memory Size: 1024 MB	Max Memory Used: 249 MB

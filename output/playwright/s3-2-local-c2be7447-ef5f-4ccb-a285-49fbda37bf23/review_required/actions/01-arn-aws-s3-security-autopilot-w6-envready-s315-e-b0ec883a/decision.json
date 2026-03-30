@@ -1,0 +1,49 @@
+{
+  "action_id": "b0ec883a-f08d-4480-a5f6-807446f9ad8b",
+  "action_type": "s3_bucket_block_public_access",
+  "blocked_reasons": [
+    "Runtime evidence could not prove the bucket is private and website hosting is disabled.",
+    "An error occurred (AccessDenied) when calling the AssumeRole operation: Access denied. Check role ARN and trust policy."
+  ],
+  "control_id": "S3.2",
+  "decision_rationale": "Family resolver downgraded strategy 's3_bucket_block_public_access_standard' to review-required S3.2 profile 's3_bucket_block_public_access_review_state_verification'. Runtime evidence could not prove the bucket is private and website hosting is disabled. An error occurred (AccessDenied) when calling the AssumeRole operation: Access denied. Check role ARN and trust policy. Run creation did not require additional risk-only acceptance.",
+  "decision_summary": "Family resolver downgraded strategy 's3_bucket_block_public_access_standard' to review-required S3.2 profile 's3_bucket_block_public_access_review_state_verification'. Runtime evidence could not prove the bucket is private and website hosting is disabled. An error occurred (AccessDenied) when calling the AssumeRole operation: Access denied. Check role ARN and trust policy. Run creation did not require additional risk-only acceptance.",
+  "decision_version": "resolver/v1",
+  "finding_coverage": {},
+  "folder": "review_required/actions/01-arn-aws-s3-security-autopilot-w6-envready-s315-e-b0ec883a",
+  "has_runnable_terraform": false,
+  "index": 1,
+  "missing_defaults": [],
+  "missing_inputs": [],
+  "outcome": "review_required_metadata_only",
+  "preservation_summary": {
+    "access_path_evidence_available": false,
+    "bucket_policy_public": null,
+    "executable_preservation_allowed": false,
+    "existing_bucket_policy_json_captured": false,
+    "existing_bucket_policy_statement_count": null,
+    "family": "s3_bucket_block_public_access",
+    "family_strategy": "s3_bucket_block_public_access_standard",
+    "manual_preservation_required": false,
+    "review_bundle_required": true,
+    "selected_branch": "s3_bucket_block_public_access_review_state_verification",
+    "single_profile_compatible": false,
+    "strategy_only_supported": true,
+    "website_configured": null
+  },
+  "profile_id": "s3_bucket_block_public_access_review_state_verification",
+  "rejected_profiles": [
+    {
+      "detail": "Runtime evidence could not prove the bucket is private and website hosting is disabled.",
+      "profile_id": "s3_bucket_block_public_access_standard",
+      "reason": "branch_unavailable"
+    }
+  ],
+  "strategy_id": "s3_bucket_block_public_access_standard",
+  "strategy_inputs": {},
+  "support_tier": "review_required_bundle",
+  "target_id": "696505809372|eu-north-1|arn:aws:s3:::security-autopilot-w6-envready-s315-exec-696505809372|S3.2",
+  "tier": "review_required",
+  "tier_root": "review_required/actions",
+  "title": "S3 general purpose buckets should block public access"
+}

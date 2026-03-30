@@ -1,0 +1,56 @@
+{
+  "artifact_type": "generated_diff_summary",
+  "file_count": 5,
+  "files": [
+    {
+      "bundle_path": "providers.tf",
+      "byte_count": 479,
+      "change_type": "create_or_update",
+      "content_sha256": "9a0536e0e9790c63a892e3b288fc6b299b5f7a1ea52e004cf4a0a8833e7227f3",
+      "line_count": 18,
+      "repo_path": "providers.tf"
+    },
+    {
+      "bundle_path": "s3_bucket_lifecycle_configuration.tf",
+      "byte_count": 1294,
+      "change_type": "create_or_update",
+      "content_sha256": "af41e38a5a39f59fbd6d31865bcee28f8631a01f36174cb72fb1ee30cb4e786e",
+      "line_count": 40,
+      "repo_path": "s3_bucket_lifecycle_configuration.tf"
+    },
+    {
+      "bundle_path": "scripts/s3_lifecycle_merge.py",
+      "byte_count": 6700,
+      "change_type": "create_or_update",
+      "content_sha256": "e9cc8660e6f94e9c479dad62d891403f7f419e50dc849c734fdbf341b0d8de39",
+      "line_count": 211,
+      "repo_path": "scripts/s3_lifecycle_merge.py"
+    },
+    {
+      "bundle_path": "rollback/s3_lifecycle_restore.py",
+      "byte_count": 3157,
+      "change_type": "create_or_update",
+      "content_sha256": "2ccb990499586cb32b7a181442334199fbef4e94301942d1fd7b1d1b461c5a76",
+      "line_count": 95,
+      "repo_path": "rollback/s3_lifecycle_restore.py"
+    },
+    {
+      "bundle_path": "README.txt",
+      "byte_count": 1143,
+      "change_type": "create_or_update",
+      "content_sha256": "245ab2b344f7f14c510dee24848e4111440ff8a2c774c8a556417d2ded982d96",
+      "line_count": 31,
+      "repo_path": "README.txt"
+    }
+  ],
+  "fingerprint_sha256": "345e63b3f1564099f839e81f837c4571415ef40ec7ea5038ee94c8e330c4d88f",
+  "repo_target_configured": false,
+  "summary_lines": [
+    "`providers.tf` <- `providers.tf` (18 lines, sha256:9a0536e0e979)",
+    "`s3_bucket_lifecycle_configuration.tf` <- `s3_bucket_lifecycle_configuration.tf` (40 lines, sha256:af41e38a5a39)",
+    "`scripts/s3_lifecycle_merge.py` <- `scripts/s3_lifecycle_merge.py` (211 lines, sha256:e9cc8660e6f9)",
+    "`rollback/s3_lifecycle_restore.py` <- `rollback/s3_lifecycle_restore.py` (95 lines, sha256:2ccb99049958)",
+    "`README.txt` <- `README.txt` (31 lines, sha256:245ab2b344f7)"
+  ],
+  "version": 1
+}

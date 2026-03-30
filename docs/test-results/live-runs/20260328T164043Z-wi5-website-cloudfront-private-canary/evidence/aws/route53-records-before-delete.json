@@ -1,0 +1,33 @@
+{
+    "ResourceRecordSets": [
+        {
+            "Name": "wi5-canary-696505809372-164043.net.",
+            "Type": "NS",
+            "TTL": 172800,
+            "ResourceRecords": [
+                {
+                    "Value": "ns-1858.awsdns-40.co.uk."
+                },
+                {
+                    "Value": "ns-1215.awsdns-23.org."
+                },
+                {
+                    "Value": "ns-956.awsdns-55.net."
+                },
+                {
+                    "Value": "ns-240.awsdns-30.com."
+                }
+            ]
+        },
+        {
+            "Name": "wi5-canary-696505809372-164043.net.",
+            "Type": "SOA",
+            "TTL": 900,
+            "ResourceRecords": [
+                {
+                    "Value": "ns-1858.awsdns-40.co.uk. awsdns-hostmaster.amazon.com. 1 7200 900 1209600 86400"
+                }
+            ]
+        }
+    ]
+}

@@ -1,0 +1,16 @@
+
+Error: Invalid reference
+
+  on cloudtrail_enabled.tf line 102, in data "aws_iam_policy_document" "ssl_only_cloudtrail_logs":
+ 102:       "${arn_prefix_cloudtrail_logs}",
+
+A reference to a resource type must be followed by at least one attribute
+access, specifying the resource name.
+
+Error: Invalid reference
+
+  on cloudtrail_enabled.tf line 103, in data "aws_iam_policy_document" "ssl_only_cloudtrail_logs":
+ 103:       "${arn_prefix_cloudtrail_logs}/*",
+
+A reference to a resource type must be followed by at least one attribute
+access, specifying the resource name.

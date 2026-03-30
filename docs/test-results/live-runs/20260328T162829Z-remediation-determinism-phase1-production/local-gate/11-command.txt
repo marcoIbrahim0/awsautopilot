@@ -1,0 +1,3 @@
+$ PYTHONPATH=. ./venv/bin/pytest tests/test_step7_components.py -q -k 'aws_config_enabled'
+...............                                                          [100%]
+15 passed, 137 deselected in 0.07s

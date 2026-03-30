@@ -1,0 +1,32 @@
+{
+  "layout_version": "grouped_bundle_mixed_tier/v1",
+  "execution_root": "executable/actions",
+  "executable_action_count": 3,
+  "review_required_action_count": 1,
+  "action_resolutions": [
+    {
+      "action_id": "29f0d788-90f3-48e4-96d7-8ed0657924a6",
+      "support_tier": "deterministic_bundle",
+      "apply_time_merge": true,
+      "resource_id": null
+    },
+    {
+      "action_id": "424d65bb-5bd8-4ba3-a5ca-9785fbb41bb9",
+      "support_tier": "deterministic_bundle",
+      "apply_time_merge": true,
+      "resource_id": null
+    },
+    {
+      "action_id": "7a438b0e-37e8-444e-a211-04a906891a69",
+      "support_tier": "deterministic_bundle",
+      "apply_time_merge": true,
+      "resource_id": null
+    },
+    {
+      "action_id": "251b980d-17a9-4fae-8e5f-e2ca38d389ed",
+      "support_tier": "review_required_bundle",
+      "apply_time_merge": false,
+      "resource_id": null
+    }
+  ]
+}

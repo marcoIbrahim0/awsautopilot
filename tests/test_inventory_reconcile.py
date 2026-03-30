@@ -638,6 +638,22 @@ class _FakeConfigMissingResourceCoverage(_FakeConfig):
         }
 
 
+class _FakeConfigSelectiveResourceScope(_FakeConfig):
+    def describe_configuration_recorders(self):
+        return {
+            "ConfigurationRecorders": [
+                {
+                    "name": "default",
+                    "roleARN": "arn:aws:iam::123456789012:role/service-role/config",
+                    "recordingGroup": {
+                        "allSupported": False,
+                        "resourceTypes": ["AWS::S3::Bucket"],
+                    },
+                }
+            ]
+        }
+
+
 class _FakeConfigMultiRecorderNameMismatch(_FakeConfig):
     def describe_configuration_recorders(self):
         return {
@@ -1297,6 +1313,7 @@ def test_config_1_full_coverage_is_compliant() -> None:
     assert evaluation.status == "RESOLVED"
     assert bool((evaluation.evidence_ref or {}).get("recorder_has_role_arn")) is True
     assert bool((evaluation.evidence_ref or {}).get("recorder_has_resource_coverage")) is True
+    assert bool((evaluation.evidence_ref or {}).get("recorder_captures_required_scope")) is True
     assert bool((evaluation.evidence_ref or {}).get("delivery_channel_configured")) is True
 
 
@@ -1355,8 +1372,32 @@ def test_config_1_missing_resource_coverage_is_open_with_quality_flags() -> None
     assert evaluation.state_confidence == 95
     assert evaluation.evidence_ref["recorder_has_role_arn"] is True
     assert evaluation.evidence_ref["recorder_has_resource_coverage"] is False
+    assert evaluation.evidence_ref["recorder_captures_required_scope"] is False
     assert evaluation.evidence_ref["delivery_channel_configured"] is True
     assert evaluation.evidence_ref["status_access_denied"] is False
+
+
+def test_config_1_selective_resource_scope_is_open_even_with_explicit_resource_types() -> None:
+    session = _FakeSession(clients={"config": _FakeConfigSelectiveResourceScope()})
+    snapshots = collect_inventory_snapshots(
+        session_boto=session,
+        account_id="123456789012",
+        region="eu-north-1",
+        service="config",
+    )
+
+    assert len(snapshots) == 1
+    evaluation = snapshots[0].evaluations[0]
+    assert evaluation.status == "OPEN"
+    assert evaluation.status_reason == "inventory_confirmed_non_compliant"
+    assert evaluation.state_confidence == 95
+    assert evaluation.evidence_ref["recorder_has_resource_coverage"] is True
+    assert evaluation.evidence_ref["recorder_captures_required_scope"] is False
+    assert evaluation.evidence_ref["delivery_channel_configured"] is True
+    evaluated = evaluation.evidence_ref["recorders_evaluated"]
+    assert isinstance(evaluated, list)
+    assert evaluated[0]["has_resource_coverage"] is True
+    assert evaluated[0]["captures_required_scope"] is False
 
 
 def test_config_1_multi_recorder_name_mismatch_is_open_with_ambiguous_recording_state() -> None:
@@ -1812,6 +1853,40 @@ def test_s3_targeted_account_resource_id_keeps_account_eval_and_skips_bucket_eva
     assert s31.status_reason == "inventory_confirmed_compliant"
     assert s31.state_confidence == 95
     assert set((s31.evidence_ref or {}).keys()) == {"source", "public_access_block", "probe_ok"}
+
+
+def test_s3_targeted_missing_bucket_emits_deleted_resource_snapshot() -> None:
+    account_id = "123456789012"
+    region = "eu-north-1"
+    bucket = "known-bucket"
+    missing_bucket = "missing-bucket"
+    session = _FakeSession(
+        clients={
+            "s3": _FakeS3SingleBucketSkipUnknownTarget(bucket=bucket, region=region),
+            "s3control": _FakeS3Control(),
+        }
+    )
+    snapshots = collect_inventory_snapshots(
+        session_boto=session,
+        account_id=account_id,
+        region=region,
+        service="s3",
+        resource_ids=[missing_bucket],
+    )
+
+    assert len(snapshots) == 2
+    deleted_snapshot = next(snapshot for snapshot in snapshots if snapshot.resource_type == "AwsS3Bucket")
+    assert deleted_snapshot.resource_id == f"arn:aws:s3:::{missing_bucket}"
+    assert deleted_snapshot.key_fields["deleted"] is True
+    assert deleted_snapshot.state_for_hash["deleted"] is True
+    assert deleted_snapshot.metadata_json["bucket_name"] == "DELETED"
+    deleted_evaluations = {evaluation.control_id: evaluation for evaluation in deleted_snapshot.evaluations}
+    assert set(deleted_evaluations) == {"S3.2", "S3.4", "S3.5", "S3.9", "S3.11", "S3.15"}
+    for evaluation in deleted_evaluations.values():
+        assert evaluation.status == "RESOLVED"
+        assert evaluation.status_reason == "inventory_resource_deleted"
+        assert evaluation.state_confidence == 95
+        assert evaluation.evidence_ref["resource_deleted"] is True
 
 
 def test_s3_global_sweep_mixed_bucket_states_keeps_per_bucket_statuses_isolated() -> None:
@@ -2952,6 +3027,30 @@ def test_s3_lifecycle_enabled_rule_with_transitions_is_compliant() -> None:
             {
                 "Status": "Enabled",
                 "Transitions": [{"Days": 45, "StorageClass": "GLACIER"}],
+            }
+        ]
+    )
+    assert _s3_bucket_has_valid_lifecycle_rule(s3, "example-bucket") is True
+
+
+def test_s3_lifecycle_enabled_rule_with_noncurrent_expiration_is_compliant() -> None:
+    s3 = _FakeS3Lifecycle(
+        [
+            {
+                "Status": "Enabled",
+                "NoncurrentVersionExpiration": {"NoncurrentDays": 30},
+            }
+        ]
+    )
+    assert _s3_bucket_has_valid_lifecycle_rule(s3, "example-bucket") is True
+
+
+def test_s3_lifecycle_enabled_rule_with_abort_incomplete_upload_is_compliant() -> None:
+    s3 = _FakeS3Lifecycle(
+        [
+            {
+                "Status": "Enabled",
+                "AbortIncompleteMultipartUpload": {"DaysAfterInitiation": 7},
             }
         ]
     )

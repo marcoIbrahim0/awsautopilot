@@ -1,0 +1,4 @@
+{
+  "sg_access_path_preference": "bastion_sg_reference",
+  "approved_bastion_security_group_ids": ["sg-085d69a76707542b2"]
+}

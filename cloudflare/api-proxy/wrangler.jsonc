@@ -16,6 +16,6 @@
     }
   ],
   "vars": {
-    "UPSTREAM_API_BASE": "https://sybw8x0716.execute-api.eu-north-1.amazonaws.com"
+    "UPSTREAM_API_BASE": "https://7ti19t61e6.execute-api.eu-north-1.amazonaws.com"
   }
 }

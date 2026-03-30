@@ -1,0 +1,6 @@
+{
+  "post_restore_has_deny": false,
+  "restored_matches_exact_pre_apply": true,
+  "pre_statement_count": 3,
+  "post_statement_count": 3
+}

@@ -1,0 +1,118 @@
+BUCKET sa-wi13-14-nopolicy-696505809372-20260328201935
+{
+    "BucketArn": "arn:aws:s3:::sa-wi13-14-nopolicy-696505809372-20260328201935",
+    "BucketRegion": "eu-north-1",
+    "AccessPointAlias": false
+}
+
+BUCKET security-autopilot-access-logs-696505809372-r221001
+{
+    "BucketArn": "arn:aws:s3:::security-autopilot-access-logs-696505809372-r221001",
+    "BucketRegion": "eu-north-1",
+    "AccessPointAlias": false
+}
+
+BUCKET security-autopilot-w6-envready-cloudtrail-696505809372
+{
+    "BucketArn": "arn:aws:s3:::security-autopilot-w6-envready-cloudtrail-696505809372",
+    "BucketRegion": "eu-north-1",
+    "AccessPointAlias": false
+}
+
+BUCKET config-bucket-696505809372
+{
+    "BucketArn": "arn:aws:s3:::config-bucket-696505809372",
+    "BucketRegion": "eu-north-1",
+    "AccessPointAlias": false
+}
+
+BUCKET security-autopilot-w6-envready-s311-exec-696505809372
+{
+    "BucketArn": "arn:aws:s3:::security-autopilot-w6-envready-s311-exec-696505809372",
+    "BucketRegion": "eu-north-1",
+    "AccessPointAlias": false
+}
+
+BUCKET security-autopilot-w6-strict-s311-exec-696505809372
+{
+    "BucketArn": "arn:aws:s3:::security-autopilot-w6-strict-s311-exec-696505809372",
+    "BucketRegion": "eu-north-1",
+    "AccessPointAlias": false
+}
+
+BUCKET security-autopilot-w6-envready-accesslogs-696505809372
+{
+    "BucketArn": "arn:aws:s3:::security-autopilot-w6-envready-accesslogs-696505809372",
+    "BucketRegion": "eu-north-1",
+    "AccessPointAlias": false
+}
+
+BUCKET security-autopilot-w6-strict-s311-manual-696505809372
+{
+    "BucketArn": "arn:aws:s3:::security-autopilot-w6-strict-s311-manual-696505809372",
+    "BucketRegion": "eu-north-1",
+    "AccessPointAlias": false
+}
+
+BUCKET ocypheris-live-ct-20260323162333-eu-north-1
+{
+    "BucketArn": "arn:aws:s3:::ocypheris-live-ct-20260323162333-eu-north-1",
+    "BucketRegion": "eu-north-1",
+    "AccessPointAlias": false
+}
+
+BUCKET security-autopilot-w6-strict-s315-manual-696505809372
+{
+    "BucketArn": "arn:aws:s3:::security-autopilot-w6-strict-s315-manual-696505809372",
+    "BucketRegion": "eu-north-1",
+    "AccessPointAlias": false
+}
+
+BUCKET security-autopilot-w6-strict-s315-exec-696505809372
+{
+    "BucketArn": "arn:aws:s3:::security-autopilot-w6-strict-s315-exec-696505809372",
+    "BucketRegion": "eu-north-1",
+    "AccessPointAlias": false
+}
+
+BUCKET security-autopilot-config-696505809372-eu-north-1
+{
+    "BucketArn": "arn:aws:s3:::security-autopilot-config-696505809372-eu-north-1",
+    "BucketRegion": "eu-north-1",
+    "AccessPointAlias": false
+}
+
+BUCKET security-autopilot-w6-envready-config-696505809372
+{
+    "BucketArn": "arn:aws:s3:::security-autopilot-w6-envready-config-696505809372",
+    "BucketRegion": "eu-north-1",
+    "AccessPointAlias": false
+}
+
+BUCKET phase2-wi1-lifecycle-696505809372-20260328224331
+
+An error occurred (404) when calling the HeadBucket operation: Not Found
+
+BUCKET sa-wi7-seed-696505809372-20260328205857
+
+An error occurred (404) when calling the HeadBucket operation: Not Found
+
+BUCKET ocypheris-live-ct-20260328t181200z-eu-north-1
+
+An error occurred (404) when calling the HeadBucket operation: Not Found
+
+BUCKET security-autopilot-access-logs-696505809372-r221001-access-logs
+
+An error occurred (404) when calling the HeadBucket operation: Not Found
+
+BUCKET sa-wi5-site-696505809372-20260328t164043z
+
+An error occurred (404) when calling the HeadBucket operation: Not Found
+
+BUCKET security-autopilot-w6-envready-s315-exec-696505809372
+{
+    "BucketArn": "arn:aws:s3:::security-autopilot-w6-envready-s315-exec-696505809372",
+    "BucketRegion": "eu-north-1",
+    "AccessPointAlias": false
+}
+

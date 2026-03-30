@@ -1,0 +1,56 @@
+null_resource.revoke_public_admin_ingress: Refreshing state... [id=6922099160536107615]
+aws_vpc_security_group_ingress_rule.bastion_ssh["sg-085d69a76707542b2"]: Refreshing state... [id=sgr-0d8837460036a325e]
+aws_vpc_security_group_ingress_rule.bastion_rdp["sg-085d69a76707542b2"]: Refreshing state... [id=sgr-099ed29049610b0e5]
+
+Terraform used the selected providers to generate the following execution
+plan. Resource actions are indicated with the following symbols:
+  - destroy
+
+Terraform will perform the following actions:
+
+  # aws_vpc_security_group_ingress_rule.bastion_rdp["sg-085d69a76707542b2"] will be destroyed
+  - resource "aws_vpc_security_group_ingress_rule" "bastion_rdp" {
+      - arn                          = "arn:aws:ec2:eu-north-1:696505809372:security-group-rule/sgr-099ed29049610b0e5" -> null
+      - description                  = "RDP from approved bastion security group sg-085d69a76707542b2 - Security Autopilot" -> null
+      - from_port                    = 3389 -> null
+      - id                           = "sgr-099ed29049610b0e5" -> null
+      - ip_protocol                  = "tcp" -> null
+      - referenced_security_group_id = "sg-085d69a76707542b2" -> null
+      - security_group_id            = "sg-0ef32ca8805a55a8b" -> null
+      - security_group_rule_id       = "sgr-099ed29049610b0e5" -> null
+      - tags_all                     = {} -> null
+      - to_port                      = 3389 -> null
+    }
+
+  # aws_vpc_security_group_ingress_rule.bastion_ssh["sg-085d69a76707542b2"] will be destroyed
+  - resource "aws_vpc_security_group_ingress_rule" "bastion_ssh" {
+      - arn                          = "arn:aws:ec2:eu-north-1:696505809372:security-group-rule/sgr-0d8837460036a325e" -> null
+      - description                  = "SSH from approved bastion security group sg-085d69a76707542b2 - Security Autopilot" -> null
+      - from_port                    = 22 -> null
+      - id                           = "sgr-0d8837460036a325e" -> null
+      - ip_protocol                  = "tcp" -> null
+      - referenced_security_group_id = "sg-085d69a76707542b2" -> null
+      - security_group_id            = "sg-0ef32ca8805a55a8b" -> null
+      - security_group_rule_id       = "sgr-0d8837460036a325e" -> null
+      - tags_all                     = {} -> null
+      - to_port                      = 22 -> null
+    }
+
+  # null_resource.revoke_public_admin_ingress will be destroyed
+  - resource "null_resource" "revoke_public_admin_ingress" {
+      - id       = "6922099160536107615" -> null
+      - triggers = {
+          - "region"            = "eu-north-1"
+          - "security_group_id" = "sg-0ef32ca8805a55a8b"
+        } -> null
+    }
+
+Plan: 0 to add, 0 to change, 3 to destroy.
+aws_vpc_security_group_ingress_rule.bastion_ssh["sg-085d69a76707542b2"]: Destroying... [id=sgr-0d8837460036a325e]
+aws_vpc_security_group_ingress_rule.bastion_rdp["sg-085d69a76707542b2"]: Destroying... [id=sgr-099ed29049610b0e5]
+aws_vpc_security_group_ingress_rule.bastion_ssh["sg-085d69a76707542b2"]: Destruction complete after 1s
+aws_vpc_security_group_ingress_rule.bastion_rdp["sg-085d69a76707542b2"]: Destruction complete after 1s
+null_resource.revoke_public_admin_ingress: Destroying... [id=6922099160536107615]
+null_resource.revoke_public_admin_ingress: Destruction complete after 0s
+
+Destroy complete! Resources: 3 destroyed.

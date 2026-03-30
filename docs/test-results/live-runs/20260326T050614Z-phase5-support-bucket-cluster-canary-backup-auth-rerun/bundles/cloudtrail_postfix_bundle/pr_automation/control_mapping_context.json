@@ -1,0 +1,34 @@
+{
+  "artifact_type": "control_mapping_context",
+  "control_ids": [
+    "CloudTrail.1"
+  ],
+  "mapped_control_ids": [
+    "CloudTrail.1"
+  ],
+  "mappings": [
+    {
+      "control_id": "CloudTrail.1",
+      "control_title": "Ensure CloudTrail in all regions",
+      "description": "CloudTrail multi-region",
+      "framework_control_code": "3.2",
+      "framework_name": "CIS AWS Foundations Benchmark"
+    },
+    {
+      "control_id": "CloudTrail.1",
+      "control_title": "Event logging",
+      "description": "Event logs for audit",
+      "framework_control_code": "A.12.4.1",
+      "framework_name": "ISO 27001"
+    },
+    {
+      "control_id": "CloudTrail.1",
+      "control_title": "System monitoring",
+      "description": "Monitoring of system operations",
+      "framework_control_code": "CC7.2",
+      "framework_name": "SOC 2"
+    }
+  ],
+  "unmapped_control_ids": [],
+  "version": 1
+}

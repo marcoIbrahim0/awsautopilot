@@ -1,0 +1,14 @@
+{
+  "status_code": 201,
+  "body": {
+    "id": "dd2d80c0-81ca-4940-ade5-cee658a3c879",
+    "action_id": "90646049-6b51-4aef-a855-8e5f210d88ee",
+    "mode": "pr_only",
+    "status": "pending",
+    "created_at": "2026-03-28T17:04:08.230229+00:00",
+    "updated_at": "2026-03-28T17:04:08.230229+00:00",
+    "manual_high_risk": false,
+    "pre_execution_notice": null,
+    "runbook_url": null
+  }
+}

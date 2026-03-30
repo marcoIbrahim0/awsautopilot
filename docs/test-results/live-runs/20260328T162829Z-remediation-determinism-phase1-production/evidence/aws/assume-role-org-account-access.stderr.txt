@@ -1,0 +1,2 @@
+
+An error occurred (AccessDenied) when calling the AssumeRole operation: User: arn:aws:iam::029037611564:user/AutoPilotAdmin is not authorized to perform: sts:AssumeRole on resource: arn:aws:iam::696505809372:role/OrganizationAccountAccessRole

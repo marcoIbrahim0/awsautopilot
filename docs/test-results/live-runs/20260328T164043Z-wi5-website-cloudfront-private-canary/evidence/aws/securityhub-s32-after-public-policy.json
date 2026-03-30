@@ -1,0 +1,101 @@
+{
+    "Findings": [
+        {
+            "SchemaVersion": "2018-10-08",
+            "Id": "arn:aws:securityhub:eu-north-1:696505809372:security-control/S3.2/finding/8264969a-cc4c-4983-b06b-fbbf86480f7d",
+            "ProductArn": "arn:aws:securityhub:eu-north-1::product/aws/securityhub",
+            "ProductName": "Security Hub",
+            "CompanyName": "AWS",
+            "Region": "eu-north-1",
+            "GeneratorId": "security-control/S3.2",
+            "AwsAccountId": "696505809372",
+            "Types": [
+                "Effects/Data Exposure"
+            ],
+            "FirstObservedAt": "2026-03-28T16:41:46.518Z",
+            "LastObservedAt": "2026-03-28T16:56:28.495Z",
+            "CreatedAt": "2026-03-28T16:41:56.142Z",
+            "UpdatedAt": "2026-03-28T16:56:42.585Z",
+            "Severity": {
+                "Label": "INFORMATIONAL",
+                "Normalized": 0,
+                "Original": "INFORMATIONAL"
+            },
+            "Title": "S3 general purpose buckets should block public read access",
+            "Description": "This control checks whether an Amazon S3 general purpose bucket permits public read access. It evaluates the block public access settings, the bucket policy, and the bucket access control list (ACL). The control fails if the bucket permits public read access.",
+            "Remediation": {
+                "Recommendation": {
+                    "Text": "For information on how to correct this issue, consult the AWS Security Hub controls documentation.",
+                    "Url": "https://docs.aws.amazon.com/console/securityhub/S3.2/remediation"
+                }
+            },
+            "ProductFields": {
+                "RelatedAWSResources:0/name": "securityhub-s3-bucket-public-read-prohibited-a490ed63",
+                "RelatedAWSResources:0/type": "AWS::Config::ConfigRule",
+                "aws/securityhub/ProductName": "Security Hub",
+                "aws/securityhub/CompanyName": "AWS",
+                "Resources:0/Id": "arn:aws:s3:::sa-wi5-site-696505809372-20260328t164043z",
+                "aws/securityhub/FindingId": "arn:aws:securityhub:eu-north-1::product/aws/securityhub/arn:aws:securityhub:eu-north-1:696505809372:security-control/S3.2/finding/8264969a-cc4c-4983-b06b-fbbf86480f7d",
+                "PreviousComplianceStatus": "PASSED"
+            },
+            "Resources": [
+                {
+                    "Type": "AwsS3Bucket",
+                    "Id": "arn:aws:s3:::sa-wi5-site-696505809372-20260328t164043z",
+                    "Partition": "aws",
+                    "Region": "eu-north-1",
+                    "Details": {
+                        "AwsS3Bucket": {
+                            "OwnerId": "2d735bbb71d4146170966dc3fa559ad48e4a2ce47d9aadccfc95d721c99c4bdc",
+                            "CreatedAt": "2026-03-28T16:41:20.000Z",
+                            "Name": "sa-wi5-site-696505809372-20260328t164043z"
+                        }
+                    }
+                }
+            ],
+            "Compliance": {
+                "Status": "PASSED",
+                "RelatedRequirements": [
+                    "NIST.800-53.r5 AC-21",
+                    "NIST.800-53.r5 AC-3",
+                    "NIST.800-53.r5 AC-3(7)",
+                    "NIST.800-53.r5 AC-4",
+                    "NIST.800-53.r5 AC-4(21)",
+                    "NIST.800-53.r5 AC-6",
+                    "NIST.800-53.r5 SC-7",
+                    "NIST.800-53.r5 SC-7(11)",
+                    "NIST.800-53.r5 SC-7(16)",
+                    "NIST.800-53.r5 SC-7(20)",
+                    "NIST.800-53.r5 SC-7(21)",
+                    "NIST.800-53.r5 SC-7(3)",
+                    "NIST.800-53.r5 SC-7(4)",
+                    "NIST.800-53.r5 SC-7(9)"
+                ],
+                "SecurityControlId": "S3.2",
+                "AssociatedStandards": [
+                    {
+                        "StandardsId": "standards/aws-foundational-security-best-practices/v/1.0.0"
+                    },
+                    {
+                        "StandardsId": "standards/nist-800-53/v/5.0.0"
+                    }
+                ]
+            },
+            "WorkflowState": "NEW",
+            "Workflow": {
+                "Status": "RESOLVED"
+            },
+            "RecordState": "ACTIVE",
+            "FindingProviderFields": {
+                "Severity": {
+                    "Label": "INFORMATIONAL",
+                    "Original": "INFORMATIONAL"
+                },
+                "Types": [
+                    "Effects/Data Exposure"
+                ]
+            },
+            "ProcessedAt": "2026-03-28T16:57:22.052Z"
+        }
+    ]
+}

@@ -1,0 +1,68 @@
+{
+  "bucket_existed_before": true,
+  "bucket_name": "security-autopilot-config-696505809372-eu-north-1",
+  "policy_json": {
+    "Statement": [
+      {
+        "Action": "s3:GetBucketAcl",
+        "Condition": {
+          "StringEquals": {
+            "AWS:SourceAccount": "696505809372"
+          }
+        },
+        "Effect": "Allow",
+        "Principal": {
+          "Service": "config.amazonaws.com"
+        },
+        "Resource": "arn:aws:s3:::security-autopilot-config-696505809372-eu-north-1",
+        "Sid": "AWSConfigBucketPermissionsCheck"
+      },
+      {
+        "Action": "s3:ListBucket",
+        "Condition": {
+          "StringEquals": {
+            "AWS:SourceAccount": "696505809372"
+          }
+        },
+        "Effect": "Allow",
+        "Principal": {
+          "Service": "config.amazonaws.com"
+        },
+        "Resource": "arn:aws:s3:::security-autopilot-config-696505809372-eu-north-1",
+        "Sid": "AWSConfigBucketExistenceCheck"
+      },
+      {
+        "Action": "s3:PutObject",
+        "Condition": {
+          "StringEquals": {
+            "AWS:SourceAccount": "696505809372",
+            "s3:x-amz-acl": "bucket-owner-full-control"
+          }
+        },
+        "Effect": "Allow",
+        "Principal": {
+          "Service": "config.amazonaws.com"
+        },
+        "Resource": "arn:aws:s3:::security-autopilot-config-696505809372-eu-north-1/AWSLogs/696505809372/Config/*",
+        "Sid": "AWSConfigBucketDelivery"
+      },
+      {
+        "Action": "s3:*",
+        "Condition": {
+          "Bool": {
+            "aws:SecureTransport": "false"
+          }
+        },
+        "Effect": "Deny",
+        "Principal": "*",
+        "Resource": [
+          "arn:aws:s3:::security-autopilot-config-696505809372-eu-north-1/*",
+          "arn:aws:s3:::security-autopilot-config-696505809372-eu-north-1"
+        ],
+        "Sid": "DenyInsecureTransport"
+      }
+    ],
+    "Version": "2012-10-17"
+  },
+  "version": 1
+}

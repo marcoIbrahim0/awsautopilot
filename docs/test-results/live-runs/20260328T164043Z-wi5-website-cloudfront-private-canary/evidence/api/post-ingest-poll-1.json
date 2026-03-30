@@ -1,0 +1,32 @@
+{
+  "findings_any": {
+    "status_code": 200,
+    "body": {
+      "items": [],
+      "total": 0
+    }
+  },
+  "findings_resolved": {
+    "status_code": 200,
+    "body": {
+      "items": [],
+      "total": 0
+    }
+  },
+  "actions_open": {
+    "status_code": 200,
+    "body": {
+      "items": [],
+      "total": 0,
+      "owner_queue_counters": null
+    }
+  },
+  "actions_resolved": {
+    "status_code": 200,
+    "body": {
+      "items": [],
+      "total": 0,
+      "owner_queue_counters": null
+    }
+  }
+}

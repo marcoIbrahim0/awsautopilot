@@ -1,0 +1,35 @@
+{
+  "id": "791310a6-f60e-4fe7-bc2e-f257f0f4da71",
+  "status": "finished",
+  "started_at": "2026-03-25T16:46:51.912940+00:00",
+  "finished_at": "2026-03-25T16:53:57+00:00",
+  "reporting_source": "bundle_callback",
+  "remediation_run_id": "f885729d-0f94-48d7-b400-edf4b155afaf",
+  "results": [
+    {
+      "action_id": "9276d94e-763c-4f18-8d4b-131275e664b4",
+      "result_type": "executable",
+      "support_tier": null
+    },
+    {
+      "action_id": "9bbf0407-5274-4a26-9f48-964ff1737ac0",
+      "result_type": "executable",
+      "support_tier": null
+    },
+    {
+      "action_id": "4fc6db43-ea06-4afc-a670-2ca8d0495070",
+      "result_type": "executable",
+      "support_tier": null
+    },
+    {
+      "action_id": "b9d3ffd9-6193-48ba-a02d-5835b1c120ad",
+      "result_type": "executable",
+      "support_tier": null
+    },
+    {
+      "action_id": "1e453177-31da-47ec-bfce-796fcebc9e4b",
+      "result_type": "non_executable",
+      "support_tier": "review_required_bundle"
+    }
+  ]
+}

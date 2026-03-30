@@ -1,0 +1,23 @@
+
+Terraform used the selected providers to generate the following execution
+plan. Resource actions are indicated with the following symbols:
+  + create
+
+Terraform will perform the following actions:
+
+  # null_resource.revoke_public_admin_ingress will be created
+  + resource "null_resource" "revoke_public_admin_ingress" {
+      + id       = (known after apply)
+      + triggers = {
+          + "region"            = "eu-north-1"
+          + "security_group_id" = "sg-06f6252fa8a95b61d"
+        }
+    }
+
+Plan: 1 to add, 0 to change, 0 to destroy.
+null_resource.revoke_public_admin_ingress: Creating...
+null_resource.revoke_public_admin_ingress: Provisioning with 'local-exec'...
+null_resource.revoke_public_admin_ingress (local-exec): Executing: ["/bin/bash" "-c" "set +e\naws ec2 revoke-security-group-ingress --region \"eu-north-1\" --group-id \"sg-06f6252fa8a95b61d\" --ip-permissions 'IpProtocol=tcp,FromPort=22,ToPort=22,IpRanges=[{CidrIp=0.0.0.0/0}]' >/dev/null 2>&1 || true\naws ec2 revoke-security-group-ingress --region \"eu-north-1\" --group-id \"sg-06f6252fa8a95b61d\" --ip-permissions 'IpProtocol=tcp,FromPort=3389,ToPort=3389,IpRanges=[{CidrIp=0.0.0.0/0}]' >/dev/null 2>&1 || true\naws ec2 revoke-security-group-ingress --region \"eu-north-1\" --group-id \"sg-06f6252fa8a95b61d\" --ip-permissions 'IpProtocol=tcp,FromPort=22,ToPort=22,Ipv6Ranges=[{CidrIpv6=::/0}]' >/dev/null 2>&1 || true\naws ec2 revoke-security-group-ingress --region \"eu-north-1\" --group-id \"sg-06f6252fa8a95b61d\" --ip-permissions 'IpProtocol=tcp,FromPort=3389,ToPort=3389,Ipv6Ranges=[{CidrIpv6=::/0}]' >/dev/null 2>&1 || true\nexit 0\n"]
+null_resource.revoke_public_admin_ingress: Creation complete after 6s [id=8873908812014871167]
+
+Apply complete! Resources: 1 added, 0 changed, 0 destroyed.

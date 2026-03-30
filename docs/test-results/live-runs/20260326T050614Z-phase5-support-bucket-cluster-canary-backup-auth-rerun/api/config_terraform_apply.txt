@@ -1,0 +1,28 @@
+
+Terraform used the selected providers to generate the following execution
+plan. Resource actions are indicated with the following symbols:
+  + create
+
+Terraform will perform the following actions:
+
+  # null_resource.aws_config_enablement will be created
+  + resource "null_resource" "aws_config_enablement" {
+      + id       = (known after apply)
+      + triggers = {
+          + "config_role_arn"           = "arn:aws:iam::696505809372:role/aws-service-role/config.amazonaws.com/AWSServiceRoleForConfig"
+          + "create_local_bucket"       = "true"
+          + "delivery_bucket"           = "security-autopilot-config-696505809372-eu-north-1"
+          + "kms_key_arn"               = null
+          + "overwrite_recording_group" = "true"
+          + "region"                    = "eu-north-1"
+        }
+    }
+
+Plan: 1 to add, 0 to change, 0 to destroy.
+null_resource.aws_config_enablement: Creating...
+null_resource.aws_config_enablement: Provisioning with 'local-exec'...
+null_resource.aws_config_enablement (local-exec): Executing: ["/bin/bash" "-c" "set -euo pipefail\nexport REGION=\"eu-north-1\"\nexport BUCKET=\"security-autopilot-config-696505809372-eu-north-1\"\nexport ROLE_ARN=\"arn:aws:iam::696505809372:role/aws-service-role/config.amazonaws.com/AWSServiceRoleForConfig\"\nexport KMS_ARN=\"\"\nexport CREATE_LOCAL_BUCKET=\"true\"\nexport OVERWRITE_RECORDING_GROUP=\"true\"\nexport ACCOUNT_ID=\"696505809372\"\nexport ROLLBACK_DIR=\".aws-config-rollback\"\n\npython3 ./scripts/aws_config_apply.py\n"]
+null_resource.aws_config_enablement: Still creating... [00m10s elapsed]
+null_resource.aws_config_enablement: Creation complete after 11s [id=4447058501069983749]
+
+Apply complete! Resources: 1 added, 0 changed, 0 destroyed.

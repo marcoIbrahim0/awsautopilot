@@ -1,0 +1,66 @@
+{
+  "run_id": "20260330T011601Z-phase1-action-resolution-closure",
+  "date_utc": "2026-03-30",
+  "api_base": "https://api.ocypheris.com",
+  "tenant": {
+    "name": "Marco",
+    "tenant_id": "e4e07aa8-b8ea-4c1d-9fd7-4362a2fc1195"
+  },
+  "aws": {
+    "account_id": "696505809372",
+    "region": "eu-north-1",
+    "profile": "test28-root",
+    "terraform_mirror": "/tmp/terraformrc-codex"
+  },
+  "verdict": {
+    "phase_1": "PASS",
+    "gate_1": "PASS",
+    "post_apply_action_resolution_lag": "FIXED_ON_PRODUCTION"
+  },
+  "deploy": {
+    "script": "scripts/deploy_saas_serverless.sh",
+    "image_tag": "20260330T013354Z",
+    "migration_required": false,
+    "log_path": "deploy-serverless.log"
+  },
+  "code_change": {
+    "runtime_files": [
+      "backend/workers/jobs/reconcile_inventory_shard.py",
+      "backend/workers/jobs/ingest_control_plane_events.py"
+    ],
+    "test_files": [
+      "tests/test_reconcile_inventory_shard_worker.py",
+      "tests/test_ingest_control_plane_events.py"
+    ],
+    "deployed_from_isolated_worktree": "/tmp/aws-security-autopilot-phase1-deploy"
+  },
+  "local_validation": [
+    "PYTHONPATH=. ./venv/bin/pytest tests/test_reconcile_inventory_shard_worker.py",
+    "PYTHONPATH=. ./venv/bin/pytest tests/test_ingest_control_plane_events.py",
+    "PYTHONPATH=. ./venv/bin/pytest tests/test_action_engine_merge.py -k 'shadow or resolved'"
+  ],
+  "proof_targets": {
+    "action_id": "54b0d584-d60a-409d-86e3-5458bd8054b1",
+    "resource_id": "arn:aws:s3:::security-autopilot-w6-envready-s311-exec-696505809372",
+    "bucket": "security-autopilot-w6-envready-s311-exec-696505809372",
+    "predeploy_run_id": "b9c90690-f124-491b-922d-2ac0bb8ff252",
+    "postdeploy_run_id": "ec7fa11c-e4d0-4f54-a26a-084e3aa92d39"
+  },
+  "predeploy_truth": {
+    "aws_apply_succeeded": true,
+    "action_remained_open_after_apply": true,
+    "manual_scoped_compute_closed_action": true
+  },
+  "postdeploy_truth": {
+    "aws_apply_succeeded": true,
+    "canary_read_role_trust_repaired": true,
+    "targeted_reconcile_enqueued": true,
+    "manual_compute_required": false,
+    "action_closed_truthfully": true
+  },
+  "cleanup": {
+    "bucket_lifecycle_restored_to_absent": true,
+    "cleanup_action_reopen_poll_noisy": true,
+    "read_role_trust_left_repaired": true
+  }
+}

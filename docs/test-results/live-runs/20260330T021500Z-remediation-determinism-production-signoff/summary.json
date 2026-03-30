@@ -1,0 +1,45 @@
+{
+  "run_id": "20260330T021500Z-remediation-determinism-production-signoff",
+  "date_utc": "2026-03-30",
+  "api_base": "https://api.ocypheris.com",
+  "tenant": {
+    "name": "Marco",
+    "tenant_id": "e4e07aa8-b8ea-4c1d-9fd7-4362a2fc1195"
+  },
+  "aws": {
+    "account_id": "696505809372",
+    "region": "eu-north-1"
+  },
+  "verdict": {
+    "overall": "PASS",
+    "gate_1": "PASS",
+    "gate_2": "PASS",
+    "gate_3": "PASS",
+    "gate_4": "PASS",
+    "gate_5": "PASS"
+  },
+  "authoritative_packages": {
+    "phase_1": "docs/test-results/live-runs/20260330T011601Z-phase1-action-resolution-closure/",
+    "phase_2": "docs/test-results/live-runs/20260330T012757Z-phase2-action-resolution-lag-closure/",
+    "phase_3": "docs/test-results/live-runs/20260329T194129Z-remediation-determinism-phase3-production/"
+  },
+  "wi_status": {
+    "WI-1": "PASS_AS_AUTHORITATIVE_NO_CANDIDATE_CONCLUSION",
+    "WI-2": "PASS",
+    "WI-3": "PASS",
+    "WI-4": "PASS",
+    "WI-5": "PASS",
+    "WI-6": "PASS",
+    "WI-7": "WAIVED_DEFERRED",
+    "WI-8": "PASS",
+    "WI-9": "PASS",
+    "WI-10": "PASS",
+    "WI-11": "PASS",
+    "WI-12": "PASS",
+    "WI-13": "PASS",
+    "WI-14": "PASS"
+  },
+  "non_blocking_follow_up": {
+    "attack_path_materialization_duplicate_key": true
+  }
+}

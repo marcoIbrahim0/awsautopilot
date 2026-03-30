@@ -1,0 +1,236 @@
+[WARNING]	2026-03-30T00:18:14.810Z		database_failover selected source=fallback host=ep-curly-butterfly-al0pzr9w-pooler.c-3.eu-central-1.aws.neon.tech after primary probe failure
+	[WARNING]	2026-03-30T00:18:14.863Z		database_failover selected source=fallback host=ep-curly-butterfly-al0pzr9w-pooler.c-3.eu-central-1.aws.neon.tech after primary probe failure
+	[WARNING]	2026-03-30T00:18:14.866Z		database_failover selected source=fallback host=ep-curly-butterfly-al0pzr9w-pooler.c-3.eu-central-1.aws.neon.tech after primary probe failure
+	INIT_REPORT Init Duration: 9999.44 ms	Phase: init	Status: timeout
+	INIT_REPORT Init Duration: 9999.23 ms	Phase: init	Status: timeout
+	INIT_REPORT Init Duration: 9999.98 ms	Phase: init	Status: timeout
+	[WARNING]	2026-03-30T00:18:17.088Z		database_failover selected source=fallback host=ep-curly-butterfly-al0pzr9w-pooler.c-3.eu-central-1.aws.neon.tech after primary probe failure
+	[WARNING]	2026-03-30T00:18:17.169Z		database_failover selected source=fallback host=ep-curly-butterfly-al0pzr9w-pooler.c-3.eu-central-1.aws.neon.tech after primary probe failure
+	[WARNING]	2026-03-30T00:18:17.596Z		database_failover selected source=fallback host=ep-curly-butterfly-al0pzr9w-pooler.c-3.eu-central-1.aws.neon.tech after primary probe failure
+	START RequestId: 48127103-d6f5-5ec7-9445-1340158f8395 Version: $LATEST
+	START RequestId: 114d7021-ba86-588e-afa7-126279f3419e Version: $LATEST
+	START RequestId: 4bd07202-bb4e-54e6-92cc-10417834b9d2 Version: $LATEST
+	[WARNING]	2026-03-30T00:18:20.601Z	4bd07202-bb4e-54e6-92cc-10417834b9d2	Skipping account-scoped SG finding expansion tenant_id=e4e07aa8-b8ea-4c1d-9fd7-4362a2fc1195 account_id=696505809372 region=eu-north-1 finding_id=arn:aws:securityhub:eu-north-1:696505809372:security-control/EC2.18/finding/5940965d-8b9e-4e56-ac17-d8a5d1b0790d control_id=EC2.18 reason=no_non_compliant_resources config_rule=securityhub-vpc-sg-open-only-to-authorized-ports-c242906d
+	[WARNING]	2026-03-30T00:18:20.735Z	4bd07202-bb4e-54e6-92cc-10417834b9d2	Skipping account-scoped SG finding expansion tenant_id=e4e07aa8-b8ea-4c1d-9fd7-4362a2fc1195 account_id=696505809372 region=eu-north-1 finding_id=arn:aws:securityhub:eu-north-1:696505809372:security-control/EC2.19/finding/f96f654f-2571-4c38-8db7-b36968bbb676 control_id=EC2.19 reason=no_non_compliant_resources config_rule=securityhub-vpc-sg-restricted-common-ports-aaa86401
+	END RequestId: 48127103-d6f5-5ec7-9445-1340158f8395
+	REPORT RequestId: 48127103-d6f5-5ec7-9445-1340158f8395	Duration: 5379.35 ms	Billed Duration: 5380 ms	Memory Size: 1024 MB	Max Memory Used: 215 MB	
+	[WARNING]	2026-03-30T00:18:20.851Z	4bd07202-bb4e-54e6-92cc-10417834b9d2	Skipping account-scoped SG finding expansion tenant_id=e4e07aa8-b8ea-4c1d-9fd7-4362a2fc1195 account_id=696505809372 region=eu-north-1 finding_id=arn:aws:securityhub:eu-north-1:696505809372:security-control/EC2.19/finding/379338ba-a10f-44d2-8089-3a349fa43d5d control_id=EC2.19 reason=no_non_compliant_resources config_rule=securityhub-vpc-sg-restricted-common-ports-aaa86401
+	[WARNING]	2026-03-30T00:18:20.989Z	4bd07202-bb4e-54e6-92cc-10417834b9d2	Skipping account-scoped SG finding expansion tenant_id=e4e07aa8-b8ea-4c1d-9fd7-4362a2fc1195 account_id=696505809372 region=eu-north-1 finding_id=arn:aws:securityhub:eu-north-1:696505809372:security-control/EC2.18/finding/544995b4-0a59-432d-9501-f39bed1bf576 control_id=EC2.18 reason=no_non_compliant_resources config_rule=securityhub-vpc-sg-open-only-to-authorized-ports-c242906d
+	[WARNING]	2026-03-30T00:18:21.122Z	4bd07202-bb4e-54e6-92cc-10417834b9d2	Skipping account-scoped SG finding expansion tenant_id=e4e07aa8-b8ea-4c1d-9fd7-4362a2fc1195 account_id=696505809372 region=eu-north-1 finding_id=arn:aws:securityhub:eu-north-1:696505809372:security-control/EC2.13/finding/352aa7c6-1b51-4fe4-bff7-71f98b27c018 control_id=EC2.13 reason=no_non_compliant_resources config_rule=securityhub-restricted-ssh-4fea2ef3
+	END RequestId: 4bd07202-bb4e-54e6-92cc-10417834b9d2
+	REPORT RequestId: 4bd07202-bb4e-54e6-92cc-10417834b9d2	Duration: 13820.45 ms	Billed Duration: 13821 ms	Memory Size: 1024 MB	Max Memory Used: 218 MB	
+	START RequestId: ec4a5d79-364e-52b1-9aee-3f3af5c7415a Version: $LATEST
+	START RequestId: 11995b8c-ea5c-5e59-95ec-39cf29c9e30b Version: $LATEST
+	END RequestId: 11995b8c-ea5c-5e59-95ec-39cf29c9e30b
+	REPORT RequestId: 11995b8c-ea5c-5e59-95ec-39cf29c9e30b	Duration: 1106.70 ms	Billed Duration: 1107 ms	Memory Size: 1024 MB	Max Memory Used: 224 MB	
+	START RequestId: 544ac0de-1c60-5fe4-9d36-a29ddffbc2b6 Version: $LATEST
+	END RequestId: 544ac0de-1c60-5fe4-9d36-a29ddffbc2b6
+	REPORT RequestId: 544ac0de-1c60-5fe4-9d36-a29ddffbc2b6	Duration: 622.68 ms	Billed Duration: 623 ms	Memory Size: 1024 MB	Max Memory Used: 228 MB	
+	START RequestId: 951488b9-9342-572e-a408-eafa50dd3a7c Version: $LATEST
+	END RequestId: 114d7021-ba86-588e-afa7-126279f3419e
+	REPORT RequestId: 114d7021-ba86-588e-afa7-126279f3419e	Duration: 25103.45 ms	Billed Duration: 25104 ms	Memory Size: 1024 MB	Max Memory Used: 243 MB	
+	END RequestId: 951488b9-9342-572e-a408-eafa50dd3a7c
+	REPORT RequestId: 951488b9-9342-572e-a408-eafa50dd3a7c	Duration: 1191.53 ms	Billed Duration: 1192 ms	Memory Size: 1024 MB	Max Memory Used: 252 MB	
+	START RequestId: 832cfd8a-18fe-5d86-a193-9fc9db5ed0d4 Version: $LATEST
+	END RequestId: 832cfd8a-18fe-5d86-a193-9fc9db5ed0d4
+	REPORT RequestId: 832cfd8a-18fe-5d86-a193-9fc9db5ed0d4	Duration: 402.38 ms	Billed Duration: 403 ms	Memory Size: 1024 MB	Max Memory Used: 258 MB	
+	START RequestId: 6b12a988-00f5-5dbc-8583-cbcbc35470ee Version: $LATEST
+	END RequestId: 6b12a988-00f5-5dbc-8583-cbcbc35470ee
+	REPORT RequestId: 6b12a988-00f5-5dbc-8583-cbcbc35470ee	Duration: 1030.71 ms	Billed Duration: 1031 ms	Memory Size: 1024 MB	Max Memory Used: 269 MB	
+	START RequestId: 925d580a-33f2-5369-91dc-3a49f0511e3b Version: $LATEST
+	END RequestId: ec4a5d79-364e-52b1-9aee-3f3af5c7415a
+	REPORT RequestId: ec4a5d79-364e-52b1-9aee-3f3af5c7415a	Duration: 22981.69 ms	Billed Duration: 22982 ms	Memory Size: 1024 MB	Max Memory Used: 221 MB	
+	START RequestId: 60e2db55-bea6-5b9c-a83f-b9167d12a28c Version: $LATEST
+	END RequestId: 60e2db55-bea6-5b9c-a83f-b9167d12a28c
+	REPORT RequestId: 60e2db55-bea6-5b9c-a83f-b9167d12a28c	Duration: 411.34 ms	Billed Duration: 412 ms	Memory Size: 1024 MB	Max Memory Used: 227 MB	
+	START RequestId: 8459de97-8dab-504d-a37e-bcd44e1a94db Version: $LATEST
+	[WARNING]	2026-03-30T00:19:04.111Z	8459de97-8dab-504d-a37e-bcd44e1a94db	Skipping account-scoped SG finding expansion tenant_id=e4e07aa8-b8ea-4c1d-9fd7-4362a2fc1195 account_id=696505809372 region=eu-north-1 finding_id=arn:aws:securityhub:eu-north-1:696505809372:security-control/EC2.18/finding/5940965d-8b9e-4e56-ac17-d8a5d1b0790d control_id=EC2.18 reason=no_non_compliant_resources config_rule=securityhub-vpc-sg-open-only-to-authorized-ports-c242906d
+	[WARNING]	2026-03-30T00:19:04.252Z	8459de97-8dab-504d-a37e-bcd44e1a94db	Skipping account-scoped SG finding expansion tenant_id=e4e07aa8-b8ea-4c1d-9fd7-4362a2fc1195 account_id=696505809372 region=eu-north-1 finding_id=arn:aws:securityhub:eu-north-1:696505809372:security-control/EC2.19/finding/f96f654f-2571-4c38-8db7-b36968bbb676 control_id=EC2.19 reason=no_non_compliant_resources config_rule=securityhub-vpc-sg-restricted-common-ports-aaa86401
+	[WARNING]	2026-03-30T00:19:04.382Z	8459de97-8dab-504d-a37e-bcd44e1a94db	Skipping account-scoped SG finding expansion tenant_id=e4e07aa8-b8ea-4c1d-9fd7-4362a2fc1195 account_id=696505809372 region=eu-north-1 finding_id=arn:aws:securityhub:eu-north-1:696505809372:security-control/EC2.19/finding/379338ba-a10f-44d2-8089-3a349fa43d5d control_id=EC2.19 reason=no_non_compliant_resources config_rule=securityhub-vpc-sg-restricted-common-ports-aaa86401
+	[WARNING]	2026-03-30T00:19:04.533Z	8459de97-8dab-504d-a37e-bcd44e1a94db	Skipping account-scoped SG finding expansion tenant_id=e4e07aa8-b8ea-4c1d-9fd7-4362a2fc1195 account_id=696505809372 region=eu-north-1 finding_id=arn:aws:securityhub:eu-north-1:696505809372:security-control/EC2.18/finding/544995b4-0a59-432d-9501-f39bed1bf576 control_id=EC2.18 reason=no_non_compliant_resources config_rule=securityhub-vpc-sg-open-only-to-authorized-ports-c242906d
+	[WARNING]	2026-03-30T00:19:04.679Z	8459de97-8dab-504d-a37e-bcd44e1a94db	Skipping account-scoped SG finding expansion tenant_id=e4e07aa8-b8ea-4c1d-9fd7-4362a2fc1195 account_id=696505809372 region=eu-north-1 finding_id=arn:aws:securityhub:eu-north-1:696505809372:security-control/EC2.13/finding/352aa7c6-1b51-4fe4-bff7-71f98b27c018 control_id=EC2.13 reason=no_non_compliant_resources config_rule=securityhub-restricted-ssh-4fea2ef3
+	END RequestId: 8459de97-8dab-504d-a37e-bcd44e1a94db
+	REPORT RequestId: 8459de97-8dab-504d-a37e-bcd44e1a94db	Duration: 9741.90 ms	Billed Duration: 9742 ms	Memory Size: 1024 MB	Max Memory Used: 236 MB	
+	START RequestId: 50b9df2e-06ac-58b3-9911-bd6dc5137b58 Version: $LATEST
+	END RequestId: 925d580a-33f2-5369-91dc-3a49f0511e3b
+	REPORT RequestId: 925d580a-33f2-5369-91dc-3a49f0511e3b	Duration: 22417.48 ms	Billed Duration: 22418 ms	Memory Size: 1024 MB	Max Memory Used: 298 MB	
+	START RequestId: b92bdfe4-0738-5091-bf62-bda7c4fa5206 Version: $LATEST
+	END RequestId: b92bdfe4-0738-5091-bf62-bda7c4fa5206
+	REPORT RequestId: b92bdfe4-0738-5091-bf62-bda7c4fa5206	Duration: 1262.86 ms	Billed Duration: 1263 ms	Memory Size: 1024 MB	Max Memory Used: 298 MB	
+	START RequestId: 959501e7-ea3f-57fc-8d20-63a429fbeaae Version: $LATEST
+	END RequestId: 959501e7-ea3f-57fc-8d20-63a429fbeaae
+	REPORT RequestId: 959501e7-ea3f-57fc-8d20-63a429fbeaae	Duration: 1560.97 ms	Billed Duration: 1561 ms	Memory Size: 1024 MB	Max Memory Used: 298 MB	
+	START RequestId: aef444ca-37d8-5f3f-b25c-2689f4103da8 Version: $LATEST
+	END RequestId: aef444ca-37d8-5f3f-b25c-2689f4103da8
+	REPORT RequestId: aef444ca-37d8-5f3f-b25c-2689f4103da8	Duration: 597.80 ms	Billed Duration: 598 ms	Memory Size: 1024 MB	Max Memory Used: 298 MB	
+	START RequestId: b91d3868-7f6e-5d6b-8236-5a2bbca49039 Version: $LATEST
+	START RequestId: c41542eb-c1be-51c4-9366-20a80275f353 Version: $LATEST
+	END RequestId: b91d3868-7f6e-5d6b-8236-5a2bbca49039
+	REPORT RequestId: b91d3868-7f6e-5d6b-8236-5a2bbca49039	Duration: 1817.60 ms	Billed Duration: 1818 ms	Memory Size: 1024 MB	Max Memory Used: 298 MB	
+	END RequestId: c41542eb-c1be-51c4-9366-20a80275f353
+	REPORT RequestId: c41542eb-c1be-51c4-9366-20a80275f353	Duration: 559.64 ms	Billed Duration: 560 ms	Memory Size: 1024 MB	Max Memory Used: 248 MB	
+	END RequestId: 50b9df2e-06ac-58b3-9911-bd6dc5137b58
+	REPORT RequestId: 50b9df2e-06ac-58b3-9911-bd6dc5137b58	Duration: 22493.74 ms	Billed Duration: 22494 ms	Memory Size: 1024 MB	Max Memory Used: 236 MB	
+	START RequestId: 25b9d59f-1b34-545d-b90c-b7dcd8ee00cb Version: $LATEST
+	END RequestId: 25b9d59f-1b34-545d-b90c-b7dcd8ee00cb
+	REPORT RequestId: 25b9d59f-1b34-545d-b90c-b7dcd8ee00cb	Duration: 453.48 ms	Billed Duration: 454 ms	Memory Size: 1024 MB	Max Memory Used: 236 MB	
+	START RequestId: 141a37e0-e24d-5dc4-a2f5-55a326699b33 Version: $LATEST
+	[WARNING]	2026-03-30T00:21:00.776Z	141a37e0-e24d-5dc4-a2f5-55a326699b33	Access denied when assuming role arn:aws:iam::696505809372:role/SecurityAutopilotReadRole: User: arn:aws:sts::029037611564:assumed-role/security-autopilot-dev-lambda-worker/security-autopilot-dev-worker is not authorized to perform: sts:AssumeRole on resource: arn:aws:iam::696505809372:role/SecurityAutopilotReadRole
+	[ERROR]	2026-03-30T00:21:00.802Z	141a37e0-e24d-5dc4-a2f5-55a326699b33	[42ba1107-44f1-4598-b467-3a9e55097351] Permission error (AccessDenied) account=696505809372 job_type=ingest_control_plane_events. Message will retry/DLQ. Error=An error occurred (AccessDenied) when calling the AssumeRole operation: Access denied. Check role ARN and trust policy.
+	END RequestId: 141a37e0-e24d-5dc4-a2f5-55a326699b33
+	REPORT RequestId: 141a37e0-e24d-5dc4-a2f5-55a326699b33	Duration: 218.25 ms	Billed Duration: 219 ms	Memory Size: 1024 MB	Max Memory Used: 236 MB	
+	START RequestId: 3fbf6f61-9c55-568e-854c-0d22587f0d1f Version: $LATEST
+	[WARNING]	2026-03-30T00:21:01.118Z	3fbf6f61-9c55-568e-854c-0d22587f0d1f	Access denied when assuming role arn:aws:iam::696505809372:role/SecurityAutopilotReadRole: User: arn:aws:sts::029037611564:assumed-role/security-autopilot-dev-lambda-worker/security-autopilot-dev-worker is not authorized to perform: sts:AssumeRole on resource: arn:aws:iam::696505809372:role/SecurityAutopilotReadRole
+	[ERROR]	2026-03-30T00:21:01.145Z	3fbf6f61-9c55-568e-854c-0d22587f0d1f	[50454dc3-bba7-4893-9774-b517bce6b885] Permission error (AccessDenied) account=696505809372 job_type=ingest_control_plane_events. Message will retry/DLQ. Error=An error occurred (AccessDenied) when calling the AssumeRole operation: Access denied. Check role ARN and trust policy.
+	END RequestId: 3fbf6f61-9c55-568e-854c-0d22587f0d1f
+	REPORT RequestId: 3fbf6f61-9c55-568e-854c-0d22587f0d1f	Duration: 194.31 ms	Billed Duration: 195 ms	Memory Size: 1024 MB	Max Memory Used: 236 MB	
+	START RequestId: 5911378f-0b2d-5174-b0e2-55cccf6572c5 Version: $LATEST
+	START RequestId: 2bc0cd14-c1dc-5772-a35f-af57059b05e5 Version: $LATEST
+	END RequestId: 5911378f-0b2d-5174-b0e2-55cccf6572c5
+	REPORT RequestId: 5911378f-0b2d-5174-b0e2-55cccf6572c5	Duration: 2263.38 ms	Billed Duration: 2264 ms	Memory Size: 1024 MB	Max Memory Used: 243 MB	
+	START RequestId: 28f5e6d0-3973-589c-8bf8-8493fd26fb2d Version: $LATEST
+	END RequestId: 28f5e6d0-3973-589c-8bf8-8493fd26fb2d
+	REPORT RequestId: 28f5e6d0-3973-589c-8bf8-8493fd26fb2d	Duration: 1013.84 ms	Billed Duration: 1014 ms	Memory Size: 1024 MB	Max Memory Used: 243 MB	
+	START RequestId: b17efd07-36a3-525a-a616-9f44f2fb31eb Version: $LATEST
+	END RequestId: b17efd07-36a3-525a-a616-9f44f2fb31eb
+	REPORT RequestId: b17efd07-36a3-525a-a616-9f44f2fb31eb	Duration: 567.43 ms	Billed Duration: 568 ms	Memory Size: 1024 MB	Max Memory Used: 243 MB	
+	START RequestId: 639580e6-f528-59c4-9ee6-e2a53171ea75 Version: $LATEST
+	END RequestId: 639580e6-f528-59c4-9ee6-e2a53171ea75
+	REPORT RequestId: 639580e6-f528-59c4-9ee6-e2a53171ea75	Duration: 441.02 ms	Billed Duration: 442 ms	Memory Size: 1024 MB	Max Memory Used: 253 MB	
+	START RequestId: 125ae472-8592-5b7a-8cdf-863141c8a8cb Version: $LATEST
+	END RequestId: 125ae472-8592-5b7a-8cdf-863141c8a8cb
+	REPORT RequestId: 125ae472-8592-5b7a-8cdf-863141c8a8cb	Duration: 1530.57 ms	Billed Duration: 1531 ms	Memory Size: 1024 MB	Max Memory Used: 274 MB	
+	START RequestId: 8355a7fc-d2b4-5e41-998e-c5bf16e9edf0 Version: $LATEST
+	START RequestId: 964f726b-9edd-5f9d-a451-10285a911852 Version: $LATEST
+	END RequestId: 8355a7fc-d2b4-5e41-998e-c5bf16e9edf0
+	REPORT RequestId: 8355a7fc-d2b4-5e41-998e-c5bf16e9edf0	Duration: 601.01 ms	Billed Duration: 602 ms	Memory Size: 1024 MB	Max Memory Used: 284 MB	
+	END RequestId: 2bc0cd14-c1dc-5772-a35f-af57059b05e5
+	REPORT RequestId: 2bc0cd14-c1dc-5772-a35f-af57059b05e5	Duration: 19950.64 ms	Billed Duration: 19951 ms	Memory Size: 1024 MB	Max Memory Used: 263 MB	
+	END RequestId: 964f726b-9edd-5f9d-a451-10285a911852
+	REPORT RequestId: 964f726b-9edd-5f9d-a451-10285a911852	Duration: 10440.70 ms	Billed Duration: 10441 ms	Memory Size: 1024 MB	Max Memory Used: 298 MB	
+	START RequestId: bb057ad3-d7b0-5a96-8d1a-189013e86023 Version: $LATEST
+	END RequestId: bb057ad3-d7b0-5a96-8d1a-189013e86023
+	REPORT RequestId: bb057ad3-d7b0-5a96-8d1a-189013e86023	Duration: 23211.58 ms	Billed Duration: 23212 ms	Memory Size: 1024 MB	Max Memory Used: 298 MB	
+	START RequestId: 7a5e69b4-4367-598e-ac02-0bf787e14a3f Version: $LATEST
+	START RequestId: bf876ad7-fe57-5a84-9e62-08943acbe813 Version: $LATEST
+	END RequestId: bf876ad7-fe57-5a84-9e62-08943acbe813
+	REPORT RequestId: bf876ad7-fe57-5a84-9e62-08943acbe813	Duration: 596.33 ms	Billed Duration: 597 ms	Memory Size: 1024 MB	Max Memory Used: 272 MB	
+	START RequestId: ab208a1a-8f7e-5cd2-856e-e8594be016e5 Version: $LATEST
+	END RequestId: ab208a1a-8f7e-5cd2-856e-e8594be016e5
+	REPORT RequestId: ab208a1a-8f7e-5cd2-856e-e8594be016e5	Duration: 1164.23 ms	Billed Duration: 1165 ms	Memory Size: 1024 MB	Max Memory Used: 302 MB	
+	START RequestId: c902a648-8ae4-534f-b0ae-c40b4e445978 Version: $LATEST
+	END RequestId: c902a648-8ae4-534f-b0ae-c40b4e445978
+	REPORT RequestId: c902a648-8ae4-534f-b0ae-c40b4e445978	Duration: 2087.80 ms	Billed Duration: 2088 ms	Memory Size: 1024 MB	Max Memory Used: 304 MB	
+	START RequestId: 44a5be0a-f34e-5989-b61e-dc4937ecc3be Version: $LATEST
+	END RequestId: 44a5be0a-f34e-5989-b61e-dc4937ecc3be
+	REPORT RequestId: 44a5be0a-f34e-5989-b61e-dc4937ecc3be	Duration: 542.93 ms	Billed Duration: 543 ms	Memory Size: 1024 MB	Max Memory Used: 304 MB	
+	START RequestId: ba68ca13-1990-547a-a6c1-a850dd33ee4d Version: $LATEST
+	END RequestId: ba68ca13-1990-547a-a6c1-a850dd33ee4d
+	REPORT RequestId: ba68ca13-1990-547a-a6c1-a850dd33ee4d	Duration: 1121.38 ms	Billed Duration: 1122 ms	Memory Size: 1024 MB	Max Memory Used: 304 MB	
+	START RequestId: e7455eb7-7dff-5935-9e18-3cf4b96d533f Version: $LATEST
+	START RequestId: 794fdfcd-17fa-57b6-8705-bd8ed35c7d81 Version: $LATEST
+	END RequestId: 794fdfcd-17fa-57b6-8705-bd8ed35c7d81
+	REPORT RequestId: 794fdfcd-17fa-57b6-8705-bd8ed35c7d81	Duration: 417.16 ms	Billed Duration: 418 ms	Memory Size: 1024 MB	Max Memory Used: 284 MB	
+	END RequestId: e7455eb7-7dff-5935-9e18-3cf4b96d533f
+	REPORT RequestId: e7455eb7-7dff-5935-9e18-3cf4b96d533f	Duration: 9359.44 ms	Billed Duration: 9360 ms	Memory Size: 1024 MB	Max Memory Used: 304 MB	
+	START RequestId: bdf543b8-62c9-50ee-be4f-21fba6527a5b Version: $LATEST
+	END RequestId: 7a5e69b4-4367-598e-ac02-0bf787e14a3f
+	REPORT RequestId: 7a5e69b4-4367-598e-ac02-0bf787e14a3f	Duration: 22505.01 ms	Billed Duration: 22506 ms	Memory Size: 1024 MB	Max Memory Used: 298 MB	
+	END RequestId: bdf543b8-62c9-50ee-be4f-21fba6527a5b
+	REPORT RequestId: bdf543b8-62c9-50ee-be4f-21fba6527a5b	Duration: 20667.20 ms	Billed Duration: 20668 ms	Memory Size: 1024 MB	Max Memory Used: 304 MB	
+	START RequestId: ffe21109-c569-5ed5-8263-734a018ed026 Version: $LATEST
+	START RequestId: ddc01ea8-ec4e-5bdf-b6f0-7ceb290b6e4f Version: $LATEST
+	[WARNING]	2026-03-30T00:26:00.680Z	ddc01ea8-ec4e-5bdf-b6f0-7ceb290b6e4f	[42ba1107-44f1-4598-b467-3a9e55097351] Retried message queue=security-autopilot-events-fastlane-queue receive_count=2 job_type=ingest_control_plane_events schema_version=1 tenant=c3351a02-0bc2-4449-beed-d59d7ac937d0 account=696505809372 region=eu-north-1
+	[WARNING]	2026-03-30T00:26:00.992Z	ddc01ea8-ec4e-5bdf-b6f0-7ceb290b6e4f	Access denied when assuming role arn:aws:iam::696505809372:role/SecurityAutopilotReadRole: User: arn:aws:sts::029037611564:assumed-role/security-autopilot-dev-lambda-worker/security-autopilot-dev-worker is not authorized to perform: sts:AssumeRole on resource: arn:aws:iam::696505809372:role/SecurityAutopilotReadRole
+	START RequestId: 8f12d264-3de7-583f-b793-b027f8a2bfd0 Version: $LATEST
+	[WARNING]	2026-03-30T00:26:01.006Z	8f12d264-3de7-583f-b793-b027f8a2bfd0	[50454dc3-bba7-4893-9774-b517bce6b885] Retried message queue=security-autopilot-events-fastlane-queue receive_count=2 job_type=ingest_control_plane_events schema_version=1 tenant=c3351a02-0bc2-4449-beed-d59d7ac937d0 account=696505809372 region=eu-north-1
+	[ERROR]	2026-03-30T00:26:01.018Z	ddc01ea8-ec4e-5bdf-b6f0-7ceb290b6e4f	[42ba1107-44f1-4598-b467-3a9e55097351] Permission error (AccessDenied) account=696505809372 job_type=ingest_control_plane_events. Message will retry/DLQ. Error=An error occurred (AccessDenied) when calling the AssumeRole operation: Access denied. Check role ARN and trust policy.
+	END RequestId: ddc01ea8-ec4e-5bdf-b6f0-7ceb290b6e4f
+	REPORT RequestId: ddc01ea8-ec4e-5bdf-b6f0-7ceb290b6e4f	Duration: 341.25 ms	Billed Duration: 342 ms	Memory Size: 1024 MB	Max Memory Used: 298 MB	
+	[WARNING]	2026-03-30T00:26:01.314Z	8f12d264-3de7-583f-b793-b027f8a2bfd0	Access denied when assuming role arn:aws:iam::696505809372:role/SecurityAutopilotReadRole: User: arn:aws:sts::029037611564:assumed-role/security-autopilot-dev-lambda-worker/security-autopilot-dev-worker is not authorized to perform: sts:AssumeRole on resource: arn:aws:iam::696505809372:role/SecurityAutopilotReadRole
+	[ERROR]	2026-03-30T00:26:01.339Z	8f12d264-3de7-583f-b793-b027f8a2bfd0	[50454dc3-bba7-4893-9774-b517bce6b885] Permission error (AccessDenied) account=696505809372 job_type=ingest_control_plane_events. Message will retry/DLQ. Error=An error occurred (AccessDenied) when calling the AssumeRole operation: Access denied. Check role ARN and trust policy.
+	END RequestId: 8f12d264-3de7-583f-b793-b027f8a2bfd0
+	REPORT RequestId: 8f12d264-3de7-583f-b793-b027f8a2bfd0	Duration: 335.43 ms	Billed Duration: 336 ms	Memory Size: 1024 MB	Max Memory Used: 284 MB	
+	START RequestId: 28c11549-7631-50f4-83ef-770ab35c971b Version: $LATEST
+	[WARNING]	2026-03-30T00:26:22.494Z	28c11549-7631-50f4-83ef-770ab35c971b	Access denied when assuming role arn:aws:iam::696505809372:role/SecurityAutopilotReadRole: User: arn:aws:sts::029037611564:assumed-role/security-autopilot-dev-lambda-worker/security-autopilot-dev-worker is not authorized to perform: sts:AssumeRole on resource: arn:aws:iam::696505809372:role/SecurityAutopilotReadRole
+	[ERROR]	2026-03-30T00:26:22.519Z	28c11549-7631-50f4-83ef-770ab35c971b	[9bc4b2d0-5a69-453e-aa05-f66fcae61c82] Permission error (AccessDenied) account=696505809372 job_type=ingest_control_plane_events. Message will retry/DLQ. Error=An error occurred (AccessDenied) when calling the AssumeRole operation: Access denied. Check role ARN and trust policy.
+	END RequestId: 28c11549-7631-50f4-83ef-770ab35c971b
+	REPORT RequestId: 28c11549-7631-50f4-83ef-770ab35c971b	Duration: 187.61 ms	Billed Duration: 188 ms	Memory Size: 1024 MB	Max Memory Used: 284 MB	
+	END RequestId: ffe21109-c569-5ed5-8263-734a018ed026
+	REPORT RequestId: ffe21109-c569-5ed5-8263-734a018ed026	Duration: 123344.25 ms	Billed Duration: 123345 ms	Memory Size: 1024 MB	Max Memory Used: 304 MB	
+	START RequestId: 7528bd91-8252-5b12-9383-dfd247315e4b Version: $LATEST
+	END RequestId: 7528bd91-8252-5b12-9383-dfd247315e4b
+	REPORT RequestId: 7528bd91-8252-5b12-9383-dfd247315e4b	Duration: 9402.90 ms	Billed Duration: 9403 ms	Memory Size: 1024 MB	Max Memory Used: 304 MB	
+	START RequestId: 44ca324e-6764-59dd-afe6-500da2130c84 Version: $LATEST
+	END RequestId: 44ca324e-6764-59dd-afe6-500da2130c84
+	REPORT RequestId: 44ca324e-6764-59dd-afe6-500da2130c84	Duration: 21443.90 ms	Billed Duration: 21444 ms	Memory Size: 1024 MB	Max Memory Used: 304 MB	
+	START RequestId: d4833865-c5aa-526c-8e52-5a2600693bfe Version: $LATEST
+	START RequestId: 814ebf52-4669-53d2-a2e3-dd1183a9707d Version: $LATEST
+	END RequestId: 814ebf52-4669-53d2-a2e3-dd1183a9707d
+	REPORT RequestId: 814ebf52-4669-53d2-a2e3-dd1183a9707d	Duration: 1247.43 ms	Billed Duration: 1248 ms	Memory Size: 1024 MB	Max Memory Used: 299 MB	
+	START RequestId: 429ed796-41fc-5424-98ac-b5d5842c378b Version: $LATEST
+	END RequestId: 429ed796-41fc-5424-98ac-b5d5842c378b
+	REPORT RequestId: 429ed796-41fc-5424-98ac-b5d5842c378b	Duration: 1134.51 ms	Billed Duration: 1135 ms	Memory Size: 1024 MB	Max Memory Used: 325 MB	
+	START RequestId: dded9f6f-7948-5e6e-9c5c-fd2cbc9a6dc1 Version: $LATEST
+	END RequestId: dded9f6f-7948-5e6e-9c5c-fd2cbc9a6dc1
+	REPORT RequestId: dded9f6f-7948-5e6e-9c5c-fd2cbc9a6dc1	Duration: 1023.11 ms	Billed Duration: 1024 ms	Memory Size: 1024 MB	Max Memory Used: 327 MB	
+	START RequestId: a9c6394c-ce5a-5912-b96d-5b0f0b896abd Version: $LATEST
+	END RequestId: a9c6394c-ce5a-5912-b96d-5b0f0b896abd
+	REPORT RequestId: a9c6394c-ce5a-5912-b96d-5b0f0b896abd	Duration: 1803.62 ms	Billed Duration: 1804 ms	Memory Size: 1024 MB	Max Memory Used: 342 MB	
+	START RequestId: 76ced735-9c2d-5217-b3fc-b57659fb51b8 Version: $LATEST
+	END RequestId: 76ced735-9c2d-5217-b3fc-b57659fb51b8
+	REPORT RequestId: 76ced735-9c2d-5217-b3fc-b57659fb51b8	Duration: 951.73 ms	Billed Duration: 952 ms	Memory Size: 1024 MB	Max Memory Used: 342 MB	
+	END RequestId: d4833865-c5aa-526c-8e52-5a2600693bfe
+	REPORT RequestId: d4833865-c5aa-526c-8e52-5a2600693bfe	Duration: 20594.93 ms	Billed Duration: 20595 ms	Memory Size: 1024 MB	Max Memory Used: 304 MB	
+	START RequestId: 6796c713-15b6-5c02-981a-a550d041395b Version: $LATEST
+	END RequestId: 6796c713-15b6-5c02-981a-a550d041395b
+	REPORT RequestId: 6796c713-15b6-5c02-981a-a550d041395b	Duration: 9597.89 ms	Billed Duration: 9598 ms	Memory Size: 1024 MB	Max Memory Used: 304 MB	
+	START RequestId: 6c41519f-a2be-5bf5-9e28-33dc67426418 Version: $LATEST
+	END RequestId: 6c41519f-a2be-5bf5-9e28-33dc67426418
+	REPORT RequestId: 6c41519f-a2be-5bf5-9e28-33dc67426418	Duration: 21928.99 ms	Billed Duration: 21929 ms	Memory Size: 1024 MB	Max Memory Used: 304 MB	
+	START RequestId: ae905ad3-60b3-5c70-bd1b-3890a6ea0e3e Version: $LATEST
+	START RequestId: f6ea718a-f9a1-5afc-b10c-13c93ff3d953 Version: $LATEST
+	END RequestId: ae905ad3-60b3-5c70-bd1b-3890a6ea0e3e
+	REPORT RequestId: ae905ad3-60b3-5c70-bd1b-3890a6ea0e3e	Duration: 2281.53 ms	Billed Duration: 2282 ms	Memory Size: 1024 MB	Max Memory Used: 304 MB	
+	START RequestId: aa1a7276-f7d3-5697-baea-103531b1a4d9 Version: $LATEST
+	END RequestId: aa1a7276-f7d3-5697-baea-103531b1a4d9
+	REPORT RequestId: aa1a7276-f7d3-5697-baea-103531b1a4d9	Duration: 1129.15 ms	Billed Duration: 1130 ms	Memory Size: 1024 MB	Max Memory Used: 304 MB	
+	START RequestId: 91256e40-2e20-5a59-b393-0c03e8447817 Version: $LATEST
+	END RequestId: 91256e40-2e20-5a59-b393-0c03e8447817
+	REPORT RequestId: 91256e40-2e20-5a59-b393-0c03e8447817	Duration: 546.25 ms	Billed Duration: 547 ms	Memory Size: 1024 MB	Max Memory Used: 304 MB	
+	START RequestId: a232399c-51b7-5c0a-a5dd-5bdf97d21e44 Version: $LATEST
+	END RequestId: a232399c-51b7-5c0a-a5dd-5bdf97d21e44
+	REPORT RequestId: a232399c-51b7-5c0a-a5dd-5bdf97d21e44	Duration: 395.66 ms	Billed Duration: 396 ms	Memory Size: 1024 MB	Max Memory Used: 304 MB	
+	START RequestId: df5b80d5-e562-5dd7-9a19-e2962307ef99 Version: $LATEST
+	END RequestId: df5b80d5-e562-5dd7-9a19-e2962307ef99
+	REPORT RequestId: df5b80d5-e562-5dd7-9a19-e2962307ef99	Duration: 1630.51 ms	Billed Duration: 1631 ms	Memory Size: 1024 MB	Max Memory Used: 304 MB	
+	START RequestId: 455b5b0f-dde7-5cbd-a6e7-394c1b8f1ef3 Version: $LATEST
+	END RequestId: 455b5b0f-dde7-5cbd-a6e7-394c1b8f1ef3
+	REPORT RequestId: 455b5b0f-dde7-5cbd-a6e7-394c1b8f1ef3	Duration: 391.48 ms	Billed Duration: 392 ms	Memory Size: 1024 MB	Max Memory Used: 304 MB	
+	END RequestId: f6ea718a-f9a1-5afc-b10c-13c93ff3d953
+	REPORT RequestId: f6ea718a-f9a1-5afc-b10c-13c93ff3d953	Duration: 21072.18 ms	Billed Duration: 21073 ms	Memory Size: 1024 MB	Max Memory Used: 342 MB	
+	START RequestId: d0893f75-0614-5fe2-bd89-5d36c065b033 Version: $LATEST
+	[WARNING]	2026-03-30T00:31:00.776Z	d0893f75-0614-5fe2-bd89-5d36c065b033	[42ba1107-44f1-4598-b467-3a9e55097351] Retried message queue=security-autopilot-events-fastlane-queue receive_count=3 job_type=ingest_control_plane_events schema_version=1 tenant=c3351a02-0bc2-4449-beed-d59d7ac937d0 account=696505809372 region=eu-north-1
+	[WARNING]	2026-03-30T00:31:00.930Z	d0893f75-0614-5fe2-bd89-5d36c065b033	Access denied when assuming role arn:aws:iam::696505809372:role/SecurityAutopilotReadRole: User: arn:aws:sts::029037611564:assumed-role/security-autopilot-dev-lambda-worker/security-autopilot-dev-worker is not authorized to perform: sts:AssumeRole on resource: arn:aws:iam::696505809372:role/SecurityAutopilotReadRole
+	[ERROR]	2026-03-30T00:31:00.956Z	d0893f75-0614-5fe2-bd89-5d36c065b033	[42ba1107-44f1-4598-b467-3a9e55097351] Permission error (AccessDenied) account=696505809372 job_type=ingest_control_plane_events. Message will retry/DLQ. Error=An error occurred (AccessDenied) when calling the AssumeRole operation: Access denied. Check role ARN and trust policy.
+	END RequestId: d0893f75-0614-5fe2-bd89-5d36c065b033
+	REPORT RequestId: d0893f75-0614-5fe2-bd89-5d36c065b033	Duration: 282.83 ms	Billed Duration: 283 ms	Memory Size: 1024 MB	Max Memory Used: 342 MB	
+	START RequestId: 70ecdb66-7ad1-5f71-8c83-b925bca3ed86 Version: $LATEST
+	[WARNING]	2026-03-30T00:31:01.103Z	70ecdb66-7ad1-5f71-8c83-b925bca3ed86	[50454dc3-bba7-4893-9774-b517bce6b885] Retried message queue=security-autopilot-events-fastlane-queue receive_count=3 job_type=ingest_control_plane_events schema_version=1 tenant=c3351a02-0bc2-4449-beed-d59d7ac937d0 account=696505809372 region=eu-north-1
+	[WARNING]	2026-03-30T00:31:01.410Z	70ecdb66-7ad1-5f71-8c83-b925bca3ed86	Access denied when assuming role arn:aws:iam::696505809372:role/SecurityAutopilotReadRole: User: arn:aws:sts::029037611564:assumed-role/security-autopilot-dev-lambda-worker/security-autopilot-dev-worker is not authorized to perform: sts:AssumeRole on resource: arn:aws:iam::696505809372:role/SecurityAutopilotReadRole
+	[ERROR]	2026-03-30T00:31:01.436Z	70ecdb66-7ad1-5f71-8c83-b925bca3ed86	[50454dc3-bba7-4893-9774-b517bce6b885] Permission error (AccessDenied) account=696505809372 job_type=ingest_control_plane_events. Message will retry/DLQ. Error=An error occurred (AccessDenied) when calling the AssumeRole operation: Access denied. Check role ARN and trust policy.
+	END RequestId: 70ecdb66-7ad1-5f71-8c83-b925bca3ed86
+	REPORT RequestId: 70ecdb66-7ad1-5f71-8c83-b925bca3ed86	Duration: 436.60 ms	Billed Duration: 437 ms	Memory Size: 1024 MB	Max Memory Used: 342 MB	
+	START RequestId: fb10cf23-5506-573d-9162-ad609385aa6f Version: $LATEST
+	END RequestId: fb10cf23-5506-573d-9162-ad609385aa6f
+	REPORT RequestId: fb10cf23-5506-573d-9162-ad609385aa6f	Duration: 9826.35 ms	Billed Duration: 9827 ms	Memory Size: 1024 MB	Max Memory Used: 342 MB	
+	START RequestId: 795e081a-072f-5d0b-b6f7-6a59c1a8457d Version: $LATEST
+	START RequestId: bc643c3a-e4bd-5763-8e36-5e79222428b2 Version: $LATEST
+	[WARNING]	2026-03-30T00:31:22.379Z	bc643c3a-e4bd-5763-8e36-5e79222428b2	[9bc4b2d0-5a69-453e-aa05-f66fcae61c82] Retried message queue=security-autopilot-events-fastlane-queue receive_count=2 job_type=ingest_control_plane_events schema_version=1 tenant=c3351a02-0bc2-4449-beed-d59d7ac937d0 account=696505809372 region=eu-north-1
+	[WARNING]	2026-03-30T00:31:22.540Z	bc643c3a-e4bd-5763-8e36-5e79222428b2	Access denied when assuming role arn:aws:iam::696505809372:role/SecurityAutopilotReadRole: User: arn:aws:sts::029037611564:assumed-role/security-autopilot-dev-lambda-worker/security-autopilot-dev-worker is not authorized to perform: sts:AssumeRole on resource: arn:aws:iam::696505809372:role/SecurityAutopilotReadRole
+	[ERROR]	2026-03-30T00:31:22.564Z	bc643c3a-e4bd-5763-8e36-5e79222428b2	[9bc4b2d0-5a69-453e-aa05-f66fcae61c82] Permission error (AccessDenied) account=696505809372 job_type=ingest_control_plane_events. Message will retry/DLQ. Error=An error occurred (AccessDenied) when calling the AssumeRole operation: Access denied. Check role ARN and trust policy.
+	END RequestId: bc643c3a-e4bd-5763-8e36-5e79222428b2
+	REPORT RequestId: bc643c3a-e4bd-5763-8e36-5e79222428b2	Duration: 187.94 ms	Billed Duration: 188 ms	Memory Size: 1024 MB	Max Memory Used: 304 MB	
+	END RequestId: 795e081a-072f-5d0b-b6f7-6a59c1a8457d
+	REPORT RequestId: 795e081a-072f-5d0b-b6f7-6a59c1a8457d	Duration: 22854.32 ms	Billed Duration: 22855 ms	Memory Size: 1024 MB	Max Memory Used: 342 MB	
+

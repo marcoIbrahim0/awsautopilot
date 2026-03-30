@@ -41,6 +41,13 @@ from backend.services.aws_s3_bundle_support import (
     aws_s3_policy_capture_script_content,
     aws_s3_policy_restore_script_content,
 )
+from backend.services.aws_s3_lifecycle_bundle_support import (
+    AWS_S3_LIFECYCLE_APPLY_SCRIPT_PATH,
+    AWS_S3_LIFECYCLE_RESTORE_SCRIPT_PATH,
+    aws_s3_lifecycle_bundle_rollback_metadata,
+    aws_s3_lifecycle_merge_script_content,
+    aws_s3_lifecycle_restore_script_content,
+)
 from backend.services.aws_s3_encryption_bundle_support import (
     AWS_S3_ENCRYPTION_CAPTURE_SCRIPT_PATH,
     AWS_S3_ENCRYPTION_RESTORE_SCRIPT_PATH,
@@ -128,6 +135,7 @@ class ActionLike(Protocol):
     target_id: str
     title: str
     control_id: str | None
+    resource_id: str | None
 
 
 # ---------------------------------------------------------------------------
@@ -830,6 +838,7 @@ def generate_pr_bundle(
             normalized_format,
             strategy_inputs=strategy_inputs,
             risk_snapshot=risk_snapshot,
+            resolution=resolution,
         )
     elif action_type == ACTION_TYPE_S3_BUCKET_ENCRYPTION_KMS:
         result = _generate_for_s3_bucket_encryption_kms(
@@ -1404,6 +1413,21 @@ def _security_group_id_from_action_context(action: ActionLike, target_id: str) -
         if resolved != "REPLACE_SECURITY_GROUP_ID":
             return resolved
     return None
+
+
+def _s3_bucket_name_from_action_context(action: ActionLike, target_id: str) -> str:
+    """Resolve bucket name from target_id first, then resource_id as fallback."""
+    candidates = [
+        target_id,
+        getattr(action, "resource_id", None),
+    ]
+    for candidate in candidates:
+        if not candidate:
+            continue
+        resolved = _s3_bucket_name_from_target_id(str(candidate))
+        if resolved != "REPLACE_BUCKET_NAME":
+            return resolved
+    return "REPLACE_BUCKET_NAME"
 
 
 # ---------------------------------------------------------------------------
@@ -2127,10 +2151,13 @@ locals {{
   )
   existing_policy_id = try(local.existing_policy_document.Id, null)
   existing_policy_statements_candidate = try(local.existing_policy_document.Statement, null)
-  existing_policy_statements = can(local.existing_policy_statements_candidate.Effect) ? [
-    local.existing_policy_statements_candidate
-  ] : (
-    local.existing_policy_statements_candidate == null ? [] : local.existing_policy_statements_candidate
+  existing_policy_statements = jsondecode(
+    local.existing_policy_statements_candidate == null ? "[]" : (
+      can(local.existing_policy_statements_candidate.Effect) ? format(
+        "[%s]",
+        jsonencode(local.existing_policy_statements_candidate)
+      ) : jsonencode(local.existing_policy_statements_candidate)
+    )
   )
   existing_policy_statement_metadata = [
     for idx, statement in local.existing_policy_statements : {{
@@ -2168,8 +2195,26 @@ locals {{
 }}
 
 resource "aws_s3_bucket_policy" "security_autopilot" {{
+  count  = length(local.preserved_policy_statements) > 0 ? 1 : 0
   bucket = "{bucket}"
   policy = jsonencode(local.scrubbed_policy_document)
+}}
+
+resource "terraform_data" "delete_bucket_policy" {{
+  count = length(local.preserved_policy_statements) == 0 ? 1 : 0
+
+  triggers_replace = {{
+    bucket_name            = "{bucket}"
+    scrubbed_policy_sha256 = sha256(jsonencode(local.scrubbed_policy_document))
+  }}
+
+  provisioner "local-exec" {{
+    interpreter = ["/bin/bash", "-c"]
+    command     = <<-EOT
+set -euo pipefail
+aws s3api delete-bucket-policy --bucket "{bucket}"
+EOT
+  }}
 }}
 
 resource "aws_s3_bucket_public_access_block" "security_autopilot" {{
@@ -2180,7 +2225,10 @@ resource "aws_s3_bucket_public_access_block" "security_autopilot" {{
   ignore_public_acls      = true
   restrict_public_buckets = true
 
-  depends_on = [aws_s3_bucket_policy.security_autopilot]
+  depends_on = [
+    aws_s3_bucket_policy.security_autopilot,
+    terraform_data.delete_bucket_policy,
+  ]
 }}
 
 output "removed_statement_count" {{
@@ -3307,17 +3355,30 @@ def _generate_for_s3_bucket_lifecycle_configuration(
     *,
     strategy_inputs: dict[str, Any] | None = None,
     risk_snapshot: dict[str, Any] | None = None,
+    resolution: Mapping[str, Any] | None = None,
 ) -> PRBundleResult:
     """Generate IaC for S3 bucket lifecycle configuration (S3.11)."""
     meta = _action_meta(action)
     region = meta["region"]
-    bucket_name = _s3_bucket_name_from_target_id(meta["target_id"])
+    bucket_name = _s3_bucket_name_from_action_context(action, meta["target_id"])
     abort_days = _resolve_s3_lifecycle_abort_days(strategy_inputs)
     lifecycle_analysis = _s3_lifecycle_analysis_from_risk_snapshot(
         risk_snapshot,
         abort_days=abort_days,
     )
+    apply_time_merge = _s3_11_apply_time_merge_requested(resolution)
     if format == CLOUDFORMATION_FORMAT:
+        if apply_time_merge:
+            _raise_pr_bundle_error(
+                code="cloudformation_lifecycle_additive_merge_unsupported",
+                detail=(
+                    "CloudFormation additive lifecycle merge is out of scope for S3.11. "
+                    "Generate the Terraform bundle for apply-time lifecycle merge when runtime capture fails."
+                ),
+                action_type=action.action_type,
+                format=format,
+                strategy_id="s3_enable_abort_incomplete_uploads",
+            )
         _ensure_cloudformation_lifecycle_supported(
             lifecycle_analysis,
             action_type=action.action_type,
@@ -3342,6 +3403,45 @@ def _generate_for_s3_bucket_lifecycle_configuration(
             "Return to the action and click **Recompute actions** or trigger ingest to verify.",
         ]
     else:
+        if apply_time_merge:
+            files = [
+                PRBundleFile(path="providers.tf", content=_terraform_regional_providers_content(meta)),
+                PRBundleFile(
+                    path="s3_bucket_lifecycle_configuration.tf",
+                    content=_terraform_s3_bucket_lifecycle_configuration_apply_time_content(
+                        meta,
+                        bucket_name=bucket_name,
+                        abort_days=abort_days,
+                    ),
+                ),
+                PRBundleFile(
+                    path=AWS_S3_LIFECYCLE_APPLY_SCRIPT_PATH,
+                    content=aws_s3_lifecycle_merge_script_content(
+                        bucket_name=bucket_name,
+                        region=region,
+                        abort_days=abort_days,
+                    ),
+                ),
+                PRBundleFile(
+                    path=AWS_S3_LIFECYCLE_RESTORE_SCRIPT_PATH,
+                    content=aws_s3_lifecycle_restore_script_content(),
+                ),
+            ]
+            steps = [
+                f"Configure AWS provider for account {meta['account_id']} and region {region}.",
+                (
+                    f"The bundle targets bucket {bucket_name} and will fetch the current lifecycle configuration "
+                    f"at apply time before enforcing abort-days={abort_days}."
+                ),
+                "Run `terraform init` and `terraform plan`.",
+                "Run `terraform apply`; the helper snapshots exact pre-state to `.s3-lifecycle-rollback/lifecycle_snapshot.json` before merging the managed abort rule.",
+                f"Rollback: run `python3 {AWS_S3_LIFECYCLE_RESTORE_SCRIPT_PATH}` to restore the captured lifecycle configuration exactly.",
+                "Return to the action and click **Recompute actions** or trigger ingest to verify.",
+            ]
+            result = PRBundleResult(format=format, files=files, steps=steps)
+            result["metadata"] = aws_s3_lifecycle_bundle_rollback_metadata(str(action.id))
+            return result
+
         _ensure_terraform_lifecycle_renderable(
             lifecycle_analysis,
             action_type=action.action_type,
@@ -3355,6 +3455,7 @@ def _generate_for_s3_bucket_lifecycle_configuration(
                     meta,
                     abort_days=abort_days,
                     existing_rules=lifecycle_analysis["preserved_rules"],
+                    bucket_name=bucket_name,
                 ),
             ),
         ]
@@ -3376,9 +3477,10 @@ def _terraform_s3_bucket_lifecycle_configuration_content(
     *,
     abort_days: int,
     existing_rules: list[dict[str, Any]] | None = None,
+    bucket_name: str | None = None,
 ) -> str:
     """Terraform for S3 bucket lifecycle configuration (S3.11)."""
-    bucket = _s3_bucket_name_from_target_id(meta.get("target_id", ""))
+    bucket = bucket_name or _s3_bucket_name_from_target_id(meta.get("target_id", ""))
     rendered_existing_rules = lifecycle_rules_to_terraform(existing_rules or [])
     managed_rule = _managed_abort_rule_block()
     rule_blocks = "\n\n".join(block for block in (rendered_existing_rules, managed_rule) if block)
@@ -3397,6 +3499,56 @@ resource "aws_s3_bucket_lifecycle_configuration" "security_autopilot" {{
   bucket = "{bucket}"
 
 {rule_blocks}
+}}
+"""
+
+
+def _terraform_s3_bucket_lifecycle_configuration_apply_time_content(
+    meta: dict[str, str],
+    *,
+    bucket_name: str,
+    abort_days: int,
+) -> str:
+    """Terraform for S3.11 apply-time lifecycle merge fallback."""
+    return f"""# S3 bucket lifecycle configuration - Action: {meta["action_id"]}
+# Remediation for: {meta["action_title"]}
+# Account: {meta["account_id"]} | Region: {meta["region"]} | Bucket: {bucket_name}
+# Control: {meta["control_id"]}
+
+locals {{
+  target_bucket_name = "{bucket_name}"
+}}
+
+variable "remediation_region" {{
+  type        = string
+  description = "Region for lifecycle remediation."
+  default     = "{meta["region"]}"
+}}
+
+variable "abort_incomplete_multipart_days" {{
+  type        = number
+  description = "Days before incomplete multipart uploads are aborted"
+  default     = {abort_days}
+}}
+
+resource "terraform_data" "security_autopilot" {{
+  triggers_replace = {{
+    bucket_name                    = local.target_bucket_name
+    remediation_region             = var.remediation_region
+    abort_incomplete_multipart_days = tostring(var.abort_incomplete_multipart_days)
+  }}
+
+  provisioner "local-exec" {{
+    interpreter = ["/bin/bash", "-c"]
+    command     = <<-EOT
+set -euo pipefail
+export BUCKET_NAME="${{local.target_bucket_name}}"
+export REGION="${{var.remediation_region}}"
+export ABORT_INCOMPLETE_MULTIPART_DAYS="${{var.abort_incomplete_multipart_days}}"
+
+python3 ./{AWS_S3_LIFECYCLE_APPLY_SCRIPT_PATH}
+EOT
+  }}
 }}
 """
 
@@ -5733,6 +5885,15 @@ def _generate_for_s3_bucket_require_ssl(
 
 
 def _s3_5_apply_time_merge_requested(resolution: Mapping[str, Any] | None) -> bool:
+    if not isinstance(resolution, Mapping):
+        return False
+    summary = resolution.get("preservation_summary")
+    if not isinstance(summary, Mapping):
+        return False
+    return summary.get("apply_time_merge") is True
+
+
+def _s3_11_apply_time_merge_requested(resolution: Mapping[str, Any] | None) -> bool:
     if not isinstance(resolution, Mapping):
         return False
     summary = resolution.get("preservation_summary")

@@ -1,0 +1,56 @@
+{
+  "artifact_type": "generated_diff_summary",
+  "file_count": 5,
+  "files": [
+    {
+      "bundle_path": "providers.tf",
+      "byte_count": 479,
+      "change_type": "create_or_update",
+      "content_sha256": "9a0536e0e9790c63a892e3b288fc6b299b5f7a1ea52e004cf4a0a8833e7227f3",
+      "line_count": 18,
+      "repo_path": "providers.tf"
+    },
+    {
+      "bundle_path": "sg_restrict_public_ports.tf",
+      "byte_count": 2009,
+      "change_type": "create_or_update",
+      "content_sha256": "d8493d4b2b405fcef4bd02330192a13086a1026d1154fca6c82f78064230c389",
+      "line_count": 37,
+      "repo_path": "sg_restrict_public_ports.tf"
+    },
+    {
+      "bundle_path": "scripts/sg_capture_state.py",
+      "byte_count": 3966,
+      "change_type": "create_or_update",
+      "content_sha256": "421cac23cc7410eb6e86b5340bd03edbaf820a97c047d8e5be933261c9480b4d",
+      "line_count": 127,
+      "repo_path": "scripts/sg_capture_state.py"
+    },
+    {
+      "bundle_path": "rollback/sg_restore.py",
+      "byte_count": 2318,
+      "change_type": "create_or_update",
+      "content_sha256": "b0269b5e1a85df22e1b116ae185cb95e0e8ad7dce77753fca7deda47a7e45741",
+      "line_count": 81,
+      "repo_path": "rollback/sg_restore.py"
+    },
+    {
+      "bundle_path": "README.txt",
+      "byte_count": 2985,
+      "change_type": "create_or_update",
+      "content_sha256": "56a751ecfdb09bad37b01eb4f3ae94d791176b71029044e06f2f9c4dcab93dee",
+      "line_count": 56,
+      "repo_path": "README.txt"
+    }
+  ],
+  "fingerprint_sha256": "6af230ce109c6f417a9d3c0697c947c802f7a0512e2e14ec8bb8b9f14806b1d1",
+  "repo_target_configured": false,
+  "summary_lines": [
+    "`providers.tf` <- `providers.tf` (18 lines, sha256:9a0536e0e979)",
+    "`sg_restrict_public_ports.tf` <- `sg_restrict_public_ports.tf` (37 lines, sha256:d8493d4b2b40)",
+    "`scripts/sg_capture_state.py` <- `scripts/sg_capture_state.py` (127 lines, sha256:421cac23cc74)",
+    "`rollback/sg_restore.py` <- `rollback/sg_restore.py` (81 lines, sha256:b0269b5e1a85)",
+    "`README.txt` <- `README.txt` (56 lines, sha256:56a751ecfdb0)"
+  ],
+  "version": 1
+}

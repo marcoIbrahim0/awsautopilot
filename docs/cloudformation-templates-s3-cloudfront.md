@@ -86,7 +86,9 @@ The backend builds the AWS CloudFormation "Create stack" console URL with query 
 
 Example (conceptually):
 
-`https://us-east-1.console.aws.amazon.com/cloudformation/home?region=us-east-1#/stacks/new?stackName=SecurityAutopilotReadRole&templateURL=...&param_SaaSAccountId=123456789012&param_ExternalId=ext-xxx`
+`https://us-east-1.console.aws.amazon.com/cloudformation/home?region=us-east-1#/stacks/create/review?stackName=SecurityAutopilotReadRole&templateURL=...&param_SaaSAccountId=123456789012&param_ExternalId=ext-xxx`
+
+Use `#/stacks/create/review?`, which AWS currently normalizes into the quick-create flow and applies the `param_*` values to the rendered form. Keep legacy parsing for older `stacks/new` and `stacks/create/template` links, but do not generate them for new payloads.
 
 ## Changelog / versions
 

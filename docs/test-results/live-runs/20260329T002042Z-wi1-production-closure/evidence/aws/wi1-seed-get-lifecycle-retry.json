@@ -1,0 +1,15 @@
+{
+    "TransitionDefaultMinimumObjectSize": "all_storage_classes_128K",
+    "Rules": [
+        {
+            "Expiration": {
+                "Days": 30
+            },
+            "ID": "retain-logs-30d",
+            "Filter": {
+                "Prefix": "logs/"
+            },
+            "Status": "Enabled"
+        }
+    ]
+}

@@ -1,0 +1,52 @@
+{
+  "action_id": "c6c920fd-b9f6-4015-8ede-a072d5ad22c5",
+  "action_type": "s3_bucket_access_logging",
+  "blocked_reasons": [
+    "An error occurred (AccessDenied) when calling the AssumeRole operation: Access denied. Check role ARN and trust policy."
+  ],
+  "control_id": "S3.9",
+  "decision_rationale": "Family resolver kept S3.9 executable by switching to dedicated destination-bucket creation with secure defaults. An error occurred (AccessDenied) when calling the AssumeRole operation: Access denied. Check role ARN and trust policy. Run creation did not require additional risk-only acceptance.",
+  "decision_summary": "Family resolver kept S3.9 executable by switching to dedicated destination-bucket creation with secure defaults. An error occurred (AccessDenied) when calling the AssumeRole operation: Access denied. Check role ARN and trust policy. Run creation did not require additional risk-only acceptance.",
+  "decision_version": "resolver/v1",
+  "finding_coverage": {},
+  "folder": "executable/actions/01-arn-aws-s3-security-autopilot-config-69650580937-c6c920fd",
+  "has_runnable_terraform": true,
+  "index": 1,
+  "missing_defaults": [],
+  "missing_inputs": [],
+  "outcome": "executable_bundle_generated",
+  "preservation_summary": {
+    "ambiguous_source_destination_relationship": false,
+    "destination_bucket_name": "sa-access-logs-696505809372-use1-r0325224512",
+    "destination_bucket_reachable": false,
+    "destination_creation_planned": true,
+    "destination_safety_proven": false,
+    "destination_secure_defaults": true,
+    "executable_destination_allowed": true,
+    "family": "s3_bucket_access_logging",
+    "family_strategy": "s3_enable_access_logging_guided",
+    "selected_branch": "s3_enable_access_logging_create_destination_bucket",
+    "single_profile_compatible": false,
+    "source_bucket_name": "security-autopilot-config-696505809372-us-east-1",
+    "source_bucket_scope_proven": true,
+    "strategy_only_supported": true
+  },
+  "profile_id": "s3_enable_access_logging_create_destination_bucket",
+  "rejected_profiles": [
+    {
+      "detail": "An error occurred (AccessDenied) when calling the AssumeRole operation: Access denied. Check role ARN and trust policy.",
+      "profile_id": "s3_enable_access_logging_guided",
+      "reason": "branch_unavailable"
+    }
+  ],
+  "shared_setup_folder": "executable/actions/00-shared-01-sa-access-logs-696505809372-use1-r032522",
+  "strategy_id": "s3_enable_access_logging_guided",
+  "strategy_inputs": {
+    "log_bucket_name": "sa-access-logs-696505809372-use1-r0325224512"
+  },
+  "support_tier": "deterministic_bundle",
+  "target_id": "696505809372|us-east-1|arn:aws:s3:::security-autopilot-config-696505809372-us-east-1|S3.9",
+  "tier": "executable",
+  "tier_root": "executable/actions",
+  "title": "S3 general purpose buckets should have server access logging enabled"
+}

@@ -1,0 +1,11 @@
+{
+  "account_id": "696505809372",
+  "jobs_queued": 1,
+  "regions": [
+    "eu-north-1"
+  ],
+  "message_ids": [
+    "dada5c45-2b93-491c-ba9e-68fc7fa446f5"
+  ],
+  "message": "Ingestion jobs queued successfully"
+}

@@ -1,0 +1,8 @@
+HTTP/1.1 403 Forbidden
+x-amz-request-id: 881KXHTKZ0325T96
+x-amz-id-2: cIRaIbMnYEAzPQqoZethGmFG1s7ZJG6BvUXija8eHSQe1wGYpFUGt55M274Ic2DFkgazMTDjdN0=
+Content-Type: text/html; charset=utf-8
+Content-Length: 303
+Date: Sun, 29 Mar 2026 20:35:06 GMT
+Server: AmazonS3
+

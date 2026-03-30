@@ -1,0 +1,17 @@
+{
+  "name": "findings-default-open",
+  "url": "https://ocypheris.com/findings",
+  "currentUrl": "https://ocypheris.com/findings",
+  "title": "AWS Security Autopilot",
+  "found": [
+    {
+      "text": "Findings",
+      "found": true
+    },
+    {
+      "text": "Status: Open",
+      "found": true
+    }
+  ],
+  "bodySnippet": "Findings\nAccounts\nSettings\nTop Risks\nExports\nHelp\nAudit Log\nFindings\n28\nM\nTry: root access key or public S3 bucket\nSearch\nFLAT VIEW ONLY\nGrouped\nFlat\nRefresh\nAll\nCritical(3)\nHigh\nMedium\nLow\nSTATUS\nOpen\nACCOUNT\nAll Accounts\nREGION\nAll Regions\nIDS\nACTIVE:\nStatus: Open\nClear All\nGROUP BY\nSeverity\nRule\nAdd Grouping\nClear\nCRITICAL\n5 groups · 7 findings\nCOLLAPSE\nConfig.1\n2 groups · 2 findings\nCOLLAPSE\nAWS Config should be enabled and use the service-linked role for resource recording\nCONFIG.1\n·\nAwsAccount\nExpand\n1 CRITICAL\n1 finding\nacross AwsAccount\n·\n696505809372\n·\neu-north-1\nGENERATED, AWAITING AWS VERIFICATION\nGenerate PR Bundle\nView details\nView PR bundle group\nSuppress Group\nAcknowledge Risk\nMark False Positive\n\nThe fix was applied successfully, but AWS source-of-truth confirmation has not arrived after 12 hours. Check Security Hub/reconciliation and investigate why the resolved state has not propagated.\n\nAWS Config should be enabled and use the service-linked role for resource recording\nCONFIG.1\n·\nAwsAccount\nExpand\n1 CRITICAL\n1 finding\nacross AwsAccount\n·\n696505809372\n·\nus-east-1\nGENERATED, AWAITING AWS VERIFICATION\nGenerate PR Bundle\nView details\nView PR bundle group\nSuppress Group\nAcknowledge Risk\nMark False Positive\n\nThe fix was applied successfully, but AWS source-of-truth confirmation has not arrived after 12 hours. Check Security Hub/reconciliation and investigate why the resolved state has not propagated.\n\nEC2.19\n1 group · 2 findings\nEXPAND\nIAM.4\n2 groups · 3 findings\nEXPAND\nHIGH\n3 groups · 7 findings\nEXPAND\nMEDIUM\n2 groups · 2 findings\nEXPAND\nINFORMATIONAL\n9 groups · 22 findings\nEXPAND\n\nOCYPHERIS\n\nAsk AI"
+}

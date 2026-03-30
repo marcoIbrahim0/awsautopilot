@@ -1,0 +1,39 @@
+{
+  "after_state": {},
+  "before_state": {},
+  "compliant": false,
+  "diff_lines": [],
+  "impact_summary": "S3 server access logs will be enabled and delivered to a dedicated destination bucket. S3 server access logs will be delivered to the selected dedicated log bucket.",
+  "message": "Preview for mode 'pr_only' is informational only. Generate a PR bundle to review the change set.",
+  "resolution": {
+    "blocked_reasons": [],
+    "decision_rationale": "Family resolver kept S3.9 executable because bucket scope and destination safety are proven.",
+    "decision_version": "resolver/v1",
+    "finding_coverage": {},
+    "missing_defaults": [],
+    "missing_inputs": [],
+    "preservation_summary": {
+      "ambiguous_source_destination_relationship": false,
+      "destination_bucket_name": "security-autopilot-phase5-access-logs-696505809372-050614",
+      "destination_bucket_reachable": false,
+      "destination_safety_proven": true,
+      "executable_destination_allowed": true,
+      "family": "s3_bucket_access_logging",
+      "family_strategy": "s3_enable_access_logging_guided",
+      "selected_branch": "s3_enable_access_logging_guided",
+      "single_profile_compatible": true,
+      "source_bucket_name": "security-autopilot-access-logs-696505809372",
+      "source_bucket_scope_proven": true,
+      "strategy_only_supported": true
+    },
+    "profile_id": "s3_enable_access_logging_guided",
+    "rejected_profiles": [],
+    "resolved_inputs": {
+      "create_log_bucket": true,
+      "log_bucket_name": "security-autopilot-phase5-access-logs-696505809372-050614"
+    },
+    "strategy_id": "s3_enable_access_logging_guided",
+    "support_tier": "deterministic_bundle"
+  },
+  "will_apply": false
+}

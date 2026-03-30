@@ -1,0 +1,7 @@
+Archive:  docs/test-results/live-runs/20260330T011601Z-phase1-action-resolution-closure/scenarios/wi1-postdeploy/bundle/pr-bundle.zip
+  inflating: docs/test-results/live-runs/20260330T011601Z-phase1-action-resolution-closure/scenarios/wi1-postdeploy/bundle/extracted/README.txt  
+  inflating: docs/test-results/live-runs/20260330T011601Z-phase1-action-resolution-closure/scenarios/wi1-postdeploy/bundle/extracted/pr_automation/control_mapping_context.json  
+  inflating: docs/test-results/live-runs/20260330T011601Z-phase1-action-resolution-closure/scenarios/wi1-postdeploy/bundle/extracted/pr_automation/diff_summary.json  
+  inflating: docs/test-results/live-runs/20260330T011601Z-phase1-action-resolution-closure/scenarios/wi1-postdeploy/bundle/extracted/pr_automation/rollback_notes.md  
+  inflating: docs/test-results/live-runs/20260330T011601Z-phase1-action-resolution-closure/scenarios/wi1-postdeploy/bundle/extracted/providers.tf  
+  inflating: docs/test-results/live-runs/20260330T011601Z-phase1-action-resolution-closure/scenarios/wi1-postdeploy/bundle/extracted/s3_bucket_lifecycle_configuration.tf  

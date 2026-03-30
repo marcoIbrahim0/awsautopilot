@@ -110,6 +110,10 @@ from backend.services.root_credentials_workflow import (
     ROOT_CREDENTIALS_REQUIRED_RUNBOOK_PATH,
     is_root_credentials_required_action,
 )
+from backend.workers.services.post_apply_reconcile import (
+    reconcile_resource_id_for_action,
+    reconcile_service_for_action_type,
+)
 from backend.utils.sqs import (
     build_compute_actions_job_payload,
     build_reconcile_inventory_shard_job_payload,
@@ -141,6 +145,31 @@ _RUNTIME_CONTEXT_OPTION_STRATEGIES = frozenset(
         "cloudtrail_enable_guided",
     }
 )
+
+
+def _targeted_reeval_payloads_for_action(
+    *,
+    action: Action,
+    tenant_uuid: uuid.UUID,
+    created_at: str,
+    max_resources: int,
+) -> list[dict[str, Any]]:
+    service = reconcile_service_for_action_type(getattr(action, "action_type", None))
+    resource_id = reconcile_resource_id_for_action(action)
+    if not service or not resource_id:
+        return []
+    return [
+        build_reconcile_inventory_shard_job_payload(
+            tenant_id=tenant_uuid,
+            account_id=action.account_id,
+            region=action.region or settings.AWS_REGION,
+            service=service,
+            created_at=created_at,
+            resource_ids=[resource_id],
+            sweep_mode="targeted",
+            max_resources=max_resources,
+        )
+    ]
 
 
 # ---------------------------------------------------------------------------
@@ -3337,20 +3366,32 @@ async def trigger_action_reevaluation(
     now = datetime.now(timezone.utc).isoformat()
     enqueued_jobs = 0
 
+    targeted_payloads = _targeted_reeval_payloads_for_action(
+        action=action,
+        tenant_uuid=tenant_uuid,
+        created_at=now,
+        max_resources=max_resources,
+    )
+
     try:
-        for region in target_regions:
-            for service in services:
-                payload = build_reconcile_inventory_shard_job_payload(
-                    tenant_id=tenant_uuid,
-                    account_id=action.account_id,
-                    region=region,
-                    service=service,
-                    created_at=now,
-                    sweep_mode="global",
-                    max_resources=max_resources,
-                )
+        if targeted_payloads:
+            for payload in targeted_payloads:
                 sqs.send_message(QueueUrl=queue_url, MessageBody=json.dumps(payload))
                 enqueued_jobs += 1
+        else:
+            for region in target_regions:
+                for service in services:
+                    payload = build_reconcile_inventory_shard_job_payload(
+                        tenant_id=tenant_uuid,
+                        account_id=action.account_id,
+                        region=region,
+                        service=service,
+                        created_at=now,
+                        sweep_mode="global",
+                        max_resources=max_resources,
+                    )
+                    sqs.send_message(QueueUrl=queue_url, MessageBody=json.dumps(payload))
+                    enqueued_jobs += 1
     except ClientError as e:
         logger.exception("SQS send_message failed for trigger_action_reevaluation: %s", e)
         raise HTTPException(

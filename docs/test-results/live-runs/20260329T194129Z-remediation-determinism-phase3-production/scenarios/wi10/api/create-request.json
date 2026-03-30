@@ -1,0 +1,6 @@
+{
+  "action_id": "688f5ed0-9594-4df1-9883-cc17feca62f8",
+  "mode": "pr_only",
+  "strategy_id": "s3_bucket_block_public_access_standard",
+  "risk_acknowledged": true
+}

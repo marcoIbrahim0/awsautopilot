@@ -1,0 +1,27 @@
+{
+  "ConfigurationRecorders": [
+    {
+      "arn": "arn:aws:config:eu-north-1:696505809372:configuration-recorder/default/ufz0gz0v46x5zqwp",
+      "name": "default",
+      "recordingGroup": {
+        "allSupported": false,
+        "exclusionByResourceTypes": {
+          "resourceTypes": []
+        },
+        "includeGlobalResourceTypes": false,
+        "recordingStrategy": {
+          "useOnly": "INCLUSION_BY_RESOURCE_TYPES"
+        },
+        "resourceTypes": [
+          "AWS::S3::Bucket"
+        ]
+      },
+      "recordingMode": {
+        "recordingFrequency": "CONTINUOUS",
+        "recordingModeOverrides": []
+      },
+      "recordingScope": "PAID",
+      "roleARN": "arn:aws:iam::696505809372:role/aws-service-role/config.amazonaws.com/AWSServiceRoleForConfig"
+    }
+  ]
+}

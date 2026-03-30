@@ -1,0 +1,19 @@
+aws_s3_bucket_policy.security_autopilot: Creating...
+aws_s3_bucket_policy.security_autopilot: Still creating... [00m10s elapsed]
+aws_s3_bucket_policy.security_autopilot: Still creating... [00m20s elapsed]
+aws_s3_bucket_policy.security_autopilot: Still creating... [00m30s elapsed]
+aws_s3_bucket_policy.security_autopilot: Still creating... [00m40s elapsed]
+aws_s3_bucket_policy.security_autopilot: Still creating... [00m50s elapsed]
+aws_s3_bucket_policy.security_autopilot: Still creating... [01m00s elapsed]
+aws_s3_bucket_policy.security_autopilot: Still creating... [01m10s elapsed]
+aws_s3_bucket_policy.security_autopilot: Still creating... [01m20s elapsed]
+aws_s3_bucket_policy.security_autopilot: Still creating... [01m30s elapsed]
+aws_s3_bucket_policy.security_autopilot: Still creating... [01m40s elapsed]
+aws_s3_bucket_policy.security_autopilot: Still creating... [01m50s elapsed]
+
+Error: putting S3 Bucket (sa-wi13-14-nopolicy-696505809372-20260328201935) Policy: operation error S3: PutBucketPolicy, https response error StatusCode: 400, RequestID: NQTE4DYVAHR4YH8Q, HostID: YpuRwtx1qJUsolkG24cxWseNRsfE84wVCWjKfIi2XZtOT3hbfqd+rpHUUwGYnlg25fWcYI6CAvOEzZFO/W2ghS420ciP6/wN, api error MalformedPolicy: Could not parse the policy: Statement is empty!
+
+  with aws_s3_bucket_policy.security_autopilot,
+  on s3_bucket_block_public_access.tf line 66, in resource "aws_s3_bucket_policy" "security_autopilot":
+  66: resource "aws_s3_bucket_policy" "security_autopilot" {
+

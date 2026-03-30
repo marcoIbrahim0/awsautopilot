@@ -1,0 +1,275 @@
+[
+  {
+    "group_id": "ff032063-af10-4693-bf9c-31c33b6a28ce",
+    "control": "EC2.53",
+    "action_type": "sg_restrict_public_ports",
+    "region": "eu-north-1",
+    "result": "already_created",
+    "runs": [
+      {
+        "id": "2fc5f643-1a05-4070-aad4-92bbdb1b7ed9",
+        "remediation_run_id": "d5d01a2b-fd75-420a-b026-f0ba40a774bd",
+        "initiated_by_user_id": "896bbef7-0afe-4a5a-b849-3ff1c4cdcd6e",
+        "mode": "download_bundle",
+        "status": "started",
+        "started_at": "2026-03-24T22:56:05.247616+00:00",
+        "finished_at": null,
+        "reporting_source": "system",
+        "created_at": "2026-03-24T22:56:02.321187+00:00",
+        "updated_at": "2026-03-24T22:56:05.098930+00:00",
+        "results": []
+      }
+    ]
+  },
+  {
+    "group_id": "f5936cb5-8ab3-42ca-aa72-60d27bf88c3d",
+    "control": "S3.2",
+    "action_type": "s3_bucket_block_public_access",
+    "region": "eu-north-1",
+    "result": "safety_gate_blocked",
+    "strategy_id": "s3_migrate_cloudfront_oac_private",
+    "failing_checks": [
+      "Unable to inspect bucket website configuration (AccessDenied)."
+    ]
+  },
+  {
+    "group_id": "f32ef69f-75a6-4b17-bb32-dcc8682ace7f",
+    "control": "SSM.7",
+    "action_type": "ssm_block_public_sharing",
+    "region": "eu-north-1",
+    "result": "already_created",
+    "runs": [
+      {
+        "id": "fef20f5b-d5c4-4315-9b1d-37d84f2b16bc",
+        "remediation_run_id": "2ed2c2b7-ff4a-4950-8a7f-18ffc7ff8c1d",
+        "initiated_by_user_id": "896bbef7-0afe-4a5a-b849-3ff1c4cdcd6e",
+        "mode": "download_bundle",
+        "status": "started",
+        "started_at": "2026-03-24T22:58:18.059907+00:00",
+        "finished_at": null,
+        "reporting_source": "system",
+        "created_at": "2026-03-24T22:58:16.488857+00:00",
+        "updated_at": "2026-03-24T22:58:17.912731+00:00",
+        "results": []
+      }
+    ]
+  },
+  {
+    "group_id": "cde98a9b-c168-4bfe-a456-fabd61cb0faf",
+    "control": "EC2.7",
+    "action_type": "ebs_default_encryption",
+    "region": "us-east-1",
+    "result": "already_created",
+    "runs": [
+      {
+        "id": "9f587072-bd08-4ca2-a7a2-201e3c9ed6c4",
+        "remediation_run_id": "e87ac6a1-ab69-4198-9d62-36bb2f4dd2b7",
+        "initiated_by_user_id": "896bbef7-0afe-4a5a-b849-3ff1c4cdcd6e",
+        "mode": "download_bundle",
+        "status": "started",
+        "started_at": "2026-03-24T22:48:20.505717+00:00",
+        "finished_at": null,
+        "reporting_source": "system",
+        "created_at": "2026-03-24T22:48:14.656326+00:00",
+        "updated_at": "2026-03-24T22:48:20.361798+00:00",
+        "results": []
+      }
+    ]
+  },
+  {
+    "group_id": "cc08cf10-f948-46ae-8b42-22d9891d9ef4",
+    "control": "EC2.7",
+    "action_type": "ebs_default_encryption",
+    "region": "eu-north-1",
+    "result": "already_created",
+    "runs": [
+      {
+        "id": "67511a2f-21c6-4be8-b6a0-5cf2852c52a8",
+        "remediation_run_id": "e3845d2f-3fd2-4cda-8493-6e03db566801",
+        "initiated_by_user_id": "896bbef7-0afe-4a5a-b849-3ff1c4cdcd6e",
+        "mode": "download_bundle",
+        "status": "started",
+        "started_at": "2026-03-24T22:53:38.509199+00:00",
+        "finished_at": null,
+        "reporting_source": "system",
+        "created_at": "2026-03-24T22:53:32.610054+00:00",
+        "updated_at": "2026-03-24T22:53:38.349138+00:00",
+        "results": []
+      }
+    ]
+  },
+  {
+    "group_id": "c91803c4-63c4-4bbe-93ca-722bef8833fc",
+    "control": "S3.9",
+    "action_type": "s3_bucket_access_logging",
+    "region": "us-east-1",
+    "result": "safety_gate_blocked",
+    "strategy_id": "s3_enable_access_logging_guided",
+    "failing_checks": [
+      "Destination log bucket 'security-autopilot-access-logs-696505809372' could not be verified from this account context (404)."
+    ]
+  },
+  {
+    "group_id": "bb4292fb-683e-4b1e-b5b5-38df426ba32e",
+    "control": "S3.5",
+    "action_type": "s3_bucket_require_ssl",
+    "region": "us-east-1",
+    "result": "post_attempt",
+    "request_body": {
+      "strategy_id": "s3_enforce_ssl_strict_deny",
+      "risk_acknowledged": true
+    },
+    "status_code": 0,
+    "response": {
+      "group_run_id": "423a405e-a20d-4563-8d9c-931a701dc39c",
+      "remediation_run_id": "0aa82e8a-e964-40b7-ae87-4a8a05433494",
+      "reporting_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0ZW5hbnRfaWQiOiJjMzM1MWEwMi0wYmMyLTQ0NDktYmVlZC1kNTlkN2FjOTM3ZDAiLCJncm91cF9ydW5faWQiOiI0MjNhNDA1ZS1hMjBkLTQ1NjMtOGQ5Yy05MzFhNzAxZGMzOWMiLCJncm91cF9pZCI6ImJiNDI5MmZiLTY4M2UtNGIxZS1iNWI1LTM4ZGY0MjZiYTMyZSIsImFsbG93ZWRfYWN0aW9uX2lkcyI6WyJlYmM3MTk5Mi02Yzc0LTQxNWUtOTYzNy00ZWMxOTg0YzUzMjIiXSwianRpIjoiZjVmYzE1ZjgtZWIzNy00M2Y2LTg1ZjgtM2MzYzliOGQxM2MyIiwiaWF0IjoxNzc0MzkzNjE2LCJleHAiOjE3NzQ0ODAwMTZ9.fVLgKD2iPO6iiH-0r_JhKpXJDqcHRqUMm-oy1nmWI5Y",
+      "reporting_callback_url": "https://api.ocypheris.com/api/internal/group-runs/report",
+      "status": "queued"
+    },
+    "stderr": ""
+  },
+  {
+    "group_id": "aa087d9a-0547-4d76-bd51-f4eeb0005e83",
+    "control": "S3.5",
+    "action_type": "s3_bucket_require_ssl",
+    "region": "eu-north-1",
+    "result": "already_created",
+    "runs": [
+      {
+        "id": "b069734f-bda4-460f-9ae5-ad4fbb109022",
+        "remediation_run_id": "e66f3760-1b25-420d-b476-3a175f49b4d2",
+        "initiated_by_user_id": "896bbef7-0afe-4a5a-b849-3ff1c4cdcd6e",
+        "mode": "download_bundle",
+        "status": "started",
+        "started_at": "2026-03-24T23:01:25.505282+00:00",
+        "finished_at": null,
+        "reporting_source": "system",
+        "created_at": "2026-03-24T23:01:23.284312+00:00",
+        "updated_at": "2026-03-24T23:01:25.355982+00:00",
+        "results": []
+      }
+    ]
+  },
+  {
+    "group_id": "a8ee0fbb-aa3a-4b54-a512-53bba77766ad",
+    "control": "S3.1",
+    "action_type": "s3_block_public_access",
+    "region": "us-east-1",
+    "result": "already_created",
+    "runs": [
+      {
+        "id": "dd3ab827-ad73-4318-b951-2648d0dcf9ef",
+        "remediation_run_id": "c92b268f-3d75-4b46-8e2c-8e761e67da5c",
+        "initiated_by_user_id": "896bbef7-0afe-4a5a-b849-3ff1c4cdcd6e",
+        "mode": "download_bundle",
+        "status": "started",
+        "started_at": "2026-03-24T23:01:33.981676+00:00",
+        "finished_at": null,
+        "reporting_source": "system",
+        "created_at": "2026-03-24T23:01:32.690159+00:00",
+        "updated_at": "2026-03-24T23:01:33.833043+00:00",
+        "results": []
+      }
+    ]
+  },
+  {
+    "group_id": "997f70a9-04ac-495b-a434-9a52083b5777",
+    "control": "S3.11",
+    "action_type": "s3_bucket_lifecycle_configuration",
+    "region": "eu-north-1",
+    "result": "already_created",
+    "runs": [
+      {
+        "id": "b4644d2d-a8e2-4d97-b8aa-3989c4d58730",
+        "remediation_run_id": "14cbe174-7e4c-4013-9ae4-3e84b014509a",
+        "initiated_by_user_id": "896bbef7-0afe-4a5a-b849-3ff1c4cdcd6e",
+        "mode": "download_bundle",
+        "status": "started",
+        "started_at": "2026-03-24T23:01:46.727124+00:00",
+        "finished_at": null,
+        "reporting_source": "system",
+        "created_at": "2026-03-24T23:01:41.955616+00:00",
+        "updated_at": "2026-03-24T23:01:46.553854+00:00",
+        "results": []
+      }
+    ]
+  },
+  {
+    "group_id": "91add132-cc7c-4d5d-b343-bea9696af6de",
+    "control": "IAM.4",
+    "action_type": "iam_root_access_key_absent",
+    "region": "eu-north-1",
+    "result": "post_attempt",
+    "request_body": {
+      "strategy_id": "iam_root_key_disable",
+      "risk_acknowledged": true
+    },
+    "status_code": 0,
+    "response": {
+      "detail": {
+        "error": "Dedicated root-key route required",
+        "reason": "root_key_execution_authority",
+        "detail": "IAM.4 execution is handled exclusively by /api/root-key-remediation-runs. Generic remediation-run routes expose IAM.4 guidance only.",
+        "execution_authority": "/api/root-key-remediation-runs",
+        "runbook_url": "docs/prod-readiness/root-credentials-required-iam-root-access-key-absent.md",
+        "strategy_id": "iam_root_key_disable"
+      }
+    },
+    "stderr": ""
+  },
+  {
+    "group_id": "8d0b831d-8c37-48eb-b1f2-099d6271faaa",
+    "control": "S3.9",
+    "action_type": "s3_bucket_access_logging",
+    "region": "eu-north-1",
+    "result": "safety_gate_blocked",
+    "strategy_id": "s3_enable_access_logging_guided",
+    "failing_checks": [
+      "Destination log bucket 'security-autopilot-access-logs-696505809372' could not be verified from this account context (404)."
+    ]
+  },
+  {
+    "group_id": "40ffa223-7869-4d43-abfe-ae991b0187cb",
+    "control": "IAM.4",
+    "action_type": "iam_root_access_key_absent",
+    "region": "us-east-1",
+    "result": "post_attempt",
+    "request_body": {
+      "strategy_id": "iam_root_key_disable",
+      "risk_acknowledged": true
+    },
+    "status_code": 0,
+    "response": {
+      "detail": {
+        "error": "Dedicated root-key route required",
+        "reason": "root_key_execution_authority",
+        "detail": "IAM.4 execution is handled exclusively by /api/root-key-remediation-runs. Generic remediation-run routes expose IAM.4 guidance only.",
+        "execution_authority": "/api/root-key-remediation-runs",
+        "runbook_url": "docs/prod-readiness/root-credentials-required-iam-root-access-key-absent.md",
+        "strategy_id": "iam_root_key_disable"
+      }
+    },
+    "stderr": ""
+  },
+  {
+    "group_id": "2d076270-1f7b-4c57-bc74-31197f047e5d",
+    "control": "S3.11",
+    "action_type": "s3_bucket_lifecycle_configuration",
+    "region": "us-east-1",
+    "result": "post_attempt",
+    "request_body": {
+      "strategy_id": "s3_enable_abort_incomplete_uploads",
+      "risk_acknowledged": true
+    },
+    "status_code": 0,
+    "response": {
+      "group_run_id": "4af0e11f-cfa7-4ad0-9c15-8290fc60e010",
+      "remediation_run_id": "2973369f-902c-4f25-8c3c-be33569353d1",
+      "reporting_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0ZW5hbnRfaWQiOiJjMzM1MWEwMi0wYmMyLTQ0NDktYmVlZC1kNTlkN2FjOTM3ZDAiLCJncm91cF9ydW5faWQiOiI0YWYwZTExZi1jZmE3LTRhZDAtOWMxNS04MjkwZmM2MGUwMTAiLCJncm91cF9pZCI6IjJkMDc2MjcwLTFmN2ItNGM1Ny1iYzc0LTMxMTk3ZjA0N2U1ZCIsImFsbG93ZWRfYWN0aW9uX2lkcyI6WyJlNmI1NTJhNC00NDYxLTRkZTUtOWE3Yi0xNWZmMGExYjQ0ODUiXSwianRpIjoiMWFkNzdlYjctZDA2OS00NjEwLWFhZWEtZjQ1NDFhOWYzNzhjIiwiaWF0IjoxNzc0MzkzNjM1LCJleHAiOjE3NzQ0ODAwMzV9.9ign9og6es-tesGRSkNwyNT4Cq_BrT2TGMEnagc8g0A",
+      "reporting_callback_url": "https://api.ocypheris.com/api/internal/group-runs/report",
+      "status": "queued"
+    },
+    "stderr": ""
+  }
+]

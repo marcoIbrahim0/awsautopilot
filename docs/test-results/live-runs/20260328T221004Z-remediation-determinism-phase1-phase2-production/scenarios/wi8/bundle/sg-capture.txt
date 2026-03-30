@@ -1,0 +1,1 @@
+Captured 2 public ingress rule(s) to .sg-rollback/sg_ingress_snapshot.json

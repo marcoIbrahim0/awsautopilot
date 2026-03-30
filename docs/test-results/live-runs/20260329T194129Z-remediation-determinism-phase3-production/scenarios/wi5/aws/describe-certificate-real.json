@@ -1,0 +1,37 @@
+{
+    "Certificate": {
+        "CertificateArn": "arn:aws:acm:us-east-1:696505809372:certificate/509785ff-eef1-4071-bddc-d275f1dfa6ed",
+        "DomainName": "wi5-gate3-696505809372.ocypheris.com",
+        "SubjectAlternativeNames": [
+            "wi5-gate3-696505809372.ocypheris.com"
+        ],
+        "DomainValidationOptions": [
+            {
+                "DomainName": "wi5-gate3-696505809372.ocypheris.com",
+                "ValidationDomain": "wi5-gate3-696505809372.ocypheris.com",
+                "ValidationStatus": "PENDING_VALIDATION",
+                "ResourceRecord": {
+                    "Name": "_b1ce87aef1c13e39692e78e5918d8077.wi5-gate3-696505809372.ocypheris.com.",
+                    "Type": "CNAME",
+                    "Value": "_1d3156031ecd2e78d7a69bb88b75b7fe.jkddzztszm.acm-validations.aws."
+                },
+                "ValidationMethod": "DNS"
+            }
+        ],
+        "Subject": "CN=wi5-gate3-696505809372.ocypheris.com",
+        "Issuer": "Amazon",
+        "CreatedAt": "2026-03-30T01:13:03.522000+02:00",
+        "Status": "PENDING_VALIDATION",
+        "KeyAlgorithm": "RSA-2048",
+        "SignatureAlgorithm": "SHA256WITHRSA",
+        "InUseBy": [],
+        "Type": "AMAZON_ISSUED",
+        "KeyUsages": [],
+        "ExtendedKeyUsages": [],
+        "RenewalEligibility": "INELIGIBLE",
+        "Options": {
+            "CertificateTransparencyLoggingPreference": "ENABLED",
+            "Export": "DISABLED"
+        }
+    }
+}

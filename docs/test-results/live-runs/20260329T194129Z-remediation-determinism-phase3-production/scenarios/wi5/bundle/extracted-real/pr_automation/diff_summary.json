@@ -1,0 +1,47 @@
+{
+  "artifact_type": "generated_diff_summary",
+  "file_count": 4,
+  "files": [
+    {
+      "bundle_path": "providers.tf",
+      "byte_count": 557,
+      "change_type": "create_or_update",
+      "content_sha256": "f94b43f86e30978edc49d6a86b6cebf38c9aec621d2031c7b12d94eca0de382f",
+      "line_count": 22,
+      "repo_path": "providers.tf"
+    },
+    {
+      "bundle_path": "s3_website_cloudfront_private.tf",
+      "byte_count": 6852,
+      "change_type": "create_or_update",
+      "content_sha256": "a7d3fe8477c23598f5326934b33e176e0a5ab9443f35087cd7a010011882f9a0",
+      "line_count": 209,
+      "repo_path": "s3_website_cloudfront_private.tf"
+    },
+    {
+      "bundle_path": "terraform.auto.tfvars.json",
+      "byte_count": 992,
+      "change_type": "create_or_update",
+      "content_sha256": "7310acb6b3a1c4f597a0043146321edfba48ce9f1ebe1473f5dc9023f844c73a",
+      "line_count": 4,
+      "repo_path": "terraform.auto.tfvars.json"
+    },
+    {
+      "bundle_path": "README.txt",
+      "byte_count": 2595,
+      "change_type": "create_or_update",
+      "content_sha256": "921b53c60ccd869dea346f6005d738b251dd0592a766ade8c16b0548b388302b",
+      "line_count": 55,
+      "repo_path": "README.txt"
+    }
+  ],
+  "fingerprint_sha256": "11acc05f6f328331260ef1af09b48f441f9bc2095e895e89187f435bf7055536",
+  "repo_target_configured": false,
+  "summary_lines": [
+    "`providers.tf` <- `providers.tf` (22 lines, sha256:f94b43f86e30)",
+    "`s3_website_cloudfront_private.tf` <- `s3_website_cloudfront_private.tf` (209 lines, sha256:a7d3fe8477c2)",
+    "`terraform.auto.tfvars.json` <- `terraform.auto.tfvars.json` (4 lines, sha256:7310acb6b3a1)",
+    "`README.txt` <- `README.txt` (55 lines, sha256:921b53c60ccd)"
+  ],
+  "version": 1
+}

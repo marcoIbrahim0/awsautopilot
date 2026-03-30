@@ -1,0 +1,38 @@
+{
+  "artifact_type": "generated_diff_summary",
+  "file_count": 3,
+  "files": [
+    {
+      "bundle_path": "providers.tf",
+      "byte_count": 479,
+      "change_type": "create_or_update",
+      "content_sha256": "9a0536e0e9790c63a892e3b288fc6b299b5f7a1ea52e004cf4a0a8833e7227f3",
+      "line_count": 18,
+      "repo_path": "providers.tf"
+    },
+    {
+      "bundle_path": "cloudtrail_enabled.tf",
+      "byte_count": 6752,
+      "change_type": "create_or_update",
+      "content_sha256": "92ec2d29789bf82e5102c97bf6b28f54f4e7da9d11068b9f2176ddcbfcbaede3",
+      "line_count": 242,
+      "repo_path": "cloudtrail_enabled.tf"
+    },
+    {
+      "bundle_path": "README.txt",
+      "byte_count": 1486,
+      "change_type": "create_or_update",
+      "content_sha256": "a214e3d0f276f622659850b6253868b0554e0bdccf3bae206d24c58ef230cb88",
+      "line_count": 33,
+      "repo_path": "README.txt"
+    }
+  ],
+  "fingerprint_sha256": "6a29a6fcd6c050d07fbb13b4dbfb17d625bf243700bc82835012a294335a3762",
+  "repo_target_configured": false,
+  "summary_lines": [
+    "`providers.tf` <- `providers.tf` (18 lines, sha256:9a0536e0e979)",
+    "`cloudtrail_enabled.tf` <- `cloudtrail_enabled.tf` (242 lines, sha256:92ec2d29789b)",
+    "`README.txt` <- `README.txt` (33 lines, sha256:a214e3d0f276)"
+  ],
+  "version": 1
+}

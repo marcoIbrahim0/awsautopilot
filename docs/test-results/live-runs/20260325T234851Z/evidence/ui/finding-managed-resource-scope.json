@@ -1,0 +1,17 @@
+{
+  "name": "finding-managed-resource-scope",
+  "url": "https://ocypheris.com/findings/d903df85-8486-4e6c-a6fe-83dc82199a34",
+  "currentUrl": "https://ocypheris.com/findings/d903df85-8486-4e6c-a6fe-83dc82199a34",
+  "title": "AWS Security Autopilot",
+  "found": [
+    {
+      "text": "Managed on resource rows",
+      "found": false
+    },
+    {
+      "text": "This finding family is remediated on affected resource rows. Open the resource-level row for the runnable fix.",
+      "found": true
+    }
+  ],
+  "bodySnippet": "Findings\nAccounts\nSettings\nTop Risks\nExports\nHelp\nAudit Log\nFinding Detail\n28\nM\nBack to Findings\nNeed help with this finding?\nSecurity groups should only allow unrestricted incoming traffic for authorized ports\nSECURITY HUB\nINFORMATIONAL\nRESOLVED\nEC2.18\n696505809372\nEU-NORTH-1\nMANAGED ON RESOURCE ROWS\nFix this finding\n\nThis finding family is remediated on affected resource rows. Open the resource-level row for the runnable fix. Open settings\n\nView PR bundle group\nSuppress Finding\n\nThis control checks whether an Amazon EC2 security group permits unrestricted incoming traffic from unauthorized ports. The control status is determined as follows: If you use the default value for 'authorizedTcpPorts', the control fails if the security group permits unrestricted incoming traffic from any port other than ports 80 and 443; If you provide custom values for 'authorizedTcpPorts' or 'authorizedUdpPorts', the control fails if the security group permits unrestricted incoming traffic from any unlisted port; If no parameter is used, the control fails for any security group that has an unrestricted inbound traffic rule.\n\nRESOURCE\n\nResource ID\n\nAWS::::Account:696505809372\n\nResource Type\n\nAwsAccount\n\nCOMPLIANCE\n\nSource\n\nSecurity Hub\n\nControl ID\n\nEC2.18\n\nRemediation family: EC2.53\n\nStandard\n\nstandards/aws-foundational-security-best-practices/v/1.0.0\n\nTIMELINE\n\nFirst Observed\n\n3/12/2026, 2:43:34 PM\n\nLast Observed\n\n3/15/2026, 2:57:51 PM\n\nLast Updated\n\n3/15/2026, 10:46:03 PM\n\nIDENTIFIERS\n\nFinding ID\n\narn:aws:securityhub:eu-north-1:696505809372:security-control/EC2.18/finding/5e6067d0-d10b-4972-b3ca-3c6e69ae2701\n\nInternal ID\n\nd903df85-8486-4e6c-a6fe-83dc82199a34\n\nRAW SECURITY HUB JSON\n\nOCYPHERIS\n\nAsk AI"
+}

@@ -1,0 +1,7 @@
+[GET] https://api.ocypheris.com/api/auth/me => [401] 
+[POST] https://ocypheris.com/cdn-cgi/rum? => [204] 
+[GET] https://ocypheris.com/signup?_rsc=17yrj => [200] 
+[GET] https://ocypheris.com/signup?_rsc=m8m8p => [200] 
+[GET] https://ocypheris.com/signup?_rsc=4c4j4 => [200] 
+[GET] https://ocypheris.com/signup?_rsc=1ijlu => [200] 
+[GET] https://ocypheris.com/signup?_rsc=yuv3p => [200] 

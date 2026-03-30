@@ -1,0 +1,14 @@
+{
+  "strategy_id": "s3_enable_access_logging_guided",
+  "strategy_inputs": {
+    "log_bucket_name": "security-autopilot-access-logs-696505809372"
+  },
+  "risk_acknowledged": true,
+  "repo_target": {
+    "provider": "github",
+    "repository": "e2e/live-s3-9-shared-setup",
+    "base_branch": "main",
+    "head_branch": "autopilot/s3-9-shared-setup-20260325t0219z",
+    "root_path": "terraform/s3"
+  }
+}

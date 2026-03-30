@@ -1,0 +1,794 @@
+{
+  "artifact_type": "generated_diff_summary",
+  "file_count": 87,
+  "files": [
+    {
+      "bundle_path": "run_all.sh",
+      "byte_count": 15701,
+      "change_type": "create_or_update",
+      "content_sha256": "2d392fb0748c8aea08327e4ed82e347d06ba9b09f22c2c9244fc5e17cbb06435",
+      "line_count": 139,
+      "repo_path": "run_all.sh"
+    },
+    {
+      "bundle_path": "replay_group_run_reports.sh",
+      "byte_count": 1521,
+      "change_type": "create_or_update",
+      "content_sha256": "722cb6d7017b682c0f4c44153d15e7e4a9918cfc102cf87fa92fef591f5dbd4f",
+      "line_count": 54,
+      "repo_path": "replay_group_run_reports.sh"
+    },
+    {
+      "bundle_path": "run_actions.sh",
+      "byte_count": 22158,
+      "change_type": "create_or_update",
+      "content_sha256": "2b65fdf761b932a3f945423cb6656ddce115ec15fe123879d2e4ad5a05250e3b",
+      "line_count": 763,
+      "repo_path": "run_actions.sh"
+    },
+    {
+      "bundle_path": "README_GROUP.txt",
+      "byte_count": 3700,
+      "change_type": "create_or_update",
+      "content_sha256": "3222e44f629bf48083b266589958d60e0f5821bf7efff15f7844f146dc29e642",
+      "line_count": 38,
+      "repo_path": "README_GROUP.txt"
+    },
+    {
+      "bundle_path": "bundle_manifest.json",
+      "byte_count": 52388,
+      "change_type": "create_or_update",
+      "content_sha256": "3738def41ee967240cababd26376061110bd1651918e257f61f3028bf59f0422",
+      "line_count": 888,
+      "repo_path": "bundle_manifest.json"
+    },
+    {
+      "bundle_path": "decision_log.md",
+      "byte_count": 9897,
+      "change_type": "create_or_update",
+      "content_sha256": "6af236b07255c93dbb364ab52dd87eec8f0d9921069519c2313afc5a62063364",
+      "line_count": 114,
+      "repo_path": "decision_log.md"
+    },
+    {
+      "bundle_path": "finding_coverage.json",
+      "byte_count": 2428,
+      "change_type": "create_or_update",
+      "content_sha256": "0af9368f2af2304caf50cf83c69c2ce28e59725b1be0c07dc8e909489c6c9b33",
+      "line_count": 85,
+      "repo_path": "finding_coverage.json"
+    },
+    {
+      "bundle_path": "executable/actions/00-shared-01-security-autopilot-access-logs-696505809/providers.tf",
+      "byte_count": 479,
+      "change_type": "create_or_update",
+      "content_sha256": "9a0536e0e9790c63a892e3b288fc6b299b5f7a1ea52e004cf4a0a8833e7227f3",
+      "line_count": 18,
+      "repo_path": "executable/actions/00-shared-01-security-autopilot-access-logs-696505809/providers.tf"
+    },
+    {
+      "bundle_path": "executable/actions/00-shared-01-security-autopilot-access-logs-696505809/s3_access_logging_shared_destination.tf",
+      "byte_count": 3641,
+      "change_type": "create_or_update",
+      "content_sha256": "cc925a522bb2d16784ca6e4413fa9998aec2583bb429e990d72657121ef7d31b",
+      "line_count": 123,
+      "repo_path": "executable/actions/00-shared-01-security-autopilot-access-logs-696505809/s3_access_logging_shared_destination.tf"
+    },
+    {
+      "bundle_path": "executable/actions/00-shared-01-security-autopilot-access-logs-696505809/README_SHARED.txt",
+      "byte_count": 154,
+      "change_type": "create_or_update",
+      "content_sha256": "161bb7e76e85a88f2d1d77556214d685c2fa72998a251b1b170db0d360cc2d80",
+      "line_count": 4,
+      "repo_path": "executable/actions/00-shared-01-security-autopilot-access-logs-696505809/README_SHARED.txt"
+    },
+    {
+      "bundle_path": "executable/actions/01-arn-aws-s3-security-autopilot-access-logs-696505-9482c713/providers.tf",
+      "byte_count": 479,
+      "change_type": "create_or_update",
+      "content_sha256": "9a0536e0e9790c63a892e3b288fc6b299b5f7a1ea52e004cf4a0a8833e7227f3",
+      "line_count": 18,
+      "repo_path": "executable/actions/01-arn-aws-s3-security-autopilot-access-logs-696505-9482c713/providers.tf"
+    },
+    {
+      "bundle_path": "executable/actions/01-arn-aws-s3-security-autopilot-access-logs-696505-9482c713/s3_bucket_access_logging.tf",
+      "byte_count": 976,
+      "change_type": "create_or_update",
+      "content_sha256": "276f9a63deb7c350e354ae336d7b56c8b2d9873129ff7afaad380a6783797548",
+      "line_count": 30,
+      "repo_path": "executable/actions/01-arn-aws-s3-security-autopilot-access-logs-696505-9482c713/s3_bucket_access_logging.tf"
+    },
+    {
+      "bundle_path": "executable/actions/01-arn-aws-s3-security-autopilot-access-logs-696505-9482c713/README.txt",
+      "byte_count": 902,
+      "change_type": "create_or_update",
+      "content_sha256": "3ff3fdc636a9e50b7adb3108632ea74205626761dfb9c58ba6bfa1d71aca27ba",
+      "line_count": 23,
+      "repo_path": "executable/actions/01-arn-aws-s3-security-autopilot-access-logs-696505-9482c713/README.txt"
+    },
+    {
+      "bundle_path": "executable/actions/01-arn-aws-s3-security-autopilot-access-logs-696505-9482c713/README_ACTION.txt",
+      "byte_count": 733,
+      "change_type": "create_or_update",
+      "content_sha256": "0ea4011f881ab5fe43a1052aa14f5d7191647e37e290df6305a859ba96d4e8a2",
+      "line_count": 12,
+      "repo_path": "executable/actions/01-arn-aws-s3-security-autopilot-access-logs-696505-9482c713/README_ACTION.txt"
+    },
+    {
+      "bundle_path": "executable/actions/01-arn-aws-s3-security-autopilot-access-logs-696505-9482c713/decision.json",
+      "byte_count": 2927,
+      "change_type": "create_or_update",
+      "content_sha256": "880fa8ac7d51eed906ab82447edadca4b653afc7167a1488e63a91b1b7ab1500",
+      "line_count": 52,
+      "repo_path": "executable/actions/01-arn-aws-s3-security-autopilot-access-logs-696505-9482c713/decision.json"
+    },
+    {
+      "bundle_path": "executable/actions/02-arn-aws-s3-security-autopilot-access-logs-696505-5f5d8617/providers.tf",
+      "byte_count": 479,
+      "change_type": "create_or_update",
+      "content_sha256": "9a0536e0e9790c63a892e3b288fc6b299b5f7a1ea52e004cf4a0a8833e7227f3",
+      "line_count": 18,
+      "repo_path": "executable/actions/02-arn-aws-s3-security-autopilot-access-logs-696505-5f5d8617/providers.tf"
+    },
+    {
+      "bundle_path": "executable/actions/02-arn-aws-s3-security-autopilot-access-logs-696505-5f5d8617/s3_bucket_access_logging.tf",
+      "byte_count": 962,
+      "change_type": "create_or_update",
+      "content_sha256": "2c607eaae35634751f496e5342f6a749b166edb3aacedd0656701f1158714778",
+      "line_count": 30,
+      "repo_path": "executable/actions/02-arn-aws-s3-security-autopilot-access-logs-696505-5f5d8617/s3_bucket_access_logging.tf"
+    },
+    {
+      "bundle_path": "executable/actions/02-arn-aws-s3-security-autopilot-access-logs-696505-5f5d8617/README.txt",
+      "byte_count": 902,
+      "change_type": "create_or_update",
+      "content_sha256": "3ff3fdc636a9e50b7adb3108632ea74205626761dfb9c58ba6bfa1d71aca27ba",
+      "line_count": 23,
+      "repo_path": "executable/actions/02-arn-aws-s3-security-autopilot-access-logs-696505-5f5d8617/README.txt"
+    },
+    {
+      "bundle_path": "executable/actions/02-arn-aws-s3-security-autopilot-access-logs-696505-5f5d8617/README_ACTION.txt",
+      "byte_count": 733,
+      "change_type": "create_or_update",
+      "content_sha256": "ecafa15d35bd60a1675713ededc4650076c551b353f4c30aa811e0087f118315",
+      "line_count": 12,
+      "repo_path": "executable/actions/02-arn-aws-s3-security-autopilot-access-logs-696505-5f5d8617/README_ACTION.txt"
+    },
+    {
+      "bundle_path": "executable/actions/02-arn-aws-s3-security-autopilot-access-logs-696505-5f5d8617/decision.json",
+      "byte_count": 2913,
+      "change_type": "create_or_update",
+      "content_sha256": "3ee5676618327515aac43a77e520c7e2fc3f9d6cf453f563436a2cdb19d14b00",
+      "line_count": 52,
+      "repo_path": "executable/actions/02-arn-aws-s3-security-autopilot-access-logs-696505-5f5d8617/decision.json"
+    },
+    {
+      "bundle_path": "executable/actions/03-arn-aws-s3-config-bucket-696505809372-01557e04/providers.tf",
+      "byte_count": 479,
+      "change_type": "create_or_update",
+      "content_sha256": "9a0536e0e9790c63a892e3b288fc6b299b5f7a1ea52e004cf4a0a8833e7227f3",
+      "line_count": 18,
+      "repo_path": "executable/actions/03-arn-aws-s3-config-bucket-696505809372-01557e04/providers.tf"
+    },
+    {
+      "bundle_path": "executable/actions/03-arn-aws-s3-config-bucket-696505809372-01557e04/s3_bucket_access_logging.tf",
+      "byte_count": 928,
+      "change_type": "create_or_update",
+      "content_sha256": "e7758bd8205727a1ea1c64d9a04d7353f06680aa6cde13dba5adebe0980908e5",
+      "line_count": 30,
+      "repo_path": "executable/actions/03-arn-aws-s3-config-bucket-696505809372-01557e04/s3_bucket_access_logging.tf"
+    },
+    {
+      "bundle_path": "executable/actions/03-arn-aws-s3-config-bucket-696505809372-01557e04/README.txt",
+      "byte_count": 902,
+      "change_type": "create_or_update",
+      "content_sha256": "3ff3fdc636a9e50b7adb3108632ea74205626761dfb9c58ba6bfa1d71aca27ba",
+      "line_count": 23,
+      "repo_path": "executable/actions/03-arn-aws-s3-config-bucket-696505809372-01557e04/README.txt"
+    },
+    {
+      "bundle_path": "executable/actions/03-arn-aws-s3-config-bucket-696505809372-01557e04/README_ACTION.txt",
+      "byte_count": 733,
+      "change_type": "create_or_update",
+      "content_sha256": "4ca706d984f2b88432a44d1d957a73aea9dd5bbaa1004db026e0ba16b33ea46a",
+      "line_count": 12,
+      "repo_path": "executable/actions/03-arn-aws-s3-config-bucket-696505809372-01557e04/README_ACTION.txt"
+    },
+    {
+      "bundle_path": "executable/actions/03-arn-aws-s3-config-bucket-696505809372-01557e04/decision.json",
+      "byte_count": 2868,
+      "change_type": "create_or_update",
+      "content_sha256": "2ccaf0aafb582959993dc4e249ebb3eeeae387fb792c5801e43607e014c723f4",
+      "line_count": 52,
+      "repo_path": "executable/actions/03-arn-aws-s3-config-bucket-696505809372-01557e04/decision.json"
+    },
+    {
+      "bundle_path": "executable/actions/04-arn-aws-s3-security-autopilot-w6-strict-s311-man-0b75c532/providers.tf",
+      "byte_count": 479,
+      "change_type": "create_or_update",
+      "content_sha256": "9a0536e0e9790c63a892e3b288fc6b299b5f7a1ea52e004cf4a0a8833e7227f3",
+      "line_count": 18,
+      "repo_path": "executable/actions/04-arn-aws-s3-security-autopilot-w6-strict-s311-man-0b75c532/providers.tf"
+    },
+    {
+      "bundle_path": "executable/actions/04-arn-aws-s3-security-autopilot-w6-strict-s311-man-0b75c532/s3_bucket_access_logging.tf",
+      "byte_count": 982,
+      "change_type": "create_or_update",
+      "content_sha256": "4aaca12671fd17f0086433db21f153ece1710eb51652dd9dae3e68c2c4c9aad4",
+      "line_count": 30,
+      "repo_path": "executable/actions/04-arn-aws-s3-security-autopilot-w6-strict-s311-man-0b75c532/s3_bucket_access_logging.tf"
+    },
+    {
+      "bundle_path": "executable/actions/04-arn-aws-s3-security-autopilot-w6-strict-s311-man-0b75c532/README.txt",
+      "byte_count": 902,
+      "change_type": "create_or_update",
+      "content_sha256": "3ff3fdc636a9e50b7adb3108632ea74205626761dfb9c58ba6bfa1d71aca27ba",
+      "line_count": 23,
+      "repo_path": "executable/actions/04-arn-aws-s3-security-autopilot-w6-strict-s311-man-0b75c532/README.txt"
+    },
+    {
+      "bundle_path": "executable/actions/04-arn-aws-s3-security-autopilot-w6-strict-s311-man-0b75c532/README_ACTION.txt",
+      "byte_count": 733,
+      "change_type": "create_or_update",
+      "content_sha256": "0ef11a68ca4687fb88dd42e68baeaca52dcdb7069bbafffff18812844004bdaa",
+      "line_count": 12,
+      "repo_path": "executable/actions/04-arn-aws-s3-security-autopilot-w6-strict-s311-man-0b75c532/README_ACTION.txt"
+    },
+    {
+      "bundle_path": "executable/actions/04-arn-aws-s3-security-autopilot-w6-strict-s311-man-0b75c532/decision.json",
+      "byte_count": 2933,
+      "change_type": "create_or_update",
+      "content_sha256": "51a149a7ba4dab2ef58b3f689a61d3c344ec2e474f7342e627c651d98d9fcfe4",
+      "line_count": 52,
+      "repo_path": "executable/actions/04-arn-aws-s3-security-autopilot-w6-strict-s311-man-0b75c532/decision.json"
+    },
+    {
+      "bundle_path": "executable/actions/05-arn-aws-s3-security-autopilot-w6-envready-access-1dc612d8/providers.tf",
+      "byte_count": 479,
+      "change_type": "create_or_update",
+      "content_sha256": "9a0536e0e9790c63a892e3b288fc6b299b5f7a1ea52e004cf4a0a8833e7227f3",
+      "line_count": 18,
+      "repo_path": "executable/actions/05-arn-aws-s3-security-autopilot-w6-envready-access-1dc612d8/providers.tf"
+    },
+    {
+      "bundle_path": "executable/actions/05-arn-aws-s3-security-autopilot-w6-envready-access-1dc612d8/s3_bucket_access_logging.tf",
+      "byte_count": 984,
+      "change_type": "create_or_update",
+      "content_sha256": "1cbc9952542f67e2467e5e531df3b183ff86f7e20ca3b41cded97711c37b5681",
+      "line_count": 30,
+      "repo_path": "executable/actions/05-arn-aws-s3-security-autopilot-w6-envready-access-1dc612d8/s3_bucket_access_logging.tf"
+    },
+    {
+      "bundle_path": "executable/actions/05-arn-aws-s3-security-autopilot-w6-envready-access-1dc612d8/README.txt",
+      "byte_count": 902,
+      "change_type": "create_or_update",
+      "content_sha256": "3ff3fdc636a9e50b7adb3108632ea74205626761dfb9c58ba6bfa1d71aca27ba",
+      "line_count": 23,
+      "repo_path": "executable/actions/05-arn-aws-s3-security-autopilot-w6-envready-access-1dc612d8/README.txt"
+    },
+    {
+      "bundle_path": "executable/actions/05-arn-aws-s3-security-autopilot-w6-envready-access-1dc612d8/README_ACTION.txt",
+      "byte_count": 733,
+      "change_type": "create_or_update",
+      "content_sha256": "298f05aa086136c33475239624d3ec202852b45e96e2a303376bd8a638361cbc",
+      "line_count": 12,
+      "repo_path": "executable/actions/05-arn-aws-s3-security-autopilot-w6-envready-access-1dc612d8/README_ACTION.txt"
+    },
+    {
+      "bundle_path": "executable/actions/05-arn-aws-s3-security-autopilot-w6-envready-access-1dc612d8/decision.json",
+      "byte_count": 2935,
+      "change_type": "create_or_update",
+      "content_sha256": "347d0a7f3fec7cb7aaa3a10d1e21db4f90878a76d161c3e8bc003820518479ba",
+      "line_count": 52,
+      "repo_path": "executable/actions/05-arn-aws-s3-security-autopilot-w6-envready-access-1dc612d8/decision.json"
+    },
+    {
+      "bundle_path": "executable/actions/06-arn-aws-s3-security-autopilot-config-69650580937-4d6a1520/providers.tf",
+      "byte_count": 479,
+      "change_type": "create_or_update",
+      "content_sha256": "9a0536e0e9790c63a892e3b288fc6b299b5f7a1ea52e004cf4a0a8833e7227f3",
+      "line_count": 18,
+      "repo_path": "executable/actions/06-arn-aws-s3-security-autopilot-config-69650580937-4d6a1520/providers.tf"
+    },
+    {
+      "bundle_path": "executable/actions/06-arn-aws-s3-security-autopilot-config-69650580937-4d6a1520/s3_bucket_access_logging.tf",
+      "byte_count": 974,
+      "change_type": "create_or_update",
+      "content_sha256": "70370a3337c55a0f2f5126de9868fed9c2ea84100a3a865c754536a5514f9015",
+      "line_count": 30,
+      "repo_path": "executable/actions/06-arn-aws-s3-security-autopilot-config-69650580937-4d6a1520/s3_bucket_access_logging.tf"
+    },
+    {
+      "bundle_path": "executable/actions/06-arn-aws-s3-security-autopilot-config-69650580937-4d6a1520/README.txt",
+      "byte_count": 902,
+      "change_type": "create_or_update",
+      "content_sha256": "3ff3fdc636a9e50b7adb3108632ea74205626761dfb9c58ba6bfa1d71aca27ba",
+      "line_count": 23,
+      "repo_path": "executable/actions/06-arn-aws-s3-security-autopilot-config-69650580937-4d6a1520/README.txt"
+    },
+    {
+      "bundle_path": "executable/actions/06-arn-aws-s3-security-autopilot-config-69650580937-4d6a1520/README_ACTION.txt",
+      "byte_count": 733,
+      "change_type": "create_or_update",
+      "content_sha256": "4fda3e1b1c90154708293b7e21211a2cb2e98f6abc281ea7ff9df097f23181c8",
+      "line_count": 12,
+      "repo_path": "executable/actions/06-arn-aws-s3-security-autopilot-config-69650580937-4d6a1520/README_ACTION.txt"
+    },
+    {
+      "bundle_path": "executable/actions/06-arn-aws-s3-security-autopilot-config-69650580937-4d6a1520/decision.json",
+      "byte_count": 2925,
+      "change_type": "create_or_update",
+      "content_sha256": "fa3c4639808f6fb1e60b3ad96a938b623f519903644fdb0d768793ad2a5f561f",
+      "line_count": 52,
+      "repo_path": "executable/actions/06-arn-aws-s3-security-autopilot-config-69650580937-4d6a1520/decision.json"
+    },
+    {
+      "bundle_path": "executable/actions/07-arn-aws-s3-security-autopilot-w6-envready-config-4d81e63b/providers.tf",
+      "byte_count": 479,
+      "change_type": "create_or_update",
+      "content_sha256": "9a0536e0e9790c63a892e3b288fc6b299b5f7a1ea52e004cf4a0a8833e7227f3",
+      "line_count": 18,
+      "repo_path": "executable/actions/07-arn-aws-s3-security-autopilot-w6-envready-config-4d81e63b/providers.tf"
+    },
+    {
+      "bundle_path": "executable/actions/07-arn-aws-s3-security-autopilot-w6-envready-config-4d81e63b/s3_bucket_access_logging.tf",
+      "byte_count": 976,
+      "change_type": "create_or_update",
+      "content_sha256": "f4c55ab312d27a5e0e56a30d2549395ab87d344cbca806f3803fa0a427fb2efc",
+      "line_count": 30,
+      "repo_path": "executable/actions/07-arn-aws-s3-security-autopilot-w6-envready-config-4d81e63b/s3_bucket_access_logging.tf"
+    },
+    {
+      "bundle_path": "executable/actions/07-arn-aws-s3-security-autopilot-w6-envready-config-4d81e63b/README.txt",
+      "byte_count": 902,
+      "change_type": "create_or_update",
+      "content_sha256": "3ff3fdc636a9e50b7adb3108632ea74205626761dfb9c58ba6bfa1d71aca27ba",
+      "line_count": 23,
+      "repo_path": "executable/actions/07-arn-aws-s3-security-autopilot-w6-envready-config-4d81e63b/README.txt"
+    },
+    {
+      "bundle_path": "executable/actions/07-arn-aws-s3-security-autopilot-w6-envready-config-4d81e63b/README_ACTION.txt",
+      "byte_count": 733,
+      "change_type": "create_or_update",
+      "content_sha256": "3992609e23124bcf448d0571dfab97cc04a98e6db9b3094bc14bca479f0d72bb",
+      "line_count": 12,
+      "repo_path": "executable/actions/07-arn-aws-s3-security-autopilot-w6-envready-config-4d81e63b/README_ACTION.txt"
+    },
+    {
+      "bundle_path": "executable/actions/07-arn-aws-s3-security-autopilot-w6-envready-config-4d81e63b/decision.json",
+      "byte_count": 2927,
+      "change_type": "create_or_update",
+      "content_sha256": "2aee310ef49758a5e82711a630195f4dba840f5c2b55cff0ca7dd71d74230e71",
+      "line_count": 52,
+      "repo_path": "executable/actions/07-arn-aws-s3-security-autopilot-w6-envready-config-4d81e63b/decision.json"
+    },
+    {
+      "bundle_path": "executable/actions/08-arn-aws-s3-security-autopilot-w6-envready-s311-e-501021f0/providers.tf",
+      "byte_count": 479,
+      "change_type": "create_or_update",
+      "content_sha256": "9a0536e0e9790c63a892e3b288fc6b299b5f7a1ea52e004cf4a0a8833e7227f3",
+      "line_count": 18,
+      "repo_path": "executable/actions/08-arn-aws-s3-security-autopilot-w6-envready-s311-e-501021f0/providers.tf"
+    },
+    {
+      "bundle_path": "executable/actions/08-arn-aws-s3-security-autopilot-w6-envready-s311-e-501021f0/s3_bucket_access_logging.tf",
+      "byte_count": 982,
+      "change_type": "create_or_update",
+      "content_sha256": "0f27fae1c2405ff6943950ffe9903fa288e0fdc14423bfe1936a14f674505711",
+      "line_count": 30,
+      "repo_path": "executable/actions/08-arn-aws-s3-security-autopilot-w6-envready-s311-e-501021f0/s3_bucket_access_logging.tf"
+    },
+    {
+      "bundle_path": "executable/actions/08-arn-aws-s3-security-autopilot-w6-envready-s311-e-501021f0/README.txt",
+      "byte_count": 902,
+      "change_type": "create_or_update",
+      "content_sha256": "3ff3fdc636a9e50b7adb3108632ea74205626761dfb9c58ba6bfa1d71aca27ba",
+      "line_count": 23,
+      "repo_path": "executable/actions/08-arn-aws-s3-security-autopilot-w6-envready-s311-e-501021f0/README.txt"
+    },
+    {
+      "bundle_path": "executable/actions/08-arn-aws-s3-security-autopilot-w6-envready-s311-e-501021f0/README_ACTION.txt",
+      "byte_count": 733,
+      "change_type": "create_or_update",
+      "content_sha256": "bc92fbc5b3ab1e14d1a38b939d87acfe475ea3fca6003e9ae22dcb85c7ad1f3f",
+      "line_count": 12,
+      "repo_path": "executable/actions/08-arn-aws-s3-security-autopilot-w6-envready-s311-e-501021f0/README_ACTION.txt"
+    },
+    {
+      "bundle_path": "executable/actions/08-arn-aws-s3-security-autopilot-w6-envready-s311-e-501021f0/decision.json",
+      "byte_count": 2933,
+      "change_type": "create_or_update",
+      "content_sha256": "bbb442a01f550c398bb346a9ade53ea2f2bc135ac5e32614b849ab0b60d17764",
+      "line_count": 52,
+      "repo_path": "executable/actions/08-arn-aws-s3-security-autopilot-w6-envready-s311-e-501021f0/decision.json"
+    },
+    {
+      "bundle_path": "executable/actions/09-arn-aws-s3-security-autopilot-w6-envready-cloudt-dcd9aac0/providers.tf",
+      "byte_count": 479,
+      "change_type": "create_or_update",
+      "content_sha256": "9a0536e0e9790c63a892e3b288fc6b299b5f7a1ea52e004cf4a0a8833e7227f3",
+      "line_count": 18,
+      "repo_path": "executable/actions/09-arn-aws-s3-security-autopilot-w6-envready-cloudt-dcd9aac0/providers.tf"
+    },
+    {
+      "bundle_path": "executable/actions/09-arn-aws-s3-security-autopilot-w6-envready-cloudt-dcd9aac0/s3_bucket_access_logging.tf",
+      "byte_count": 984,
+      "change_type": "create_or_update",
+      "content_sha256": "44eb37f5aba61b37f5bac326498c5708eeda3f73bceec6218cb987d39c2d0621",
+      "line_count": 30,
+      "repo_path": "executable/actions/09-arn-aws-s3-security-autopilot-w6-envready-cloudt-dcd9aac0/s3_bucket_access_logging.tf"
+    },
+    {
+      "bundle_path": "executable/actions/09-arn-aws-s3-security-autopilot-w6-envready-cloudt-dcd9aac0/README.txt",
+      "byte_count": 902,
+      "change_type": "create_or_update",
+      "content_sha256": "3ff3fdc636a9e50b7adb3108632ea74205626761dfb9c58ba6bfa1d71aca27ba",
+      "line_count": 23,
+      "repo_path": "executable/actions/09-arn-aws-s3-security-autopilot-w6-envready-cloudt-dcd9aac0/README.txt"
+    },
+    {
+      "bundle_path": "executable/actions/09-arn-aws-s3-security-autopilot-w6-envready-cloudt-dcd9aac0/README_ACTION.txt",
+      "byte_count": 733,
+      "change_type": "create_or_update",
+      "content_sha256": "4b302494f4430a52472857c8340a166bc8d34def944b4b9eae0372494af5aafe",
+      "line_count": 12,
+      "repo_path": "executable/actions/09-arn-aws-s3-security-autopilot-w6-envready-cloudt-dcd9aac0/README_ACTION.txt"
+    },
+    {
+      "bundle_path": "executable/actions/09-arn-aws-s3-security-autopilot-w6-envready-cloudt-dcd9aac0/decision.json",
+      "byte_count": 2935,
+      "change_type": "create_or_update",
+      "content_sha256": "be1025621c5a17e99d6dc02a27bfff40d9ba5a093b6afc0a20c94d981dfee955",
+      "line_count": 52,
+      "repo_path": "executable/actions/09-arn-aws-s3-security-autopilot-w6-envready-cloudt-dcd9aac0/decision.json"
+    },
+    {
+      "bundle_path": "executable/actions/10-arn-aws-s3-ocypheris-live-ct-20260323162333-eu-n-e03f9f63/providers.tf",
+      "byte_count": 479,
+      "change_type": "create_or_update",
+      "content_sha256": "9a0536e0e9790c63a892e3b288fc6b299b5f7a1ea52e004cf4a0a8833e7227f3",
+      "line_count": 18,
+      "repo_path": "executable/actions/10-arn-aws-s3-ocypheris-live-ct-20260323162333-eu-n-e03f9f63/providers.tf"
+    },
+    {
+      "bundle_path": "executable/actions/10-arn-aws-s3-ocypheris-live-ct-20260323162333-eu-n-e03f9f63/s3_bucket_access_logging.tf",
+      "byte_count": 962,
+      "change_type": "create_or_update",
+      "content_sha256": "cd4370a355d398bbe8dd8ca49a9a97fc4c3e887459faee997c04ebd6bf3bdf4e",
+      "line_count": 30,
+      "repo_path": "executable/actions/10-arn-aws-s3-ocypheris-live-ct-20260323162333-eu-n-e03f9f63/s3_bucket_access_logging.tf"
+    },
+    {
+      "bundle_path": "executable/actions/10-arn-aws-s3-ocypheris-live-ct-20260323162333-eu-n-e03f9f63/README.txt",
+      "byte_count": 902,
+      "change_type": "create_or_update",
+      "content_sha256": "3ff3fdc636a9e50b7adb3108632ea74205626761dfb9c58ba6bfa1d71aca27ba",
+      "line_count": 23,
+      "repo_path": "executable/actions/10-arn-aws-s3-ocypheris-live-ct-20260323162333-eu-n-e03f9f63/README.txt"
+    },
+    {
+      "bundle_path": "executable/actions/10-arn-aws-s3-ocypheris-live-ct-20260323162333-eu-n-e03f9f63/README_ACTION.txt",
+      "byte_count": 733,
+      "change_type": "create_or_update",
+      "content_sha256": "f594716b860d2c23487c91aa6dce9d37ef3b1ac7e5db2b6b5064229c156ef1f1",
+      "line_count": 12,
+      "repo_path": "executable/actions/10-arn-aws-s3-ocypheris-live-ct-20260323162333-eu-n-e03f9f63/README_ACTION.txt"
+    },
+    {
+      "bundle_path": "executable/actions/10-arn-aws-s3-ocypheris-live-ct-20260323162333-eu-n-e03f9f63/decision.json",
+      "byte_count": 2914,
+      "change_type": "create_or_update",
+      "content_sha256": "5fae719c20635ff6650c5d25faf196cdb586443dd4903b9bd5377fd55056ed66",
+      "line_count": 52,
+      "repo_path": "executable/actions/10-arn-aws-s3-ocypheris-live-ct-20260323162333-eu-n-e03f9f63/decision.json"
+    },
+    {
+      "bundle_path": "executable/actions/11-arn-aws-s3-security-autopilot-w6-envready-s315-e-e7eb463d/providers.tf",
+      "byte_count": 479,
+      "change_type": "create_or_update",
+      "content_sha256": "9a0536e0e9790c63a892e3b288fc6b299b5f7a1ea52e004cf4a0a8833e7227f3",
+      "line_count": 18,
+      "repo_path": "executable/actions/11-arn-aws-s3-security-autopilot-w6-envready-s315-e-e7eb463d/providers.tf"
+    },
+    {
+      "bundle_path": "executable/actions/11-arn-aws-s3-security-autopilot-w6-envready-s315-e-e7eb463d/s3_bucket_access_logging.tf",
+      "byte_count": 982,
+      "change_type": "create_or_update",
+      "content_sha256": "8502406395488446a18cee66fc1c01035e08c4d794c158d32bd5ef5c382e2e9b",
+      "line_count": 30,
+      "repo_path": "executable/actions/11-arn-aws-s3-security-autopilot-w6-envready-s315-e-e7eb463d/s3_bucket_access_logging.tf"
+    },
+    {
+      "bundle_path": "executable/actions/11-arn-aws-s3-security-autopilot-w6-envready-s315-e-e7eb463d/README.txt",
+      "byte_count": 902,
+      "change_type": "create_or_update",
+      "content_sha256": "3ff3fdc636a9e50b7adb3108632ea74205626761dfb9c58ba6bfa1d71aca27ba",
+      "line_count": 23,
+      "repo_path": "executable/actions/11-arn-aws-s3-security-autopilot-w6-envready-s315-e-e7eb463d/README.txt"
+    },
+    {
+      "bundle_path": "executable/actions/11-arn-aws-s3-security-autopilot-w6-envready-s315-e-e7eb463d/README_ACTION.txt",
+      "byte_count": 733,
+      "change_type": "create_or_update",
+      "content_sha256": "c8161df9128bb16e107e29e8b66d1763b8edcc548ad379d2a7ecd747fb713d0b",
+      "line_count": 12,
+      "repo_path": "executable/actions/11-arn-aws-s3-security-autopilot-w6-envready-s315-e-e7eb463d/README_ACTION.txt"
+    },
+    {
+      "bundle_path": "executable/actions/11-arn-aws-s3-security-autopilot-w6-envready-s315-e-e7eb463d/decision.json",
+      "byte_count": 2934,
+      "change_type": "create_or_update",
+      "content_sha256": "98fa7631ca844513b185576972bf2217091312928c6060bf6eb75a8bbac3752d",
+      "line_count": 52,
+      "repo_path": "executable/actions/11-arn-aws-s3-security-autopilot-w6-envready-s315-e-e7eb463d/decision.json"
+    },
+    {
+      "bundle_path": "executable/actions/12-arn-aws-s3-security-autopilot-w6-strict-s311-exe-e8ae2a41/providers.tf",
+      "byte_count": 479,
+      "change_type": "create_or_update",
+      "content_sha256": "9a0536e0e9790c63a892e3b288fc6b299b5f7a1ea52e004cf4a0a8833e7227f3",
+      "line_count": 18,
+      "repo_path": "executable/actions/12-arn-aws-s3-security-autopilot-w6-strict-s311-exe-e8ae2a41/providers.tf"
+    },
+    {
+      "bundle_path": "executable/actions/12-arn-aws-s3-security-autopilot-w6-strict-s311-exe-e8ae2a41/s3_bucket_access_logging.tf",
+      "byte_count": 978,
+      "change_type": "create_or_update",
+      "content_sha256": "4ced5cdb5affc8cc70528d47c6528506e7e919753a8d3b849e1b9eebfc8b5d5a",
+      "line_count": 30,
+      "repo_path": "executable/actions/12-arn-aws-s3-security-autopilot-w6-strict-s311-exe-e8ae2a41/s3_bucket_access_logging.tf"
+    },
+    {
+      "bundle_path": "executable/actions/12-arn-aws-s3-security-autopilot-w6-strict-s311-exe-e8ae2a41/README.txt",
+      "byte_count": 902,
+      "change_type": "create_or_update",
+      "content_sha256": "3ff3fdc636a9e50b7adb3108632ea74205626761dfb9c58ba6bfa1d71aca27ba",
+      "line_count": 23,
+      "repo_path": "executable/actions/12-arn-aws-s3-security-autopilot-w6-strict-s311-exe-e8ae2a41/README.txt"
+    },
+    {
+      "bundle_path": "executable/actions/12-arn-aws-s3-security-autopilot-w6-strict-s311-exe-e8ae2a41/README_ACTION.txt",
+      "byte_count": 733,
+      "change_type": "create_or_update",
+      "content_sha256": "f0dbcf805d81e0b09188f0be53574eb208496eb8ef9cc951b4430fdf1c96532e",
+      "line_count": 12,
+      "repo_path": "executable/actions/12-arn-aws-s3-security-autopilot-w6-strict-s311-exe-e8ae2a41/README_ACTION.txt"
+    },
+    {
+      "bundle_path": "executable/actions/12-arn-aws-s3-security-autopilot-w6-strict-s311-exe-e8ae2a41/decision.json",
+      "byte_count": 2930,
+      "change_type": "create_or_update",
+      "content_sha256": "a64c0efe68778d450275df83bdc5aed638d898e651295a5908e1ac26cfafd97c",
+      "line_count": 52,
+      "repo_path": "executable/actions/12-arn-aws-s3-security-autopilot-w6-strict-s311-exe-e8ae2a41/decision.json"
+    },
+    {
+      "bundle_path": "executable/actions/13-arn-aws-s3-security-autopilot-w6-envready-s311-r-e9ca4a12/providers.tf",
+      "byte_count": 479,
+      "change_type": "create_or_update",
+      "content_sha256": "9a0536e0e9790c63a892e3b288fc6b299b5f7a1ea52e004cf4a0a8833e7227f3",
+      "line_count": 18,
+      "repo_path": "executable/actions/13-arn-aws-s3-security-autopilot-w6-envready-s311-r-e9ca4a12/providers.tf"
+    },
+    {
+      "bundle_path": "executable/actions/13-arn-aws-s3-security-autopilot-w6-envready-s311-r-e9ca4a12/s3_bucket_access_logging.tf",
+      "byte_count": 986,
+      "change_type": "create_or_update",
+      "content_sha256": "d1488ef1579245e4bbec6a0fc9d6571ab5a9a1f22dd618b71e90be6d966e20f9",
+      "line_count": 30,
+      "repo_path": "executable/actions/13-arn-aws-s3-security-autopilot-w6-envready-s311-r-e9ca4a12/s3_bucket_access_logging.tf"
+    },
+    {
+      "bundle_path": "executable/actions/13-arn-aws-s3-security-autopilot-w6-envready-s311-r-e9ca4a12/README.txt",
+      "byte_count": 902,
+      "change_type": "create_or_update",
+      "content_sha256": "3ff3fdc636a9e50b7adb3108632ea74205626761dfb9c58ba6bfa1d71aca27ba",
+      "line_count": 23,
+      "repo_path": "executable/actions/13-arn-aws-s3-security-autopilot-w6-envready-s311-r-e9ca4a12/README.txt"
+    },
+    {
+      "bundle_path": "executable/actions/13-arn-aws-s3-security-autopilot-w6-envready-s311-r-e9ca4a12/README_ACTION.txt",
+      "byte_count": 733,
+      "change_type": "create_or_update",
+      "content_sha256": "1beefda38ca162af6d62557d572ccf5b6357fc570640d8f7fa838db1d0c1a98b",
+      "line_count": 12,
+      "repo_path": "executable/actions/13-arn-aws-s3-security-autopilot-w6-envready-s311-r-e9ca4a12/README_ACTION.txt"
+    },
+    {
+      "bundle_path": "executable/actions/13-arn-aws-s3-security-autopilot-w6-envready-s311-r-e9ca4a12/decision.json",
+      "byte_count": 2938,
+      "change_type": "create_or_update",
+      "content_sha256": "94f2dd7f06d23a38b9aabebb170f95fc89d18e2bf87adb247fdf68df4cf640e8",
+      "line_count": 52,
+      "repo_path": "executable/actions/13-arn-aws-s3-security-autopilot-w6-envready-s311-r-e9ca4a12/decision.json"
+    },
+    {
+      "bundle_path": "review_required/actions/14-aws-account-696505809372-0c490240/README_ACTION.txt",
+      "byte_count": 796,
+      "change_type": "create_or_update",
+      "content_sha256": "4d25cf7abd06fca86e737953bfdbc44d5972f3e51a90ad8c0ff398ba9c1b6dd5",
+      "line_count": 12,
+      "repo_path": "review_required/actions/14-aws-account-696505809372-0c490240/README_ACTION.txt"
+    },
+    {
+      "bundle_path": "review_required/actions/14-aws-account-696505809372-0c490240/decision.json",
+      "byte_count": 2801,
+      "change_type": "create_or_update",
+      "content_sha256": "549df57ce354145f1f1689197ac2151c6be480253b65077ea0ac69a759e6a3b5",
+      "line_count": 51,
+      "repo_path": "review_required/actions/14-aws-account-696505809372-0c490240/decision.json"
+    },
+    {
+      "bundle_path": "executable/actions/15-arn-aws-s3-security-autopilot-w6-strict-s315-man-3dd66962/providers.tf",
+      "byte_count": 479,
+      "change_type": "create_or_update",
+      "content_sha256": "9a0536e0e9790c63a892e3b288fc6b299b5f7a1ea52e004cf4a0a8833e7227f3",
+      "line_count": 18,
+      "repo_path": "executable/actions/15-arn-aws-s3-security-autopilot-w6-strict-s315-man-3dd66962/providers.tf"
+    },
+    {
+      "bundle_path": "executable/actions/15-arn-aws-s3-security-autopilot-w6-strict-s315-man-3dd66962/s3_bucket_access_logging.tf",
+      "byte_count": 982,
+      "change_type": "create_or_update",
+      "content_sha256": "8bfc6666252847a3647d94fc81d0ffb5632ade96e90f31a77e59262488007d40",
+      "line_count": 30,
+      "repo_path": "executable/actions/15-arn-aws-s3-security-autopilot-w6-strict-s315-man-3dd66962/s3_bucket_access_logging.tf"
+    },
+    {
+      "bundle_path": "executable/actions/15-arn-aws-s3-security-autopilot-w6-strict-s315-man-3dd66962/README.txt",
+      "byte_count": 902,
+      "change_type": "create_or_update",
+      "content_sha256": "3ff3fdc636a9e50b7adb3108632ea74205626761dfb9c58ba6bfa1d71aca27ba",
+      "line_count": 23,
+      "repo_path": "executable/actions/15-arn-aws-s3-security-autopilot-w6-strict-s315-man-3dd66962/README.txt"
+    },
+    {
+      "bundle_path": "executable/actions/15-arn-aws-s3-security-autopilot-w6-strict-s315-man-3dd66962/README_ACTION.txt",
+      "byte_count": 733,
+      "change_type": "create_or_update",
+      "content_sha256": "29ac1284271aff3a435bc2ccfb4da4f51501877d2f4f1c7226fc332402091896",
+      "line_count": 12,
+      "repo_path": "executable/actions/15-arn-aws-s3-security-autopilot-w6-strict-s315-man-3dd66962/README_ACTION.txt"
+    },
+    {
+      "bundle_path": "executable/actions/15-arn-aws-s3-security-autopilot-w6-strict-s315-man-3dd66962/decision.json",
+      "byte_count": 2934,
+      "change_type": "create_or_update",
+      "content_sha256": "58ad5190742a95804818c0aeccc5a3a2ac9fe48f998942c58bd6275f78d7a782",
+      "line_count": 52,
+      "repo_path": "executable/actions/15-arn-aws-s3-security-autopilot-w6-strict-s315-man-3dd66962/decision.json"
+    },
+    {
+      "bundle_path": "executable/actions/16-arn-aws-s3-security-autopilot-w6-strict-s315-exe-6069ec49/providers.tf",
+      "byte_count": 479,
+      "change_type": "create_or_update",
+      "content_sha256": "9a0536e0e9790c63a892e3b288fc6b299b5f7a1ea52e004cf4a0a8833e7227f3",
+      "line_count": 18,
+      "repo_path": "executable/actions/16-arn-aws-s3-security-autopilot-w6-strict-s315-exe-6069ec49/providers.tf"
+    },
+    {
+      "bundle_path": "executable/actions/16-arn-aws-s3-security-autopilot-w6-strict-s315-exe-6069ec49/s3_bucket_access_logging.tf",
+      "byte_count": 978,
+      "change_type": "create_or_update",
+      "content_sha256": "7188fb0c48a8f591fe76745d713cc402df6c46665141931ba7f82a444f293ec2",
+      "line_count": 30,
+      "repo_path": "executable/actions/16-arn-aws-s3-security-autopilot-w6-strict-s315-exe-6069ec49/s3_bucket_access_logging.tf"
+    },
+    {
+      "bundle_path": "executable/actions/16-arn-aws-s3-security-autopilot-w6-strict-s315-exe-6069ec49/README.txt",
+      "byte_count": 902,
+      "change_type": "create_or_update",
+      "content_sha256": "3ff3fdc636a9e50b7adb3108632ea74205626761dfb9c58ba6bfa1d71aca27ba",
+      "line_count": 23,
+      "repo_path": "executable/actions/16-arn-aws-s3-security-autopilot-w6-strict-s315-exe-6069ec49/README.txt"
+    },
+    {
+      "bundle_path": "executable/actions/16-arn-aws-s3-security-autopilot-w6-strict-s315-exe-6069ec49/README_ACTION.txt",
+      "byte_count": 733,
+      "change_type": "create_or_update",
+      "content_sha256": "7f8b6c19f668e99a846f4e2f0f195087a4a44284656520d6965d3b7858e414f7",
+      "line_count": 12,
+      "repo_path": "executable/actions/16-arn-aws-s3-security-autopilot-w6-strict-s315-exe-6069ec49/README_ACTION.txt"
+    },
+    {
+      "bundle_path": "executable/actions/16-arn-aws-s3-security-autopilot-w6-strict-s315-exe-6069ec49/decision.json",
+      "byte_count": 2930,
+      "change_type": "create_or_update",
+      "content_sha256": "c7f54edcc71499fb77f5270ccd177fe177addaeb583551c168a795d61196ee61",
+      "line_count": 52,
+      "repo_path": "executable/actions/16-arn-aws-s3-security-autopilot-w6-strict-s315-exe-6069ec49/decision.json"
+    }
+  ],
+  "fingerprint_sha256": "7ad4d8c68f744ce1219f5d3f7c4e79eb1c50d7f1d9f8d6bbb1f4bfe8973495ca",
+  "repo_target_configured": false,
+  "summary_lines": [
+    "`run_all.sh` <- `run_all.sh` (139 lines, sha256:2d392fb0748c)",
+    "`replay_group_run_reports.sh` <- `replay_group_run_reports.sh` (54 lines, sha256:722cb6d7017b)",
+    "`run_actions.sh` <- `run_actions.sh` (763 lines, sha256:2b65fdf761b9)",
+    "`README_GROUP.txt` <- `README_GROUP.txt` (38 lines, sha256:3222e44f629b)",
+    "`bundle_manifest.json` <- `bundle_manifest.json` (888 lines, sha256:3738def41ee9)",
+    "`decision_log.md` <- `decision_log.md` (114 lines, sha256:6af236b07255)",
+    "`finding_coverage.json` <- `finding_coverage.json` (85 lines, sha256:0af9368f2af2)",
+    "`executable/actions/00-shared-01-security-autopilot-access-logs-696505809/providers.tf` <- `executable/actions/00-shared-01-security-autopilot-access-logs-696505809/providers.tf` (18 lines, sha256:9a0536e0e979)",
+    "`executable/actions/00-shared-01-security-autopilot-access-logs-696505809/s3_access_logging_shared_destination.tf` <- `executable/actions/00-shared-01-security-autopilot-access-logs-696505809/s3_access_logging_shared_destination.tf` (123 lines, sha256:cc925a522bb2)",
+    "`executable/actions/00-shared-01-security-autopilot-access-logs-696505809/README_SHARED.txt` <- `executable/actions/00-shared-01-security-autopilot-access-logs-696505809/README_SHARED.txt` (4 lines, sha256:161bb7e76e85)",
+    "`executable/actions/01-arn-aws-s3-security-autopilot-access-logs-696505-9482c713/providers.tf` <- `executable/actions/01-arn-aws-s3-security-autopilot-access-logs-696505-9482c713/providers.tf` (18 lines, sha256:9a0536e0e979)",
+    "`executable/actions/01-arn-aws-s3-security-autopilot-access-logs-696505-9482c713/s3_bucket_access_logging.tf` <- `executable/actions/01-arn-aws-s3-security-autopilot-access-logs-696505-9482c713/s3_bucket_access_logging.tf` (30 lines, sha256:276f9a63deb7)",
+    "`executable/actions/01-arn-aws-s3-security-autopilot-access-logs-696505-9482c713/README.txt` <- `executable/actions/01-arn-aws-s3-security-autopilot-access-logs-696505-9482c713/README.txt` (23 lines, sha256:3ff3fdc636a9)",
+    "`executable/actions/01-arn-aws-s3-security-autopilot-access-logs-696505-9482c713/README_ACTION.txt` <- `executable/actions/01-arn-aws-s3-security-autopilot-access-logs-696505-9482c713/README_ACTION.txt` (12 lines, sha256:0ea4011f881a)",
+    "`executable/actions/01-arn-aws-s3-security-autopilot-access-logs-696505-9482c713/decision.json` <- `executable/actions/01-arn-aws-s3-security-autopilot-access-logs-696505-9482c713/decision.json` (52 lines, sha256:880fa8ac7d51)",
+    "`executable/actions/02-arn-aws-s3-security-autopilot-access-logs-696505-5f5d8617/providers.tf` <- `executable/actions/02-arn-aws-s3-security-autopilot-access-logs-696505-5f5d8617/providers.tf` (18 lines, sha256:9a0536e0e979)",
+    "`executable/actions/02-arn-aws-s3-security-autopilot-access-logs-696505-5f5d8617/s3_bucket_access_logging.tf` <- `executable/actions/02-arn-aws-s3-security-autopilot-access-logs-696505-5f5d8617/s3_bucket_access_logging.tf` (30 lines, sha256:2c607eaae356)",
+    "`executable/actions/02-arn-aws-s3-security-autopilot-access-logs-696505-5f5d8617/README.txt` <- `executable/actions/02-arn-aws-s3-security-autopilot-access-logs-696505-5f5d8617/README.txt` (23 lines, sha256:3ff3fdc636a9)",
+    "`executable/actions/02-arn-aws-s3-security-autopilot-access-logs-696505-5f5d8617/README_ACTION.txt` <- `executable/actions/02-arn-aws-s3-security-autopilot-access-logs-696505-5f5d8617/README_ACTION.txt` (12 lines, sha256:ecafa15d35bd)",
+    "`executable/actions/02-arn-aws-s3-security-autopilot-access-logs-696505-5f5d8617/decision.json` <- `executable/actions/02-arn-aws-s3-security-autopilot-access-logs-696505-5f5d8617/decision.json` (52 lines, sha256:3ee567661832)",
+    "`executable/actions/03-arn-aws-s3-config-bucket-696505809372-01557e04/providers.tf` <- `executable/actions/03-arn-aws-s3-config-bucket-696505809372-01557e04/providers.tf` (18 lines, sha256:9a0536e0e979)",
+    "`executable/actions/03-arn-aws-s3-config-bucket-696505809372-01557e04/s3_bucket_access_logging.tf` <- `executable/actions/03-arn-aws-s3-config-bucket-696505809372-01557e04/s3_bucket_access_logging.tf` (30 lines, sha256:e7758bd82057)",
+    "`executable/actions/03-arn-aws-s3-config-bucket-696505809372-01557e04/README.txt` <- `executable/actions/03-arn-aws-s3-config-bucket-696505809372-01557e04/README.txt` (23 lines, sha256:3ff3fdc636a9)",
+    "`executable/actions/03-arn-aws-s3-config-bucket-696505809372-01557e04/README_ACTION.txt` <- `executable/actions/03-arn-aws-s3-config-bucket-696505809372-01557e04/README_ACTION.txt` (12 lines, sha256:4ca706d984f2)",
+    "`executable/actions/03-arn-aws-s3-config-bucket-696505809372-01557e04/decision.json` <- `executable/actions/03-arn-aws-s3-config-bucket-696505809372-01557e04/decision.json` (52 lines, sha256:2ccaf0aafb58)",
+    "`executable/actions/04-arn-aws-s3-security-autopilot-w6-strict-s311-man-0b75c532/providers.tf` <- `executable/actions/04-arn-aws-s3-security-autopilot-w6-strict-s311-man-0b75c532/providers.tf` (18 lines, sha256:9a0536e0e979)",
+    "`executable/actions/04-arn-aws-s3-security-autopilot-w6-strict-s311-man-0b75c532/s3_bucket_access_logging.tf` <- `executable/actions/04-arn-aws-s3-security-autopilot-w6-strict-s311-man-0b75c532/s3_bucket_access_logging.tf` (30 lines, sha256:4aaca12671fd)",
+    "`executable/actions/04-arn-aws-s3-security-autopilot-w6-strict-s311-man-0b75c532/README.txt` <- `executable/actions/04-arn-aws-s3-security-autopilot-w6-strict-s311-man-0b75c532/README.txt` (23 lines, sha256:3ff3fdc636a9)",
+    "`executable/actions/04-arn-aws-s3-security-autopilot-w6-strict-s311-man-0b75c532/README_ACTION.txt` <- `executable/actions/04-arn-aws-s3-security-autopilot-w6-strict-s311-man-0b75c532/README_ACTION.txt` (12 lines, sha256:0ef11a68ca46)",
+    "`executable/actions/04-arn-aws-s3-security-autopilot-w6-strict-s311-man-0b75c532/decision.json` <- `executable/actions/04-arn-aws-s3-security-autopilot-w6-strict-s311-man-0b75c532/decision.json` (52 lines, sha256:51a149a7ba4d)",
+    "`executable/actions/05-arn-aws-s3-security-autopilot-w6-envready-access-1dc612d8/providers.tf` <- `executable/actions/05-arn-aws-s3-security-autopilot-w6-envready-access-1dc612d8/providers.tf` (18 lines, sha256:9a0536e0e979)",
+    "`executable/actions/05-arn-aws-s3-security-autopilot-w6-envready-access-1dc612d8/s3_bucket_access_logging.tf` <- `executable/actions/05-arn-aws-s3-security-autopilot-w6-envready-access-1dc612d8/s3_bucket_access_logging.tf` (30 lines, sha256:1cbc9952542f)",
+    "`executable/actions/05-arn-aws-s3-security-autopilot-w6-envready-access-1dc612d8/README.txt` <- `executable/actions/05-arn-aws-s3-security-autopilot-w6-envready-access-1dc612d8/README.txt` (23 lines, sha256:3ff3fdc636a9)",
+    "`executable/actions/05-arn-aws-s3-security-autopilot-w6-envready-access-1dc612d8/README_ACTION.txt` <- `executable/actions/05-arn-aws-s3-security-autopilot-w6-envready-access-1dc612d8/README_ACTION.txt` (12 lines, sha256:298f05aa0861)",
+    "`executable/actions/05-arn-aws-s3-security-autopilot-w6-envready-access-1dc612d8/decision.json` <- `executable/actions/05-arn-aws-s3-security-autopilot-w6-envready-access-1dc612d8/decision.json` (52 lines, sha256:347d0a7f3fec)",
+    "`executable/actions/06-arn-aws-s3-security-autopilot-config-69650580937-4d6a1520/providers.tf` <- `executable/actions/06-arn-aws-s3-security-autopilot-config-69650580937-4d6a1520/providers.tf` (18 lines, sha256:9a0536e0e979)",
+    "`executable/actions/06-arn-aws-s3-security-autopilot-config-69650580937-4d6a1520/s3_bucket_access_logging.tf` <- `executable/actions/06-arn-aws-s3-security-autopilot-config-69650580937-4d6a1520/s3_bucket_access_logging.tf` (30 lines, sha256:70370a3337c5)",
+    "`executable/actions/06-arn-aws-s3-security-autopilot-config-69650580937-4d6a1520/README.txt` <- `executable/actions/06-arn-aws-s3-security-autopilot-config-69650580937-4d6a1520/README.txt` (23 lines, sha256:3ff3fdc636a9)",
+    "`executable/actions/06-arn-aws-s3-security-autopilot-config-69650580937-4d6a1520/README_ACTION.txt` <- `executable/actions/06-arn-aws-s3-security-autopilot-config-69650580937-4d6a1520/README_ACTION.txt` (12 lines, sha256:4fda3e1b1c90)",
+    "`executable/actions/06-arn-aws-s3-security-autopilot-config-69650580937-4d6a1520/decision.json` <- `executable/actions/06-arn-aws-s3-security-autopilot-config-69650580937-4d6a1520/decision.json` (52 lines, sha256:fa3c4639808f)",
+    "`executable/actions/07-arn-aws-s3-security-autopilot-w6-envready-config-4d81e63b/providers.tf` <- `executable/actions/07-arn-aws-s3-security-autopilot-w6-envready-config-4d81e63b/providers.tf` (18 lines, sha256:9a0536e0e979)",
+    "`executable/actions/07-arn-aws-s3-security-autopilot-w6-envready-config-4d81e63b/s3_bucket_access_logging.tf` <- `executable/actions/07-arn-aws-s3-security-autopilot-w6-envready-config-4d81e63b/s3_bucket_access_logging.tf` (30 lines, sha256:f4c55ab312d2)",
+    "`executable/actions/07-arn-aws-s3-security-autopilot-w6-envready-config-4d81e63b/README.txt` <- `executable/actions/07-arn-aws-s3-security-autopilot-w6-envready-config-4d81e63b/README.txt` (23 lines, sha256:3ff3fdc636a9)",
+    "`executable/actions/07-arn-aws-s3-security-autopilot-w6-envready-config-4d81e63b/README_ACTION.txt` <- `executable/actions/07-arn-aws-s3-security-autopilot-w6-envready-config-4d81e63b/README_ACTION.txt` (12 lines, sha256:3992609e2312)",
+    "`executable/actions/07-arn-aws-s3-security-autopilot-w6-envready-config-4d81e63b/decision.json` <- `executable/actions/07-arn-aws-s3-security-autopilot-w6-envready-config-4d81e63b/decision.json` (52 lines, sha256:2aee310ef497)",
+    "`executable/actions/08-arn-aws-s3-security-autopilot-w6-envready-s311-e-501021f0/providers.tf` <- `executable/actions/08-arn-aws-s3-security-autopilot-w6-envready-s311-e-501021f0/providers.tf` (18 lines, sha256:9a0536e0e979)",
+    "`executable/actions/08-arn-aws-s3-security-autopilot-w6-envready-s311-e-501021f0/s3_bucket_access_logging.tf` <- `executable/actions/08-arn-aws-s3-security-autopilot-w6-envready-s311-e-501021f0/s3_bucket_access_logging.tf` (30 lines, sha256:0f27fae1c240)",
+    "`executable/actions/08-arn-aws-s3-security-autopilot-w6-envready-s311-e-501021f0/README.txt` <- `executable/actions/08-arn-aws-s3-security-autopilot-w6-envready-s311-e-501021f0/README.txt` (23 lines, sha256:3ff3fdc636a9)",
+    "`executable/actions/08-arn-aws-s3-security-autopilot-w6-envready-s311-e-501021f0/README_ACTION.txt` <- `executable/actions/08-arn-aws-s3-security-autopilot-w6-envready-s311-e-501021f0/README_ACTION.txt` (12 lines, sha256:bc92fbc5b3ab)",
+    "`executable/actions/08-arn-aws-s3-security-autopilot-w6-envready-s311-e-501021f0/decision.json` <- `executable/actions/08-arn-aws-s3-security-autopilot-w6-envready-s311-e-501021f0/decision.json` (52 lines, sha256:bbb442a01f55)",
+    "`executable/actions/09-arn-aws-s3-security-autopilot-w6-envready-cloudt-dcd9aac0/providers.tf` <- `executable/actions/09-arn-aws-s3-security-autopilot-w6-envready-cloudt-dcd9aac0/providers.tf` (18 lines, sha256:9a0536e0e979)",
+    "`executable/actions/09-arn-aws-s3-security-autopilot-w6-envready-cloudt-dcd9aac0/s3_bucket_access_logging.tf` <- `executable/actions/09-arn-aws-s3-security-autopilot-w6-envready-cloudt-dcd9aac0/s3_bucket_access_logging.tf` (30 lines, sha256:44eb37f5aba6)",
+    "`executable/actions/09-arn-aws-s3-security-autopilot-w6-envready-cloudt-dcd9aac0/README.txt` <- `executable/actions/09-arn-aws-s3-security-autopilot-w6-envready-cloudt-dcd9aac0/README.txt` (23 lines, sha256:3ff3fdc636a9)",
+    "`executable/actions/09-arn-aws-s3-security-autopilot-w6-envready-cloudt-dcd9aac0/README_ACTION.txt` <- `executable/actions/09-arn-aws-s3-security-autopilot-w6-envready-cloudt-dcd9aac0/README_ACTION.txt` (12 lines, sha256:4b302494f443)",
+    "`executable/actions/09-arn-aws-s3-security-autopilot-w6-envready-cloudt-dcd9aac0/decision.json` <- `executable/actions/09-arn-aws-s3-security-autopilot-w6-envready-cloudt-dcd9aac0/decision.json` (52 lines, sha256:be1025621c5a)",
+    "`executable/actions/10-arn-aws-s3-ocypheris-live-ct-20260323162333-eu-n-e03f9f63/providers.tf` <- `executable/actions/10-arn-aws-s3-ocypheris-live-ct-20260323162333-eu-n-e03f9f63/providers.tf` (18 lines, sha256:9a0536e0e979)",
+    "`executable/actions/10-arn-aws-s3-ocypheris-live-ct-20260323162333-eu-n-e03f9f63/s3_bucket_access_logging.tf` <- `executable/actions/10-arn-aws-s3-ocypheris-live-ct-20260323162333-eu-n-e03f9f63/s3_bucket_access_logging.tf` (30 lines, sha256:cd4370a355d3)",
+    "`executable/actions/10-arn-aws-s3-ocypheris-live-ct-20260323162333-eu-n-e03f9f63/README.txt` <- `executable/actions/10-arn-aws-s3-ocypheris-live-ct-20260323162333-eu-n-e03f9f63/README.txt` (23 lines, sha256:3ff3fdc636a9)",
+    "`executable/actions/10-arn-aws-s3-ocypheris-live-ct-20260323162333-eu-n-e03f9f63/README_ACTION.txt` <- `executable/actions/10-arn-aws-s3-ocypheris-live-ct-20260323162333-eu-n-e03f9f63/README_ACTION.txt` (12 lines, sha256:f594716b860d)",
+    "`executable/actions/10-arn-aws-s3-ocypheris-live-ct-20260323162333-eu-n-e03f9f63/decision.json` <- `executable/actions/10-arn-aws-s3-ocypheris-live-ct-20260323162333-eu-n-e03f9f63/decision.json` (52 lines, sha256:5fae719c2063)",
+    "`executable/actions/11-arn-aws-s3-security-autopilot-w6-envready-s315-e-e7eb463d/providers.tf` <- `executable/actions/11-arn-aws-s3-security-autopilot-w6-envready-s315-e-e7eb463d/providers.tf` (18 lines, sha256:9a0536e0e979)",
+    "`executable/actions/11-arn-aws-s3-security-autopilot-w6-envready-s315-e-e7eb463d/s3_bucket_access_logging.tf` <- `executable/actions/11-arn-aws-s3-security-autopilot-w6-envready-s315-e-e7eb463d/s3_bucket_access_logging.tf` (30 lines, sha256:850240639548)",
+    "`executable/actions/11-arn-aws-s3-security-autopilot-w6-envready-s315-e-e7eb463d/README.txt` <- `executable/actions/11-arn-aws-s3-security-autopilot-w6-envready-s315-e-e7eb463d/README.txt` (23 lines, sha256:3ff3fdc636a9)",
+    "`executable/actions/11-arn-aws-s3-security-autopilot-w6-envready-s315-e-e7eb463d/README_ACTION.txt` <- `executable/actions/11-arn-aws-s3-security-autopilot-w6-envready-s315-e-e7eb463d/README_ACTION.txt` (12 lines, sha256:c8161df9128b)",
+    "`executable/actions/11-arn-aws-s3-security-autopilot-w6-envready-s315-e-e7eb463d/decision.json` <- `executable/actions/11-arn-aws-s3-security-autopilot-w6-envready-s315-e-e7eb463d/decision.json` (52 lines, sha256:98fa7631ca84)",
+    "`executable/actions/12-arn-aws-s3-security-autopilot-w6-strict-s311-exe-e8ae2a41/providers.tf` <- `executable/actions/12-arn-aws-s3-security-autopilot-w6-strict-s311-exe-e8ae2a41/providers.tf` (18 lines, sha256:9a0536e0e979)",
+    "`executable/actions/12-arn-aws-s3-security-autopilot-w6-strict-s311-exe-e8ae2a41/s3_bucket_access_logging.tf` <- `executable/actions/12-arn-aws-s3-security-autopilot-w6-strict-s311-exe-e8ae2a41/s3_bucket_access_logging.tf` (30 lines, sha256:4ced5cdb5aff)",
+    "`executable/actions/12-arn-aws-s3-security-autopilot-w6-strict-s311-exe-e8ae2a41/README.txt` <- `executable/actions/12-arn-aws-s3-security-autopilot-w6-strict-s311-exe-e8ae2a41/README.txt` (23 lines, sha256:3ff3fdc636a9)",
+    "`executable/actions/12-arn-aws-s3-security-autopilot-w6-strict-s311-exe-e8ae2a41/README_ACTION.txt` <- `executable/actions/12-arn-aws-s3-security-autopilot-w6-strict-s311-exe-e8ae2a41/README_ACTION.txt` (12 lines, sha256:f0dbcf805d81)",
+    "`executable/actions/12-arn-aws-s3-security-autopilot-w6-strict-s311-exe-e8ae2a41/decision.json` <- `executable/actions/12-arn-aws-s3-security-autopilot-w6-strict-s311-exe-e8ae2a41/decision.json` (52 lines, sha256:a64c0efe6877)",
+    "`executable/actions/13-arn-aws-s3-security-autopilot-w6-envready-s311-r-e9ca4a12/providers.tf` <- `executable/actions/13-arn-aws-s3-security-autopilot-w6-envready-s311-r-e9ca4a12/providers.tf` (18 lines, sha256:9a0536e0e979)",
+    "`executable/actions/13-arn-aws-s3-security-autopilot-w6-envready-s311-r-e9ca4a12/s3_bucket_access_logging.tf` <- `executable/actions/13-arn-aws-s3-security-autopilot-w6-envready-s311-r-e9ca4a12/s3_bucket_access_logging.tf` (30 lines, sha256:d1488ef15792)",
+    "`executable/actions/13-arn-aws-s3-security-autopilot-w6-envready-s311-r-e9ca4a12/README.txt` <- `executable/actions/13-arn-aws-s3-security-autopilot-w6-envready-s311-r-e9ca4a12/README.txt` (23 lines, sha256:3ff3fdc636a9)",
+    "`executable/actions/13-arn-aws-s3-security-autopilot-w6-envready-s311-r-e9ca4a12/README_ACTION.txt` <- `executable/actions/13-arn-aws-s3-security-autopilot-w6-envready-s311-r-e9ca4a12/README_ACTION.txt` (12 lines, sha256:1beefda38ca1)",
+    "`executable/actions/13-arn-aws-s3-security-autopilot-w6-envready-s311-r-e9ca4a12/decision.json` <- `executable/actions/13-arn-aws-s3-security-autopilot-w6-envready-s311-r-e9ca4a12/decision.json` (52 lines, sha256:94f2dd7f06d2)",
+    "`review_required/actions/14-aws-account-696505809372-0c490240/README_ACTION.txt` <- `review_required/actions/14-aws-account-696505809372-0c490240/README_ACTION.txt` (12 lines, sha256:4d25cf7abd06)",
+    "`review_required/actions/14-aws-account-696505809372-0c490240/decision.json` <- `review_required/actions/14-aws-account-696505809372-0c490240/decision.json` (51 lines, sha256:549df57ce354)",
+    "`executable/actions/15-arn-aws-s3-security-autopilot-w6-strict-s315-man-3dd66962/providers.tf` <- `executable/actions/15-arn-aws-s3-security-autopilot-w6-strict-s315-man-3dd66962/providers.tf` (18 lines, sha256:9a0536e0e979)",
+    "`executable/actions/15-arn-aws-s3-security-autopilot-w6-strict-s315-man-3dd66962/s3_bucket_access_logging.tf` <- `executable/actions/15-arn-aws-s3-security-autopilot-w6-strict-s315-man-3dd66962/s3_bucket_access_logging.tf` (30 lines, sha256:8bfc66662528)",
+    "`executable/actions/15-arn-aws-s3-security-autopilot-w6-strict-s315-man-3dd66962/README.txt` <- `executable/actions/15-arn-aws-s3-security-autopilot-w6-strict-s315-man-3dd66962/README.txt` (23 lines, sha256:3ff3fdc636a9)",
+    "`executable/actions/15-arn-aws-s3-security-autopilot-w6-strict-s315-man-3dd66962/README_ACTION.txt` <- `executable/actions/15-arn-aws-s3-security-autopilot-w6-strict-s315-man-3dd66962/README_ACTION.txt` (12 lines, sha256:29ac1284271a)",
+    "`executable/actions/15-arn-aws-s3-security-autopilot-w6-strict-s315-man-3dd66962/decision.json` <- `executable/actions/15-arn-aws-s3-security-autopilot-w6-strict-s315-man-3dd66962/decision.json` (52 lines, sha256:58ad5190742a)",
+    "`executable/actions/16-arn-aws-s3-security-autopilot-w6-strict-s315-exe-6069ec49/providers.tf` <- `executable/actions/16-arn-aws-s3-security-autopilot-w6-strict-s315-exe-6069ec49/providers.tf` (18 lines, sha256:9a0536e0e979)",
+    "`executable/actions/16-arn-aws-s3-security-autopilot-w6-strict-s315-exe-6069ec49/s3_bucket_access_logging.tf` <- `executable/actions/16-arn-aws-s3-security-autopilot-w6-strict-s315-exe-6069ec49/s3_bucket_access_logging.tf` (30 lines, sha256:7188fb0c48a8)",
+    "`executable/actions/16-arn-aws-s3-security-autopilot-w6-strict-s315-exe-6069ec49/README.txt` <- `executable/actions/16-arn-aws-s3-security-autopilot-w6-strict-s315-exe-6069ec49/README.txt` (23 lines, sha256:3ff3fdc636a9)",
+    "`executable/actions/16-arn-aws-s3-security-autopilot-w6-strict-s315-exe-6069ec49/README_ACTION.txt` <- `executable/actions/16-arn-aws-s3-security-autopilot-w6-strict-s315-exe-6069ec49/README_ACTION.txt` (12 lines, sha256:7f8b6c19f668)",
+    "`executable/actions/16-arn-aws-s3-security-autopilot-w6-strict-s315-exe-6069ec49/decision.json` <- `executable/actions/16-arn-aws-s3-security-autopilot-w6-strict-s315-exe-6069ec49/decision.json` (52 lines, sha256:c7f54edcc714)"
+  ],
+  "version": 1
+}

@@ -1,0 +1,32 @@
+BUCKET security-autopilot-w6-envready-s315-exec-696505809372 ACTION 0b87839b-28f5-4150-af26-74cf2b1af3a3
+RC 254
+An error occurred (AccessDenied) when calling the GetBucketWebsite operation: Access Denied
+---
+BUCKET security-autopilot-w6-envready-s311-review-696505809372 ACTION 352ac9b2-d343-40ac-b427-4c4f285615ef
+RC 254
+An error occurred (AccessDenied) when calling the GetBucketWebsite operation: Access Denied
+---
+BUCKET sa-wi13-14-nopolicy-696505809372-20260328201935 ACTION 688f5ed0-9594-4df1-9883-cc17feca62f8
+RC 254
+An error occurred (AccessDenied) when calling the GetBucketWebsite operation: Access Denied
+---
+BUCKET sa-wi7-seed-696505809372-20260328205857 ACTION 4a965fac-c139-46e3-8594-11058b1dfe24
+RC 254
+An error occurred (NoSuchBucket) when calling the GetBucketWebsite operation: The specified bucket does not exist
+---
+BUCKET security-autopilot-access-logs-696505809372-r221001-access-logs ACTION 5571e909-6491-4077-818e-5441ae0dc95d
+RC 254
+An error occurred (NoSuchBucket) when calling the GetBucketWebsite operation: The specified bucket does not exist
+---
+BUCKET phase2-wi1-lifecycle-696505809372-20260328224331 ACTION 7522bc9f-5cab-4bad-908b-a382045f8d87
+RC 254
+An error occurred (NoSuchBucket) when calling the GetBucketWebsite operation: The specified bucket does not exist
+---
+BUCKET sa-wi5-site-696505809372-20260328t164043z ACTION bdfa85bc-b3a3-4456-b8d9-9ed1dd895ad3
+RC 254
+An error occurred (NoSuchBucket) when calling the GetBucketWebsite operation: The specified bucket does not exist
+---
+BUCKET ocypheris-live-ct-20260328t181200z-eu-north-1 ACTION cdb53f5c-8701-497d-a866-4256cddd9d66
+RC 254
+An error occurred (NoSuchBucket) when calling the GetBucketWebsite operation: The specified bucket does not exist
+---

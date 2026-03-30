@@ -1,0 +1,3 @@
+{
+    "Policy": "{\"Version\":\"2012-10-17\",\"Statement\":[{\"Sid\":\"DenyLiveReadRoleGetBucketPolicy\",\"Effect\":\"Deny\",\"Principal\":{\"AWS\":\"arn:aws:iam::696505809372:role/SecurityAutopilotReadRole\"},\"Action\":\"s3:GetBucketPolicy\",\"Resource\":\"arn:aws:s3:::sa-wi13-14-nopolicy-696505809372-20260328201935\"}]}"
+}

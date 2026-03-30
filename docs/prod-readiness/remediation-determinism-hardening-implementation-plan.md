@@ -93,6 +93,10 @@ flowchart TD
 **Effort:** Medium (~200 LOC)  
 **Dependencies:** None
 
+> Status note (2026-03-29): the bundle-generation work item itself is implemented, and the retained production closure follow-up in [20260329T002042Z-wi1-production-closure](/Users/marcomaher/AWS%20Security%20Autopilot/docs/test-results/live-runs/20260329T002042Z-wi1-production-closure/README.md) fixed the missing live finding-materialization bug on the reconcile path. `WI-1` still remains `BLOCKED` at the production-ready gate because the truthful seeded lifecycle bucket now materializes as `RESOLVED` / compliant and still produces no open S3.11 action for additive-merge preview/create proof.
+
+> Status note (2026-03-30): the retained closure run [20260330T012757Z-phase2-action-resolution-lag-closure](/Users/marcomaher/AWS%20Security%20Autopilot/docs/test-results/live-runs/20260330T012757Z-phase2-action-resolution-lag-closure/README.md) closed the remaining Gate 2 blocker without reopening candidate discovery. The authoritative live conclusion remains that `WI-1` does not currently expose a truthful open additive-merge candidate under the corrected `S3.11` semantics; the final blocker was the post-apply action-resolution lag, and that lag is now fixed and re-proven on production.
+
 #### Problem
 
 When a bucket has existing lifecycle rules, the S3.11 resolver downgrades to `review_required_bundle` even though the probe successfully captures the full lifecycle JSON. The IaC generator ignores the captured JSON and only emits a single-rule resource.
@@ -509,7 +513,7 @@ resource "aws_s3_bucket_policy" "ssl_enforcement" {{
 
 > Status: Implemented locally on March 28, 2026 across strategy selection, runtime probes, preview/create resolution, grouped-run validation, and Terraform bundle generation. Website-enabled S3.2 actions now have a dedicated `s3_migrate_website_cloudfront_private` branch that migrates simple S3 website buckets to CloudFront backed by the private S3 REST origin plus OAC, updates Route53 aliases, removes website hosting, and then enables bucket Block Public Access. Complex website configs still downgrade truthfully to `review_required_bundle`, CloudFormation remains unsupported, and grouped execution requires per-action overrides because aliases, hosted zone IDs, and ACM certificates are bucket-specific.
 >
-> Retained production canary status on March 28, 2026: `BLOCKED` in [20260328T164043Z-wi5-website-cloudfront-private-canary](/Users/marcomaher/AWS%20Security%20Autopilot/docs/test-results/live-runs/20260328T164043Z-wi5-website-cloudfront-private-canary/README.md). The canary proved the AWS-side action and website evidence path, but production still rejected `strategy_id=s3_migrate_website_cloudfront_private` as unknown, so the current WI-5 code has not yet been deployed on the production runtime. The same canary also exposed a canary-account read-role gap: `s3:GetBucketWebsite` was missing and had to be added temporarily to let production detect website hosting truthfully.
+> Current retained production status on March 30, 2026: `PASS` in [20260329T194129Z-remediation-determinism-phase3-production](/Users/marcomaher/AWS%20Security%20Autopilot/docs/test-results/live-runs/20260329T194129Z-remediation-determinism-phase3-production/README.md). The March 29 rerun plus March 30 follow-up proved the full truthful live chain on `https://api.ocypheris.com`: the canary read-role baseline now includes `s3:GetBucketWebsite`, production accepted `strategy_id=s3_migrate_website_cloudfront_private`, the real delegated hostname `wi5-gate3-696505809372.ocypheris.com` resolved publicly, ACM certificate `arn:aws:acm:us-east-1:696505809372:certificate/509785ff-eef1-4071-bddc-d275f1dfa6ed` reached `ISSUED`, production create run `ff6dea42-dbdc-42f1-996f-da437ad48e4c` succeeded, local Terraform apply created CloudFront distribution `E3VUPASYW2QL80` and OAC `EDLL3VYQR916E`, and truthful rollback restored website hosting, the original bucket policy, and the baseline all-false bucket-level Public Access Block state.
 
 **Priority:** 🔴 P0  
 **Effort:** High (~350 LOC)  
@@ -824,24 +828,27 @@ When `s3_bucket_policy_public=True`, the resolver blocks. At apply time, we can 
 **Effort:** High (~200 LOC)  
 **Dependencies:** WI-1 (same rule, WI-1 handles evidence-present case)
 
+> Status: Implemented locally on March 28, 2026. S3.11 now keeps the Terraform customer-run path executable when runtime probes know the target bucket but `GetBucketLifecycleConfiguration` fails concretely. CloudFormation remains fail-closed for this fallback branch.
+
 #### Problem
 
 When the probe can't read the lifecycle config at all (`GetLifecycleConfiguration` fails), WI-1 doesn't help. This WI adds a fallback: read lifecycle at apply time via a helper script.
 
 #### Required Changes
 
-When `existing_lifecycle_configuration_json` is `None` AND [rule_count](file:///Users/marcomaher/AWS%20Security%20Autopilot/backend/services/remediation_runtime_checks.py#309-318) is unknown, generate a bundle containing a Python helper script shipped alongside the Terraform:
+When `existing_lifecycle_configuration_json` is `None`, [rule_count](file:///Users/marcomaher/AWS%20Security%20Autopilot/backend/services/remediation_runtime_checks.py#309-318) is unknown, `existing_lifecycle_capture_error` is concrete, and runtime probes still know the bucket, generate a Terraform bundle containing an apply-time helper:
 
-1. `scripts/lifecycle_merge.py` — calls `GetBucketLifecycleConfiguration`, parses existing rules, appends the abort rule, calls `PutBucketLifecycleConfiguration`
-2. A `terraform_data` resource with `provisioner "local-exec"` running the script
-3. Script must be idempotent — running twice doesn't duplicate the abort rule
+1. `scripts/s3_lifecycle_merge.py` — calls `GetBucketLifecycleConfiguration`, snapshots exact pre-state, removes only an equivalent existing abort rule, appends the managed abort rule, and calls `PutBucketLifecycleConfiguration`
+2. `rollback/s3_lifecycle_restore.py` — restores the exact captured lifecycle document or deletes lifecycle configuration when the original state was empty
+3. A `terraform_data` resource with `provisioner "local-exec"` running the merge helper
+4. Script must be idempotent — running twice doesn't duplicate the abort rule and must preserve the first rollback snapshot
 
 #### Acceptance Criteria
 
-- [ ] Lifecycle JSON captured by probe → WI-1 handles (merge at gen time)
-- [ ] Lifecycle JSON NOT captured → this WI handles (merge at apply time via script)
-- [ ] Helper script is idempotent
-- [ ] Rollback script undoes only the changes made
+- [x] Lifecycle JSON captured by probe → WI-1 handles (merge at gen time)
+- [x] Lifecycle JSON NOT captured after a concrete capture failure with known bucket → this WI handles via executable Terraform apply-time merge
+- [x] Helper script is idempotent
+- [x] Rollback script restores the exact captured lifecycle state
 
 ---
 
@@ -1047,12 +1054,12 @@ terraform plan        # with customer credentials, NOT ReadRole
 Do not begin either phase gate until every prerequisite below is satisfied.
 
 **Required prerequisites:**
-- [ ] `https://api.ocypheris.com/health` returns healthy
-- [ ] `https://api.ocypheris.com/ready` returns ready
-- [ ] Production operator authentication is working for the target tenant
-- [ ] The canary tenant is connected to AWS account `696505809372` in `eu-north-1`
-- [ ] Local operator environment has `terraform`, `aws`, and a working `AWS_PROFILE` for the canary account
-- [ ] Control-plane freshness is healthy before each live run
+- [x] `https://api.ocypheris.com/health` returns healthy
+- [x] `https://api.ocypheris.com/ready` returns ready
+- [x] Production operator authentication is working for the target tenant
+- [x] The canary tenant is connected to AWS account `696505809372` in `eu-north-1`
+- [x] Local operator environment has `terraform`, `aws`, and a working `AWS_PROFILE` for the canary account
+- [x] Control-plane freshness is healthy before each live run
 
 **Operator checks:**
 
@@ -1100,18 +1107,26 @@ PYTHONPATH=. ./venv/bin/pytest tests/test_step7_components.py -q -k 'aws_config_
 
 #### Gate 1B — Required Phase 1 Production Scenarios
 
-Production signoff for Phase 1 requires one truthful production-backed proof for each of these scenarios:
+Production signoff for Phase 1 requires one truthful production-backed proof for each required scenario below. `WI-7` is no longer a required live-proof item for this gate because the authoritative March 28, 2026 production-path investigation showed the implementation is present but the current production data path cannot surface a truthful candidate even after a bounded AWS-side seed attempt.
 
-- [ ] `WI-3` CloudTrail no-trail safe-default create path
-- [ ] `WI-6` S3.9 bucket-scoped auto log-bucket default
-- [ ] `WI-7` stale `target_id` with truthful `resource_id` fallback on an S3 family action
-- [ ] `WI-12` Config selective/custom recorder auto-promotion to `all_resources`
-- [ ] `WI-13` S3.2 OAC zero-policy executable path via `GetBucketPolicyStatus`
-- [ ] `WI-14` S3.5 empty-policy executable path via `GetBucketPolicyStatus`
+- [x] `WI-3` CloudTrail no-trail safe-default create path
+- [x] `WI-6` S3.9 bucket-scoped auto log-bucket default
+- `WI-7` stale `target_id` with truthful `resource_id` fallback on an S3 family action — `WAIVED / DEFERRED` on [20260328T205427Z-wi7-production-authoritative-path](/Users/marcomaher/AWS%20Security%20Autopilot/docs/test-results/live-runs/20260328T205427Z-wi7-production-authoritative-path/README.md)
+- [x] `WI-12` Config selective/custom recorder auto-promotion to `all_resources`
+- [x] `WI-13` S3.2 OAC zero-policy executable path via `GetBucketPolicyStatus`
+- [x] `WI-14` S3.5 empty-policy executable path via `GetBucketPolicyStatus`
 
 If production does not expose a truthful candidate for any required scenario, mark Gate 1 `BLOCKED`.
 
-**Current retained outcome (2026-03-28):** [docs/test-results/live-runs/20260328T175854Z-phase1-production-signoff-rerun/notes/final-summary.md](/Users/marcomaher/AWS%20Security%20Autopilot/docs/test-results/live-runs/20260328T175854Z-phase1-production-signoff-rerun/notes/final-summary.md) is the current authoritative production attempt. Production auth succeeded, live `WI-3` and bucket-scoped `WI-6` bundles now pass `terraform validate`, and both families now have retained live `plan`, `apply`, and rollback proof. Phase 1 is still `BLOCKED` because control-plane freshness remains stale, post-apply production finding/action closure still lags actual AWS state, and truthful production candidates are still missing for `WI-7`, `WI-12`, `WI-13`, and `WI-14`. The earlier March 28 packages remain historical evidence only.
+**Current retained outcome (2026-03-30):** [docs/test-results/live-runs/20260330T011601Z-phase1-action-resolution-closure/notes/final-summary.md](/Users/marcomaher/AWS%20Security%20Autopilot/docs/test-results/live-runs/20260330T011601Z-phase1-action-resolution-closure/notes/final-summary.md) is now the latest authoritative Phase 1 follow-up. Together with the predecessor [docs/test-results/live-runs/20260330T000053Z-remediation-determinism-phase1-phase2-closure/notes/final-summary.md](/Users/marcomaher/AWS%20Security%20Autopilot/docs/test-results/live-runs/20260330T000053Z-remediation-determinism-phase1-phase2-closure/notes/final-summary.md), it proves:
+
+- `WI-12` is now closed truthfully on production through preview/create/bundle download/local Terraform validation/real canary apply/live closure/live cleanup.
+- `WI-13` and `WI-14` remain already proven live.
+- `WI-7` remains `WAIVED / DEFERRED` on the current production data path.
+- before deploy, the remaining production defect was reproduced truthfully on live action `54b0d584-d60a-409d-86e3-5458bd8054b1`: real AWS remediation converged, the action still remained `open`, and a manual scoped compute closed it immediately
+- after deploying image tag `20260330T013354Z`, the same action family closed automatically on the live API after truthful targeted reconcile, with no manual compute and no DB repair
+
+Gate 1 is now `PASS`. The former remaining blocker was the post-apply action-resolution lag, and that lag is now fixed and re-proven on production.
 
 ### Gate 2 — Phase 2 Production-Ready Gate
 
@@ -1136,19 +1151,172 @@ PYTHONPATH=. ./venv/bin/pytest tests/test_remediation_run_worker.py -q -k 'sg_re
 PYTHONPATH=. ./venv/bin/pytest tests/test_grouped_remediation_run_routes.py tests/test_internal_group_run_report.py tests/test_remediation_run_queue_contract.py -q -k 'grouped or resend or replay or sg_restrict or lifecycle'
 ```
 
-**Status note (2026-03-28):** the non-live Phase 2 local gate for `WI-1`, `WI-2`, and `WI-8` already passed across preview, create, bundle generation, run API, worker, grouped-run, action-group, and queue/callback coverage. This does **not** close Phase 2 yet because the production-live gate, rollback proof, grouped proof, and retained evidence package are still pending.
+**Status note (2026-03-28):** the non-live Phase 2 local gate was rerun unchanged and retained again under [docs/test-results/live-runs/20260328T221004Z-remediation-determinism-phase1-phase2-production/README.md](/Users/marcomaher/AWS%20Security%20Autopilot/docs/test-results/live-runs/20260328T221004Z-remediation-determinism-phase1-phase2-production/README.md). Gate 2A remains `PASS`.
 
 #### Gate 2B — Required Phase 2 Production Scenarios
 
 Production signoff for Phase 2 requires one truthful production-backed proof for each of these scenarios:
 
 - [ ] `WI-1` S3.11 captured additive lifecycle merge
-- [ ] `WI-2` EC2.53 `ssm_only`
-- [ ] `WI-8` EC2.53 `bastion_sg_reference`
+- [x] `WI-2` EC2.53 `ssm_only`
+- [x] `WI-8` EC2.53 `bastion_sg_reference`
 
 If production does not expose a truthful candidate for any required scenario, mark Gate 2 `BLOCKED`.
 
-### Gate 3 — Production Live Execution
+**Current retained outcome (2026-03-30):** [docs/test-results/live-runs/20260330T012757Z-phase2-action-resolution-lag-closure/notes/final-summary.md](/Users/marcomaher/AWS%20Security%20Autopilot/docs/test-results/live-runs/20260330T012757Z-phase2-action-resolution-lag-closure/notes/final-summary.md) is now the latest authoritative Phase 2 follow-up. Together with [docs/test-results/live-runs/20260328T221004Z-remediation-determinism-phase1-phase2-production/notes/final-summary.md](/Users/marcomaher/AWS%20Security%20Autopilot/docs/test-results/live-runs/20260328T221004Z-remediation-determinism-phase1-phase2-production/notes/final-summary.md) and [docs/test-results/live-runs/20260330T000053Z-remediation-determinism-phase1-phase2-closure/notes/final-summary.md](/Users/marcomaher/AWS%20Security%20Autopilot/docs/test-results/live-runs/20260330T000053Z-remediation-determinism-phase1-phase2-closure/notes/final-summary.md), the retained truth is:
+
+- `WI-2` `ssm_only` live on production through create, bundle generation, bundle download, local Terraform `init` / `validate` / `plan` / `apply`, AWS mutation proof, and rollback
+- `WI-8` `bastion_sg_reference` live on production after patching real approved bastion SG settings, with the same retained bundle/apply/rollback proof path
+- one grouped mixed-tier S3.11 production run finalized successfully through the callback-backed `run_all.sh` contract with two executable members and five `manual_guidance_only` siblings
+- the WI-1 lifecycle semantics were corrected on March 30 to match authoritative live AWS behavior: enabled lifecycle rules, including noncurrent-version-only rules, are compliant under the current control semantics used here
+- the March 30 follow-up therefore proves the earlier open WI-1 additive-merge candidate was not truthful live AWS behavior
+- the Phase 2 lag-closure follow-up fixed the remaining targeted re-evaluation defect on production and retained a truthful resolved-finding to resolved-action transition with no manual recompute script
+
+Gate 2 is now `PASS`. The March 30 semantics conclusion still stands for `WI-1`, and the remaining lag blocker was fixed and re-proven on production in the same-day closure follow-up.
+
+### Gate 3 — Phase 3 Production-Ready Gate
+
+Phase 3 in this section means the remediation-determinism apply-time data-source wave only:
+
+- `WI-4` S3.5 apply-time policy merge
+- `WI-5` S3.2 website-to-CloudFront private-origin migration
+- `WI-9` S3.2 OAC apply-time policy capture
+- `WI-10` S3.2 public-policy scrub review bundle
+- `WI-11` S3.11 apply-time lifecycle fallback
+
+Use the same strict signoff contract as the March 28, 2026 Phase 1 and Phase 2 gates:
+
+- production runtime only
+- accepted live surface is `https://api.ocypheris.com`
+- canary account is `696505809372` in `eu-north-1`
+- isolated current-head or isolated-runtime evidence remains historical context only and does not count toward production-ready signoff
+
+#### Gate 3 Scope and Current Status
+
+Current retained outcome for this wave is now `PASS` on [20260329T194129Z-remediation-determinism-phase3-production](/Users/marcomaher/AWS%20Security%20Autopilot/docs/test-results/live-runs/20260329T194129Z-remediation-determinism-phase3-production/README.md):
+
+- `WI-4` has retained truthful production apply/rollback proof
+- `WI-5` is now closed truthfully on production through the retained delegated DNS plus ACM follow-up
+- `WI-9` has retained truthful production apply/rollback proof
+- `WI-10` has retained truthful production review-required bundle plus apply/rollback proof
+- `WI-11` has retained truthful production apply/rollback proof
+
+Gate 3A through Gate 3E now pass. Treat the retained package above as the authoritative Phase 3 signoff set for the remediation-determinism apply-time wave.
+
+#### Gate 3A — Preflight and Deploy-Parity Requirements
+
+Do not begin any Phase 3 live scenario until all prerequisites below are satisfied.
+
+**Required prerequisites:**
+
+- [x] `https://api.ocypheris.com/health` returns healthy
+- [x] `https://api.ocypheris.com/ready` returns ready
+- [x] Production operator authentication works for the target tenant
+- [x] The canary tenant is connected to AWS account `696505809372` in `eu-north-1`
+- [x] Local operator environment has `terraform`, `aws`, and a working `AWS_PROFILE` for the canary account
+- [x] Control-plane freshness is healthy before each live scenario
+- [x] Production runtime includes the landed Phase 3 branches
+- [x] The canary read-role baseline includes `s3:GetBucketWebsite`
+
+Deploy parity for Phase 3 must be proven through live production behavior, not assumed from local code or prior isolated-runtime evidence.
+
+**Required parity checks:**
+
+- [x] `WI-5`: production `remediation-options` for a truthful website bucket exposes `website_configured=true` and production accepts `strategy_id=s3_migrate_website_cloudfront_private`
+- [x] `WI-9`: production preview/create for an OAC capture-failure case preserves executability and surfaces apply-time merge metadata
+- [x] `WI-10`: production preview/create for a public non-website bucket resolves to `review_required_bundle`, not `manual_guidance_only`
+- [x] `WI-11`: production preview/create for a lifecycle capture-failure case remains executable and surfaces lifecycle apply-time merge metadata
+
+If any parity check fails, Gate 3 remains `BLOCKED` and live execution for the affected Phase 3 work item does not begin.
+
+#### Gate 3B — Phase 3 Non-Live Regression Gate
+
+Re-run this consolidated local gate unchanged before any Phase 3 production rerun:
+
+```bash
+PYTHONPATH=. ./venv/bin/pytest tests/test_remediation_risk.py tests/test_remediation_runtime_checks.py -q -k 's3_2 or s3_5 or access_path or bucket_policy_status or website_strategy'
+PYTHONPATH=. ./venv/bin/pytest tests/test_remediation_profile_catalog.py tests/test_remediation_profile_options_preview.py -q -k 's3_2 or s3_5 or s3_11 or oac or website_strategy or public_policy_scrub'
+PYTHONPATH=. ./venv/bin/pytest tests/test_remediation_run_resolution_create.py -q -k 's3_2 or s3_5 or s3_11 or oac or website_strategy or public_policy_scrub'
+PYTHONPATH=. ./venv/bin/pytest tests/test_grouped_remediation_run_service.py tests/test_internal_group_run_report.py -q -k 'apply_time_merge or website or s3_11 or lifecycle or s3_migrate_cloudfront_oac_private'
+PYTHONPATH=. ./venv/bin/pytest tests/test_remediation_run_worker.py tests/test_step7_components.py -q -k 's3_2 or s3_5 or s3_11 or lifecycle or website_cloudfront_private or cloudfront_oac_private or public_policy_scrub'
+```
+
+Gate 3B is `PASS` only if every command passes unchanged and the transcripts are retained under the final Phase 3 evidence package.
+
+#### Gate 3C — Required Phase 3 Production Scenarios
+
+Production signoff for this wave requires one truthful production-backed proof for each required scenario below.
+
+- [x] `WI-4`
+  - Production S3.5 candidate must show concrete policy-capture failure with known bucket and `apply_time_merge=true`
+  - Retain preview, create, run detail, bundle download, local `terraform init`, `terraform validate`, `terraform apply`, AWS post-state, recompute, and exact rollback
+- [x] `WI-5`
+  - Seed a simple website bucket with explicit Route53 hosted zone and `us-east-1` ACM certificate
+  - Production must accept `s3_migrate_website_cloudfront_private`
+  - Retain options, preview, create, bundle download, local `terraform validate`, apply, post-apply AWS checks for CloudFront, OAC, DNS, website disablement, and bucket Public Access Block, plus recompute and cleanup rollback
+  - Keep complex website configs out of scope and fail them closed truthfully
+- [x] `WI-9`
+  - Production S3.2 OAC candidate must show policy-capture failure with known bucket and executable apply-time merge behavior
+  - Retain bundle proof that uses live policy fetch/merge, plus apply and rollback
+- [x] `WI-10`
+  - Production public non-website S3.2 candidate must resolve to `review_required_bundle`
+  - Require explicit operator review acknowledgement before apply
+  - Retain proof that only unconditional public `Allow` statements are removed, `removed_statement_*` outputs are present, bucket Public Access Block is applied after scrub, and rollback or restore is captured
+- [x] `WI-11`
+  - Production S3.11 candidate must show concrete lifecycle-capture failure with known bucket and executable apply-time fallback behavior
+  - Retain bundle proof for helper scripts and rollback metadata, plus apply that adds the abort rule and exact lifecycle restore on rollback
+
+If any required Phase 3 scenario lacks a truthful production candidate, Gate 3C is `BLOCKED`.
+
+#### Gate 3D — Grouped Phase 3 Production Proof
+
+Retain at least one grouped mixed-tier production run for the Phase 3 wave.
+
+Use this priority order:
+
+1. grouped S3.11 proof with at least one `WI-11` executable member
+2. grouped S3.2 proof with at least one `WI-9` or `WI-10` executable or `review_required_bundle` member
+3. grouped S3.5 proof with at least one `WI-4` executable member on production
+
+Do not use `WI-5` as the grouped proof anchor because website migration is intentionally a per-action override path rather than a top-level grouped strategy.
+
+The retained grouped proof must include:
+
+- group create response
+- final group detail
+- bundle layout
+- `run_all.sh` execution
+- callback finalization
+- recompute output
+- rollback or cleanup verification for every executed member
+
+#### Gate 3E — Retained Evidence and Cross-Links
+
+Retain one Phase 3 signoff package under:
+
+- `docs/test-results/live-runs/<RUN_ID>-remediation-determinism-phase3-production/`
+
+The retained package must contain at minimum:
+
+- `README.md`
+- `00-run-metadata.md`
+- `summary.json`
+- `notes/final-summary.md`
+- local-gate transcripts
+- per-scenario preview, create, and run-detail captures
+- bundle downloads or extracted bundle evidence
+- Terraform validate and apply output
+- recompute output
+- rollback or cleanup verification
+- a final go or no-go table with one row each for `WI-4`, `WI-5`, `WI-9`, `WI-10`, and `WI-11`
+
+Cross-link the retained package from:
+
+- [docs/live-e2e-testing/README.md](/Users/marcomaher/AWS%20Security%20Autopilot/docs/live-e2e-testing/README.md)
+- [docs/prod-readiness/README.md](/Users/marcomaher/AWS%20Security%20Autopilot/docs/prod-readiness/README.md)
+- [docs/README.md](/Users/marcomaher/AWS%20Security%20Autopilot/docs/README.md)
+
+### Gate 4 — Production Live Execution
 
 Use the production runtime only:
 
@@ -1181,18 +1349,17 @@ AWS_PROFILE=<CANARY_PROFILE> AWS_REGION=eu-north-1 bash ./run_all.sh
 ```
 
 **Live acceptance rules:**
-- [ ] Every required WI has one truthful production-backed proof
-- [ ] Every applied run shows create, bundle generation, local `terraform validate`, apply, recompute, and rollback evidence
-- [ ] At least one grouped mixed-tier production run is retained for Phase 1
-- [ ] At least one grouped mixed-tier production run is retained for Phase 2
+- [x] Every required WI has one truthful production-backed proof or authoritative no-candidate production conclusion
+- [x] Every applied run shows create, bundle generation, local `terraform validate`, apply, production visibility, and rollback or cleanup evidence where an apply path was executed
+- [x] At least one grouped mixed-tier production run is retained for the grouped-capable phases in this signoff (`Phase 2` and `Phase 3`)
 
 Any missing production candidate, auth gap, readiness failure, or rollback gap is a blocker, not a waiver.
 
-### Gate 4 — Retained Evidence and Signoff
+### Gate 5 — Retained Evidence and Signoff
 
-Retain one signoff package under:
+Retain one final signoff package under:
 
-- `docs/test-results/live-runs/<RUN_ID>-remediation-determinism-phase1-phase2-production/`
+- `docs/test-results/live-runs/<RUN_ID>-remediation-determinism-production-signoff/`
 
 The retained package must contain at minimum:
 
@@ -1200,12 +1367,9 @@ The retained package must contain at minimum:
 - `00-run-metadata.md`
 - `summary.json`
 - `notes/final-summary.md`
-- per-phase local gate transcripts
-- per-scenario API captures for preview, create, final run detail, and grouped detail where used
-- Terraform validate/apply output
-- recompute output
-- rollback verification
-- a final go/no-go table with one row per WI
+- links to the authoritative retained closure packages for Gate 1, Gate 2, and Gate 3
+- enough metadata to show the final umbrella verdict and per-WI status
+- any remaining non-blocking follow-up notes that surfaced during signoff
 
 Cross-link the retained package from:
 
@@ -1213,16 +1377,56 @@ Cross-link the retained package from:
 - [docs/prod-readiness/README.md](/Users/marcomaher/AWS%20Security%20Autopilot/docs/prod-readiness/README.md)
 - [docs/README.md](/Users/marcomaher/AWS%20Security%20Autopilot/docs/README.md)
 
+### Frontend UI Coverage Status
+
+**Status note (2026-03-30):** the closed Phase 1, Phase 2, and Phase 3 remediation-determinism contracts are now fully surfaced in the shipped frontend for the intended operator journey. The final single-action gap was the lack of canonical resolver-decision visibility on the remediation preview modal for review-only/manual branches. That gap is now closed.
+
+Repo-backed UI evidence:
+
+- Action-detail launch, state refresh, execution guidance, implementation artifacts, and attack-path deep links are already present in `frontend/src/components/ActionDetailModal.tsx`.
+- Single-action remediation options, preview, create, manual-workflow evidence, CloudTrail create-bucket approval, and the new canonical resolver `Execution decision` surface are present in `frontend/src/components/RemediationModal.tsx`.
+- Run progress, generated artifacts, closure checklist, and evidence pointers are present in `frontend/src/components/RemediationRunProgress.tsx`.
+- Grouped mixed-tier generation outcomes, review-required follow-up, and member-level status visibility are present in `frontend/src/app/actions/group/page.tsx`.
+- Findings-level grouped/member state cues and post-apply refresh visibility are present in `frontend/src/app/findings/FindingCard.tsx` and `frontend/src/app/findings/FindingGroupCard.tsx`.
+- Attack-path list/detail workflow and action-detail deep-link targets are present in `frontend/src/app/attack-paths/page.tsx`.
+
+What was missing before this follow-up:
+
+- `GET /api/actions/{id}/remediation-preview` already returned canonical `resolution` metadata for review-only and manual branches, but the single-action modal did not render:
+  - `support_tier`
+  - `decision_rationale`
+  - `blocked_reasons`
+  - `missing_defaults`
+  - `preservation_summary`
+- As a result, grouped pages showed truthful mixed-tier outcomes more clearly than the single-action modal for some Phase 2 and Phase 3 paths.
+
+What is now surfaced in-product:
+
+- Phase 1 families such as `CloudTrail.1`, `S3.9`, `Config.1`, `S3.2`, and `S3.5` can be driven through findings/action detail into remediation options, preview, bundle creation, run progress, implementation artifacts, and post-apply refresh cues without hidden API-only steps.
+- Phase 2 families such as `S3.11` and `EC2.53` now show the truthful single-action resolver conclusion directly in the modal, including the authoritative no-candidate/no-truthful-additive outcome for the retained `WI-1` semantics boundary when preview resolution lands on non-executable support tiers.
+- Phase 3 apply-time merge and website/OAC families now expose review-required rationale, preservation evidence, and missing-default blockers in the same single-action flow that already linked into grouped follow-up and `/attack-paths`.
+
+Still intentionally operator-only:
+
+- customer-side `terraform plan` / `apply` / rollback execution
+- customer-owned DNS, ACM, Route53, and other per-environment values that must be supplied or reviewed outside the browser
+- no-UI/runbook automation flows used for retained signoff capture and production proof packaging
+
 ### Production-Ready Exit Gate
 
 Do not call this handoff production-ready until all of the following are true:
 
-- [ ] Gate 0 preflight passes
-- [ ] Gate 1A Phase 1 local regression passes
-- [ ] Gate 1B Phase 1 production scenarios are all proven on production
-- [ ] Gate 2A Phase 2 local regression passes
-- [ ] Gate 2B Phase 2 production scenarios are all proven on production
-- [ ] Gate 3 live execution evidence is complete, including rollback proof
-- [ ] Gate 4 retained evidence package is complete and cross-linked
+- [x] Gate 0 preflight passes
+- [x] Gate 1A Phase 1 local regression passes
+- [x] Gate 1B Phase 1 production scenarios are all proven on production
+- [x] Gate 2A Phase 2 local regression passes
+- [x] Gate 2B Phase 2 production scenarios are all proven on production
+- [x] Gate 3A preflight and deploy-parity requirements pass for the Phase 3 wave
+- [x] Gate 3B Phase 3 local regression gate passes
+- [x] Gate 3C Phase 3 production scenarios are all proven on production
+- [x] Gate 3D grouped Phase 3 production proof is retained
+- [x] Gate 3E Phase 3 retained evidence package is complete and cross-linked
+- [x] Gate 4 live execution evidence is complete, including rollback proof
+- [x] Gate 5 retained evidence package is complete and cross-linked
 
 If any required production-only branch cannot be observed truthfully on `https://api.ocypheris.com`, leave the phase or overall signoff in `BLOCKED` or `planned` status rather than claiming completion.

@@ -1,0 +1,56 @@
+
+; <<>> DiG 9.10.6 <<>> +trace NS wi5-gate3-696505809372.ocypheris.com
+;; global options: +cmd
+.			515502	IN	NS	a.root-servers.net.
+.			515502	IN	NS	b.root-servers.net.
+.			515502	IN	NS	c.root-servers.net.
+.			515502	IN	NS	d.root-servers.net.
+.			515502	IN	NS	e.root-servers.net.
+.			515502	IN	NS	f.root-servers.net.
+.			515502	IN	NS	g.root-servers.net.
+.			515502	IN	NS	h.root-servers.net.
+.			515502	IN	NS	i.root-servers.net.
+.			515502	IN	NS	j.root-servers.net.
+.			515502	IN	NS	k.root-servers.net.
+.			515502	IN	NS	l.root-servers.net.
+.			515502	IN	NS	m.root-servers.net.
+.			515502	IN	RRSIG	NS 8 0 518400 20260411170000 20260329160000 21831 . pTszcG3ZYyLAS49QKb3785jzNXSEVpz1+sV3tRrnSbl6Wcm5zbaSW/Es JKfgnJU/ANpviXiOTROqZVFfc4kvxqsaStgyJRo66wkiPSQu7JH/ZLeg PqTmmrgzleRYkBFsNeCiCRqdjkYe/HOCy9gpZuIzhAHoiqQbL2REWNf+ kaIh/VW1MPqf20VIqN6N+zomljFjjI6/O+IgivkeWE9pLVsl4YI2BTi5 Aqyy5I8pZ82Lj/eUB1hZFOQjGiEAneufrBu5MxidoFskuTOfMEl9z4QP qDZ/qiyNKiGVKkhob4vhmdcScDz58o5+S063J6Vg68Alq3GpHsMy5NQV SRr3gA==
+;; Received 525 bytes from 1.1.1.1#53(1.1.1.1) in 68 ms
+
+com.			172800	IN	NS	b.gtld-servers.net.
+com.			172800	IN	NS	l.gtld-servers.net.
+com.			172800	IN	NS	m.gtld-servers.net.
+com.			172800	IN	NS	d.gtld-servers.net.
+com.			172800	IN	NS	i.gtld-servers.net.
+com.			172800	IN	NS	h.gtld-servers.net.
+com.			172800	IN	NS	c.gtld-servers.net.
+com.			172800	IN	NS	a.gtld-servers.net.
+com.			172800	IN	NS	e.gtld-servers.net.
+com.			172800	IN	NS	f.gtld-servers.net.
+com.			172800	IN	NS	j.gtld-servers.net.
+com.			172800	IN	NS	k.gtld-servers.net.
+com.			172800	IN	NS	g.gtld-servers.net.
+com.			86400	IN	DS	19718 13 2 8ACBB0CD28F41250A80A491389424D341522D946B0DA0C0291F2D3D7 71D7805A
+com.			86400	IN	RRSIG	DS 8 1 86400 20260411170000 20260329160000 21831 . YZlwFaBIHFaqA3J57KlQbRqpa1kUgilw0O4rCyR4OxsVkj1zpF7ciIt0 1guYOt7/8j9nmwKnVk05SBazPyfY80j5vdEVCmakZnqWXGwabjy6isAy p3vVuuaeCF6VnJcVoKj4caB0J013Rkwf7xYvKvh8Ho6q/Bss/kthsAKc oLCNT61AMCePZ+wiEN0SLy6YbyYr3OJyautbq++sQvXRwhhnMl4XefXn eNR/+F1FcDJxuPYPiWrigkZeZov1jK0AdvOPZsWn73GEuU0bDSgJpf32 stIYGQdr0AY7pDPHng7HPZK0z2I0ebjcX38a7PaeHbkrnR0Ei8aoJwKD bIUyJA==
+;; Received 1199 bytes from 192.33.4.12#53(c.root-servers.net) in 96 ms
+
+ocypheris.com.		172800	IN	NS	kay.ns.cloudflare.com.
+ocypheris.com.		172800	IN	NS	conrad.ns.cloudflare.com.
+CK0POJMG874LJREF7EFN8430QVIT8BSM.com. 900 IN NSEC3 1 1 0 - CK0Q3UDG8CEKKAE7RUKPGCT1DVSSH8LL  NS SOA RRSIG DNSKEY NSEC3PARAM
+CK0POJMG874LJREF7EFN8430QVIT8BSM.com. 900 IN RRSIG NSEC3 13 2 900 20260404002633 20260327231633 35511 com. flp18pH28vyYfd0TqKCGIYLYAdsHEuND2uVK/oY/petazSvJcmcTVhww WWrrw4VAZHd8YVCH6VAR1690iCPjog==
+BR990QIVG1062CC84H3OJD9A4KUEUFVJ.com. 900 IN NSEC3 1 1 0 - BR99I74Q806BF2I2SGBE2LHOGIALK6BC  NS DS RRSIG
+BR990QIVG1062CC84H3OJD9A4KUEUFVJ.com. 900 IN RRSIG NSEC3 13 2 900 20260405022744 20260329011744 35511 com. Q1Zx2QRFodfWeRrpNN8oxgZB/wIkd0RbJ9gkn0DgbYbI99vUCfxSs4Y2 Ugta6hEGQ6lCcqvono5dDNK9n82HIw==
+;; Received 739 bytes from 192.12.94.30#53(e.gtld-servers.net) in 63 ms
+
+wi5-gate3-696505809372.ocypheris.com. 300 IN NS	ns-1018.awsdns-63.net.
+wi5-gate3-696505809372.ocypheris.com. 300 IN NS	ns-1270.awsdns-30.org.
+wi5-gate3-696505809372.ocypheris.com. 300 IN NS	ns-1780.awsdns-30.co.uk.
+wi5-gate3-696505809372.ocypheris.com. 300 IN NS	ns-47.awsdns-05.com.
+;; Received 202 bytes from 108.162.192.125#53(kay.ns.cloudflare.com) in 56 ms
+
+wi5-gate3-696505809372.ocypheris.com. 172800 IN	NS ns-1018.awsdns-63.net.
+wi5-gate3-696505809372.ocypheris.com. 172800 IN	NS ns-1270.awsdns-30.org.
+wi5-gate3-696505809372.ocypheris.com. 172800 IN	NS ns-1780.awsdns-30.co.uk.
+wi5-gate3-696505809372.ocypheris.com. 172800 IN	NS ns-47.awsdns-05.com.
+;; Received 202 bytes from 205.251.198.244#53(ns-1780.awsdns-30.co.uk) in 75 ms
+

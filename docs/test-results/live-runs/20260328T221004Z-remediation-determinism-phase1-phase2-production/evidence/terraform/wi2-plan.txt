@@ -1,0 +1,22 @@
+
+Terraform used the selected providers to generate the following execution
+plan. Resource actions are indicated with the following symbols:
+  + create
+
+Terraform will perform the following actions:
+
+  # null_resource.revoke_public_admin_ingress will be created
+  + resource "null_resource" "revoke_public_admin_ingress" {
+      + id       = (known after apply)
+      + triggers = {
+          + "region"            = "eu-north-1"
+          + "security_group_id" = "sg-06f6252fa8a95b61d"
+        }
+    }
+
+Plan: 1 to add, 0 to change, 0 to destroy.
+
+─────────────────────────────────────────────────────────────────────────────
+
+Note: You didn't use the -out option to save this plan, so Terraform can't
+guarantee to take exactly these actions if you run "terraform apply" now.

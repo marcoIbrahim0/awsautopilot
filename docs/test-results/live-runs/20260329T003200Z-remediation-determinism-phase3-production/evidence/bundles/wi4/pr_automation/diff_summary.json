@@ -1,0 +1,56 @@
+{
+  "artifact_type": "generated_diff_summary",
+  "file_count": 5,
+  "files": [
+    {
+      "bundle_path": "providers.tf",
+      "byte_count": 479,
+      "change_type": "create_or_update",
+      "content_sha256": "9a0536e0e9790c63a892e3b288fc6b299b5f7a1ea52e004cf4a0a8833e7227f3",
+      "line_count": 18,
+      "repo_path": "providers.tf"
+    },
+    {
+      "bundle_path": "s3_bucket_require_ssl.tf",
+      "byte_count": 2645,
+      "change_type": "create_or_update",
+      "content_sha256": "7680f14878088e62e3dd9535e45fd57dbc643af2897b434cff7251cb4f7cb807",
+      "line_count": 91,
+      "repo_path": "s3_bucket_require_ssl.tf"
+    },
+    {
+      "bundle_path": "scripts/s3_policy_capture.py",
+      "byte_count": 2660,
+      "change_type": "create_or_update",
+      "content_sha256": "950ae50efa81ac7d36ea776c82ec199f45b398c9a33d74149d6ea6ddf9646c2f",
+      "line_count": 94,
+      "repo_path": "scripts/s3_policy_capture.py"
+    },
+    {
+      "bundle_path": "rollback/s3_policy_restore.py",
+      "byte_count": 2971,
+      "change_type": "create_or_update",
+      "content_sha256": "3e55d585d87cddb692cfaca638e74f8673051cf949693c3ac7b00a0be5febaec",
+      "line_count": 96,
+      "repo_path": "rollback/s3_policy_restore.py"
+    },
+    {
+      "bundle_path": "README.txt",
+      "byte_count": 2376,
+      "change_type": "create_or_update",
+      "content_sha256": "caa8ff722fcb6f24aa160c6e845fbec0f3f9cb67243163a5b54e709efa0db36f",
+      "line_count": 55,
+      "repo_path": "README.txt"
+    }
+  ],
+  "fingerprint_sha256": "462999b9901d39953be03e567db4cc7ebff1e8629e71aa41a1c86e51817e66ab",
+  "repo_target_configured": false,
+  "summary_lines": [
+    "`providers.tf` <- `providers.tf` (18 lines, sha256:9a0536e0e979)",
+    "`s3_bucket_require_ssl.tf` <- `s3_bucket_require_ssl.tf` (91 lines, sha256:7680f1487808)",
+    "`scripts/s3_policy_capture.py` <- `scripts/s3_policy_capture.py` (94 lines, sha256:950ae50efa81)",
+    "`rollback/s3_policy_restore.py` <- `rollback/s3_policy_restore.py` (96 lines, sha256:3e55d585d87c)",
+    "`README.txt` <- `README.txt` (55 lines, sha256:caa8ff722fcb)"
+  ],
+  "version": 1
+}

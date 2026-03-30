@@ -233,6 +233,7 @@ def resolve_s3_11_selection(
         "decision_rationale": _s3_11_rationale(
             strategy_id=strategy_id,
             abort_days=abort_days,
+            runtime_signals=runtime_signals,
             blocked_reasons=blocked_reasons,
         ),
     }
@@ -839,11 +840,14 @@ def _s3_11_blocked_reasons(
     rule_count = _coerce_int(evidence.get("existing_lifecycle_rule_count"))
     lifecycle_json = _clean_text(evidence.get("existing_lifecycle_configuration_json"))
     lifecycle_analysis = analyze_lifecycle_preservation(lifecycle_json, abort_days=abort_days)
+    apply_time_merge_reason = _s3_11_apply_time_merge_reason(runtime_signals)
     if rule_count == 0:
         return []
     if lifecycle_analysis["equivalent_safe_state"]:
         return []
     if lifecycle_analysis["merge_renderable"]:
+        return []
+    if apply_time_merge_reason is not None:
         return []
     reasons: list[str] = []
     if analysis_possible is False:
@@ -892,6 +896,7 @@ def _s3_11_preservation_summary(
     evidence = _evidence(runtime_signals)
     lifecycle_json = _clean_text(evidence.get("existing_lifecycle_configuration_json"))
     lifecycle_analysis = analyze_lifecycle_preservation(lifecycle_json, abort_days=abort_days)
+    apply_time_merge_reason = _s3_11_apply_time_merge_reason(runtime_signals)
     return {
         "family": "s3_bucket_lifecycle_configuration",
         "family_strategy": strategy_id,
@@ -902,6 +907,8 @@ def _s3_11_preservation_summary(
         "existing_lifecycle_merge_renderable": lifecycle_analysis["merge_renderable"],
         "existing_lifecycle_render_failure_reason": lifecycle_analysis["render_failure_reason"],
         "existing_equivalent_abort_rule_present": lifecycle_analysis["has_equivalent_abort_rule"],
+        "apply_time_merge": apply_time_merge_reason is not None and not blocked_reasons,
+        "apply_time_merge_reason": apply_time_merge_reason,
         "additive_merge_safe": not blocked_reasons,
         "executable_lifecycle_merge_allowed": not blocked_reasons,
     }
@@ -911,9 +918,16 @@ def _s3_11_rationale(
     *,
     strategy_id: str,
     abort_days: int,
+    runtime_signals: Mapping[str, Any] | None,
     blocked_reasons: list[str],
 ) -> str:
     if not blocked_reasons:
+        apply_time_merge_reason = _s3_11_apply_time_merge_reason(runtime_signals)
+        if apply_time_merge_reason is not None:
+            return (
+                f"Family resolver kept S3.11 strategy '{strategy_id}' executable with abort_days={abort_days} "
+                f"because Terraform can fetch and merge the current lifecycle configuration at apply time. {apply_time_merge_reason}"
+            )
         return (
             f"Family resolver kept S3.11 strategy '{strategy_id}' executable with abort_days={abort_days} "
             "because lifecycle preservation is already safe."
@@ -921,6 +935,25 @@ def _s3_11_rationale(
     return (
         f"Family resolver downgraded S3.11 strategy '{strategy_id}' because additive lifecycle preservation "
         f"is under-proven. {' '.join(blocked_reasons)}"
+    )
+
+
+def _s3_11_apply_time_merge_reason(runtime_signals: Mapping[str, Any] | None) -> str | None:
+    evidence = _evidence(runtime_signals)
+    if _mapping_value(runtime_signals, "s3_lifecycle_analysis_possible") is not False:
+        return None
+    if _clean_text(evidence.get("existing_lifecycle_configuration_json")) is not None:
+        return None
+    if _coerce_int(evidence.get("existing_lifecycle_rule_count")) is not None:
+        return None
+    if _clean_text(evidence.get("target_bucket")) is None:
+        return None
+    capture_error = _clean_text(evidence.get("existing_lifecycle_capture_error"))
+    if capture_error is None:
+        return None
+    return (
+        f"Runtime capture failed ({capture_error}), so the customer-run Terraform bundle must fetch and merge "
+        "the live lifecycle configuration."
     )
 
 

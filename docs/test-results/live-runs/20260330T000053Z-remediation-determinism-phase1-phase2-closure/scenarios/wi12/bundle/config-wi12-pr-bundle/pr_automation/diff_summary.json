@@ -1,0 +1,56 @@
+{
+  "artifact_type": "generated_diff_summary",
+  "file_count": 5,
+  "files": [
+    {
+      "bundle_path": "providers.tf",
+      "byte_count": 557,
+      "change_type": "create_or_update",
+      "content_sha256": "f94b43f86e30978edc49d6a86b6cebf38c9aec621d2031c7b12d94eca0de382f",
+      "line_count": 22,
+      "repo_path": "providers.tf"
+    },
+    {
+      "bundle_path": "aws_config_enabled.tf",
+      "byte_count": 2209,
+      "change_type": "create_or_update",
+      "content_sha256": "bc01676751abeebb051b28cf64e1b649b6b42c4451562f47a39f802e6c8cd123",
+      "line_count": 68,
+      "repo_path": "aws_config_enabled.tf"
+    },
+    {
+      "bundle_path": "scripts/aws_config_apply.py",
+      "byte_count": 20536,
+      "change_type": "create_or_update",
+      "content_sha256": "d7d28c645142da4ca69bfad080824d283cf93cf473bbb6ad5469f02218f3fd16",
+      "line_count": 544,
+      "repo_path": "scripts/aws_config_apply.py"
+    },
+    {
+      "bundle_path": "rollback/aws_config_restore.py",
+      "byte_count": 11154,
+      "change_type": "create_or_update",
+      "content_sha256": "344d4b5cf02440c27a6b9146efc99b91f04bae1150a92ae0ef249422dabd168b",
+      "line_count": 309,
+      "repo_path": "rollback/aws_config_restore.py"
+    },
+    {
+      "bundle_path": "README.txt",
+      "byte_count": 2448,
+      "change_type": "create_or_update",
+      "content_sha256": "41db46aa56595d318d114bb08ded220059e5746a9ae6b1301fb2557593d144b1",
+      "line_count": 42,
+      "repo_path": "README.txt"
+    }
+  ],
+  "fingerprint_sha256": "2a7f05951de08e14315a6d30d41769809649edef9a2cd14ab80c7676aa7794e2",
+  "repo_target_configured": false,
+  "summary_lines": [
+    "`providers.tf` <- `providers.tf` (22 lines, sha256:f94b43f86e30)",
+    "`aws_config_enabled.tf` <- `aws_config_enabled.tf` (68 lines, sha256:bc01676751ab)",
+    "`scripts/aws_config_apply.py` <- `scripts/aws_config_apply.py` (544 lines, sha256:d7d28c645142)",
+    "`rollback/aws_config_restore.py` <- `rollback/aws_config_restore.py` (309 lines, sha256:344d4b5cf024)",
+    "`README.txt` <- `README.txt` (42 lines, sha256:41db46aa5659)"
+  ],
+  "version": 1
+}

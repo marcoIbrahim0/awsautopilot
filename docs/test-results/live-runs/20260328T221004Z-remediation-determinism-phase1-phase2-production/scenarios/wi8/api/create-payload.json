@@ -1,0 +1,1 @@
+{"action_id":"dfa0a526-87b8-4670-92d7-401a611f58f5","mode":"pr_only","strategy_id":"sg_restrict_public_ports_guided","profile_id":"bastion_sg_reference","strategy_inputs":{"access_mode":"bastion_sg_reference"},"risk_acknowledged":true}

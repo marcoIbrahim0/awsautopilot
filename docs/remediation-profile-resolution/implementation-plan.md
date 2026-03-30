@@ -602,8 +602,10 @@ Executable phase-1 branches remain only:
 - `close_and_revoke`
 - `restrict_to_ip`
 - `restrict_to_cidr`
+- `ssm_only`
+- `bastion_sg_reference`
 
-Keep `ssm_only` and `bastion_sg_reference` as review/manual until runtime support exists.
+`ssm_only` is executable once the revoke-only bundle path exists and Session Manager access is treated as an operator prerequisite rather than a security-group ingress rule. `bastion_sg_reference` is executable once tenant-approved bastion SG IDs are available and the branch can emit revoke-plus-SG-reference bundles in both Terraform and CloudFormation.
 
 ### 9.3 Define IAM.4 additive profile metadata and dedicated execution authority
 

@@ -1,0 +1,306 @@
+- generic [ref=e1]:
+  - status [ref=e2]
+  - generic [ref=e5]:
+    - complementary [ref=e6]:
+      - navigation [ref=e10]:
+        - link "Findings" [ref=e11] [cursor=pointer]:
+          - /url: /findings
+          - img [ref=e13]
+          - generic: Findings
+        - link "Accounts" [ref=e15] [cursor=pointer]:
+          - /url: /accounts
+          - img [ref=e17]
+          - generic: Accounts
+        - link "Settings" [ref=e19] [cursor=pointer]:
+          - /url: /settings
+          - img [ref=e21]
+          - generic: Settings
+        - link "Top Risks" [ref=e24] [cursor=pointer]:
+          - /url: /top-risks
+          - img [ref=e26]
+          - generic: Top Risks
+        - link "Exports" [ref=e28] [cursor=pointer]:
+          - /url: /exports
+          - img [ref=e30]
+          - generic: Exports
+        - link "Help" [ref=e32] [cursor=pointer]:
+          - /url: /help
+          - img [ref=e34]
+          - generic: Help
+      - button "Pin sidebar open" [ref=e39]:
+        - img [ref=e40]
+    - generic [ref=e42]:
+      - banner [ref=e43]:
+        - heading "Findings" [level=1] [ref=e45]
+        - generic [ref=e46]:
+          - button "Switch to light mode" [ref=e47]:
+            - img [ref=e48]
+          - button "Notifications" [ref=e51]:
+            - img [ref=e52]
+          - button "Profile menu" [ref=e54]:
+            - generic [ref=e55]: U
+      - main [ref=e56]:
+        - generic [ref=e58]:
+          - generic [ref=e59]:
+            - generic [ref=e60]:
+              - generic [ref=e61]:
+                - generic [ref=e63]:
+                  - img [ref=e64]
+                  - generic [ref=e67]:
+                    - generic: "Try: root access key or public S3 bucket"
+                    - textbox "Search" [ref=e68]
+                  - button "Search" [ref=e69]
+                - generic: Flat View Only
+              - generic [ref=e70]:
+                - generic [ref=e71]:
+                  - button "Grouped" [ref=e72]
+                  - button "Flat" [ref=e73]
+                - button "Refresh" [ref=e74]:
+                  - generic [ref=e75]:
+                    - img [ref=e76]
+                    - text: Refresh
+            - generic [ref=e78]:
+              - generic [ref=e81]:
+                - button "All" [ref=e82]
+                - button "Critical" [ref=e83]
+                - button "High" [ref=e84]
+                - button "Medium" [ref=e85]
+                - button "Low" [ref=e86]
+              - generic [ref=e87]:
+                - generic [ref=e88]:
+                  - generic [ref=e89]: Status
+                  - button "All Statuses" [ref=e90]:
+                    - generic [ref=e91]:
+                      - generic [ref=e92]: All Statuses
+                      - img [ref=e93]
+                - generic [ref=e95]:
+                  - generic [ref=e96]: Account
+                  - button "All Accounts" [ref=e97]:
+                    - generic [ref=e98]:
+                      - generic [ref=e99]: All Accounts
+                      - img [ref=e100]
+                - generic [ref=e102]:
+                  - generic [ref=e103]: Region
+                  - button "All Regions" [ref=e104]:
+                    - generic [ref=e105]:
+                      - generic [ref=e106]: All Regions
+                      - img [ref=e107]
+                - generic [ref=e109]:
+                  - generic [ref=e110]: IDs
+                  - generic [ref=e111]:
+                    - textbox "Control ID" [ref=e112]
+                    - textbox "Resource ID" [ref=e113]
+            - generic [ref=e115]:
+              - generic [ref=e116]: Group by
+              - generic [ref=e117]:
+                - generic [ref=e119]:
+                  - generic [ref=e120]:
+                    - img [ref=e121]
+                    - generic [ref=e128]: Severity
+                    - button "Remove Severity grouping" [ref=e129]:
+                      - img [ref=e130]
+                  - img [ref=e132]
+                - generic [ref=e136]:
+                  - img [ref=e137]
+                  - generic [ref=e144]: Rule
+                  - button "Remove Rule grouping" [ref=e145]:
+                    - img [ref=e146]
+              - button "Add Grouping" [ref=e149]:
+                - img [ref=e150]
+                - text: Add Grouping
+              - button "Clear" [ref=e152]
+          - generic [ref=e173]:
+            - generic [ref=e174]:
+              - button "CRITICAL 6 groups · 10 findings Collapse" [expanded] [ref=e175]:
+                - generic [ref=e176]:
+                  - img [ref=e178]
+                  - generic [ref=e180]:
+                    - generic [ref=e181]: CRITICAL
+                    - generic [ref=e182]: 6 groups · 10 findings
+                - generic [ref=e183]: Collapse
+              - generic [ref=e185]:
+                - generic [ref=e186]:
+                  - button "Config.1 2 groups · 2 findings Collapse" [expanded] [ref=e187]:
+                    - generic [ref=e188]:
+                      - img [ref=e190]
+                      - generic [ref=e192]:
+                        - generic [ref=e193]: Config.1
+                        - generic [ref=e194]: 2 groups · 2 findings
+                    - generic [ref=e195]: Collapse
+                  - generic [ref=e197]:
+                    - article [ref=e198]:
+                      - generic [ref=e199]:
+                        - generic [ref=e200]:
+                          - heading "AWS Config should be enabled and use the service-linked role for resource recording" [level=3] [ref=e202]
+                          - generic [ref=e203]:
+                            - generic [ref=e204]: CONFIG.1
+                            - generic [ref=e205]: ·
+                            - generic [ref=e206]: AwsAccount
+                        - button "Expand findings" [ref=e207]:
+                          - generic [ref=e208]: Expand
+                          - img [ref=e209]
+                      - generic [ref=e213]: 1 Critical
+                      - generic [ref=e214]:
+                        - generic [ref=e215]: 1 finding
+                        - generic [ref=e216]: across AwsAccount
+                        - generic [ref=e217]: ·
+                        - generic [ref=e218]: "696505809372"
+                        - generic [ref=e219]: ·
+                        - generic [ref=e220]: us-east-1
+                      - generic "A PR bundle was generated and run successfully, but AWS source-of-truth systems such as Security Hub have not confirmed closure yet." [ref=e223]: Generated, awaiting AWS verification
+                      - generic [ref=e224]:
+                        - button "Generate PR Bundle" [ref=e225]:
+                          - generic [ref=e226]: Generate PR Bundle
+                        - button "View details" [ref=e227]:
+                          - generic [ref=e228]: View details
+                        - link "View PR bundle group" [ref=e229] [cursor=pointer]:
+                          - /url: /actions/group?group_id=661a96a0-0453-4df2-a48f-cb8d312659d6
+                          - button "View PR bundle group" [ref=e230]:
+                            - generic [ref=e231]: View PR bundle group
+                        - button "Suppress Group" [disabled] [ref=e232]:
+                          - generic [ref=e233]: Suppress Group
+                        - button "Acknowledge Risk" [disabled] [ref=e234]:
+                          - generic [ref=e235]: Acknowledge Risk
+                        - button "Mark False Positive" [disabled] [ref=e236]:
+                          - generic [ref=e237]: Mark False Positive
+                      - paragraph [ref=e240]: The fix was applied successfully, but AWS source-of-truth confirmation has not arrived after 12 hours. Check Security Hub/reconciliation and investigate why the resolved state has not propagated.
+                    - article [ref=e241]:
+                      - generic [ref=e242]:
+                        - generic [ref=e243]:
+                          - heading "AWS Config should be enabled and use the service-linked role for resource recording" [level=3] [ref=e245]
+                          - generic [ref=e246]:
+                            - generic [ref=e247]: CONFIG.1
+                            - generic [ref=e248]: ·
+                            - generic [ref=e249]: AwsAccount
+                        - button "Expand findings" [ref=e250]:
+                          - generic [ref=e251]: Expand
+                          - img [ref=e252]
+                      - generic [ref=e256]: 1 Critical
+                      - generic [ref=e257]:
+                        - generic [ref=e258]: 1 finding
+                        - generic [ref=e259]: across AwsAccount
+                        - generic [ref=e260]: ·
+                        - generic [ref=e261]: "696505809372"
+                        - generic [ref=e262]: ·
+                        - generic [ref=e263]: eu-north-1
+                      - generic "A PR bundle was generated and run successfully, but AWS source-of-truth systems such as Security Hub have not confirmed closure yet." [ref=e266]: Generated, awaiting AWS verification
+                      - generic [ref=e267]:
+                        - button "Generate PR Bundle" [ref=e268]:
+                          - generic [ref=e269]: Generate PR Bundle
+                        - button "View details" [ref=e270]:
+                          - generic [ref=e271]: View details
+                        - link "View PR bundle group" [ref=e272] [cursor=pointer]:
+                          - /url: /actions/group?group_id=03352204-291a-4b40-bfc6-9913c42148ac
+                          - button "View PR bundle group" [ref=e273]:
+                            - generic [ref=e274]: View PR bundle group
+                        - button "Suppress Group" [disabled] [ref=e275]:
+                          - generic [ref=e276]: Suppress Group
+                        - button "Acknowledge Risk" [disabled] [ref=e277]:
+                          - generic [ref=e278]: Acknowledge Risk
+                        - button "Mark False Positive" [disabled] [ref=e279]:
+                          - generic [ref=e280]: Mark False Positive
+                      - paragraph [ref=e283]: The fix was applied successfully, but AWS source-of-truth confirmation has not arrived after 12 hours. Check Security Hub/reconciliation and investigate why the resolved state has not propagated.
+                - generic [ref=e284]:
+                  - button "EC2.19 1 group · 3 findings Collapse" [expanded] [active] [ref=e367]:
+                    - generic [ref=e286]:
+                      - img [ref=e288]
+                      - generic [ref=e290]:
+                        - generic [ref=e291]: EC2.19
+                        - generic [ref=e292]: 1 group · 3 findings
+                    - generic [ref=e293]: Collapse
+                  - article [ref=e370]:
+                    - generic [ref=e371]:
+                      - generic [ref=e372]:
+                        - heading "Security groups should not allow unrestricted access to ports with high risk" [level=3] [ref=e374]
+                        - generic [ref=e375]:
+                          - generic [ref=e376]: EC2.19
+                          - generic [ref=e377]: ·
+                          - generic [ref=e378]: AwsEc2SecurityGroup
+                        - paragraph [ref=e379]: "Remediation family: EC2.53"
+                      - button "Expand findings" [ref=e380]:
+                        - generic [ref=e381]: Expand
+                        - img [ref=e382]
+                    - generic [ref=e385]:
+                      - generic [ref=e386]: 2 Critical
+                      - generic [ref=e387]: 1 Informational
+                    - generic [ref=e388]:
+                      - generic [ref=e389]: 3 findings
+                      - generic [ref=e390]: across AwsEc2SecurityGroup
+                      - generic [ref=e391]: ·
+                      - generic [ref=e392]: "696505809372"
+                      - generic [ref=e393]: ·
+                      - generic [ref=e394]: eu-north-1
+                    - generic "A PR bundle was generated and run successfully, but this item still needs an additional follow-up change before it can fully resolve." [ref=e397]: Generated, needs follow-up
+                    - generic [ref=e398]:
+                      - button "Generate PR Bundle" [ref=e399]:
+                        - generic [ref=e400]: Generate PR Bundle
+                      - button "View details" [ref=e401]:
+                        - generic [ref=e402]: View details
+                      - link "View PR bundle group" [ref=e403] [cursor=pointer]:
+                        - /url: /actions/group?group_id=ff032063-af10-4693-bf9c-31c33b6a28ce
+                        - button "View PR bundle group" [ref=e404]:
+                          - generic [ref=e405]: View PR bundle group
+                      - button "Suppress Group" [disabled] [ref=e406]:
+                        - generic [ref=e407]: Suppress Group
+                      - button "Acknowledge Risk" [disabled] [ref=e408]:
+                        - generic [ref=e409]: Acknowledge Risk
+                      - button "Mark False Positive" [disabled] [ref=e410]:
+                        - generic [ref=e411]: Mark False Positive
+                    - paragraph [ref=e414]: The fix was applied successfully. Restricted access was added, but unrestricted public access is still present. Remove the unrestricted rule to resolve this finding.
+                - button "IAM.4 2 groups · 3 findings Expand" [ref=e295]:
+                  - generic [ref=e296]:
+                    - img [ref=e298]
+                    - generic [ref=e300]:
+                      - generic [ref=e301]: IAM.4
+                      - generic [ref=e302]: 2 groups · 3 findings
+                  - generic [ref=e303]: Expand
+                - button "SSM.7 1 group · 2 findings Expand" [ref=e305]:
+                  - generic [ref=e306]:
+                    - img [ref=e308]
+                    - generic [ref=e310]:
+                      - generic [ref=e311]: SSM.7
+                      - generic [ref=e312]: 1 group · 2 findings
+                  - generic [ref=e313]: Expand
+            - button "HIGH 5 groups · 24 findings Expand" [ref=e315]:
+              - generic [ref=e316]:
+                - img [ref=e318]
+                - generic [ref=e320]:
+                  - generic [ref=e321]: HIGH
+                  - generic [ref=e322]: 5 groups · 24 findings
+              - generic [ref=e323]: Expand
+            - button "MEDIUM 6 groups · 48 findings Expand" [ref=e325]:
+              - generic [ref=e326]:
+                - img [ref=e328]
+                - generic [ref=e330]:
+                  - generic [ref=e331]: MEDIUM
+                  - generic [ref=e332]: 6 groups · 48 findings
+              - generic [ref=e333]: Expand
+            - button "LOW 2 groups · 6 findings Expand" [ref=e335]:
+              - generic [ref=e336]:
+                - img [ref=e338]
+                - generic [ref=e340]:
+                  - generic [ref=e341]: LOW
+                  - generic [ref=e342]: 2 groups · 6 findings
+              - generic [ref=e343]: Expand
+            - button "INFORMATIONAL 1 group · 15 findings Expand" [ref=e345]:
+              - generic [ref=e346]:
+                - img [ref=e348]
+                - generic [ref=e350]:
+                  - generic [ref=e351]: INFORMATIONAL
+                  - generic [ref=e352]: 1 group · 15 findings
+              - generic [ref=e353]: Expand
+          - generic [ref=e355]:
+            - paragraph [ref=e356]: Showing 1 - 20 of 52 findings
+            - generic [ref=e357]:
+              - button "Previous" [disabled] [ref=e358]:
+                - generic [ref=e359]:
+                  - img [ref=e360]
+                  - text: Previous
+              - generic [ref=e362]: Page 1 of 3
+              - button "Next" [ref=e363]:
+                - generic [ref=e364]:
+                  - text: Next
+                  - img [ref=e365]
+  - button "Open Next.js Dev Tools" [ref=e168] [cursor=pointer]:
+    - img [ref=e169]
+  - alert [ref=e172]

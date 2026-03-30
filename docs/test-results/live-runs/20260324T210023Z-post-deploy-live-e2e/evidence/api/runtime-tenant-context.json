@@ -1,0 +1,7 @@
+{
+  "account_id": "696505809372",
+  "tenant_name": "Valens Local Backup",
+  "tenant_id": "c3351a02-0bc2-4449-beed-d59d7ac937d0",
+  "admin_email": "maromaher54+backup-local@example.com",
+  "note": "Current deployed fallback-db runtime tenant/admin context discovered during post-deploy live E2E."
+}

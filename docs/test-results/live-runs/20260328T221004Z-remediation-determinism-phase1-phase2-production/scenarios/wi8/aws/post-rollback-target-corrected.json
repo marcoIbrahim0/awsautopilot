@@ -1,0 +1,81 @@
+{
+    "SecurityGroups": [
+        {
+            "GroupId": "sg-0ef32ca8805a55a8b",
+            "IpPermissionsEgress": [
+                {
+                    "IpProtocol": "-1",
+                    "UserIdGroupPairs": [],
+                    "IpRanges": [
+                        {
+                            "CidrIp": "0.0.0.0/0"
+                        }
+                    ],
+                    "Ipv6Ranges": [],
+                    "PrefixListIds": []
+                }
+            ],
+            "Tags": [
+                {
+                    "Key": "Scenario",
+                    "Value": "ec253-review"
+                },
+                {
+                    "Key": "ManagedBy",
+                    "Value": "Codex"
+                },
+                {
+                    "Key": "Purpose",
+                    "Value": "Wave6EnvironmentReadiness"
+                },
+                {
+                    "Key": "RunId",
+                    "Value": "20260315T201821Z"
+                }
+            ],
+            "VpcId": "vpc-0f1bcafc3d529581d",
+            "SecurityGroupArn": "arn:aws:ec2:eu-north-1:696505809372:security-group/sg-0ef32ca8805a55a8b",
+            "OwnerId": "696505809372",
+            "GroupName": "security-autopilot-w6-envready-ec253-review",
+            "Description": "Wave 6 environment readiness EC2.53 downgrade case",
+            "IpPermissions": [
+                {
+                    "IpProtocol": "tcp",
+                    "FromPort": 22,
+                    "ToPort": 22,
+                    "UserIdGroupPairs": [],
+                    "IpRanges": [
+                        {
+                            "Description": "SSH from allowed CIDR - Security Autopilot",
+                            "CidrIp": "10.0.0.0/8"
+                        },
+                        {
+                            "Description": "Wave6 env readiness SSH exposure",
+                            "CidrIp": "0.0.0.0/0"
+                        }
+                    ],
+                    "Ipv6Ranges": [],
+                    "PrefixListIds": []
+                },
+                {
+                    "IpProtocol": "tcp",
+                    "FromPort": 3389,
+                    "ToPort": 3389,
+                    "UserIdGroupPairs": [],
+                    "IpRanges": [
+                        {
+                            "Description": "RDP from allowed CIDR - Security Autopilot",
+                            "CidrIp": "10.0.0.0/8"
+                        },
+                        {
+                            "Description": "Wave6 env readiness RDP exposure",
+                            "CidrIp": "0.0.0.0/0"
+                        }
+                    ],
+                    "Ipv6Ranges": [],
+                    "PrefixListIds": []
+                }
+            ]
+        }
+    ]
+}

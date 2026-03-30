@@ -1,0 +1,13 @@
+2026-03-28 04:15:52.536 EET [65605] LOG:  starting PostgreSQL 14.13 (Homebrew) on aarch64-apple-darwin24.0.0, compiled by Apple clang version 16.0.0 (clang-1600.0.26.3), 64-bit
+2026-03-28 04:15:52.537 EET [65605] LOG:  listening on IPv6 address "::1", port 55461
+2026-03-28 04:15:52.537 EET [65605] LOG:  listening on IPv4 address "127.0.0.1", port 55461
+2026-03-28 04:15:52.538 EET [65605] LOG:  listening on Unix socket "/tmp/.s.PGSQL.55461"
+2026-03-28 04:15:52.539 EET [65606] LOG:  database system was shut down at 2026-03-28 04:15:52 EET
+2026-03-28 04:15:52.542 EET [65605] LOG:  database system is ready to accept connections
+2026-03-28 04:39:38.177 EET [49367] ERROR:  duplicate key value violates unique constraint "uq_attack_path_materialized_summaries_tenant_path"
+2026-03-28 04:39:38.177 EET [49367] DETAIL:  Key (tenant_id, path_id)=(c72adafc-0989-47ec-8cce-8ecfecba1e47, path:7ed69663e3c16151e3a4) already exists.
+2026-03-28 04:39:38.177 EET [49367] STATEMENT:  INSERT INTO attack_path_materialized_summaries (id, tenant_id, path_id, representative_action_id, account_id, region, status, rank, confidence, has_blast_radius, is_business_critical, is_actively_exploited, has_owners, summary_payload, source_max_updated_at, computed_at, stale_after, refresh_status, refresh_error) VALUES ($1::UUID, $2::UUID, $3::VARCHAR, $4::UUID, $5::VARCHAR, $6::VARCHAR, $7::VARCHAR, $8::INTEGER, $9::FLOAT, $10::BOOLEAN, $11::BOOLEAN, $12::BOOLEAN, $13::BOOLEAN, $14::JSONB, $15::TIMESTAMP WITH TIME ZONE, $16::TIMESTAMP WITH TIME ZONE, $17::TIMESTAMP WITH TIME ZONE, $18::VARCHAR, $19::VARCHAR) RETURNING attack_path_materialized_summaries.created_at, attack_path_materialized_summaries.updated_at
+2026-03-29 03:28:36.908 EET [65605] LOG:  received smart shutdown request
+2026-03-29 03:28:38.336 EET [65605] LOG:  background worker "logical replication launcher" (PID 65612) exited with exit code 1
+2026-03-29 03:28:38.349 EET [65607] LOG:  shutting down
+2026-03-29 03:28:38.471 EET [65605] LOG:  database system is shut down

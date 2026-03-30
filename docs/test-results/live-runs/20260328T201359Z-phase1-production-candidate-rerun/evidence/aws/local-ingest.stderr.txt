@@ -1,0 +1,26 @@
+database_failover selected source=fallback host=ep-curly-butterfly-al0pzr9w-pooler.c-3.eu-central-1.aws.neon.tech after primary probe failure
+Access denied when assuming role arn:aws:iam::696505809372:role/SecurityAutopilotReadRole: User: arn:aws:iam::029037611564:user/AutoPilotAdmin is not authorized to perform: sts:SetSourceIdentity on resource: arn:aws:iam::696505809372:role/SecurityAutopilotReadRole
+Traceback (most recent call last):
+  File "/Users/marcomaher/AWS Security Autopilot/backend/services/aws.py", line 202, in assume_role
+    response = sts_client.assume_role(**assume_request)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/marcomaher/AWS Security Autopilot/venv/lib/python3.12/site-packages/botocore/client.py", line 602, in _api_call
+    return self._make_api_call(operation_name, kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/marcomaher/AWS Security Autopilot/venv/lib/python3.12/site-packages/botocore/context.py", line 123, in wrapper
+    return func(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/marcomaher/AWS Security Autopilot/venv/lib/python3.12/site-packages/botocore/client.py", line 1078, in _make_api_call
+    raise error_class(parsed_response, operation_name)
+botocore.exceptions.ClientError: An error occurred (AccessDenied) when calling the AssumeRole operation: User: arn:aws:iam::029037611564:user/AutoPilotAdmin is not authorized to perform: sts:SetSourceIdentity on resource: arn:aws:iam::696505809372:role/SecurityAutopilotReadRole
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "<stdin>", line 8, in <module>
+  File "/Users/marcomaher/AWS Security Autopilot/backend/workers/jobs/ingest_findings.py", line 399, in execute_ingest_job
+    session_boto = assume_role(
+                   ^^^^^^^^^^^^
+  File "/Users/marcomaher/AWS Security Autopilot/backend/services/aws.py", line 253, in assume_role
+    raise ClientError(
+botocore.exceptions.ClientError: An error occurred (AccessDenied) when calling the AssumeRole operation: Access denied. Check role ARN and trust policy.

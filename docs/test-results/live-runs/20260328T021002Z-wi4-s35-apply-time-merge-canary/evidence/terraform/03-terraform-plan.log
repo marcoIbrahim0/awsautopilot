@@ -1,0 +1,82 @@
+[0m[1mdata.aws_s3_bucket_policy.existing: Reading...[0m[0m
+[0m[1mdata.aws_iam_policy_document.required_ssl: Reading...[0m[0m
+[0m[1mdata.aws_iam_policy_document.required_ssl: Read complete after 0s [id=3019252452][0m
+[0m[1mdata.aws_s3_bucket_policy.existing: Read complete after 1s [id=security-autopilot-access-logs-696505809372-r221001][0m
+[0m[1mdata.aws_iam_policy_document.merged_policy: Reading...[0m[0m
+[0m[1mdata.aws_iam_policy_document.merged_policy: Read complete after 0s [id=4123713109][0m
+
+Terraform used the selected providers to generate the following execution
+plan. Resource actions are indicated with the following symbols:
+  [32m+[0m create[0m
+
+Terraform will perform the following actions:
+
+[1m  # aws_s3_bucket_policy.security_autopilot[0m will be created
+[0m  [32m+[0m[0m resource "aws_s3_bucket_policy" "security_autopilot" {
+      [32m+[0m[0m bucket = "security-autopilot-access-logs-696505809372-r221001"
+      [32m+[0m[0m id     = (known after apply)
+      [32m+[0m[0m policy = jsonencode(
+            {
+              [32m+[0m[0m Statement = [
+                  [32m+[0m[0m {
+                      [32m+[0m[0m Action    = [
+                          [32m+[0m[0m "s3:ListBucket",
+                          [32m+[0m[0m "s3:GetBucketAcl",
+                          [32m+[0m[0m "s3:GetBucketLocation",
+                          [32m+[0m[0m "s3:GetBucketPolicyStatus",
+                          [32m+[0m[0m "s3:GetBucketWebsite",
+                        ]
+                      [32m+[0m[0m Effect    = "Allow"
+                      [32m+[0m[0m Principal = {
+                          [32m+[0m[0m AWS = "arn:aws:iam::696505809372:role/CodexP2SecurityHubImportRole"
+                        }
+                      [32m+[0m[0m Resource  = "arn:aws:s3:::security-autopilot-access-logs-696505809372-r221001"
+                      [32m+[0m[0m Sid       = "AllowImportRoleBucketReadinessChecksExceptPolicyRead"
+                    },
+                  [32m+[0m[0m {
+                      [32m+[0m[0m Action    = "s3:GetBucketPolicy"
+                      [32m+[0m[0m Effect    = "Deny"
+                      [32m+[0m[0m Principal = {
+                          [32m+[0m[0m AWS = "arn:aws:iam::696505809372:role/CodexP2SecurityHubImportRole"
+                        }
+                      [32m+[0m[0m Resource  = "arn:aws:s3:::security-autopilot-access-logs-696505809372-r221001"
+                      [32m+[0m[0m Sid       = "DenyImportRoleGetBucketPolicy"
+                    },
+                  [32m+[0m[0m {
+                      [32m+[0m[0m Action    = "s3:GetBucketPolicy"
+                      [32m+[0m[0m Effect    = "Deny"
+                      [32m+[0m[0m Principal = {
+                          [32m+[0m[0m AWS = "arn:aws:iam::696505809372:role/SecurityAutopilotReadRole"
+                        }
+                      [32m+[0m[0m Resource  = "arn:aws:s3:::security-autopilot-access-logs-696505809372-r221001"
+                      [32m+[0m[0m Sid       = "DenyLiveReadRoleGetBucketPolicy"
+                    },
+                  [32m+[0m[0m {
+                      [32m+[0m[0m Action    = "s3:*"
+                      [32m+[0m[0m Condition = {
+                          [32m+[0m[0m Bool = {
+                              [32m+[0m[0m "aws:SecureTransport" = "false"
+                            }
+                        }
+                      [32m+[0m[0m Effect    = "Deny"
+                      [32m+[0m[0m Principal = "*"
+                      [32m+[0m[0m Resource  = [
+                          [32m+[0m[0m "arn:aws:s3:::security-autopilot-access-logs-696505809372-r221001/*",
+                          [32m+[0m[0m "arn:aws:s3:::security-autopilot-access-logs-696505809372-r221001",
+                        ]
+                      [32m+[0m[0m Sid       = "DenyInsecureTransport"
+                    },
+                ]
+              [32m+[0m[0m Version   = "2012-10-17"
+            }
+        )
+    }
+
+[1mPlan:[0m [0m1 to add, 0 to change, 0 to destroy.
+[90m
+─────────────────────────────────────────────────────────────────────────────[0m
+
+Saved the plan to: tfplan
+
+To perform exactly these actions, run the following command to apply:
+    terraform apply "tfplan"

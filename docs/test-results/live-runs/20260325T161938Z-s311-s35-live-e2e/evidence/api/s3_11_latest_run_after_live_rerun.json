@@ -1,0 +1,75 @@
+{
+  "id": "b4644d2d-a8e2-4d97-b8aa-3989c4d58730",
+  "status": "finished",
+  "started_at": "2026-03-24T23:01:46.727124+00:00",
+  "finished_at": "2026-03-25T16:44:07+00:00",
+  "reporting_source": "bundle_callback",
+  "remediation_run_id": "14cbe174-7e4c-4013-9ae4-3e84b014509a",
+  "results": [
+    {
+      "action_id": "42eef23b-f9ba-4381-b8af-028529231a84",
+      "result_type": "executable",
+      "support_tier": null
+    },
+    {
+      "action_id": "a57bd4fc-c54f-4965-baa9-a675d386a043",
+      "result_type": "executable",
+      "support_tier": null
+    },
+    {
+      "action_id": "53cda243-1815-4864-8cc3-f3e1535a4ff1",
+      "result_type": "executable",
+      "support_tier": null
+    },
+    {
+      "action_id": "6a75c127-7fcb-4320-b54b-dbe856f727c6",
+      "result_type": "executable",
+      "support_tier": null
+    },
+    {
+      "action_id": "7be937c3-8b96-413e-881b-94118a699913",
+      "result_type": "non_executable",
+      "support_tier": "manual_guidance_only"
+    },
+    {
+      "action_id": "d42826b3-0611-4b29-a27a-726c53c00a50",
+      "result_type": "executable",
+      "support_tier": null
+    },
+    {
+      "action_id": "4e5dc9e9-0763-45f4-a601-1bfd54c83038",
+      "result_type": "executable",
+      "support_tier": null
+    },
+    {
+      "action_id": "d5f1fd68-4ae6-46b1-8ddf-33f168eeed8c",
+      "result_type": "executable",
+      "support_tier": null
+    },
+    {
+      "action_id": "50b7681f-6f96-45f7-bb75-06cb8bb9074d",
+      "result_type": "executable",
+      "support_tier": null
+    },
+    {
+      "action_id": "0361bcde-869c-4b55-913d-ed8bea424a7e",
+      "result_type": "executable",
+      "support_tier": null
+    },
+    {
+      "action_id": "cbb438f0-4e9a-489e-b7cf-2ef5dd95edf3",
+      "result_type": "executable",
+      "support_tier": null
+    },
+    {
+      "action_id": "c81bf06a-bf7a-42d6-b154-8c1a97739781",
+      "result_type": "executable",
+      "support_tier": null
+    },
+    {
+      "action_id": "88c01f62-9a6b-4bd6-9e1f-eb7592845ce2",
+      "result_type": "executable",
+      "support_tier": null
+    }
+  ]
+}

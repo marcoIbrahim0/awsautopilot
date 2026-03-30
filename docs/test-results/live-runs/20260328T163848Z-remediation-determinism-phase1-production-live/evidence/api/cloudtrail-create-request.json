@@ -1,0 +1,14 @@
+{
+  "action_id": "456f845e-da64-43cf-8dc2-d738c3a770df",
+  "mode": "pr_only",
+  "strategy_id": "cloudtrail_enable_guided",
+  "risk_acknowledged": true,
+  "bucket_creation_acknowledged": true,
+  "strategy_inputs": {
+    "trail_name": "security-autopilot-trail",
+    "trail_bucket_name": "ocypheris-live-ct-20260328t163848z-eu-north-1",
+    "create_bucket_if_missing": true,
+    "create_bucket_policy": true,
+    "multi_region": true
+  }
+}

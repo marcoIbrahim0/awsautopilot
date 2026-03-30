@@ -1,0 +1,13 @@
+{
+  "id": "aa087d9a-0547-4d76-bd51-f4eeb0005e83",
+  "action_type": "s3_bucket_require_ssl",
+  "account_id": "696505809372",
+  "region": "eu-north-1",
+  "counters": {
+    "run_successful": 4,
+    "run_not_successful": 0,
+    "metadata_only": 1,
+    "not_run_yet": 0,
+    "total_actions": 5
+  }
+}

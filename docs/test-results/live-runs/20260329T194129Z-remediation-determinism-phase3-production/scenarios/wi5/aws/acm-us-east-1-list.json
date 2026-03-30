@@ -1,0 +1,28 @@
+{
+    "CertificateSummaryList": [
+        {
+            "CertificateArn": "arn:aws:acm:us-east-1:696505809372:certificate/dd819f7c-77bc-4261-abbb-d8e102ea3534",
+            "DomainName": "wi5-canary-696505809372.example.com",
+            "SubjectAlternativeNameSummaries": [
+                "wi5-canary-696505809372.example.com"
+            ],
+            "HasAdditionalSubjectAlternativeNames": false,
+            "Status": "ISSUED",
+            "Type": "IMPORTED",
+            "KeyAlgorithm": "RSA-2048",
+            "KeyUsages": [
+                "ANY"
+            ],
+            "ExtendedKeyUsages": [
+                "NONE"
+            ],
+            "ExportOption": "DISABLED",
+            "InUse": false,
+            "RenewalEligibility": "INELIGIBLE",
+            "NotBefore": "2026-03-28T18:41:23+02:00",
+            "NotAfter": "2026-04-27T19:41:23+03:00",
+            "CreatedAt": "2026-03-28T18:41:25.106000+02:00",
+            "ImportedAt": "2026-03-28T18:41:25.106000+02:00"
+        }
+    ]
+}

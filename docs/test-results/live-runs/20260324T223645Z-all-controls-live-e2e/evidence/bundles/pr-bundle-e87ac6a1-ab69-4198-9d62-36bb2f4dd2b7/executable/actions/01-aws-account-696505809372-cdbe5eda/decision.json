@@ -1,0 +1,29 @@
+{
+  "action_id": "cdbe5eda-ae70-4d31-815c-35fce06c1596",
+  "action_type": "ebs_default_encryption",
+  "blocked_reasons": [],
+  "control_id": "EC2.7",
+  "decision_rationale": "Compatibility resolver defaulted to the compatible profile 'ebs_enable_default_encryption_aws_managed_kms_pr_bundle' for strategy 'ebs_enable_default_encryption_aws_managed_kms_pr_bundle'. Run creation did not require additional risk-only acceptance.",
+  "decision_summary": "Compatibility resolver defaulted to the compatible profile 'ebs_enable_default_encryption_aws_managed_kms_pr_bundle' for strategy 'ebs_enable_default_encryption_aws_managed_kms_pr_bundle'. Run creation did not require additional risk-only acceptance.",
+  "decision_version": "resolver/v1",
+  "finding_coverage": {},
+  "folder": "executable/actions/01-aws-account-696505809372-cdbe5eda",
+  "has_runnable_terraform": true,
+  "index": 1,
+  "missing_defaults": [],
+  "missing_inputs": [],
+  "outcome": "executable_bundle_generated",
+  "preservation_summary": {
+    "single_profile_compatible": true,
+    "strategy_only_supported": true
+  },
+  "profile_id": "ebs_enable_default_encryption_aws_managed_kms_pr_bundle",
+  "rejected_profiles": [],
+  "strategy_id": "ebs_enable_default_encryption_aws_managed_kms_pr_bundle",
+  "strategy_inputs": {},
+  "support_tier": "deterministic_bundle",
+  "target_id": "696505809372|us-east-1|AWS::::Account:696505809372|EC2.7",
+  "tier": "executable",
+  "tier_root": "executable/actions",
+  "title": "EBS default encryption should be enabled"
+}

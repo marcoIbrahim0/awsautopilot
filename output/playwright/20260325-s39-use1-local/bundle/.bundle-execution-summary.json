@@ -1,0 +1,25 @@
+{
+  "action_results": [
+    {
+      "action_id": "c6c920fd-b9f6-4015-8ede-a072d5ad22c5",
+      "execution_error_code": "bundle_runner_apply",
+      "execution_error_message": "run_all.sh failed during apply for folder executable/actions/01-arn-aws-s3-security-autopilot-config-69650580937-c6c920fd",
+      "execution_status": "failed"
+    }
+  ],
+  "shared_execution_results": [
+    {
+      "details": {
+        "destination_bucket_name": "sa-access-logs-696505809372-use1-r0325223457",
+        "source_bucket_names": [
+          "security-autopilot-config-696505809372-us-east-1"
+        ]
+      },
+      "execution_error_code": null,
+      "execution_error_message": null,
+      "execution_status": "success",
+      "folder": "executable/actions/00-shared-01-sa-access-logs-696505809372-use1-r032522",
+      "kind": "s3_access_logging_destination_setup"
+    }
+  ]
+}

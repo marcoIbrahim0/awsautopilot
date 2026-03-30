@@ -1,0 +1,13 @@
+{
+  "status_code": 200,
+  "status": "NEW",
+  "effective_status": "NEW",
+  "shadow_status_normalized": "OPEN",
+  "shadow_status_reason": "inventory_confirmed_non_compliant",
+  "pending_confirmation": true,
+  "pending_confirmation_started_at": "2026-03-24T19:53:53+00:00",
+  "pending_confirmation_deadline_at": "2026-03-25T07:53:53+00:00",
+  "followup_kind": "awaiting_aws_confirmation",
+  "last_observed_at": "2026-03-26T00:45:44.902000+00:00",
+  "updated_at_db": "2026-03-26T03:21:50.738507+00:00"
+}

@@ -1,0 +1,110 @@
+[
+  {
+    "id": "0b87839b-28f5-4150-af26-74cf2b1af3a3",
+    "target_id": "696505809372|eu-north-1|arn:aws:s3:::security-autopilot-w6-envready-s315-exec-696505809372|S3.2",
+    "recommended_profile_id": "s3_bucket_block_public_access_standard",
+    "blocked_reasons": [],
+    "apply_time_merge": false,
+    "public_policy_scrub_available": false,
+    "website_configured": false,
+    "website_configuration_captured": false,
+    "existing_bucket_policy_capture_error": null,
+    "selected_branch": "s3_bucket_block_public_access_standard"
+  },
+  {
+    "id": "352ac9b2-d343-40ac-b427-4c4f285615ef",
+    "target_id": "696505809372|eu-north-1|arn:aws:s3:::security-autopilot-w6-envready-s311-review-696505809372|S3.2",
+    "recommended_profile_id": "s3_bucket_block_public_access_manual_preservation",
+    "blocked_reasons": [
+      "Bucket website hosting is enabled; use the manual preservation path before enforcing Block Public Access."
+    ],
+    "apply_time_merge": false,
+    "public_policy_scrub_available": false,
+    "website_configured": true,
+    "website_configuration_captured": true,
+    "existing_bucket_policy_capture_error": null,
+    "selected_branch": "s3_bucket_block_public_access_manual_preservation"
+  },
+  {
+    "id": "688f5ed0-9594-4df1-9883-cc17feca62f8",
+    "target_id": "696505809372|eu-north-1|arn:aws:s3:::sa-wi13-14-nopolicy-696505809372-20260328201935|S3.2",
+    "recommended_profile_id": "s3_bucket_block_public_access_standard",
+    "blocked_reasons": [],
+    "apply_time_merge": false,
+    "public_policy_scrub_available": false,
+    "website_configured": false,
+    "website_configuration_captured": false,
+    "existing_bucket_policy_capture_error": null,
+    "selected_branch": "s3_bucket_block_public_access_standard"
+  },
+  {
+    "id": "4a965fac-c139-46e3-8594-11058b1dfe24",
+    "target_id": "696505809372|eu-north-1|arn:aws:s3:::sa-wi7-seed-696505809372-20260328205857|S3.2",
+    "recommended_profile_id": "s3_bucket_block_public_access_manual_preservation",
+    "blocked_reasons": [
+      "Runtime evidence could not prove the bucket is private and website hosting is disabled."
+    ],
+    "apply_time_merge": false,
+    "public_policy_scrub_available": false,
+    "website_configured": null,
+    "website_configuration_captured": false,
+    "existing_bucket_policy_capture_error": null,
+    "selected_branch": "s3_bucket_block_public_access_manual_preservation"
+  },
+  {
+    "id": "5571e909-6491-4077-818e-5441ae0dc95d",
+    "target_id": "696505809372|eu-north-1|arn:aws:s3:::security-autopilot-access-logs-696505809372-r221001-access-logs|S3.2",
+    "recommended_profile_id": "s3_bucket_block_public_access_manual_preservation",
+    "blocked_reasons": [
+      "Runtime evidence could not prove the bucket is private and website hosting is disabled."
+    ],
+    "apply_time_merge": false,
+    "public_policy_scrub_available": false,
+    "website_configured": null,
+    "website_configuration_captured": false,
+    "existing_bucket_policy_capture_error": null,
+    "selected_branch": "s3_bucket_block_public_access_manual_preservation"
+  },
+  {
+    "id": "7522bc9f-5cab-4bad-908b-a382045f8d87",
+    "target_id": "696505809372|eu-north-1|arn:aws:s3:::phase2-wi1-lifecycle-696505809372-20260328224331|S3.2",
+    "recommended_profile_id": "s3_bucket_block_public_access_manual_preservation",
+    "blocked_reasons": [
+      "Runtime evidence could not prove the bucket is private and website hosting is disabled."
+    ],
+    "apply_time_merge": false,
+    "public_policy_scrub_available": false,
+    "website_configured": null,
+    "website_configuration_captured": false,
+    "existing_bucket_policy_capture_error": null,
+    "selected_branch": "s3_bucket_block_public_access_manual_preservation"
+  },
+  {
+    "id": "bdfa85bc-b3a3-4456-b8d9-9ed1dd895ad3",
+    "target_id": "696505809372|eu-north-1|arn:aws:s3:::sa-wi5-site-696505809372-20260328t164043z|S3.2",
+    "recommended_profile_id": "s3_bucket_block_public_access_manual_preservation",
+    "blocked_reasons": [
+      "Runtime evidence could not prove the bucket is private and website hosting is disabled."
+    ],
+    "apply_time_merge": false,
+    "public_policy_scrub_available": false,
+    "website_configured": null,
+    "website_configuration_captured": false,
+    "existing_bucket_policy_capture_error": null,
+    "selected_branch": "s3_bucket_block_public_access_manual_preservation"
+  },
+  {
+    "id": "cdb53f5c-8701-497d-a866-4256cddd9d66",
+    "target_id": "696505809372|eu-north-1|arn:aws:s3:::ocypheris-live-ct-20260328t181200z-eu-north-1|S3.2",
+    "recommended_profile_id": "s3_bucket_block_public_access_manual_preservation",
+    "blocked_reasons": [
+      "Runtime evidence could not prove the bucket is private and website hosting is disabled."
+    ],
+    "apply_time_merge": false,
+    "public_policy_scrub_available": false,
+    "website_configured": null,
+    "website_configuration_captured": false,
+    "existing_bucket_policy_capture_error": null,
+    "selected_branch": "s3_bucket_block_public_access_manual_preservation"
+  }
+]

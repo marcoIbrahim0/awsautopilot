@@ -1,0 +1,1 @@
+psql: error: connection to server at "ep-square-queen-agyb78gw-pooler.c-2.eu-central-1.aws.neon.tech" (3.69.34.233), port 5432 failed: ERROR:  Your project has exceeded the data transfer quota. Upgrade your plan to increase limits.

@@ -7,8 +7,8 @@ Phase-2 semantics:
 """
 from __future__ import annotations
 
-import logging
 import json
+import logging
 import uuid
 from datetime import datetime, timezone
 
@@ -18,6 +18,7 @@ from botocore.exceptions import ClientError
 from backend.models import AwsAccount
 from backend.models.action_finding import ActionFinding
 from backend.models.finding import Finding
+from backend.services.action_engine import compute_actions_for_tenant
 from backend.services.action_run_confirmation import reevaluate_confirmation_for_actions
 from backend.services.canonicalization import build_resource_key, canonicalize_control_id
 from backend.services.tenant_reconciliation import (
@@ -117,6 +118,7 @@ def execute_reconcile_inventory_shard_job(job: dict) -> None:
 
     changed_status = 0
     impacted_action_ids: set[uuid.UUID] = set()
+    compute_result: dict[str, int] | None = None
     try:
         source = (settings.CONTROL_PLANE_SOURCE or "").strip() or "event_monitor_shadow"
         reconcile_time = _utcnow()
@@ -214,6 +216,24 @@ def execute_reconcile_inventory_shard_job(job: dict) -> None:
                     len(impacted_action_ids),
                 )
 
+            if changed_status:
+                compute_result = compute_actions_for_tenant(
+                    session,
+                    tenant_id,
+                    account_id=account_id,
+                    region=region,
+                )
+                logger.info(
+                    "reconcile_inventory_shard immediate compute tenant_id=%s account_id=%s region=%s resolved=%d reopened=%d updated=%d created=%d",
+                    tenant_id,
+                    account_id,
+                    region,
+                    int((compute_result or {}).get("actions_resolved") or 0),
+                    int((compute_result or {}).get("actions_reopened_with_open_findings") or 0),
+                    int((compute_result or {}).get("actions_updated") or 0),
+                    int((compute_result or {}).get("actions_created") or 0),
+                )
+
             logger.info(
                 "reconcile_inventory_shard complete tenant_id=%s account_id=%s region=%s service=%s sweep_mode=%s "
                 "snapshots=%d assets_created=%d assets_changed=%d evaluations=%d applied=%d changed_status=%d",
@@ -245,9 +265,9 @@ def execute_reconcile_inventory_shard_job(job: dict) -> None:
                 )
         raise
 
-    # When control-plane is authoritative, reconciliation can flip canonical finding.status.
+    # Reconciliation can change effective finding state through canonical or shadow overlays.
     # Enqueue compute_actions so Actions reflect the latest finding state without manual recompute.
-    if not settings.CONTROL_PLANE_SHADOW_MODE and changed_status and settings.has_ingest_queue:
+    if changed_status and settings.has_ingest_queue:
         try:
             queue_url = settings.SQS_INGEST_QUEUE_URL.strip()
             queue_region = parse_queue_region(queue_url)

@@ -1,0 +1,19 @@
+{
+  "removed_statement_count": {
+    "sensitive": false,
+    "type": "number",
+    "value": 1
+  },
+  "removed_statement_identifiers": {
+    "sensitive": false,
+    "type": [
+      "tuple",
+      [
+        "string"
+      ]
+    ],
+    "value": [
+      "AllowPublicReadForGate3WI10"
+    ]
+  }
+}

@@ -1,0 +1,12 @@
+{
+  "action_id": "352ac9b2-d343-40ac-b427-4c4f285615ef",
+  "mode": "pr_only",
+  "strategy_id": "s3_migrate_website_cloudfront_private",
+  "strategy_inputs": {
+    "aliases": ["wi5-gate3-696505809372.ocypheris.com"],
+    "route53_hosted_zone_id": "Z081885955B6GUR4IL7E",
+    "acm_certificate_arn": "arn:aws:acm:us-east-1:696505809372:certificate/509785ff-eef1-4071-bddc-d275f1dfa6ed",
+    "price_class": "PriceClass_100"
+  },
+  "risk_acknowledged": true
+}

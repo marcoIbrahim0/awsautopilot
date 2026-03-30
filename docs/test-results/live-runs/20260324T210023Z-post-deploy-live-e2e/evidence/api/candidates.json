@@ -1,0 +1,354 @@
+[
+  {
+    "tenant_id": "c3351a02-0bc2-4449-beed-d59d7ac937d0",
+    "action_type": "iam_root_access_key_absent",
+    "account_id": "696505809372",
+    "region": "eu-north-1",
+    "status": "open",
+    "total_actions": 2,
+    "action_ids": [
+      "d9afee5d-a4dc-4a56-bb36-c3d7df484d2d",
+      "d9afee5d-a4dc-4a56-bb36-c3d7df484d2d"
+    ],
+    "representative_action_id": "d9afee5d-a4dc-4a56-bb36-c3d7df484d2d",
+    "control_ids": [
+      "IAM.4"
+    ],
+    "not_run_yet": 2,
+    "run_not_successful": 0,
+    "needs_followup": 0,
+    "metadata_only": 0,
+    "confirmed": 0,
+    "latest_artifacts": null,
+    "latest_run_id": null
+  },
+  {
+    "tenant_id": "c3351a02-0bc2-4449-beed-d59d7ac937d0",
+    "action_type": "s3_bucket_access_logging",
+    "account_id": "696505809372",
+    "region": "eu-north-1",
+    "status": "open",
+    "total_actions": 14,
+    "action_ids": [
+      "dcd9aac0-3205-4c1f-a360-8be492ac384f",
+      "1dc612d8-1930-4920-bb11-6ad8ba4fe26b",
+      "4d6a1520-3ed5-4f47-857e-e6bb8ce61606",
+      "e03f9f63-e895-46a3-93b3-76c16a0a6ee5",
+      "01557e04-8980-4554-8c32-5a7e78d3cbf3",
+      "e8ae2a41-9a3f-43c0-8d89-e574311bf148",
+      "0b75c532-0a94-407b-8174-0ae8c85f23f5",
+      "6069ec49-a8b1-47df-ace8-153c110cd984",
+      "e7eb463d-7108-4dff-ba5a-7ba8f2266142",
+      "3dd66962-2bef-4caa-9627-2f056ebabbd7",
+      "e9ca4a12-90e8-4312-82ec-fadfea82a7ce",
+      "501021f0-ee39-4692-95c1-1d7c07134c71",
+      "4d81e63b-04e6-4909-978a-e779d63ae721",
+      "0c490240-f3b5-42b2-94ce-010ae67bd79f"
+    ],
+    "representative_action_id": "dcd9aac0-3205-4c1f-a360-8be492ac384f",
+    "control_ids": [
+      "S3.9"
+    ],
+    "not_run_yet": 14,
+    "run_not_successful": 0,
+    "needs_followup": 0,
+    "metadata_only": 0,
+    "confirmed": 0,
+    "latest_artifacts": null,
+    "latest_run_id": null
+  },
+  {
+    "tenant_id": "c3351a02-0bc2-4449-beed-d59d7ac937d0",
+    "action_type": "s3_bucket_block_public_access",
+    "account_id": "696505809372",
+    "region": "eu-north-1",
+    "status": "open",
+    "total_actions": 6,
+    "action_ids": [
+      "c1a8dbfb-67f0-4656-bf8e-6f95b3bc04a0",
+      "c1a8dbfb-67f0-4656-bf8e-6f95b3bc04a0",
+      "c1a8dbfb-67f0-4656-bf8e-6f95b3bc04a0",
+      "b0ec883a-f08d-4480-a5f6-807446f9ad8b",
+      "b0ec883a-f08d-4480-a5f6-807446f9ad8b",
+      "b0ec883a-f08d-4480-a5f6-807446f9ad8b"
+    ],
+    "representative_action_id": "c1a8dbfb-67f0-4656-bf8e-6f95b3bc04a0",
+    "control_ids": [
+      "S3.2"
+    ],
+    "not_run_yet": 6,
+    "run_not_successful": 0,
+    "needs_followup": 0,
+    "metadata_only": 0,
+    "confirmed": 0,
+    "latest_artifacts": null,
+    "latest_run_id": null
+  },
+  {
+    "tenant_id": "c3351a02-0bc2-4449-beed-d59d7ac937d0",
+    "action_type": "s3_bucket_lifecycle_configuration",
+    "account_id": "696505809372",
+    "region": "eu-north-1",
+    "status": "open",
+    "total_actions": 13,
+    "action_ids": [
+      "53cda243-1815-4864-8cc3-f3e1535a4ff1",
+      "a57bd4fc-c54f-4965-baa9-a675d386a043",
+      "7be937c3-8b96-413e-881b-94118a699913",
+      "cbb438f0-4e9a-489e-b7cf-2ef5dd95edf3",
+      "6a75c127-7fcb-4320-b54b-dbe856f727c6",
+      "d5f1fd68-4ae6-46b1-8ddf-33f168eeed8c",
+      "4e5dc9e9-0763-45f4-a601-1bfd54c83038",
+      "0361bcde-869c-4b55-913d-ed8bea424a7e",
+      "c81bf06a-bf7a-42d6-b154-8c1a97739781",
+      "d42826b3-0611-4b29-a27a-726c53c00a50",
+      "42eef23b-f9ba-4381-b8af-028529231a84",
+      "88c01f62-9a6b-4bd6-9e1f-eb7592845ce2",
+      "50b7681f-6f96-45f7-bb75-06cb8bb9074d"
+    ],
+    "representative_action_id": "53cda243-1815-4864-8cc3-f3e1535a4ff1",
+    "control_ids": [
+      "S3.11"
+    ],
+    "not_run_yet": 13,
+    "run_not_successful": 0,
+    "needs_followup": 0,
+    "metadata_only": 0,
+    "confirmed": 0,
+    "latest_artifacts": null,
+    "latest_run_id": null
+  },
+  {
+    "tenant_id": "c3351a02-0bc2-4449-beed-d59d7ac937d0",
+    "action_type": "s3_bucket_require_ssl",
+    "account_id": "696505809372",
+    "region": "eu-north-1",
+    "status": "open",
+    "total_actions": 3,
+    "action_ids": [
+      "4fc6db43-ea06-4afc-a670-2ca8d0495070",
+      "b9d3ffd9-6193-48ba-a02d-5835b1c120ad",
+      "1e453177-31da-47ec-bfce-796fcebc9e4b"
+    ],
+    "representative_action_id": "4fc6db43-ea06-4afc-a670-2ca8d0495070",
+    "control_ids": [
+      "S3.5"
+    ],
+    "not_run_yet": 3,
+    "run_not_successful": 0,
+    "needs_followup": 0,
+    "metadata_only": 0,
+    "confirmed": 0,
+    "latest_artifacts": null,
+    "latest_run_id": null
+  },
+  {
+    "tenant_id": "c3351a02-0bc2-4449-beed-d59d7ac937d0",
+    "action_type": "sg_restrict_public_ports",
+    "account_id": "696505809372",
+    "region": "eu-north-1",
+    "status": "open",
+    "total_actions": 11,
+    "action_ids": [
+      "6f3dd905-6941-4742-aff4-96f262d8948d",
+      "6f3dd905-6941-4742-aff4-96f262d8948d",
+      "75d10e83-0907-4a6a-af2a-0356b45172ad",
+      "6f3dd905-6941-4742-aff4-96f262d8948d",
+      "6f3dd905-6941-4742-aff4-96f262d8948d",
+      "75d10e83-0907-4a6a-af2a-0356b45172ad",
+      "75d10e83-0907-4a6a-af2a-0356b45172ad",
+      "df16aa74-7a65-4e30-b5ee-688853936ae2",
+      "719d9e88-e83c-4fab-9f25-29cd6bae10a7",
+      "df16aa74-7a65-4e30-b5ee-688853936ae2",
+      "719d9e88-e83c-4fab-9f25-29cd6bae10a7"
+    ],
+    "representative_action_id": "6f3dd905-6941-4742-aff4-96f262d8948d",
+    "control_ids": [
+      "EC2.53"
+    ],
+    "not_run_yet": 11,
+    "run_not_successful": 0,
+    "needs_followup": 0,
+    "metadata_only": 0,
+    "confirmed": 0,
+    "latest_artifacts": null,
+    "latest_run_id": null
+  },
+  {
+    "tenant_id": "c3351a02-0bc2-4449-beed-d59d7ac937d0",
+    "action_type": "ssm_block_public_sharing",
+    "account_id": "696505809372",
+    "region": "eu-north-1",
+    "status": "open",
+    "total_actions": 2,
+    "action_ids": [
+      "a3447ad4-fd6f-45c4-8258-f4d4d6cba70a",
+      "a3447ad4-fd6f-45c4-8258-f4d4d6cba70a"
+    ],
+    "representative_action_id": "a3447ad4-fd6f-45c4-8258-f4d4d6cba70a",
+    "control_ids": [
+      "SSM.7"
+    ],
+    "not_run_yet": 2,
+    "run_not_successful": 0,
+    "needs_followup": 0,
+    "metadata_only": 0,
+    "confirmed": 0,
+    "latest_artifacts": null,
+    "latest_run_id": null
+  },
+  {
+    "tenant_id": "c3351a02-0bc2-4449-beed-d59d7ac937d0",
+    "action_type": "ebs_default_encryption",
+    "account_id": "696505809372",
+    "region": "us-east-1",
+    "status": "open",
+    "total_actions": 1,
+    "action_ids": [
+      "cdbe5eda-ae70-4d31-815c-35fce06c1596"
+    ],
+    "representative_action_id": "cdbe5eda-ae70-4d31-815c-35fce06c1596",
+    "control_ids": [
+      "EC2.7"
+    ],
+    "not_run_yet": 1,
+    "run_not_successful": 0,
+    "needs_followup": 0,
+    "metadata_only": 0,
+    "confirmed": 0,
+    "latest_artifacts": null,
+    "latest_run_id": null
+  },
+  {
+    "tenant_id": "c3351a02-0bc2-4449-beed-d59d7ac937d0",
+    "action_type": "enable_guardduty",
+    "account_id": "696505809372",
+    "region": "us-east-1",
+    "status": "open",
+    "total_actions": 1,
+    "action_ids": [
+      "7555c02e-ed92-4674-b6f3-2b02b52150ee"
+    ],
+    "representative_action_id": "7555c02e-ed92-4674-b6f3-2b02b52150ee",
+    "control_ids": [
+      "GUARDDUTY.1"
+    ],
+    "not_run_yet": 1,
+    "run_not_successful": 0,
+    "needs_followup": 0,
+    "metadata_only": 0,
+    "confirmed": 0,
+    "latest_artifacts": null,
+    "latest_run_id": null
+  },
+  {
+    "tenant_id": "c3351a02-0bc2-4449-beed-d59d7ac937d0",
+    "action_type": "iam_root_access_key_absent",
+    "account_id": "696505809372",
+    "region": "us-east-1",
+    "status": "open",
+    "total_actions": 1,
+    "action_ids": [
+      "f0e4cb02-4594-4619-ab51-d6956185975b"
+    ],
+    "representative_action_id": "f0e4cb02-4594-4619-ab51-d6956185975b",
+    "control_ids": [
+      "IAM.4"
+    ],
+    "not_run_yet": 1,
+    "run_not_successful": 0,
+    "needs_followup": 0,
+    "metadata_only": 0,
+    "confirmed": 0,
+    "latest_artifacts": null,
+    "latest_run_id": null
+  },
+  {
+    "tenant_id": "c3351a02-0bc2-4449-beed-d59d7ac937d0",
+    "action_type": "s3_block_public_access",
+    "account_id": "696505809372",
+    "region": "us-east-1",
+    "status": "open",
+    "total_actions": 1,
+    "action_ids": [
+      "4736ed63-fa17-45ea-ab33-5b7c514b31f4"
+    ],
+    "representative_action_id": "4736ed63-fa17-45ea-ab33-5b7c514b31f4",
+    "control_ids": [
+      "S3.1"
+    ],
+    "not_run_yet": 1,
+    "run_not_successful": 0,
+    "needs_followup": 0,
+    "metadata_only": 0,
+    "confirmed": 0,
+    "latest_artifacts": null,
+    "latest_run_id": null
+  },
+  {
+    "tenant_id": "c3351a02-0bc2-4449-beed-d59d7ac937d0",
+    "action_type": "s3_bucket_access_logging",
+    "account_id": "696505809372",
+    "region": "us-east-1",
+    "status": "open",
+    "total_actions": 1,
+    "action_ids": [
+      "c6c920fd-b9f6-4015-8ede-a072d5ad22c5"
+    ],
+    "representative_action_id": "c6c920fd-b9f6-4015-8ede-a072d5ad22c5",
+    "control_ids": [
+      "S3.9"
+    ],
+    "not_run_yet": 1,
+    "run_not_successful": 0,
+    "needs_followup": 0,
+    "metadata_only": 0,
+    "confirmed": 0,
+    "latest_artifacts": null,
+    "latest_run_id": null
+  },
+  {
+    "tenant_id": "c3351a02-0bc2-4449-beed-d59d7ac937d0",
+    "action_type": "s3_bucket_lifecycle_configuration",
+    "account_id": "696505809372",
+    "region": "us-east-1",
+    "status": "open",
+    "total_actions": 1,
+    "action_ids": [
+      "e6b552a4-4461-4de5-9a7b-15ff0a1b4485"
+    ],
+    "representative_action_id": "e6b552a4-4461-4de5-9a7b-15ff0a1b4485",
+    "control_ids": [
+      "S3.11"
+    ],
+    "not_run_yet": 1,
+    "run_not_successful": 0,
+    "needs_followup": 0,
+    "metadata_only": 0,
+    "confirmed": 0,
+    "latest_artifacts": null,
+    "latest_run_id": null
+  },
+  {
+    "tenant_id": "c3351a02-0bc2-4449-beed-d59d7ac937d0",
+    "action_type": "s3_bucket_require_ssl",
+    "account_id": "696505809372",
+    "region": "us-east-1",
+    "status": "open",
+    "total_actions": 1,
+    "action_ids": [
+      "ebc71992-6c74-415e-9637-4ec1984c5322"
+    ],
+    "representative_action_id": "ebc71992-6c74-415e-9637-4ec1984c5322",
+    "control_ids": [
+      "S3.5"
+    ],
+    "not_run_yet": 1,
+    "run_not_successful": 0,
+    "needs_followup": 0,
+    "metadata_only": 0,
+    "confirmed": 0,
+    "latest_artifacts": null,
+    "latest_run_id": null
+  }
+]

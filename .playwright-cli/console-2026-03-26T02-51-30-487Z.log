@@ -1,0 +1,3 @@
+[    7914ms] [ERROR] Failed to load resource: the server responded with a status of 401 () @ https://api.ocypheris.com/api/auth/me:0
+[  130919ms] [ERROR] Failed to load resource: the server responded with a status of 403 () @ https://api.ocypheris.com/api/auth/login:0
+[  164309ms] [ERROR] Failed to load resource: the server responded with a status of 401 () @ https://api.ocypheris.com/api/auth/login:0

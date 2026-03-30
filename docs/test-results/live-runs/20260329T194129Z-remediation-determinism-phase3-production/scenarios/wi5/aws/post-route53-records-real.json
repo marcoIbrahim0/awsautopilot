@@ -1,0 +1,61 @@
+{
+    "ResourceRecordSets": [
+        {
+            "Name": "wi5-gate3-696505809372.ocypheris.com.",
+            "Type": "A",
+            "AliasTarget": {
+                "HostedZoneId": "Z2FDTNDATAQYW2",
+                "DNSName": "dxxm59bao95gt.cloudfront.net.",
+                "EvaluateTargetHealth": false
+            }
+        },
+        {
+            "Name": "wi5-gate3-696505809372.ocypheris.com.",
+            "Type": "AAAA",
+            "AliasTarget": {
+                "HostedZoneId": "Z2FDTNDATAQYW2",
+                "DNSName": "dxxm59bao95gt.cloudfront.net.",
+                "EvaluateTargetHealth": false
+            }
+        },
+        {
+            "Name": "wi5-gate3-696505809372.ocypheris.com.",
+            "Type": "NS",
+            "TTL": 172800,
+            "ResourceRecords": [
+                {
+                    "Value": "ns-1780.awsdns-30.co.uk."
+                },
+                {
+                    "Value": "ns-47.awsdns-05.com."
+                },
+                {
+                    "Value": "ns-1270.awsdns-30.org."
+                },
+                {
+                    "Value": "ns-1018.awsdns-63.net."
+                }
+            ]
+        },
+        {
+            "Name": "wi5-gate3-696505809372.ocypheris.com.",
+            "Type": "SOA",
+            "TTL": 900,
+            "ResourceRecords": [
+                {
+                    "Value": "ns-1780.awsdns-30.co.uk. awsdns-hostmaster.amazon.com. 1 7200 900 1209600 86400"
+                }
+            ]
+        },
+        {
+            "Name": "_b1ce87aef1c13e39692e78e5918d8077.wi5-gate3-696505809372.ocypheris.com.",
+            "Type": "CNAME",
+            "TTL": 300,
+            "ResourceRecords": [
+                {
+                    "Value": "_1d3156031ecd2e78d7a69bb88b75b7fe.jkddzztszm.acm-validations.aws."
+                }
+            ]
+        }
+    ]
+}

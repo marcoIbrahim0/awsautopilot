@@ -1,0 +1,839 @@
+{
+  "artifact_type": "provider_agnostic_pr_payload",
+  "body_markdown": "## Summary\n\n- Repository: `e2e/live-s3-9-shared-setup`\n- Base branch: `main`\n- Head branch: `autopilot/s3-9-shared-setup-20260325t0219z`\n- Repo root path: `terraform/s3`\n- Action: `S3.9` \u00b7 `696505809372` \u00b7 `696505809372|eu-north-1|arn:aws:s3:::config-bucket-696505809372|S3.9`\n- Action: `S3.9` \u00b7 `696505809372` \u00b7 `696505809372|eu-north-1|arn:aws:s3:::security-autopilot-w6-strict-s311-manual-696505809372|S3.9`\n- Action: `S3.9` \u00b7 `696505809372` \u00b7 `696505809372|eu-north-1|arn:aws:s3:::security-autopilot-w6-envready-accesslogs-696505809372|S3.9`\n- Action: `S3.9` \u00b7 `696505809372` \u00b7 `696505809372|eu-north-1|arn:aws:s3:::security-autopilot-w6-strict-s315-manual-696505809372|S3.9`\n- Action: `S3.9` \u00b7 `696505809372` \u00b7 `696505809372|eu-north-1|arn:aws:s3:::security-autopilot-config-696505809372-eu-north-1|S3.9`\n- Action: `S3.9` \u00b7 `696505809372` \u00b7 `696505809372|eu-north-1|arn:aws:s3:::security-autopilot-w6-envready-config-696505809372|S3.9`\n- Action: `S3.9` \u00b7 `696505809372` \u00b7 `696505809372|eu-north-1|arn:aws:s3:::security-autopilot-w6-envready-s311-exec-696505809372|S3.9`\n- Action: `S3.9` \u00b7 `696505809372` \u00b7 `696505809372|eu-north-1|arn:aws:s3:::security-autopilot-w6-strict-s315-exec-696505809372|S3.9`\n- Action: `S3.9` \u00b7 `696505809372` \u00b7 `696505809372|eu-north-1|arn:aws:s3:::security-autopilot-w6-envready-cloudtrail-696505809372|S3.9`\n- Action: `S3.9` \u00b7 `696505809372` \u00b7 `696505809372|eu-north-1|arn:aws:s3:::ocypheris-live-ct-20260323162333-eu-north-1|S3.9`\n\n## Generated diff\n\n- Fingerprint: `cf41d25b84cdd9a2cc2301519e84511f33a3ac18c35cc45da1d0ca2e776642a7`\n- File count: `77`\n- `terraform/s3/run_all.sh` <- `run_all.sh` (103 lines, sha256:266d4161fa30)\n- `terraform/s3/replay_group_run_reports.sh` <- `replay_group_run_reports.sh` (54 lines, sha256:722cb6d7017b)\n- `terraform/s3/run_actions.sh` <- `run_actions.sh` (409 lines, sha256:611cdb62cfd5)\n- `terraform/s3/README_GROUP.txt` <- `README_GROUP.txt` (36 lines, sha256:f381de2dd4b8)\n- `terraform/s3/bundle_manifest.json` <- `bundle_manifest.json` (780 lines, sha256:b0522df39820)\n- `terraform/s3/decision_log.md` <- `decision_log.md` (100 lines, sha256:70445f83ca5f)\n- `terraform/s3/finding_coverage.json` <- `finding_coverage.json` (75 lines, sha256:ca0d5f3407b2)\n- `terraform/s3/executable/actions/00-shared-01-security-autopilot-access-logs-696505809/providers.tf` <- `executable/actions/00-shared-01-security-autopilot-access-logs-696505809/providers.tf` (18 lines, sha256:9a0536e0e979)\n- `terraform/s3/executable/actions/00-shared-01-security-autopilot-access-logs-696505809/s3_access_logging_shared_destination.tf` <- `executable/actions/00-shared-01-security-autopilot-access-logs-696505809/s3_access_logging_shared_destination.tf` (110 lines, sha256:c2bed14bb59e)\n- `terraform/s3/executable/actions/00-shared-01-security-autopilot-access-logs-696505809/README_SHARED.txt` <- `executable/actions/00-shared-01-security-autopilot-access-logs-696505809/README_SHARED.txt` (4 lines, sha256:55ccabedbc3b)\n\n## Rollback\n\n- Recommended path: Prefer reverting through version control and the same reviewed deployment workflow.\n- S3 general purpose buckets should have server access logging enabled: `aws s3api put-bucket-logging --bucket config-bucket-696505809372 --bucket-logging-status '{}'`\n- S3 general purpose buckets should have server access logging enabled: `aws s3api put-bucket-logging --bucket security-autopilot-w6-strict-s311-manual-696505809372 --bucket-logging-status '{}'`\n- S3 general purpose buckets should have server access logging enabled: `aws s3api put-bucket-logging --bucket security-autopilot-w6-envready-accesslogs-696505809372 --bucket-logging-status '{}'`\n- S3 general purpose buckets should have server access logging enabled: `aws s3api put-bucket-logging --bucket security-autopilot-w6-strict-s315-manual-696505809372 --bucket-logging-status '{}'`\n- S3 general purpose buckets should have server access logging enabled: `aws s3api put-bucket-logging --bucket security-autopilot-config-696505809372-eu-north-1 --bucket-logging-status '{}'`\n- S3 general purpose buckets should have server access logging enabled: `aws s3api put-bucket-logging --bucket security-autopilot-w6-envready-config-696505809372 --bucket-logging-status '{}'`\n- S3 general purpose buckets should have server access logging enabled: `aws s3api put-bucket-logging --bucket security-autopilot-w6-envready-s311-exec-696505809372 --bucket-logging-status '{}'`\n- S3 general purpose buckets should have server access logging enabled: `aws s3api put-bucket-logging --bucket security-autopilot-w6-strict-s315-exec-696505809372 --bucket-logging-status '{}'`\n- S3 general purpose buckets should have server access logging enabled: `aws s3api put-bucket-logging --bucket security-autopilot-w6-envready-cloudtrail-696505809372 --bucket-logging-status '{}'`\n- S3 general purpose buckets should have server access logging enabled: `aws s3api put-bucket-logging --bucket ocypheris-live-ct-20260323162333-eu-north-1 --bucket-logging-status '{}'`\n\n## Control mapping context\n\n- Control IDs: `S3.9`",
+  "commit_message": "Apply AWS Security Autopilot remediation bundle (14 actions)",
+  "diff_metadata": {
+    "artifact_type": "generated_diff_summary",
+    "file_count": 77,
+    "files": [
+      {
+        "bundle_path": "run_all.sh",
+        "byte_count": 11649,
+        "change_type": "create_or_update",
+        "content_sha256": "266d4161fa30f5bfb2a169dc406952a4890130286e5c6cb6c837db1abe4abbb2",
+        "line_count": 103,
+        "repo_path": "terraform/s3/run_all.sh"
+      },
+      {
+        "bundle_path": "replay_group_run_reports.sh",
+        "byte_count": 1521,
+        "change_type": "create_or_update",
+        "content_sha256": "722cb6d7017b682c0f4c44153d15e7e4a9918cfc102cf87fa92fef591f5dbd4f",
+        "line_count": 54,
+        "repo_path": "terraform/s3/replay_group_run_reports.sh"
+      },
+      {
+        "bundle_path": "run_actions.sh",
+        "byte_count": 11759,
+        "change_type": "create_or_update",
+        "content_sha256": "611cdb62cfd5526780e3e903fa18a88693f0f6cb631dceb97ba450ada38981bb",
+        "line_count": 409,
+        "repo_path": "terraform/s3/run_actions.sh"
+      },
+      {
+        "bundle_path": "README_GROUP.txt",
+        "byte_count": 3316,
+        "change_type": "create_or_update",
+        "content_sha256": "f381de2dd4b8dfda88489976610ae77687ab2c71633680c5ebb2521f2acb0f4d",
+        "line_count": 36,
+        "repo_path": "terraform/s3/README_GROUP.txt"
+      },
+      {
+        "bundle_path": "bundle_manifest.json",
+        "byte_count": 45219,
+        "change_type": "create_or_update",
+        "content_sha256": "b0522df3982098f0d78bc781624349f3ef81c3376532d692fc32e7ad9d02e9e0",
+        "line_count": 780,
+        "repo_path": "terraform/s3/bundle_manifest.json"
+      },
+      {
+        "bundle_path": "decision_log.md",
+        "byte_count": 8553,
+        "change_type": "create_or_update",
+        "content_sha256": "70445f83ca5fb940dde4c0cafc8fb984a6170c00d66f428d7aeb90522f6d617f",
+        "line_count": 100,
+        "repo_path": "terraform/s3/decision_log.md"
+      },
+      {
+        "bundle_path": "finding_coverage.json",
+        "byte_count": 2134,
+        "change_type": "create_or_update",
+        "content_sha256": "ca0d5f3407b210649b29668d5b3a30d284253e7909be44842c69730c40396edc",
+        "line_count": 75,
+        "repo_path": "terraform/s3/finding_coverage.json"
+      },
+      {
+        "bundle_path": "executable/actions/00-shared-01-security-autopilot-access-logs-696505809/providers.tf",
+        "byte_count": 479,
+        "change_type": "create_or_update",
+        "content_sha256": "9a0536e0e9790c63a892e3b288fc6b299b5f7a1ea52e004cf4a0a8833e7227f3",
+        "line_count": 18,
+        "repo_path": "terraform/s3/executable/actions/00-shared-01-security-autopilot-access-logs-696505809/providers.tf"
+      },
+      {
+        "bundle_path": "executable/actions/00-shared-01-security-autopilot-access-logs-696505809/s3_access_logging_shared_destination.tf",
+        "byte_count": 3117,
+        "change_type": "create_or_update",
+        "content_sha256": "c2bed14bb59e2fe2621240e87b539f34f9ec0f3e158da154be290df33181a507",
+        "line_count": 110,
+        "repo_path": "terraform/s3/executable/actions/00-shared-01-security-autopilot-access-logs-696505809/s3_access_logging_shared_destination.tf"
+      },
+      {
+        "bundle_path": "executable/actions/00-shared-01-security-autopilot-access-logs-696505809/README_SHARED.txt",
+        "byte_count": 146,
+        "change_type": "create_or_update",
+        "content_sha256": "55ccabedbc3bcc743a4555493414c61c5f1c11a00fa5cb9047a99cd99d18d7f6",
+        "line_count": 4,
+        "repo_path": "terraform/s3/executable/actions/00-shared-01-security-autopilot-access-logs-696505809/README_SHARED.txt"
+      },
+      {
+        "bundle_path": "executable/actions/01-arn-aws-s3-config-bucket-696505809372-01557e04/providers.tf",
+        "byte_count": 479,
+        "change_type": "create_or_update",
+        "content_sha256": "9a0536e0e9790c63a892e3b288fc6b299b5f7a1ea52e004cf4a0a8833e7227f3",
+        "line_count": 18,
+        "repo_path": "terraform/s3/executable/actions/01-arn-aws-s3-config-bucket-696505809372-01557e04/providers.tf"
+      },
+      {
+        "bundle_path": "executable/actions/01-arn-aws-s3-config-bucket-696505809372-01557e04/s3_bucket_access_logging.tf",
+        "byte_count": 920,
+        "change_type": "create_or_update",
+        "content_sha256": "07eef9dd160af4c1f8916615e14ee2080af3490250b003a48148cae6731effaf",
+        "line_count": 30,
+        "repo_path": "terraform/s3/executable/actions/01-arn-aws-s3-config-bucket-696505809372-01557e04/s3_bucket_access_logging.tf"
+      },
+      {
+        "bundle_path": "executable/actions/01-arn-aws-s3-config-bucket-696505809372-01557e04/README.txt",
+        "byte_count": 902,
+        "change_type": "create_or_update",
+        "content_sha256": "66fa71b65c66f1fab33655a9d21470a5a851d8efd17daec81f14726db2febd1d",
+        "line_count": 23,
+        "repo_path": "terraform/s3/executable/actions/01-arn-aws-s3-config-bucket-696505809372-01557e04/README.txt"
+      },
+      {
+        "bundle_path": "executable/actions/01-arn-aws-s3-config-bucket-696505809372-01557e04/README_ACTION.txt",
+        "byte_count": 725,
+        "change_type": "create_or_update",
+        "content_sha256": "12952bd13fd37769a90a3f9c53d9bf95e172c13dd0a197f2d9c85debb3cfb0fc",
+        "line_count": 12,
+        "repo_path": "terraform/s3/executable/actions/01-arn-aws-s3-config-bucket-696505809372-01557e04/README_ACTION.txt"
+      },
+      {
+        "bundle_path": "executable/actions/01-arn-aws-s3-config-bucket-696505809372-01557e04/decision.json",
+        "byte_count": 2820,
+        "change_type": "create_or_update",
+        "content_sha256": "8f694017c81c80671652d43321d4125af220bae2f7380249545811c354e64887",
+        "line_count": 52,
+        "repo_path": "terraform/s3/executable/actions/01-arn-aws-s3-config-bucket-696505809372-01557e04/decision.json"
+      },
+      {
+        "bundle_path": "executable/actions/02-arn-aws-s3-security-autopilot-w6-strict-s311-man-0b75c532/providers.tf",
+        "byte_count": 479,
+        "change_type": "create_or_update",
+        "content_sha256": "9a0536e0e9790c63a892e3b288fc6b299b5f7a1ea52e004cf4a0a8833e7227f3",
+        "line_count": 18,
+        "repo_path": "terraform/s3/executable/actions/02-arn-aws-s3-security-autopilot-w6-strict-s311-man-0b75c532/providers.tf"
+      },
+      {
+        "bundle_path": "executable/actions/02-arn-aws-s3-security-autopilot-w6-strict-s311-man-0b75c532/s3_bucket_access_logging.tf",
+        "byte_count": 974,
+        "change_type": "create_or_update",
+        "content_sha256": "63081dba230e1d28ac5cf938da9757ad40c4958e030a1321486048047c51cb18",
+        "line_count": 30,
+        "repo_path": "terraform/s3/executable/actions/02-arn-aws-s3-security-autopilot-w6-strict-s311-man-0b75c532/s3_bucket_access_logging.tf"
+      },
+      {
+        "bundle_path": "executable/actions/02-arn-aws-s3-security-autopilot-w6-strict-s311-man-0b75c532/README.txt",
+        "byte_count": 902,
+        "change_type": "create_or_update",
+        "content_sha256": "66fa71b65c66f1fab33655a9d21470a5a851d8efd17daec81f14726db2febd1d",
+        "line_count": 23,
+        "repo_path": "terraform/s3/executable/actions/02-arn-aws-s3-security-autopilot-w6-strict-s311-man-0b75c532/README.txt"
+      },
+      {
+        "bundle_path": "executable/actions/02-arn-aws-s3-security-autopilot-w6-strict-s311-man-0b75c532/README_ACTION.txt",
+        "byte_count": 725,
+        "change_type": "create_or_update",
+        "content_sha256": "f58acd5a1cb959f0bdfa9aa2d73888569ae1f6f06400c792a54960abd69fe703",
+        "line_count": 12,
+        "repo_path": "terraform/s3/executable/actions/02-arn-aws-s3-security-autopilot-w6-strict-s311-man-0b75c532/README_ACTION.txt"
+      },
+      {
+        "bundle_path": "executable/actions/02-arn-aws-s3-security-autopilot-w6-strict-s311-man-0b75c532/decision.json",
+        "byte_count": 2885,
+        "change_type": "create_or_update",
+        "content_sha256": "6dc9651a499c6cac578439dff5c7701562f025fef2cf11ca0a5be4d195580de4",
+        "line_count": 52,
+        "repo_path": "terraform/s3/executable/actions/02-arn-aws-s3-security-autopilot-w6-strict-s311-man-0b75c532/decision.json"
+      },
+      {
+        "bundle_path": "executable/actions/03-arn-aws-s3-security-autopilot-w6-envready-access-1dc612d8/providers.tf",
+        "byte_count": 479,
+        "change_type": "create_or_update",
+        "content_sha256": "9a0536e0e9790c63a892e3b288fc6b299b5f7a1ea52e004cf4a0a8833e7227f3",
+        "line_count": 18,
+        "repo_path": "terraform/s3/executable/actions/03-arn-aws-s3-security-autopilot-w6-envready-access-1dc612d8/providers.tf"
+      },
+      {
+        "bundle_path": "executable/actions/03-arn-aws-s3-security-autopilot-w6-envready-access-1dc612d8/s3_bucket_access_logging.tf",
+        "byte_count": 976,
+        "change_type": "create_or_update",
+        "content_sha256": "6cdacce72c25c003469010bc40521f3fe37c101785b14d76464c2237b76404a2",
+        "line_count": 30,
+        "repo_path": "terraform/s3/executable/actions/03-arn-aws-s3-security-autopilot-w6-envready-access-1dc612d8/s3_bucket_access_logging.tf"
+      },
+      {
+        "bundle_path": "executable/actions/03-arn-aws-s3-security-autopilot-w6-envready-access-1dc612d8/README.txt",
+        "byte_count": 902,
+        "change_type": "create_or_update",
+        "content_sha256": "66fa71b65c66f1fab33655a9d21470a5a851d8efd17daec81f14726db2febd1d",
+        "line_count": 23,
+        "repo_path": "terraform/s3/executable/actions/03-arn-aws-s3-security-autopilot-w6-envready-access-1dc612d8/README.txt"
+      },
+      {
+        "bundle_path": "executable/actions/03-arn-aws-s3-security-autopilot-w6-envready-access-1dc612d8/README_ACTION.txt",
+        "byte_count": 725,
+        "change_type": "create_or_update",
+        "content_sha256": "3ef02f9d47706d1d70cd929df7efa1609f38d6bea212a6229696925692d7e6d0",
+        "line_count": 12,
+        "repo_path": "terraform/s3/executable/actions/03-arn-aws-s3-security-autopilot-w6-envready-access-1dc612d8/README_ACTION.txt"
+      },
+      {
+        "bundle_path": "executable/actions/03-arn-aws-s3-security-autopilot-w6-envready-access-1dc612d8/decision.json",
+        "byte_count": 2887,
+        "change_type": "create_or_update",
+        "content_sha256": "a4d28b9791c074a4ad1adcaf54d50eae1a22fbb2cda6ec1578e5709b184a97aa",
+        "line_count": 52,
+        "repo_path": "terraform/s3/executable/actions/03-arn-aws-s3-security-autopilot-w6-envready-access-1dc612d8/decision.json"
+      },
+      {
+        "bundle_path": "executable/actions/04-arn-aws-s3-security-autopilot-w6-strict-s315-man-3dd66962/providers.tf",
+        "byte_count": 479,
+        "change_type": "create_or_update",
+        "content_sha256": "9a0536e0e9790c63a892e3b288fc6b299b5f7a1ea52e004cf4a0a8833e7227f3",
+        "line_count": 18,
+        "repo_path": "terraform/s3/executable/actions/04-arn-aws-s3-security-autopilot-w6-strict-s315-man-3dd66962/providers.tf"
+      },
+      {
+        "bundle_path": "executable/actions/04-arn-aws-s3-security-autopilot-w6-strict-s315-man-3dd66962/s3_bucket_access_logging.tf",
+        "byte_count": 974,
+        "change_type": "create_or_update",
+        "content_sha256": "420a83e5a9976a032d76f8846fa841e08569efa1d9d07dd24ffc184accad74cc",
+        "line_count": 30,
+        "repo_path": "terraform/s3/executable/actions/04-arn-aws-s3-security-autopilot-w6-strict-s315-man-3dd66962/s3_bucket_access_logging.tf"
+      },
+      {
+        "bundle_path": "executable/actions/04-arn-aws-s3-security-autopilot-w6-strict-s315-man-3dd66962/README.txt",
+        "byte_count": 902,
+        "change_type": "create_or_update",
+        "content_sha256": "66fa71b65c66f1fab33655a9d21470a5a851d8efd17daec81f14726db2febd1d",
+        "line_count": 23,
+        "repo_path": "terraform/s3/executable/actions/04-arn-aws-s3-security-autopilot-w6-strict-s315-man-3dd66962/README.txt"
+      },
+      {
+        "bundle_path": "executable/actions/04-arn-aws-s3-security-autopilot-w6-strict-s315-man-3dd66962/README_ACTION.txt",
+        "byte_count": 725,
+        "change_type": "create_or_update",
+        "content_sha256": "13d45d23bc82d3fdc7d023d70c10f965114ac27c7e18c0d6ac0ae8955822f9aa",
+        "line_count": 12,
+        "repo_path": "terraform/s3/executable/actions/04-arn-aws-s3-security-autopilot-w6-strict-s315-man-3dd66962/README_ACTION.txt"
+      },
+      {
+        "bundle_path": "executable/actions/04-arn-aws-s3-security-autopilot-w6-strict-s315-man-3dd66962/decision.json",
+        "byte_count": 2885,
+        "change_type": "create_or_update",
+        "content_sha256": "edf662d2fcb202de99e54c70988e13e861fb3dab870ab7a35a94375812dd0c97",
+        "line_count": 52,
+        "repo_path": "terraform/s3/executable/actions/04-arn-aws-s3-security-autopilot-w6-strict-s315-man-3dd66962/decision.json"
+      },
+      {
+        "bundle_path": "executable/actions/05-arn-aws-s3-security-autopilot-config-69650580937-4d6a1520/providers.tf",
+        "byte_count": 479,
+        "change_type": "create_or_update",
+        "content_sha256": "9a0536e0e9790c63a892e3b288fc6b299b5f7a1ea52e004cf4a0a8833e7227f3",
+        "line_count": 18,
+        "repo_path": "terraform/s3/executable/actions/05-arn-aws-s3-security-autopilot-config-69650580937-4d6a1520/providers.tf"
+      },
+      {
+        "bundle_path": "executable/actions/05-arn-aws-s3-security-autopilot-config-69650580937-4d6a1520/s3_bucket_access_logging.tf",
+        "byte_count": 966,
+        "change_type": "create_or_update",
+        "content_sha256": "323e2e7d95750dd0c9d3bcc1342d7b49328823ed0aac5a4de6d09c4a0516cd40",
+        "line_count": 30,
+        "repo_path": "terraform/s3/executable/actions/05-arn-aws-s3-security-autopilot-config-69650580937-4d6a1520/s3_bucket_access_logging.tf"
+      },
+      {
+        "bundle_path": "executable/actions/05-arn-aws-s3-security-autopilot-config-69650580937-4d6a1520/README.txt",
+        "byte_count": 902,
+        "change_type": "create_or_update",
+        "content_sha256": "66fa71b65c66f1fab33655a9d21470a5a851d8efd17daec81f14726db2febd1d",
+        "line_count": 23,
+        "repo_path": "terraform/s3/executable/actions/05-arn-aws-s3-security-autopilot-config-69650580937-4d6a1520/README.txt"
+      },
+      {
+        "bundle_path": "executable/actions/05-arn-aws-s3-security-autopilot-config-69650580937-4d6a1520/README_ACTION.txt",
+        "byte_count": 725,
+        "change_type": "create_or_update",
+        "content_sha256": "f3abfda267ee743117c69303c5275a0e8f61bc1ad83f0b2ff8328d3a9f5a8ad6",
+        "line_count": 12,
+        "repo_path": "terraform/s3/executable/actions/05-arn-aws-s3-security-autopilot-config-69650580937-4d6a1520/README_ACTION.txt"
+      },
+      {
+        "bundle_path": "executable/actions/05-arn-aws-s3-security-autopilot-config-69650580937-4d6a1520/decision.json",
+        "byte_count": 2877,
+        "change_type": "create_or_update",
+        "content_sha256": "d47500d34d4e0fdc26b1a77dacf17d67eda9a9de2f198f63ff92a5318ff42039",
+        "line_count": 52,
+        "repo_path": "terraform/s3/executable/actions/05-arn-aws-s3-security-autopilot-config-69650580937-4d6a1520/decision.json"
+      },
+      {
+        "bundle_path": "executable/actions/06-arn-aws-s3-security-autopilot-w6-envready-config-4d81e63b/providers.tf",
+        "byte_count": 479,
+        "change_type": "create_or_update",
+        "content_sha256": "9a0536e0e9790c63a892e3b288fc6b299b5f7a1ea52e004cf4a0a8833e7227f3",
+        "line_count": 18,
+        "repo_path": "terraform/s3/executable/actions/06-arn-aws-s3-security-autopilot-w6-envready-config-4d81e63b/providers.tf"
+      },
+      {
+        "bundle_path": "executable/actions/06-arn-aws-s3-security-autopilot-w6-envready-config-4d81e63b/s3_bucket_access_logging.tf",
+        "byte_count": 968,
+        "change_type": "create_or_update",
+        "content_sha256": "ef05ceca8462bcf39465fac5cc87400c6318f141818d40b495984dae77c5e50e",
+        "line_count": 30,
+        "repo_path": "terraform/s3/executable/actions/06-arn-aws-s3-security-autopilot-w6-envready-config-4d81e63b/s3_bucket_access_logging.tf"
+      },
+      {
+        "bundle_path": "executable/actions/06-arn-aws-s3-security-autopilot-w6-envready-config-4d81e63b/README.txt",
+        "byte_count": 902,
+        "change_type": "create_or_update",
+        "content_sha256": "66fa71b65c66f1fab33655a9d21470a5a851d8efd17daec81f14726db2febd1d",
+        "line_count": 23,
+        "repo_path": "terraform/s3/executable/actions/06-arn-aws-s3-security-autopilot-w6-envready-config-4d81e63b/README.txt"
+      },
+      {
+        "bundle_path": "executable/actions/06-arn-aws-s3-security-autopilot-w6-envready-config-4d81e63b/README_ACTION.txt",
+        "byte_count": 725,
+        "change_type": "create_or_update",
+        "content_sha256": "2b28e3d69628ed069283b3aaa721cf1e582a3657ad4155c7327c147f7b62da10",
+        "line_count": 12,
+        "repo_path": "terraform/s3/executable/actions/06-arn-aws-s3-security-autopilot-w6-envready-config-4d81e63b/README_ACTION.txt"
+      },
+      {
+        "bundle_path": "executable/actions/06-arn-aws-s3-security-autopilot-w6-envready-config-4d81e63b/decision.json",
+        "byte_count": 2879,
+        "change_type": "create_or_update",
+        "content_sha256": "b8883985c1071b0dc49c69fdc896d7eef96494a4e09d996b72e7ded5f697b81b",
+        "line_count": 52,
+        "repo_path": "terraform/s3/executable/actions/06-arn-aws-s3-security-autopilot-w6-envready-config-4d81e63b/decision.json"
+      },
+      {
+        "bundle_path": "executable/actions/07-arn-aws-s3-security-autopilot-w6-envready-s311-e-501021f0/providers.tf",
+        "byte_count": 479,
+        "change_type": "create_or_update",
+        "content_sha256": "9a0536e0e9790c63a892e3b288fc6b299b5f7a1ea52e004cf4a0a8833e7227f3",
+        "line_count": 18,
+        "repo_path": "terraform/s3/executable/actions/07-arn-aws-s3-security-autopilot-w6-envready-s311-e-501021f0/providers.tf"
+      },
+      {
+        "bundle_path": "executable/actions/07-arn-aws-s3-security-autopilot-w6-envready-s311-e-501021f0/s3_bucket_access_logging.tf",
+        "byte_count": 974,
+        "change_type": "create_or_update",
+        "content_sha256": "d7af8c12a1d0d9185c8d172e70cfb90ec7eccdce1ff6210258f47d4eac7b3650",
+        "line_count": 30,
+        "repo_path": "terraform/s3/executable/actions/07-arn-aws-s3-security-autopilot-w6-envready-s311-e-501021f0/s3_bucket_access_logging.tf"
+      },
+      {
+        "bundle_path": "executable/actions/07-arn-aws-s3-security-autopilot-w6-envready-s311-e-501021f0/README.txt",
+        "byte_count": 902,
+        "change_type": "create_or_update",
+        "content_sha256": "66fa71b65c66f1fab33655a9d21470a5a851d8efd17daec81f14726db2febd1d",
+        "line_count": 23,
+        "repo_path": "terraform/s3/executable/actions/07-arn-aws-s3-security-autopilot-w6-envready-s311-e-501021f0/README.txt"
+      },
+      {
+        "bundle_path": "executable/actions/07-arn-aws-s3-security-autopilot-w6-envready-s311-e-501021f0/README_ACTION.txt",
+        "byte_count": 725,
+        "change_type": "create_or_update",
+        "content_sha256": "f92a1e70ef025c984e3da507d2f9c22f89de384b8af29cd377ec591094e75b71",
+        "line_count": 12,
+        "repo_path": "terraform/s3/executable/actions/07-arn-aws-s3-security-autopilot-w6-envready-s311-e-501021f0/README_ACTION.txt"
+      },
+      {
+        "bundle_path": "executable/actions/07-arn-aws-s3-security-autopilot-w6-envready-s311-e-501021f0/decision.json",
+        "byte_count": 2885,
+        "change_type": "create_or_update",
+        "content_sha256": "3406d8394d951aa81a22fd46cc4590f2d521950cbc469392ed65274ce48c5131",
+        "line_count": 52,
+        "repo_path": "terraform/s3/executable/actions/07-arn-aws-s3-security-autopilot-w6-envready-s311-e-501021f0/decision.json"
+      },
+      {
+        "bundle_path": "executable/actions/08-arn-aws-s3-security-autopilot-w6-strict-s315-exe-6069ec49/providers.tf",
+        "byte_count": 479,
+        "change_type": "create_or_update",
+        "content_sha256": "9a0536e0e9790c63a892e3b288fc6b299b5f7a1ea52e004cf4a0a8833e7227f3",
+        "line_count": 18,
+        "repo_path": "terraform/s3/executable/actions/08-arn-aws-s3-security-autopilot-w6-strict-s315-exe-6069ec49/providers.tf"
+      },
+      {
+        "bundle_path": "executable/actions/08-arn-aws-s3-security-autopilot-w6-strict-s315-exe-6069ec49/s3_bucket_access_logging.tf",
+        "byte_count": 970,
+        "change_type": "create_or_update",
+        "content_sha256": "8b6ac7ec7ca365e083e867b78b0931736d030a7b13719d5a853b48623a8ea63f",
+        "line_count": 30,
+        "repo_path": "terraform/s3/executable/actions/08-arn-aws-s3-security-autopilot-w6-strict-s315-exe-6069ec49/s3_bucket_access_logging.tf"
+      },
+      {
+        "bundle_path": "executable/actions/08-arn-aws-s3-security-autopilot-w6-strict-s315-exe-6069ec49/README.txt",
+        "byte_count": 902,
+        "change_type": "create_or_update",
+        "content_sha256": "66fa71b65c66f1fab33655a9d21470a5a851d8efd17daec81f14726db2febd1d",
+        "line_count": 23,
+        "repo_path": "terraform/s3/executable/actions/08-arn-aws-s3-security-autopilot-w6-strict-s315-exe-6069ec49/README.txt"
+      },
+      {
+        "bundle_path": "executable/actions/08-arn-aws-s3-security-autopilot-w6-strict-s315-exe-6069ec49/README_ACTION.txt",
+        "byte_count": 725,
+        "change_type": "create_or_update",
+        "content_sha256": "ce77d44967aaf8e51e97a2f7ae3a6ead2aebf7590bdf9278cda55621871f1fd5",
+        "line_count": 12,
+        "repo_path": "terraform/s3/executable/actions/08-arn-aws-s3-security-autopilot-w6-strict-s315-exe-6069ec49/README_ACTION.txt"
+      },
+      {
+        "bundle_path": "executable/actions/08-arn-aws-s3-security-autopilot-w6-strict-s315-exe-6069ec49/decision.json",
+        "byte_count": 2881,
+        "change_type": "create_or_update",
+        "content_sha256": "8931f0ec35bc19af754092f047442f62a5a2f6787b9310f2ffb94f90346a9b33",
+        "line_count": 52,
+        "repo_path": "terraform/s3/executable/actions/08-arn-aws-s3-security-autopilot-w6-strict-s315-exe-6069ec49/decision.json"
+      },
+      {
+        "bundle_path": "executable/actions/09-arn-aws-s3-security-autopilot-w6-envready-cloudt-dcd9aac0/providers.tf",
+        "byte_count": 479,
+        "change_type": "create_or_update",
+        "content_sha256": "9a0536e0e9790c63a892e3b288fc6b299b5f7a1ea52e004cf4a0a8833e7227f3",
+        "line_count": 18,
+        "repo_path": "terraform/s3/executable/actions/09-arn-aws-s3-security-autopilot-w6-envready-cloudt-dcd9aac0/providers.tf"
+      },
+      {
+        "bundle_path": "executable/actions/09-arn-aws-s3-security-autopilot-w6-envready-cloudt-dcd9aac0/s3_bucket_access_logging.tf",
+        "byte_count": 976,
+        "change_type": "create_or_update",
+        "content_sha256": "cc4b84de619ccc91bb7ff1ff2c8bd3c1472ada6005f4bd228541916e98c7d860",
+        "line_count": 30,
+        "repo_path": "terraform/s3/executable/actions/09-arn-aws-s3-security-autopilot-w6-envready-cloudt-dcd9aac0/s3_bucket_access_logging.tf"
+      },
+      {
+        "bundle_path": "executable/actions/09-arn-aws-s3-security-autopilot-w6-envready-cloudt-dcd9aac0/README.txt",
+        "byte_count": 902,
+        "change_type": "create_or_update",
+        "content_sha256": "66fa71b65c66f1fab33655a9d21470a5a851d8efd17daec81f14726db2febd1d",
+        "line_count": 23,
+        "repo_path": "terraform/s3/executable/actions/09-arn-aws-s3-security-autopilot-w6-envready-cloudt-dcd9aac0/README.txt"
+      },
+      {
+        "bundle_path": "executable/actions/09-arn-aws-s3-security-autopilot-w6-envready-cloudt-dcd9aac0/README_ACTION.txt",
+        "byte_count": 725,
+        "change_type": "create_or_update",
+        "content_sha256": "4a228930cf901796fd3450981c38174ca116bd6bd5f6f2c94bc1e1f9a1745137",
+        "line_count": 12,
+        "repo_path": "terraform/s3/executable/actions/09-arn-aws-s3-security-autopilot-w6-envready-cloudt-dcd9aac0/README_ACTION.txt"
+      },
+      {
+        "bundle_path": "executable/actions/09-arn-aws-s3-security-autopilot-w6-envready-cloudt-dcd9aac0/decision.json",
+        "byte_count": 2887,
+        "change_type": "create_or_update",
+        "content_sha256": "c05c40a5c5f6d2863bad46071b22cc0e63954a530aa96c362def9f998be19838",
+        "line_count": 52,
+        "repo_path": "terraform/s3/executable/actions/09-arn-aws-s3-security-autopilot-w6-envready-cloudt-dcd9aac0/decision.json"
+      },
+      {
+        "bundle_path": "executable/actions/10-arn-aws-s3-ocypheris-live-ct-20260323162333-eu-n-e03f9f63/providers.tf",
+        "byte_count": 479,
+        "change_type": "create_or_update",
+        "content_sha256": "9a0536e0e9790c63a892e3b288fc6b299b5f7a1ea52e004cf4a0a8833e7227f3",
+        "line_count": 18,
+        "repo_path": "terraform/s3/executable/actions/10-arn-aws-s3-ocypheris-live-ct-20260323162333-eu-n-e03f9f63/providers.tf"
+      },
+      {
+        "bundle_path": "executable/actions/10-arn-aws-s3-ocypheris-live-ct-20260323162333-eu-n-e03f9f63/s3_bucket_access_logging.tf",
+        "byte_count": 954,
+        "change_type": "create_or_update",
+        "content_sha256": "f144b856e78dca940eb092b6be4e219f9c9409e5f147952caf1623cf70473936",
+        "line_count": 30,
+        "repo_path": "terraform/s3/executable/actions/10-arn-aws-s3-ocypheris-live-ct-20260323162333-eu-n-e03f9f63/s3_bucket_access_logging.tf"
+      },
+      {
+        "bundle_path": "executable/actions/10-arn-aws-s3-ocypheris-live-ct-20260323162333-eu-n-e03f9f63/README.txt",
+        "byte_count": 902,
+        "change_type": "create_or_update",
+        "content_sha256": "66fa71b65c66f1fab33655a9d21470a5a851d8efd17daec81f14726db2febd1d",
+        "line_count": 23,
+        "repo_path": "terraform/s3/executable/actions/10-arn-aws-s3-ocypheris-live-ct-20260323162333-eu-n-e03f9f63/README.txt"
+      },
+      {
+        "bundle_path": "executable/actions/10-arn-aws-s3-ocypheris-live-ct-20260323162333-eu-n-e03f9f63/README_ACTION.txt",
+        "byte_count": 725,
+        "change_type": "create_or_update",
+        "content_sha256": "b5124cbdf11e333b7cc5688fd572009f9890748830a5a716b1ab29ca4dc7cfcb",
+        "line_count": 12,
+        "repo_path": "terraform/s3/executable/actions/10-arn-aws-s3-ocypheris-live-ct-20260323162333-eu-n-e03f9f63/README_ACTION.txt"
+      },
+      {
+        "bundle_path": "executable/actions/10-arn-aws-s3-ocypheris-live-ct-20260323162333-eu-n-e03f9f63/decision.json",
+        "byte_count": 2866,
+        "change_type": "create_or_update",
+        "content_sha256": "5a24f5455cad696eb3b85b3011c33a84e1f82964689b4cf87fe76d8360f6aef7",
+        "line_count": 52,
+        "repo_path": "terraform/s3/executable/actions/10-arn-aws-s3-ocypheris-live-ct-20260323162333-eu-n-e03f9f63/decision.json"
+      },
+      {
+        "bundle_path": "executable/actions/11-arn-aws-s3-security-autopilot-w6-envready-s315-e-e7eb463d/providers.tf",
+        "byte_count": 479,
+        "change_type": "create_or_update",
+        "content_sha256": "9a0536e0e9790c63a892e3b288fc6b299b5f7a1ea52e004cf4a0a8833e7227f3",
+        "line_count": 18,
+        "repo_path": "terraform/s3/executable/actions/11-arn-aws-s3-security-autopilot-w6-envready-s315-e-e7eb463d/providers.tf"
+      },
+      {
+        "bundle_path": "executable/actions/11-arn-aws-s3-security-autopilot-w6-envready-s315-e-e7eb463d/s3_bucket_access_logging.tf",
+        "byte_count": 974,
+        "change_type": "create_or_update",
+        "content_sha256": "365e4e2d998a4af48e46cfcfd84a3808dc191e85640a330caa769f1d599d01d5",
+        "line_count": 30,
+        "repo_path": "terraform/s3/executable/actions/11-arn-aws-s3-security-autopilot-w6-envready-s315-e-e7eb463d/s3_bucket_access_logging.tf"
+      },
+      {
+        "bundle_path": "executable/actions/11-arn-aws-s3-security-autopilot-w6-envready-s315-e-e7eb463d/README.txt",
+        "byte_count": 902,
+        "change_type": "create_or_update",
+        "content_sha256": "66fa71b65c66f1fab33655a9d21470a5a851d8efd17daec81f14726db2febd1d",
+        "line_count": 23,
+        "repo_path": "terraform/s3/executable/actions/11-arn-aws-s3-security-autopilot-w6-envready-s315-e-e7eb463d/README.txt"
+      },
+      {
+        "bundle_path": "executable/actions/11-arn-aws-s3-security-autopilot-w6-envready-s315-e-e7eb463d/README_ACTION.txt",
+        "byte_count": 725,
+        "change_type": "create_or_update",
+        "content_sha256": "a61e8346ed92ef04deba72262a25c86eb9c1d8d19b5e10d9bd135fa8d4b99ff8",
+        "line_count": 12,
+        "repo_path": "terraform/s3/executable/actions/11-arn-aws-s3-security-autopilot-w6-envready-s315-e-e7eb463d/README_ACTION.txt"
+      },
+      {
+        "bundle_path": "executable/actions/11-arn-aws-s3-security-autopilot-w6-envready-s315-e-e7eb463d/decision.json",
+        "byte_count": 2886,
+        "change_type": "create_or_update",
+        "content_sha256": "76a20c69292b89462eacd4311622df3badb21b98b252f6641243aad77cb48546",
+        "line_count": 52,
+        "repo_path": "terraform/s3/executable/actions/11-arn-aws-s3-security-autopilot-w6-envready-s315-e-e7eb463d/decision.json"
+      },
+      {
+        "bundle_path": "executable/actions/12-arn-aws-s3-security-autopilot-w6-strict-s311-exe-e8ae2a41/providers.tf",
+        "byte_count": 479,
+        "change_type": "create_or_update",
+        "content_sha256": "9a0536e0e9790c63a892e3b288fc6b299b5f7a1ea52e004cf4a0a8833e7227f3",
+        "line_count": 18,
+        "repo_path": "terraform/s3/executable/actions/12-arn-aws-s3-security-autopilot-w6-strict-s311-exe-e8ae2a41/providers.tf"
+      },
+      {
+        "bundle_path": "executable/actions/12-arn-aws-s3-security-autopilot-w6-strict-s311-exe-e8ae2a41/s3_bucket_access_logging.tf",
+        "byte_count": 970,
+        "change_type": "create_or_update",
+        "content_sha256": "ebfcb3ccdb82074f2e6b42fb6f110879b0df81aeb3e90ebd995e00837907a6cb",
+        "line_count": 30,
+        "repo_path": "terraform/s3/executable/actions/12-arn-aws-s3-security-autopilot-w6-strict-s311-exe-e8ae2a41/s3_bucket_access_logging.tf"
+      },
+      {
+        "bundle_path": "executable/actions/12-arn-aws-s3-security-autopilot-w6-strict-s311-exe-e8ae2a41/README.txt",
+        "byte_count": 902,
+        "change_type": "create_or_update",
+        "content_sha256": "66fa71b65c66f1fab33655a9d21470a5a851d8efd17daec81f14726db2febd1d",
+        "line_count": 23,
+        "repo_path": "terraform/s3/executable/actions/12-arn-aws-s3-security-autopilot-w6-strict-s311-exe-e8ae2a41/README.txt"
+      },
+      {
+        "bundle_path": "executable/actions/12-arn-aws-s3-security-autopilot-w6-strict-s311-exe-e8ae2a41/README_ACTION.txt",
+        "byte_count": 725,
+        "change_type": "create_or_update",
+        "content_sha256": "55fec2a4119225b5c36375d83c0a029b0b502e49883e821abaf557264211c4c0",
+        "line_count": 12,
+        "repo_path": "terraform/s3/executable/actions/12-arn-aws-s3-security-autopilot-w6-strict-s311-exe-e8ae2a41/README_ACTION.txt"
+      },
+      {
+        "bundle_path": "executable/actions/12-arn-aws-s3-security-autopilot-w6-strict-s311-exe-e8ae2a41/decision.json",
+        "byte_count": 2882,
+        "change_type": "create_or_update",
+        "content_sha256": "955ed45d1733c544fa8cca04bd1d494dedf01873ced0cd6df7e241356850de8b",
+        "line_count": 52,
+        "repo_path": "terraform/s3/executable/actions/12-arn-aws-s3-security-autopilot-w6-strict-s311-exe-e8ae2a41/decision.json"
+      },
+      {
+        "bundle_path": "executable/actions/13-arn-aws-s3-security-autopilot-w6-envready-s311-r-e9ca4a12/providers.tf",
+        "byte_count": 479,
+        "change_type": "create_or_update",
+        "content_sha256": "9a0536e0e9790c63a892e3b288fc6b299b5f7a1ea52e004cf4a0a8833e7227f3",
+        "line_count": 18,
+        "repo_path": "terraform/s3/executable/actions/13-arn-aws-s3-security-autopilot-w6-envready-s311-r-e9ca4a12/providers.tf"
+      },
+      {
+        "bundle_path": "executable/actions/13-arn-aws-s3-security-autopilot-w6-envready-s311-r-e9ca4a12/s3_bucket_access_logging.tf",
+        "byte_count": 978,
+        "change_type": "create_or_update",
+        "content_sha256": "9691b5f3381fb55e4e7eaddacbd211dcbec14b11ca0b429641717e72df041cf5",
+        "line_count": 30,
+        "repo_path": "terraform/s3/executable/actions/13-arn-aws-s3-security-autopilot-w6-envready-s311-r-e9ca4a12/s3_bucket_access_logging.tf"
+      },
+      {
+        "bundle_path": "executable/actions/13-arn-aws-s3-security-autopilot-w6-envready-s311-r-e9ca4a12/README.txt",
+        "byte_count": 902,
+        "change_type": "create_or_update",
+        "content_sha256": "66fa71b65c66f1fab33655a9d21470a5a851d8efd17daec81f14726db2febd1d",
+        "line_count": 23,
+        "repo_path": "terraform/s3/executable/actions/13-arn-aws-s3-security-autopilot-w6-envready-s311-r-e9ca4a12/README.txt"
+      },
+      {
+        "bundle_path": "executable/actions/13-arn-aws-s3-security-autopilot-w6-envready-s311-r-e9ca4a12/README_ACTION.txt",
+        "byte_count": 725,
+        "change_type": "create_or_update",
+        "content_sha256": "aaf70f17198416eab79e442f81aad30e53b18d8f996ab9508dcb01d0f778c555",
+        "line_count": 12,
+        "repo_path": "terraform/s3/executable/actions/13-arn-aws-s3-security-autopilot-w6-envready-s311-r-e9ca4a12/README_ACTION.txt"
+      },
+      {
+        "bundle_path": "executable/actions/13-arn-aws-s3-security-autopilot-w6-envready-s311-r-e9ca4a12/decision.json",
+        "byte_count": 2890,
+        "change_type": "create_or_update",
+        "content_sha256": "ec539d30b5fb14b6b74107b71d4cbb7eab6122f132da47a2fef06437635441f8",
+        "line_count": 52,
+        "repo_path": "terraform/s3/executable/actions/13-arn-aws-s3-security-autopilot-w6-envready-s311-r-e9ca4a12/decision.json"
+      },
+      {
+        "bundle_path": "review_required/actions/14-aws-account-696505809372-0c490240/README_ACTION.txt",
+        "byte_count": 788,
+        "change_type": "create_or_update",
+        "content_sha256": "1353e069b3a4acd862f1e8166c0ef24b119fdbf995f0c018e5882f06f587a037",
+        "line_count": 12,
+        "repo_path": "terraform/s3/review_required/actions/14-aws-account-696505809372-0c490240/README_ACTION.txt"
+      },
+      {
+        "bundle_path": "review_required/actions/14-aws-account-696505809372-0c490240/decision.json",
+        "byte_count": 2753,
+        "change_type": "create_or_update",
+        "content_sha256": "3522dcbb914759a3b427cb6f3670236d5810e97be897219d72749499c87b7ca8",
+        "line_count": 51,
+        "repo_path": "terraform/s3/review_required/actions/14-aws-account-696505809372-0c490240/decision.json"
+      }
+    ],
+    "fingerprint_sha256": "cf41d25b84cdd9a2cc2301519e84511f33a3ac18c35cc45da1d0ca2e776642a7",
+    "repo_target_configured": true,
+    "summary_lines": [
+      "`terraform/s3/run_all.sh` <- `run_all.sh` (103 lines, sha256:266d4161fa30)",
+      "`terraform/s3/replay_group_run_reports.sh` <- `replay_group_run_reports.sh` (54 lines, sha256:722cb6d7017b)",
+      "`terraform/s3/run_actions.sh` <- `run_actions.sh` (409 lines, sha256:611cdb62cfd5)",
+      "`terraform/s3/README_GROUP.txt` <- `README_GROUP.txt` (36 lines, sha256:f381de2dd4b8)",
+      "`terraform/s3/bundle_manifest.json` <- `bundle_manifest.json` (780 lines, sha256:b0522df39820)",
+      "`terraform/s3/decision_log.md` <- `decision_log.md` (100 lines, sha256:70445f83ca5f)",
+      "`terraform/s3/finding_coverage.json` <- `finding_coverage.json` (75 lines, sha256:ca0d5f3407b2)",
+      "`terraform/s3/executable/actions/00-shared-01-security-autopilot-access-logs-696505809/providers.tf` <- `executable/actions/00-shared-01-security-autopilot-access-logs-696505809/providers.tf` (18 lines, sha256:9a0536e0e979)",
+      "`terraform/s3/executable/actions/00-shared-01-security-autopilot-access-logs-696505809/s3_access_logging_shared_destination.tf` <- `executable/actions/00-shared-01-security-autopilot-access-logs-696505809/s3_access_logging_shared_destination.tf` (110 lines, sha256:c2bed14bb59e)",
+      "`terraform/s3/executable/actions/00-shared-01-security-autopilot-access-logs-696505809/README_SHARED.txt` <- `executable/actions/00-shared-01-security-autopilot-access-logs-696505809/README_SHARED.txt` (4 lines, sha256:55ccabedbc3b)",
+      "`terraform/s3/executable/actions/01-arn-aws-s3-config-bucket-696505809372-01557e04/providers.tf` <- `executable/actions/01-arn-aws-s3-config-bucket-696505809372-01557e04/providers.tf` (18 lines, sha256:9a0536e0e979)",
+      "`terraform/s3/executable/actions/01-arn-aws-s3-config-bucket-696505809372-01557e04/s3_bucket_access_logging.tf` <- `executable/actions/01-arn-aws-s3-config-bucket-696505809372-01557e04/s3_bucket_access_logging.tf` (30 lines, sha256:07eef9dd160a)",
+      "`terraform/s3/executable/actions/01-arn-aws-s3-config-bucket-696505809372-01557e04/README.txt` <- `executable/actions/01-arn-aws-s3-config-bucket-696505809372-01557e04/README.txt` (23 lines, sha256:66fa71b65c66)",
+      "`terraform/s3/executable/actions/01-arn-aws-s3-config-bucket-696505809372-01557e04/README_ACTION.txt` <- `executable/actions/01-arn-aws-s3-config-bucket-696505809372-01557e04/README_ACTION.txt` (12 lines, sha256:12952bd13fd3)",
+      "`terraform/s3/executable/actions/01-arn-aws-s3-config-bucket-696505809372-01557e04/decision.json` <- `executable/actions/01-arn-aws-s3-config-bucket-696505809372-01557e04/decision.json` (52 lines, sha256:8f694017c81c)",
+      "`terraform/s3/executable/actions/02-arn-aws-s3-security-autopilot-w6-strict-s311-man-0b75c532/providers.tf` <- `executable/actions/02-arn-aws-s3-security-autopilot-w6-strict-s311-man-0b75c532/providers.tf` (18 lines, sha256:9a0536e0e979)",
+      "`terraform/s3/executable/actions/02-arn-aws-s3-security-autopilot-w6-strict-s311-man-0b75c532/s3_bucket_access_logging.tf` <- `executable/actions/02-arn-aws-s3-security-autopilot-w6-strict-s311-man-0b75c532/s3_bucket_access_logging.tf` (30 lines, sha256:63081dba230e)",
+      "`terraform/s3/executable/actions/02-arn-aws-s3-security-autopilot-w6-strict-s311-man-0b75c532/README.txt` <- `executable/actions/02-arn-aws-s3-security-autopilot-w6-strict-s311-man-0b75c532/README.txt` (23 lines, sha256:66fa71b65c66)",
+      "`terraform/s3/executable/actions/02-arn-aws-s3-security-autopilot-w6-strict-s311-man-0b75c532/README_ACTION.txt` <- `executable/actions/02-arn-aws-s3-security-autopilot-w6-strict-s311-man-0b75c532/README_ACTION.txt` (12 lines, sha256:f58acd5a1cb9)",
+      "`terraform/s3/executable/actions/02-arn-aws-s3-security-autopilot-w6-strict-s311-man-0b75c532/decision.json` <- `executable/actions/02-arn-aws-s3-security-autopilot-w6-strict-s311-man-0b75c532/decision.json` (52 lines, sha256:6dc9651a499c)",
+      "`terraform/s3/executable/actions/03-arn-aws-s3-security-autopilot-w6-envready-access-1dc612d8/providers.tf` <- `executable/actions/03-arn-aws-s3-security-autopilot-w6-envready-access-1dc612d8/providers.tf` (18 lines, sha256:9a0536e0e979)",
+      "`terraform/s3/executable/actions/03-arn-aws-s3-security-autopilot-w6-envready-access-1dc612d8/s3_bucket_access_logging.tf` <- `executable/actions/03-arn-aws-s3-security-autopilot-w6-envready-access-1dc612d8/s3_bucket_access_logging.tf` (30 lines, sha256:6cdacce72c25)",
+      "`terraform/s3/executable/actions/03-arn-aws-s3-security-autopilot-w6-envready-access-1dc612d8/README.txt` <- `executable/actions/03-arn-aws-s3-security-autopilot-w6-envready-access-1dc612d8/README.txt` (23 lines, sha256:66fa71b65c66)",
+      "`terraform/s3/executable/actions/03-arn-aws-s3-security-autopilot-w6-envready-access-1dc612d8/README_ACTION.txt` <- `executable/actions/03-arn-aws-s3-security-autopilot-w6-envready-access-1dc612d8/README_ACTION.txt` (12 lines, sha256:3ef02f9d4770)",
+      "`terraform/s3/executable/actions/03-arn-aws-s3-security-autopilot-w6-envready-access-1dc612d8/decision.json` <- `executable/actions/03-arn-aws-s3-security-autopilot-w6-envready-access-1dc612d8/decision.json` (52 lines, sha256:a4d28b9791c0)",
+      "`terraform/s3/executable/actions/04-arn-aws-s3-security-autopilot-w6-strict-s315-man-3dd66962/providers.tf` <- `executable/actions/04-arn-aws-s3-security-autopilot-w6-strict-s315-man-3dd66962/providers.tf` (18 lines, sha256:9a0536e0e979)",
+      "`terraform/s3/executable/actions/04-arn-aws-s3-security-autopilot-w6-strict-s315-man-3dd66962/s3_bucket_access_logging.tf` <- `executable/actions/04-arn-aws-s3-security-autopilot-w6-strict-s315-man-3dd66962/s3_bucket_access_logging.tf` (30 lines, sha256:420a83e5a997)",
+      "`terraform/s3/executable/actions/04-arn-aws-s3-security-autopilot-w6-strict-s315-man-3dd66962/README.txt` <- `executable/actions/04-arn-aws-s3-security-autopilot-w6-strict-s315-man-3dd66962/README.txt` (23 lines, sha256:66fa71b65c66)",
+      "`terraform/s3/executable/actions/04-arn-aws-s3-security-autopilot-w6-strict-s315-man-3dd66962/README_ACTION.txt` <- `executable/actions/04-arn-aws-s3-security-autopilot-w6-strict-s315-man-3dd66962/README_ACTION.txt` (12 lines, sha256:13d45d23bc82)",
+      "`terraform/s3/executable/actions/04-arn-aws-s3-security-autopilot-w6-strict-s315-man-3dd66962/decision.json` <- `executable/actions/04-arn-aws-s3-security-autopilot-w6-strict-s315-man-3dd66962/decision.json` (52 lines, sha256:edf662d2fcb2)",
+      "`terraform/s3/executable/actions/05-arn-aws-s3-security-autopilot-config-69650580937-4d6a1520/providers.tf` <- `executable/actions/05-arn-aws-s3-security-autopilot-config-69650580937-4d6a1520/providers.tf` (18 lines, sha256:9a0536e0e979)",
+      "`terraform/s3/executable/actions/05-arn-aws-s3-security-autopilot-config-69650580937-4d6a1520/s3_bucket_access_logging.tf` <- `executable/actions/05-arn-aws-s3-security-autopilot-config-69650580937-4d6a1520/s3_bucket_access_logging.tf` (30 lines, sha256:323e2e7d9575)",
+      "`terraform/s3/executable/actions/05-arn-aws-s3-security-autopilot-config-69650580937-4d6a1520/README.txt` <- `executable/actions/05-arn-aws-s3-security-autopilot-config-69650580937-4d6a1520/README.txt` (23 lines, sha256:66fa71b65c66)",
+      "`terraform/s3/executable/actions/05-arn-aws-s3-security-autopilot-config-69650580937-4d6a1520/README_ACTION.txt` <- `executable/actions/05-arn-aws-s3-security-autopilot-config-69650580937-4d6a1520/README_ACTION.txt` (12 lines, sha256:f3abfda267ee)",
+      "`terraform/s3/executable/actions/05-arn-aws-s3-security-autopilot-config-69650580937-4d6a1520/decision.json` <- `executable/actions/05-arn-aws-s3-security-autopilot-config-69650580937-4d6a1520/decision.json` (52 lines, sha256:d47500d34d4e)",
+      "`terraform/s3/executable/actions/06-arn-aws-s3-security-autopilot-w6-envready-config-4d81e63b/providers.tf` <- `executable/actions/06-arn-aws-s3-security-autopilot-w6-envready-config-4d81e63b/providers.tf` (18 lines, sha256:9a0536e0e979)",
+      "`terraform/s3/executable/actions/06-arn-aws-s3-security-autopilot-w6-envready-config-4d81e63b/s3_bucket_access_logging.tf` <- `executable/actions/06-arn-aws-s3-security-autopilot-w6-envready-config-4d81e63b/s3_bucket_access_logging.tf` (30 lines, sha256:ef05ceca8462)",
+      "`terraform/s3/executable/actions/06-arn-aws-s3-security-autopilot-w6-envready-config-4d81e63b/README.txt` <- `executable/actions/06-arn-aws-s3-security-autopilot-w6-envready-config-4d81e63b/README.txt` (23 lines, sha256:66fa71b65c66)",
+      "`terraform/s3/executable/actions/06-arn-aws-s3-security-autopilot-w6-envready-config-4d81e63b/README_ACTION.txt` <- `executable/actions/06-arn-aws-s3-security-autopilot-w6-envready-config-4d81e63b/README_ACTION.txt` (12 lines, sha256:2b28e3d69628)",
+      "`terraform/s3/executable/actions/06-arn-aws-s3-security-autopilot-w6-envready-config-4d81e63b/decision.json` <- `executable/actions/06-arn-aws-s3-security-autopilot-w6-envready-config-4d81e63b/decision.json` (52 lines, sha256:b8883985c107)",
+      "`terraform/s3/executable/actions/07-arn-aws-s3-security-autopilot-w6-envready-s311-e-501021f0/providers.tf` <- `executable/actions/07-arn-aws-s3-security-autopilot-w6-envready-s311-e-501021f0/providers.tf` (18 lines, sha256:9a0536e0e979)",
+      "`terraform/s3/executable/actions/07-arn-aws-s3-security-autopilot-w6-envready-s311-e-501021f0/s3_bucket_access_logging.tf` <- `executable/actions/07-arn-aws-s3-security-autopilot-w6-envready-s311-e-501021f0/s3_bucket_access_logging.tf` (30 lines, sha256:d7af8c12a1d0)",
+      "`terraform/s3/executable/actions/07-arn-aws-s3-security-autopilot-w6-envready-s311-e-501021f0/README.txt` <- `executable/actions/07-arn-aws-s3-security-autopilot-w6-envready-s311-e-501021f0/README.txt` (23 lines, sha256:66fa71b65c66)",
+      "`terraform/s3/executable/actions/07-arn-aws-s3-security-autopilot-w6-envready-s311-e-501021f0/README_ACTION.txt` <- `executable/actions/07-arn-aws-s3-security-autopilot-w6-envready-s311-e-501021f0/README_ACTION.txt` (12 lines, sha256:f92a1e70ef02)",
+      "`terraform/s3/executable/actions/07-arn-aws-s3-security-autopilot-w6-envready-s311-e-501021f0/decision.json` <- `executable/actions/07-arn-aws-s3-security-autopilot-w6-envready-s311-e-501021f0/decision.json` (52 lines, sha256:3406d8394d95)",
+      "`terraform/s3/executable/actions/08-arn-aws-s3-security-autopilot-w6-strict-s315-exe-6069ec49/providers.tf` <- `executable/actions/08-arn-aws-s3-security-autopilot-w6-strict-s315-exe-6069ec49/providers.tf` (18 lines, sha256:9a0536e0e979)",
+      "`terraform/s3/executable/actions/08-arn-aws-s3-security-autopilot-w6-strict-s315-exe-6069ec49/s3_bucket_access_logging.tf` <- `executable/actions/08-arn-aws-s3-security-autopilot-w6-strict-s315-exe-6069ec49/s3_bucket_access_logging.tf` (30 lines, sha256:8b6ac7ec7ca3)",
+      "`terraform/s3/executable/actions/08-arn-aws-s3-security-autopilot-w6-strict-s315-exe-6069ec49/README.txt` <- `executable/actions/08-arn-aws-s3-security-autopilot-w6-strict-s315-exe-6069ec49/README.txt` (23 lines, sha256:66fa71b65c66)",
+      "`terraform/s3/executable/actions/08-arn-aws-s3-security-autopilot-w6-strict-s315-exe-6069ec49/README_ACTION.txt` <- `executable/actions/08-arn-aws-s3-security-autopilot-w6-strict-s315-exe-6069ec49/README_ACTION.txt` (12 lines, sha256:ce77d44967aa)",
+      "`terraform/s3/executable/actions/08-arn-aws-s3-security-autopilot-w6-strict-s315-exe-6069ec49/decision.json` <- `executable/actions/08-arn-aws-s3-security-autopilot-w6-strict-s315-exe-6069ec49/decision.json` (52 lines, sha256:8931f0ec35bc)",
+      "`terraform/s3/executable/actions/09-arn-aws-s3-security-autopilot-w6-envready-cloudt-dcd9aac0/providers.tf` <- `executable/actions/09-arn-aws-s3-security-autopilot-w6-envready-cloudt-dcd9aac0/providers.tf` (18 lines, sha256:9a0536e0e979)",
+      "`terraform/s3/executable/actions/09-arn-aws-s3-security-autopilot-w6-envready-cloudt-dcd9aac0/s3_bucket_access_logging.tf` <- `executable/actions/09-arn-aws-s3-security-autopilot-w6-envready-cloudt-dcd9aac0/s3_bucket_access_logging.tf` (30 lines, sha256:cc4b84de619c)",
+      "`terraform/s3/executable/actions/09-arn-aws-s3-security-autopilot-w6-envready-cloudt-dcd9aac0/README.txt` <- `executable/actions/09-arn-aws-s3-security-autopilot-w6-envready-cloudt-dcd9aac0/README.txt` (23 lines, sha256:66fa71b65c66)",
+      "`terraform/s3/executable/actions/09-arn-aws-s3-security-autopilot-w6-envready-cloudt-dcd9aac0/README_ACTION.txt` <- `executable/actions/09-arn-aws-s3-security-autopilot-w6-envready-cloudt-dcd9aac0/README_ACTION.txt` (12 lines, sha256:4a228930cf90)",
+      "`terraform/s3/executable/actions/09-arn-aws-s3-security-autopilot-w6-envready-cloudt-dcd9aac0/decision.json` <- `executable/actions/09-arn-aws-s3-security-autopilot-w6-envready-cloudt-dcd9aac0/decision.json` (52 lines, sha256:c05c40a5c5f6)",
+      "`terraform/s3/executable/actions/10-arn-aws-s3-ocypheris-live-ct-20260323162333-eu-n-e03f9f63/providers.tf` <- `executable/actions/10-arn-aws-s3-ocypheris-live-ct-20260323162333-eu-n-e03f9f63/providers.tf` (18 lines, sha256:9a0536e0e979)",
+      "`terraform/s3/executable/actions/10-arn-aws-s3-ocypheris-live-ct-20260323162333-eu-n-e03f9f63/s3_bucket_access_logging.tf` <- `executable/actions/10-arn-aws-s3-ocypheris-live-ct-20260323162333-eu-n-e03f9f63/s3_bucket_access_logging.tf` (30 lines, sha256:f144b856e78d)",
+      "`terraform/s3/executable/actions/10-arn-aws-s3-ocypheris-live-ct-20260323162333-eu-n-e03f9f63/README.txt` <- `executable/actions/10-arn-aws-s3-ocypheris-live-ct-20260323162333-eu-n-e03f9f63/README.txt` (23 lines, sha256:66fa71b65c66)",
+      "`terraform/s3/executable/actions/10-arn-aws-s3-ocypheris-live-ct-20260323162333-eu-n-e03f9f63/README_ACTION.txt` <- `executable/actions/10-arn-aws-s3-ocypheris-live-ct-20260323162333-eu-n-e03f9f63/README_ACTION.txt` (12 lines, sha256:b5124cbdf11e)",
+      "`terraform/s3/executable/actions/10-arn-aws-s3-ocypheris-live-ct-20260323162333-eu-n-e03f9f63/decision.json` <- `executable/actions/10-arn-aws-s3-ocypheris-live-ct-20260323162333-eu-n-e03f9f63/decision.json` (52 lines, sha256:5a24f5455cad)",
+      "`terraform/s3/executable/actions/11-arn-aws-s3-security-autopilot-w6-envready-s315-e-e7eb463d/providers.tf` <- `executable/actions/11-arn-aws-s3-security-autopilot-w6-envready-s315-e-e7eb463d/providers.tf` (18 lines, sha256:9a0536e0e979)",
+      "`terraform/s3/executable/actions/11-arn-aws-s3-security-autopilot-w6-envready-s315-e-e7eb463d/s3_bucket_access_logging.tf` <- `executable/actions/11-arn-aws-s3-security-autopilot-w6-envready-s315-e-e7eb463d/s3_bucket_access_logging.tf` (30 lines, sha256:365e4e2d998a)",
+      "`terraform/s3/executable/actions/11-arn-aws-s3-security-autopilot-w6-envready-s315-e-e7eb463d/README.txt` <- `executable/actions/11-arn-aws-s3-security-autopilot-w6-envready-s315-e-e7eb463d/README.txt` (23 lines, sha256:66fa71b65c66)",
+      "`terraform/s3/executable/actions/11-arn-aws-s3-security-autopilot-w6-envready-s315-e-e7eb463d/README_ACTION.txt` <- `executable/actions/11-arn-aws-s3-security-autopilot-w6-envready-s315-e-e7eb463d/README_ACTION.txt` (12 lines, sha256:a61e8346ed92)",
+      "`terraform/s3/executable/actions/11-arn-aws-s3-security-autopilot-w6-envready-s315-e-e7eb463d/decision.json` <- `executable/actions/11-arn-aws-s3-security-autopilot-w6-envready-s315-e-e7eb463d/decision.json` (52 lines, sha256:76a20c69292b)",
+      "`terraform/s3/executable/actions/12-arn-aws-s3-security-autopilot-w6-strict-s311-exe-e8ae2a41/providers.tf` <- `executable/actions/12-arn-aws-s3-security-autopilot-w6-strict-s311-exe-e8ae2a41/providers.tf` (18 lines, sha256:9a0536e0e979)",
+      "`terraform/s3/executable/actions/12-arn-aws-s3-security-autopilot-w6-strict-s311-exe-e8ae2a41/s3_bucket_access_logging.tf` <- `executable/actions/12-arn-aws-s3-security-autopilot-w6-strict-s311-exe-e8ae2a41/s3_bucket_access_logging.tf` (30 lines, sha256:ebfcb3ccdb82)",
+      "`terraform/s3/executable/actions/12-arn-aws-s3-security-autopilot-w6-strict-s311-exe-e8ae2a41/README.txt` <- `executable/actions/12-arn-aws-s3-security-autopilot-w6-strict-s311-exe-e8ae2a41/README.txt` (23 lines, sha256:66fa71b65c66)",
+      "`terraform/s3/executable/actions/12-arn-aws-s3-security-autopilot-w6-strict-s311-exe-e8ae2a41/README_ACTION.txt` <- `executable/actions/12-arn-aws-s3-security-autopilot-w6-strict-s311-exe-e8ae2a41/README_ACTION.txt` (12 lines, sha256:55fec2a41192)",
+      "`terraform/s3/executable/actions/12-arn-aws-s3-security-autopilot-w6-strict-s311-exe-e8ae2a41/decision.json` <- `executable/actions/12-arn-aws-s3-security-autopilot-w6-strict-s311-exe-e8ae2a41/decision.json` (52 lines, sha256:955ed45d1733)",
+      "`terraform/s3/executable/actions/13-arn-aws-s3-security-autopilot-w6-envready-s311-r-e9ca4a12/providers.tf` <- `executable/actions/13-arn-aws-s3-security-autopilot-w6-envready-s311-r-e9ca4a12/providers.tf` (18 lines, sha256:9a0536e0e979)",
+      "`terraform/s3/executable/actions/13-arn-aws-s3-security-autopilot-w6-envready-s311-r-e9ca4a12/s3_bucket_access_logging.tf` <- `executable/actions/13-arn-aws-s3-security-autopilot-w6-envready-s311-r-e9ca4a12/s3_bucket_access_logging.tf` (30 lines, sha256:9691b5f3381f)",
+      "`terraform/s3/executable/actions/13-arn-aws-s3-security-autopilot-w6-envready-s311-r-e9ca4a12/README.txt` <- `executable/actions/13-arn-aws-s3-security-autopilot-w6-envready-s311-r-e9ca4a12/README.txt` (23 lines, sha256:66fa71b65c66)",
+      "`terraform/s3/executable/actions/13-arn-aws-s3-security-autopilot-w6-envready-s311-r-e9ca4a12/README_ACTION.txt` <- `executable/actions/13-arn-aws-s3-security-autopilot-w6-envready-s311-r-e9ca4a12/README_ACTION.txt` (12 lines, sha256:aaf70f171984)",
+      "`terraform/s3/executable/actions/13-arn-aws-s3-security-autopilot-w6-envready-s311-r-e9ca4a12/decision.json` <- `executable/actions/13-arn-aws-s3-security-autopilot-w6-envready-s311-r-e9ca4a12/decision.json` (52 lines, sha256:ec539d30b5fb)",
+      "`terraform/s3/review_required/actions/14-aws-account-696505809372-0c490240/README_ACTION.txt` <- `review_required/actions/14-aws-account-696505809372-0c490240/README_ACTION.txt` (12 lines, sha256:1353e069b3a4)",
+      "`terraform/s3/review_required/actions/14-aws-account-696505809372-0c490240/decision.json` <- `review_required/actions/14-aws-account-696505809372-0c490240/decision.json` (51 lines, sha256:3522dcbb9147)"
+    ],
+    "version": 1
+  },
+  "provider_agnostic": true,
+  "repo_target": {
+    "base_branch": "main",
+    "head_branch": "autopilot/s3-9-shared-setup-20260325t0219z",
+    "provider": "github",
+    "repository": "e2e/live-s3-9-shared-setup",
+    "root_path": "terraform/s3"
+  },
+  "rollback_notes": {
+    "artifact_type": "rollback_notes",
+    "entries": [
+      {
+        "action_id": "01557e04-8980-4554-8c32-5a7e78d3cbf3",
+        "action_type": "s3_bucket_access_logging",
+        "control_id": "S3.9",
+        "rollback_command": "aws s3api put-bucket-logging --bucket config-bucket-696505809372 --bucket-logging-status '{}'",
+        "target_id": "696505809372|eu-north-1|arn:aws:s3:::config-bucket-696505809372|S3.9",
+        "title": "S3 general purpose buckets should have server access logging enabled"
+      },
+      {
+        "action_id": "0b75c532-0a94-407b-8174-0ae8c85f23f5",
+        "action_type": "s3_bucket_access_logging",
+        "control_id": "S3.9",
+        "rollback_command": "aws s3api put-bucket-logging --bucket security-autopilot-w6-strict-s311-manual-696505809372 --bucket-logging-status '{}'",
+        "target_id": "696505809372|eu-north-1|arn:aws:s3:::security-autopilot-w6-strict-s311-manual-696505809372|S3.9",
+        "title": "S3 general purpose buckets should have server access logging enabled"
+      },
+      {
+        "action_id": "1dc612d8-1930-4920-bb11-6ad8ba4fe26b",
+        "action_type": "s3_bucket_access_logging",
+        "control_id": "S3.9",
+        "rollback_command": "aws s3api put-bucket-logging --bucket security-autopilot-w6-envready-accesslogs-696505809372 --bucket-logging-status '{}'",
+        "target_id": "696505809372|eu-north-1|arn:aws:s3:::security-autopilot-w6-envready-accesslogs-696505809372|S3.9",
+        "title": "S3 general purpose buckets should have server access logging enabled"
+      },
+      {
+        "action_id": "3dd66962-2bef-4caa-9627-2f056ebabbd7",
+        "action_type": "s3_bucket_access_logging",
+        "control_id": "S3.9",
+        "rollback_command": "aws s3api put-bucket-logging --bucket security-autopilot-w6-strict-s315-manual-696505809372 --bucket-logging-status '{}'",
+        "target_id": "696505809372|eu-north-1|arn:aws:s3:::security-autopilot-w6-strict-s315-manual-696505809372|S3.9",
+        "title": "S3 general purpose buckets should have server access logging enabled"
+      },
+      {
+        "action_id": "4d6a1520-3ed5-4f47-857e-e6bb8ce61606",
+        "action_type": "s3_bucket_access_logging",
+        "control_id": "S3.9",
+        "rollback_command": "aws s3api put-bucket-logging --bucket security-autopilot-config-696505809372-eu-north-1 --bucket-logging-status '{}'",
+        "target_id": "696505809372|eu-north-1|arn:aws:s3:::security-autopilot-config-696505809372-eu-north-1|S3.9",
+        "title": "S3 general purpose buckets should have server access logging enabled"
+      },
+      {
+        "action_id": "4d81e63b-04e6-4909-978a-e779d63ae721",
+        "action_type": "s3_bucket_access_logging",
+        "control_id": "S3.9",
+        "rollback_command": "aws s3api put-bucket-logging --bucket security-autopilot-w6-envready-config-696505809372 --bucket-logging-status '{}'",
+        "target_id": "696505809372|eu-north-1|arn:aws:s3:::security-autopilot-w6-envready-config-696505809372|S3.9",
+        "title": "S3 general purpose buckets should have server access logging enabled"
+      },
+      {
+        "action_id": "501021f0-ee39-4692-95c1-1d7c07134c71",
+        "action_type": "s3_bucket_access_logging",
+        "control_id": "S3.9",
+        "rollback_command": "aws s3api put-bucket-logging --bucket security-autopilot-w6-envready-s311-exec-696505809372 --bucket-logging-status '{}'",
+        "target_id": "696505809372|eu-north-1|arn:aws:s3:::security-autopilot-w6-envready-s311-exec-696505809372|S3.9",
+        "title": "S3 general purpose buckets should have server access logging enabled"
+      },
+      {
+        "action_id": "6069ec49-a8b1-47df-ace8-153c110cd984",
+        "action_type": "s3_bucket_access_logging",
+        "control_id": "S3.9",
+        "rollback_command": "aws s3api put-bucket-logging --bucket security-autopilot-w6-strict-s315-exec-696505809372 --bucket-logging-status '{}'",
+        "target_id": "696505809372|eu-north-1|arn:aws:s3:::security-autopilot-w6-strict-s315-exec-696505809372|S3.9",
+        "title": "S3 general purpose buckets should have server access logging enabled"
+      },
+      {
+        "action_id": "dcd9aac0-3205-4c1f-a360-8be492ac384f",
+        "action_type": "s3_bucket_access_logging",
+        "control_id": "S3.9",
+        "rollback_command": "aws s3api put-bucket-logging --bucket security-autopilot-w6-envready-cloudtrail-696505809372 --bucket-logging-status '{}'",
+        "target_id": "696505809372|eu-north-1|arn:aws:s3:::security-autopilot-w6-envready-cloudtrail-696505809372|S3.9",
+        "title": "S3 general purpose buckets should have server access logging enabled"
+      },
+      {
+        "action_id": "e03f9f63-e895-46a3-93b3-76c16a0a6ee5",
+        "action_type": "s3_bucket_access_logging",
+        "control_id": "S3.9",
+        "rollback_command": "aws s3api put-bucket-logging --bucket ocypheris-live-ct-20260323162333-eu-north-1 --bucket-logging-status '{}'",
+        "target_id": "696505809372|eu-north-1|arn:aws:s3:::ocypheris-live-ct-20260323162333-eu-north-1|S3.9",
+        "title": "S3 general purpose buckets should have server access logging enabled"
+      },
+      {
+        "action_id": "e7eb463d-7108-4dff-ba5a-7ba8f2266142",
+        "action_type": "s3_bucket_access_logging",
+        "control_id": "S3.9",
+        "rollback_command": "aws s3api put-bucket-logging --bucket security-autopilot-w6-envready-s315-exec-696505809372 --bucket-logging-status '{}'",
+        "target_id": "696505809372|eu-north-1|arn:aws:s3:::security-autopilot-w6-envready-s315-exec-696505809372|S3.9",
+        "title": "S3 general purpose buckets should have server access logging enabled"
+      },
+      {
+        "action_id": "e8ae2a41-9a3f-43c0-8d89-e574311bf148",
+        "action_type": "s3_bucket_access_logging",
+        "control_id": "S3.9",
+        "rollback_command": "aws s3api put-bucket-logging --bucket security-autopilot-w6-strict-s311-exec-696505809372 --bucket-logging-status '{}'",
+        "target_id": "696505809372|eu-north-1|arn:aws:s3:::security-autopilot-w6-strict-s311-exec-696505809372|S3.9",
+        "title": "S3 general purpose buckets should have server access logging enabled"
+      },
+      {
+        "action_id": "e9ca4a12-90e8-4312-82ec-fadfea82a7ce",
+        "action_type": "s3_bucket_access_logging",
+        "control_id": "S3.9",
+        "rollback_command": "aws s3api put-bucket-logging --bucket security-autopilot-w6-envready-s311-review-696505809372 --bucket-logging-status '{}'",
+        "target_id": "696505809372|eu-north-1|arn:aws:s3:::security-autopilot-w6-envready-s311-review-696505809372|S3.9",
+        "title": "S3 general purpose buckets should have server access logging enabled"
+      },
+      {
+        "action_id": "0c490240-f3b5-42b2-94ce-010ae67bd79f",
+        "action_type": "s3_bucket_access_logging",
+        "control_id": "S3.9",
+        "rollback_command": "aws s3api put-bucket-logging --bucket 696505809372|eu-north-1|AWS::::Account:696505809372|S3.9 --bucket-logging-status '{}'",
+        "target_id": "696505809372|eu-north-1|AWS::::Account:696505809372|S3.9",
+        "title": "S3 general purpose buckets should have server access logging enabled"
+      }
+    ],
+    "entry_count": 14,
+    "recommended_path": "Prefer reverting through version control and the same reviewed deployment workflow.",
+    "version": 1
+  },
+  "title": "Apply AWS Security Autopilot remediation bundle (14 actions)",
+  "version": 1
+}

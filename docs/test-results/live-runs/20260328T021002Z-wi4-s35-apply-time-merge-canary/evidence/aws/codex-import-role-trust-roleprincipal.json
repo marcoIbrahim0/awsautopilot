@@ -1,0 +1,21 @@
+{
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Sid": "AllowAutoPilotAdminAssumeRole",
+            "Effect": "Allow",
+            "Principal": {
+                "AWS": [
+                    "arn:aws:iam::029037611564:role/CodexWI4LocalApiRole",
+                    "arn:aws:iam::029037611564:user/AutoPilotAdmin"
+                ]
+            },
+            "Action": "sts:AssumeRole",
+            "Condition": {
+                "StringEquals": {
+                    "sts:ExternalId": "ocypheris-p2-e2e-20260312"
+                }
+            }
+        }
+    ]
+}

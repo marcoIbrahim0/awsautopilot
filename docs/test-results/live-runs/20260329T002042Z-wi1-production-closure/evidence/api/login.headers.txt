@@ -1,0 +1,18 @@
+HTTP/2 200 
+date: Sun, 29 Mar 2026 00:21:23 GMT
+content-type: application/json
+cf-ray: 9e3ab69e6b0ac84f-MRS
+cf-cache-status: DYNAMIC
+access-control-allow-origin: https://ocypheris.com
+nel: {"report_to":"cf-nel","success_fraction":0.0,"max_age":604800}
+server: cloudflare
+set-cookie: access_token=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJhNWZhYjQ4OS05YjhlLTQ2NTYtYjJmNC04YWNjZmJlZDYxNDIiLCJ0ZW5hbnRfaWQiOiJlNGUwN2FhOC1iOGVhLTRjMWQtOWZkNy00MzYyYTJmYzExOTUiLCJ0b2tlbl92ZXJzaW9uIjowLCJwZXJzaXN0ZW50X3Nlc3Npb24iOnRydWUsImV4cCI6MTc3NTM1MjA4M30.Znwb9CiwKZcZsMlvH1naEbHI1A6cfihF0KIxVjbr59k; expires=Sun, 05 Apr 2026 01:21:23 GMT; HttpOnly; Max-Age=608400; Path=/; SameSite=lax; Secure
+set-cookie: csrf_token=WU4WGlrhkEkzKpZqwwDrXZja_UXi-QFsOCNTUr1hqKw; Domain=.ocypheris.com; expires=Sun, 05 Apr 2026 01:21:23 GMT; Max-Age=608400; Path=/; SameSite=lax; Secure
+vary: Origin
+access-control-allow-headers: *
+access-control-allow-methods: DELETE, GET, HEAD, OPTIONS, PATCH, POST, PUT
+access-control-allow-credentials: true
+apigw-requestid: a9aDUgdwAi0EJHw=
+report-to: {"group":"cf-nel","max_age":604800,"endpoints":[{"url":"https://a.nel.cloudflare.com/report/v4?s=SJcqCCSNV9pe1vJMymrvGkhwfpHXcfWOhNJ4c%2BWzpfzF2QgWhlgnxrRv87NPmDHrGrUhN7b4DTzfBJFLSf3E1TKiO86bC8x49nC55nwkuM6iagHaWuToeQaO0i6UHF2QSeuDTg%3D%3D"}]}
+alt-svc: h3=":443"; ma=86400
+

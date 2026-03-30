@@ -1,0 +1,13 @@
+{
+  "status_code": 200,
+  "body": {
+    "compliant": false,
+    "message": "Preview for mode 'pr_only' is informational only. Generate a PR bundle to review the change set.",
+    "will_apply": false,
+    "impact_summary": null,
+    "before_state": {},
+    "after_state": {},
+    "diff_lines": [],
+    "resolution": null
+  }
+}

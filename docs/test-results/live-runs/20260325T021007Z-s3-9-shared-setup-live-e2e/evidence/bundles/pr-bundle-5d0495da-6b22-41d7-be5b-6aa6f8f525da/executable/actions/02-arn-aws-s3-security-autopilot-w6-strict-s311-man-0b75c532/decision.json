@@ -1,0 +1,52 @@
+{
+  "action_id": "0b75c532-0a94-407b-8174-0ae8c85f23f5",
+  "action_type": "s3_bucket_access_logging",
+  "blocked_reasons": [
+    "Destination log bucket 'security-autopilot-access-logs-696505809372' could not be verified from this account context (403)."
+  ],
+  "control_id": "S3.9",
+  "decision_rationale": "Family resolver kept S3.9 executable by switching to dedicated destination-bucket creation with secure defaults. Destination log bucket 'security-autopilot-access-logs-696505809372' could not be verified from this account context (403). Run creation did not require additional risk-only acceptance.",
+  "decision_summary": "Family resolver kept S3.9 executable by switching to dedicated destination-bucket creation with secure defaults. Destination log bucket 'security-autopilot-access-logs-696505809372' could not be verified from this account context (403). Run creation did not require additional risk-only acceptance.",
+  "decision_version": "resolver/v1",
+  "finding_coverage": {},
+  "folder": "executable/actions/02-arn-aws-s3-security-autopilot-w6-strict-s311-man-0b75c532",
+  "has_runnable_terraform": true,
+  "index": 2,
+  "missing_defaults": [],
+  "missing_inputs": [],
+  "outcome": "executable_bundle_generated",
+  "preservation_summary": {
+    "ambiguous_source_destination_relationship": false,
+    "destination_bucket_name": "security-autopilot-access-logs-696505809372",
+    "destination_bucket_reachable": false,
+    "destination_creation_planned": true,
+    "destination_safety_proven": false,
+    "destination_secure_defaults": true,
+    "executable_destination_allowed": true,
+    "family": "s3_bucket_access_logging",
+    "family_strategy": "s3_enable_access_logging_guided",
+    "selected_branch": "s3_enable_access_logging_create_destination_bucket",
+    "single_profile_compatible": false,
+    "source_bucket_name": "security-autopilot-w6-strict-s311-manual-696505809372",
+    "source_bucket_scope_proven": true,
+    "strategy_only_supported": true
+  },
+  "profile_id": "s3_enable_access_logging_create_destination_bucket",
+  "rejected_profiles": [
+    {
+      "detail": "Destination log bucket 'security-autopilot-access-logs-696505809372' could not be verified from this account context (403).",
+      "profile_id": "s3_enable_access_logging_guided",
+      "reason": "branch_unavailable"
+    }
+  ],
+  "shared_setup_folder": "executable/actions/00-shared-01-security-autopilot-access-logs-696505809",
+  "strategy_id": "s3_enable_access_logging_guided",
+  "strategy_inputs": {
+    "log_bucket_name": "security-autopilot-access-logs-696505809372"
+  },
+  "support_tier": "deterministic_bundle",
+  "target_id": "696505809372|eu-north-1|arn:aws:s3:::security-autopilot-w6-strict-s311-manual-696505809372|S3.9",
+  "tier": "executable",
+  "tier_root": "executable/actions",
+  "title": "S3 general purpose buckets should have server access logging enabled"
+}

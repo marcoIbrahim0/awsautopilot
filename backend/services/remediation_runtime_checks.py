@@ -419,7 +419,13 @@ def _has_preservation_evidence(action_type: str, payload: dict[str, Any]) -> boo
         )
     if action_type == "s3_bucket_lifecycle_configuration":
         rule_count = _to_int(evidence.get("existing_lifecycle_rule_count"))
-        return rule_count == 0 or isinstance(evidence.get("existing_lifecycle_configuration_json"), str)
+        if rule_count == 0 or isinstance(evidence.get("existing_lifecycle_configuration_json"), str):
+            return True
+        return (
+            payload.get("s3_lifecycle_analysis_possible") is False
+            and isinstance(evidence.get("target_bucket"), str)
+            and isinstance(evidence.get("existing_lifecycle_capture_error"), str)
+        )
     if action_type == "s3_bucket_encryption_kms":
         if payload.get("kms_key_mode") != "custom":
             return True

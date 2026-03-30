@@ -177,6 +177,113 @@ def test_upsert_shadow_state_warns_when_overlay_update_matches_zero_rows(monkeyp
     assert "matched zero rows" in str(warning.call_args[0][0])
 
 
+def test_upsert_shadow_state_materializes_in_scope_finding_when_overlay_matches_zero_rows(monkeypatch) -> None:
+    _configure_promotion_guardrails(
+        monkeypatch,
+        shadow_mode=True,
+        promotion_enabled=False,
+        high_confidence_controls="S3.11",
+        min_confidence=95,
+    )
+    session = _build_session_for_overlay_rowcount(0)
+
+    shadow_state.upsert_shadow_state(
+        session=session,
+        tenant_id=uuid.uuid4(),
+        account_id="696505809372",
+        region="eu-north-1",
+        event_time=datetime.now(timezone.utc),
+        source="event_monitor_shadow",
+        evaluation=SimpleNamespace(
+            resource_id="arn:aws:s3:::phase2-wi1-lifecycle-696505809372",
+            resource_type="AwsS3Bucket",
+            control_id="S3.11",
+            status="OPEN",
+            status_reason="inventory_confirmed_non_compliant",
+            evidence_ref={"source": "inventory", "lifecycle_has_valid_rule": False},
+            state_confidence=95,
+            severity_label="MEDIUM",
+            title="S3 bucket lifecycle rules configured",
+            description="Inventory reconciliation for lifecycle policy coverage.",
+        ),
+    )
+
+    added_findings = [obj for obj in session.add.call_args_list if isinstance(obj.args[0], Finding)]
+    assert len(added_findings) == 1
+    finding = added_findings[0].args[0]
+    assert finding.source == "event_monitor_shadow"
+    assert finding.control_id == "S3.11"
+    assert finding.canonical_control_id == "S3.11"
+    assert finding.resource_id == "arn:aws:s3:::phase2-wi1-lifecycle-696505809372"
+    assert finding.resource_type == "AwsS3Bucket"
+    assert finding.resource_key == "s3:phase2-wi1-lifecycle-696505809372"
+    assert finding.in_scope is True
+    assert finding.status == "NEW"
+    assert finding.shadow_status_normalized == "OPEN"
+    assert finding.raw_json["materialized_by"] == "inventory_reconcile"
+
+
+def test_upsert_shadow_state_reuses_pending_materialized_finding_in_same_session(monkeypatch) -> None:
+    _configure_promotion_guardrails(
+        monkeypatch,
+        shadow_mode=True,
+        promotion_enabled=False,
+        high_confidence_controls="S3.11",
+        min_confidence=95,
+    )
+    tenant_id = uuid.uuid4()
+    pending_finding = Finding(
+        id=uuid.uuid4(),
+        tenant_id=tenant_id,
+        account_id="696505809372",
+        region="eu-north-1",
+        finding_id="shadow:event_monitor_shadow:pending",
+        source="event_monitor_shadow",
+        severity_label="LOW",
+        severity_normalized=25,
+        title="stale",
+        description="stale",
+        resource_id="arn:aws:s3:::phase2-wi1-lifecycle-696505809372",
+        resource_type="AwsS3Bucket",
+        control_id="S3.11",
+        canonical_control_id="S3.11",
+        resource_key="s3:phase2-wi1-lifecycle-696505809372",
+        status="NEW",
+        in_scope=True,
+        raw_json={},
+    )
+    session = _build_session_for_overlay_rowcount(0)
+    session.new = {pending_finding}
+
+    shadow_state.upsert_shadow_state(
+        session=session,
+        tenant_id=tenant_id,
+        account_id="696505809372",
+        region="eu-north-1",
+        event_time=datetime.now(timezone.utc),
+        source="event_monitor_shadow",
+        evaluation=SimpleNamespace(
+            resource_id="arn:aws:s3:::phase2-wi1-lifecycle-696505809372",
+            resource_type="AwsS3Bucket",
+            control_id="S3.11",
+            status="OPEN",
+            status_reason="inventory_confirmed_non_compliant",
+            evidence_ref={"source": "inventory", "lifecycle_has_valid_rule": False},
+            state_confidence=95,
+            severity_label="MEDIUM",
+            title="S3 bucket lifecycle rules configured",
+            description="Inventory reconciliation for lifecycle policy coverage.",
+        ),
+    )
+
+    added_findings = [obj for obj in session.add.call_args_list if isinstance(obj.args[0], Finding)]
+    assert added_findings == []
+    assert pending_finding.title == "S3 bucket lifecycle rules configured"
+    assert pending_finding.severity_label == "MEDIUM"
+    assert pending_finding.shadow_status_normalized == "OPEN"
+    assert pending_finding.raw_json["materialized_by"] == "inventory_reconcile"
+
+
 def test_upsert_shadow_state_does_not_warn_when_overlay_update_matches_rows(monkeypatch) -> None:
     _configure_promotion_guardrails(
         monkeypatch,

@@ -1,0 +1,8 @@
+{
+    "DeliveryChannels": [
+        {
+            "name": "default",
+            "s3BucketName": "security-autopilot-config-696505809372-eu-north-1"
+        }
+    ]
+}

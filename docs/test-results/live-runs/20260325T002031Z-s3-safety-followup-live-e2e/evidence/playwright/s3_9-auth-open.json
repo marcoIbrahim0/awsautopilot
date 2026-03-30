@@ -1,0 +1,44 @@
+{
+  "url": "https://ocypheris.com/actions/group?group_id=8d0b831d-8c37-48eb-b1f2-099d6271faaa",
+  "title": "AWS Security Autopilot",
+  "bodyPreview": "Findings\nAccounts\nSettings\nTop Risks\nExports\nHelp\nAudit Log\nAction Group\n27\nM\nBack to Findings\ns3_bucket_access_logging\n\nAccount 696505809372 · eu-north-1\n\nGroup ID: 8d0b831d-8c37-48eb-b1f2-099d6271faaa\n\nView PR Bundle history →\nGenerate bundle\n\nGENERATED AND SUCCESSFUL\n\n0\n\nMETADATA-ONLY\n\n0\n\nTOTAL ACTIONS\n\n14\n\nGENERATED AND NEEDS FOLLOW-UP\nNo generated follow-up actions right now.\nGENERATION TIMELINE\nNo generations yet.\n\nOCYPHERIS\n\nAsk AI",
+  "buttons": [
+    {
+      "text": "",
+      "disabled": false
+    },
+    {
+      "text": "",
+      "disabled": false
+    },
+    {
+      "text": "",
+      "disabled": false
+    },
+    {
+      "text": "27",
+      "disabled": false
+    },
+    {
+      "text": "27",
+      "disabled": false
+    },
+    {
+      "text": "M",
+      "disabled": false
+    },
+    {
+      "text": "View PR Bundle history →",
+      "disabled": false
+    },
+    {
+      "text": "Generate bundle",
+      "disabled": false
+    },
+    {
+      "text": "OCYPHERIS\n\nAsk AI",
+      "disabled": false
+    }
+  ],
+  "inputs": []
+}

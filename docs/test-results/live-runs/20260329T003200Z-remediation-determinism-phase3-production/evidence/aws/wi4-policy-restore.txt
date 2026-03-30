@@ -1,0 +1,1 @@
+Restored bucket policy for sa-wi13-14-nopolicy-696505809372-20260328201935 from .s3-rollback/policy_snapshot.json.

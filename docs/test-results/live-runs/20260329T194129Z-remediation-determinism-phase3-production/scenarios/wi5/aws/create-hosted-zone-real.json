@@ -1,0 +1,26 @@
+{
+    "Location": "https://route53.amazonaws.com/2013-04-01/hostedzone/Z081885955B6GUR4IL7E",
+    "HostedZone": {
+        "Id": "/hostedzone/Z081885955B6GUR4IL7E",
+        "Name": "wi5-gate3-696505809372.ocypheris.com.",
+        "CallerReference": "wi5-gate3-1774825936",
+        "Config": {
+            "Comment": "WI-5 Gate 3 delegated public zone",
+            "PrivateZone": false
+        },
+        "ResourceRecordSetCount": 2
+    },
+    "ChangeInfo": {
+        "Id": "/change/C1032701186C7BL4NLRL8",
+        "Status": "PENDING",
+        "SubmittedAt": "2026-03-29T23:12:17.556000+00:00"
+    },
+    "DelegationSet": {
+        "NameServers": [
+            "ns-1780.awsdns-30.co.uk",
+            "ns-47.awsdns-05.com",
+            "ns-1270.awsdns-30.org",
+            "ns-1018.awsdns-63.net"
+        ]
+    }
+}

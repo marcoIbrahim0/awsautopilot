@@ -478,6 +478,46 @@ def test_s3_2_oac_grouped_plan_keeps_apply_time_merge_executable_without_policy_
     assert "existing_bucket_policy_json" not in plan.action_resolutions[0].strategy_inputs
 
 
+def test_s3_11_grouped_plan_keeps_apply_time_merge_executable_without_lifecycle_json(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    action = replace(
+        _make_action(priority=100, minutes_ago=1, action_type="s3_bucket_lifecycle_configuration"),
+        target_id="123456789012|eu-north-1|arn:aws:s3:::lifecycle-bucket|S3.11",
+        resource_id="arn:aws:s3:::lifecycle-bucket",
+    )
+    request = NormalizedGroupedRunRequest(
+        strategy_id="s3_enable_abort_incomplete_uploads",
+        risk_acknowledged=True,
+    )
+
+    monkeypatch.setattr(
+        "backend.services.grouped_remediation_runs.collect_runtime_risk_signals",
+        lambda **_: {
+            "s3_lifecycle_analysis_possible": False,
+            "s3_lifecycle_analysis_error": "AccessDenied",
+            "evidence": {
+                "target_bucket": "lifecycle-bucket",
+                "existing_lifecycle_capture_error": "AccessDenied",
+            },
+        },
+    )
+
+    plan = build_grouped_run_persistence_plan(
+        request=request,
+        scope=_scope(action_type="s3_bucket_lifecycle_configuration"),
+        actions=[action],
+        group_bundle_seed={"group_key": "group-lifecycle"},
+    )
+
+    resolution = plan.action_resolutions[0].resolution
+    assert resolution["support_tier"] == "deterministic_bundle"
+    assert resolution["blocked_reasons"] == []
+    assert resolution["preservation_summary"]["apply_time_merge"] is True
+    assert "AccessDenied" in resolution["preservation_summary"]["apply_time_merge_reason"]
+    assert "existing_lifecycle_configuration_json" not in plan.action_resolutions[0].strategy_inputs
+
+
 def test_s3_2_standard_grouped_plan_uses_review_policy_scrub_for_public_non_website_bucket(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:

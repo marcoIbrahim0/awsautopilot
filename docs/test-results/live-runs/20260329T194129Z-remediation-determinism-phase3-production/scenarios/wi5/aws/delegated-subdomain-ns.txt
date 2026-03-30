@@ -1,0 +1,4 @@
+ns-1018.awsdns-63.net.
+ns-1270.awsdns-30.org.
+ns-1780.awsdns-30.co.uk.
+ns-47.awsdns-05.com.

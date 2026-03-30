@@ -32,19 +32,24 @@ Related docs:
 Current landed behavior for the `cloudtrail_enabled` / `cloudtrail_enable_guided` family:
 
 - `trail_bucket_name` always means the actual CloudTrail log-destination bucket. It is never treated as a search hint.
-- Resolution precedence is:
-  - a single safe bucket discovered from an existing CloudTrail trail
-  - tenant remediation default `cloudtrail.default_bucket_name`
+- Effective resolution precedence is:
   - explicit user input
-- `create_bucket_if_missing` is additive and defaults to `false`.
+  - tenant remediation default `cloudtrail.default_bucket_name`
+  - a single safe bucket discovered from an existing CloudTrail trail
+  - generated safe default `security-autopilot-trail-logs-{account_id}-{region}`
+- `create_bucket_if_missing` now defaults to `true` for the generated safe-default path so new no-trail accounts resolve to an executable create path without asking for a bucket name first.
+- Existing-bucket reuse remains the default for:
+  - buckets discovered from an existing CloudTrail trail
+  - tenant remediation defaults that already point at the intended log bucket
 - When `create_bucket_if_missing=false`, the resolved `trail_bucket_name` must already exist and remain reachable from the current account context or the resolver fails closed with `invalid_strategy_inputs`.
 - When `create_bucket_if_missing=true`, the same `trail_bucket_name` becomes the exact bucket name to create and use for CloudTrail log delivery.
 - Bucket creation remains approval-gated. Create-time requests must include `bucket_creation_acknowledged=true` in addition to the existing generic `risk_acknowledged=true`.
 - Preview and create flows now expose bucket provenance and mode through `preservation_summary`:
-  - `trail_bucket_source = existing_trail | tenant_default | user_input`
+  - `trail_bucket_source = existing_trail | tenant_default | safe_default | user_input`
   - `trail_bucket_mode = existing | create_if_missing`
+- Remediation-options now expose resolver-backed CloudTrail defaults through `context.default_inputs`, so UI and no-UI clients can render the same effective bucket name and create-vs-reuse mode before run creation.
 
-This keeps the default CloudTrail flow fail-closed and non-creating while still allowing an explicit opt-in bundle path that creates the S3 log bucket plus baseline policy controls.
+This keeps existing-bucket reuse fail-closed while making the no-trail bootstrap path deterministic through a generated bucket name plus the existing bucket-creation approval gate.
 
 ## Wave 0 Baselines
 
@@ -330,12 +335,16 @@ Phase-1 migration rules captured in the source plan:
   - `close_and_revoke`
   - `restrict_to_ip`
   - `restrict_to_cidr`
+  - `ssm_only`
+  - `bastion_sg_reference`
 - EC2.53 semantics:
   - `close_public` is additive only. It adds restricted SSH/RDP ingress but does not revoke existing public `0.0.0.0/0` or `::/0` admin rules.
-  - `close_and_revoke` is the only executable EC2.53 profile that automatically removes the existing public admin rules.
+  - `close_and_revoke` automatically removes the existing public admin rules and adds replacement restricted SSH/RDP ingress.
+  - `ssm_only` automatically removes the existing public admin rules, does not add replacement SSH/RDP ingress, and assumes Session Manager access already works before apply.
+  - `bastion_sg_reference` automatically removes the existing public admin rules and replaces them with source-security-group ingress from the tenant's approved bastion SG list.
   - Successful grouped/single-run execution of `close_public` now projects to a non-closing success bucket (`run_successful_needs_followup`) instead of the generic waiting-for-AWS-confirmation warning, because the finding is still expected to remain open until the public rule is removed.
 - When those executable EC2.53 branches resolve deterministically with sufficient inputs, preview, single-run create, and grouped customer-run bundle resolution all preserve the same executable tier.
-- `ssm_only` and `bastion_sg_reference` are review/manual profiles until runtime support exists.
+- `bastion_sg_reference` is executable only when `approved_bastion_security_group_ids` resolves from tenant settings; otherwise it remains `manual_guidance_only` with a clear missing-settings reason.
 - IAM.4 keeps `iam_root_key_disable` and `iam_root_key_delete`, each starting with `profile_id == strategy_id`.
 - S3.2 keeps current strategy families and adds `website_manual` as manual-only.
 - S3.5 executable output requires resolver-side policy-document classification proving merge and preservation are safe.
@@ -343,11 +352,13 @@ Phase-1 migration rules captured in the source plan:
 - S3.9 stays under `s3_bucket_access_logging` and preserves public strategy `s3_enable_access_logging_guided`.
   - Executable compatibility branch remains `s3_enable_access_logging_guided`.
   - Explicit downgrade branch is `s3_enable_access_logging_review_destination_safety`.
-  - Bucket scope and destination safety must be proven before the branch remains executable.
+  - When the caller omits `log_bucket_name`, bucket-scoped actions now auto-derive `log_bucket_name=<source-bucket>-access-logs` and persist that value through preview/create/grouped artifacts.
+  - Bucket scope and destination safety must still be proven before the branch remains executable, with runtime bucket discovery trying `target_id` first and `resource_id` second for stale/account-scoped actions.
+  - Account-scoped or otherwise ambiguous actions do not invent a destination bucket and remain downgraded/fail-closed.
 - S3.15 stays under `s3_bucket_encryption_kms` and preserves public strategy `s3_enable_sse_kms_guided`.
   - Executable compatibility branch remains the AWS-managed-key path.
   - Explicit customer-managed branch is `s3_enable_sse_kms_customer_managed`.
-  - Missing or under-proven customer-managed KMS evidence downgrades explicitly instead of silently falling back to executable output.
+  - Missing or under-proven customer-managed KMS evidence downgrades explicitly instead of silently falling back to executable output, and the runtime scope proof now accepts `resource_id` fallback when `target_id` is stale/account-scoped.
 - CloudTrail.1 stays under `cloudtrail_enabled` and preserves public strategy `cloudtrail_enable_guided`.
   - `cloudtrail.default_bucket_name` and `cloudtrail.default_kms_key_arn` can populate resolver inputs, but missing defaults are never silently invented.
   - Unresolved log-bucket proof, `create_bucket_policy=false`, `multi_region=false`, or KMS delivery all downgrade explicitly instead of remaining executable by default.

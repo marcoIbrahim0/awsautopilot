@@ -11,9 +11,13 @@ from backend.models.enums import (
     ActionGroupStatusBucket,
 )
 from backend.services.action_run_confirmation import (
+    clear_confirmation_refresh_schedule,
     evaluate_confirmation_for_action,
+    mark_confirmation_refresh_enqueued,
     record_execution_result,
     record_non_executable_result,
+    schedule_confirmation_refresh,
+    seed_confirmation_refresh_schedule,
     SUCCESS_NEEDS_FOLLOWUP_KIND,
 )
 
@@ -33,6 +37,9 @@ def _mock_state() -> SimpleNamespace:
         last_attempt_at=datetime.now(timezone.utc) - timedelta(minutes=5),
         last_confirmed_at=None,
         last_confirmation_source=None,
+        confirmation_refresh_last_enqueued_at=None,
+        confirmation_refresh_next_due_at=None,
+        confirmation_refresh_attempt_count=0,
     )
 
 
@@ -99,6 +106,7 @@ def test_record_execution_result_success_sets_pending_confirmation_bucket() -> N
 
     assert result is state
     assert state.latest_run_status_bucket == ActionGroupStatusBucket.run_successful_pending_confirmation
+    assert state.confirmation_refresh_next_due_at is None
 
 
 def test_record_execution_result_success_sets_needs_followup_bucket_for_additive_run() -> None:
@@ -132,6 +140,7 @@ def test_record_execution_result_success_sets_needs_followup_bucket_for_additive
 
     assert result is state
     assert state.latest_run_status_bucket == ActionGroupStatusBucket.run_successful_needs_followup
+    assert state.confirmation_refresh_next_due_at is None
 
 
 def test_apply_success_without_aws_confirmation_stays_pending_confirmation() -> None:
@@ -165,6 +174,87 @@ def test_apply_success_without_aws_confirmation_stays_pending_confirmation() -> 
 
     assert result["confirmed"] is False
     assert state.latest_run_status_bucket == ActionGroupStatusBucket.run_successful_pending_confirmation
+
+
+def test_schedule_confirmation_refresh_seeds_next_due_at_for_pending_success() -> None:
+    action_id = uuid.uuid4()
+    membership = _mock_membership(action_id)
+    state = _mock_state()
+    state.latest_run_status_bucket = ActionGroupStatusBucket.run_successful_pending_confirmation
+    finished_at = datetime.now(timezone.utc)
+    session = MagicMock()
+
+    with patch("backend.services.action_run_confirmation._get_membership", return_value=membership):
+        with patch("backend.services.action_run_confirmation._get_or_create_state", return_value=state):
+            schedule_confirmation_refresh(
+                session,
+                action_id=action_id,
+                finished_at=finished_at,
+            )
+
+    assert state.confirmation_refresh_last_enqueued_at is None
+    assert state.confirmation_refresh_attempt_count == 0
+    assert state.confirmation_refresh_next_due_at == finished_at + timedelta(minutes=15)
+
+
+def test_schedule_confirmation_refresh_clears_non_pending_state() -> None:
+    action_id = uuid.uuid4()
+    membership = _mock_membership(action_id)
+    state = _mock_state()
+    state.confirmation_refresh_last_enqueued_at = datetime.now(timezone.utc)
+    state.confirmation_refresh_next_due_at = datetime.now(timezone.utc) + timedelta(minutes=15)
+    state.confirmation_refresh_attempt_count = 2
+    session = MagicMock()
+
+    with patch("backend.services.action_run_confirmation._get_membership", return_value=membership):
+        with patch("backend.services.action_run_confirmation._get_or_create_state", return_value=state):
+            schedule_confirmation_refresh(
+                session,
+                action_id=action_id,
+                finished_at=datetime.now(timezone.utc),
+            )
+
+    assert state.confirmation_refresh_last_enqueued_at is None
+    assert state.confirmation_refresh_next_due_at is None
+    assert state.confirmation_refresh_attempt_count == 0
+
+
+def test_mark_confirmation_refresh_enqueued_sets_hourly_backoff() -> None:
+    state = _mock_state()
+    state.latest_run_status_bucket = ActionGroupStatusBucket.run_successful_pending_confirmation
+    state.last_attempt_at = datetime(2026, 3, 26, 12, 0, tzinfo=timezone.utc)
+    enqueued_at = datetime(2026, 3, 26, 12, 15, tzinfo=timezone.utc)
+
+    mark_confirmation_refresh_enqueued(state, enqueued_at=enqueued_at)
+
+    assert state.confirmation_refresh_last_enqueued_at == enqueued_at
+    assert state.confirmation_refresh_attempt_count == 1
+    assert state.confirmation_refresh_next_due_at == enqueued_at + timedelta(hours=1)
+
+
+def test_mark_confirmation_refresh_enqueued_stops_after_deadline() -> None:
+    state = _mock_state()
+    state.latest_run_status_bucket = ActionGroupStatusBucket.run_successful_pending_confirmation
+    state.last_attempt_at = datetime(2026, 3, 26, 12, 0, tzinfo=timezone.utc)
+    enqueued_at = datetime(2026, 3, 27, 0, 0, tzinfo=timezone.utc)
+
+    mark_confirmation_refresh_enqueued(state, enqueued_at=enqueued_at)
+
+    assert state.confirmation_refresh_last_enqueued_at == enqueued_at
+    assert state.confirmation_refresh_next_due_at is None
+
+
+def test_seed_and_clear_confirmation_refresh_helpers() -> None:
+    state = _mock_state()
+    finished_at = datetime(2026, 3, 26, 12, 0, tzinfo=timezone.utc)
+
+    seed_confirmation_refresh_schedule(state, finished_at=finished_at)
+    assert state.confirmation_refresh_next_due_at == finished_at + timedelta(minutes=15)
+
+    clear_confirmation_refresh_schedule(state)
+    assert state.confirmation_refresh_last_enqueued_at is None
+    assert state.confirmation_refresh_next_due_at is None
+    assert state.confirmation_refresh_attempt_count == 0
 
 
 def test_apply_success_without_aws_confirmation_moves_additive_run_to_needs_followup() -> None:
@@ -207,6 +297,45 @@ def test_apply_success_without_aws_confirmation_moves_additive_run_to_needs_foll
 
     assert result["confirmed"] is False
     assert state.latest_run_status_bucket == ActionGroupStatusBucket.run_successful_needs_followup
+    assert state.confirmation_refresh_next_due_at is None
+
+
+def test_confirmation_clears_refresh_schedule() -> None:
+    action_id = uuid.uuid4()
+    membership = _mock_membership(action_id)
+    state = _mock_state()
+    state.latest_run_status_bucket = ActionGroupStatusBucket.run_successful_pending_confirmation
+    state.confirmation_refresh_next_due_at = datetime.now(timezone.utc) + timedelta(minutes=15)
+    state.confirmation_refresh_attempt_count = 1
+    confirmed_at = datetime.now(timezone.utc)
+    finding = SimpleNamespace(
+        status="RESOLVED",
+        last_observed_at=confirmed_at,
+        updated_at=confirmed_at,
+        shadow_status_normalized=None,
+        shadow_last_observed_event_time=None,
+        shadow_last_evaluated_at=None,
+    )
+    session = MagicMock()
+    session.execute.return_value = _mock_execute_with_findings([finding])
+
+    with patch("backend.services.action_run_confirmation._get_membership", return_value=membership):
+        with patch("backend.services.action_run_confirmation._get_or_create_state", return_value=state):
+            with patch(
+                "backend.services.action_run_confirmation._load_latest_run_context",
+                return_value=(ActionGroupExecutionStatus.success, "finished", None, state.last_attempt_at, None),
+            ):
+                result = evaluate_confirmation_for_action(
+                    session,
+                    action_id=action_id,
+                    since_run_started=state.last_attempt_at,
+                    execution_status=ActionGroupExecutionStatus.success,
+                )
+
+    assert result["confirmed"] is True
+    assert state.latest_run_status_bucket == ActionGroupStatusBucket.run_successful_confirmed
+    assert state.confirmation_refresh_next_due_at is None
+    assert state.confirmation_refresh_attempt_count == 0
 
 
 def test_additive_run_followup_kind_is_detected() -> None:

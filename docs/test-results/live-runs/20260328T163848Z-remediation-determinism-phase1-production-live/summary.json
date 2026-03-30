@@ -1,0 +1,56 @@
+{
+  "run_id": "20260328T163848Z-remediation-determinism-phase1-production-live",
+  "date_utc": "2026-03-28",
+  "phase": "phase1",
+  "api_base": "https://api.ocypheris.com",
+  "tenant_id": "e4e07aa8-b8ea-4c1d-9fd7-4362a2fc1195",
+  "tenant_name": "Marco",
+  "account_id": "696505809372",
+  "region": "eu-north-1",
+  "outcome": "BLOCKED",
+  "gate_status": {
+    "gate_0_preflight": "BLOCKED",
+    "gate_1a_local_regression": "PASS",
+    "gate_1b_production_scenarios": "BLOCKED",
+    "gate_3_live_execution": "PARTIAL"
+  },
+  "preflight": {
+    "service_readiness_overall_ready": true,
+    "control_plane_overall_ready": false,
+    "control_plane_missing_regions": [
+      "eu-north-1"
+    ],
+    "auth_succeeded": true
+  },
+  "executed_runs": [
+    {
+      "work_item": "WI-3",
+      "action_id": "456f845e-da64-43cf-8dc2-d738c3a770df",
+      "run_id": "d16be6ee-2297-41c2-88b4-5dbac9ade2b6",
+      "run_status": "success",
+      "support_tier": "deterministic_bundle",
+      "terraform_validate": "failed",
+      "failure_reason": "Invalid Terraform references to arn_prefix_cloudtrail_logs in cloudtrail_enabled.tf"
+    },
+    {
+      "work_item": "WI-6",
+      "action_id": "19a9b0f0-de47-4a5b-982f-8d3c876c2064",
+      "run_id": "83461a94-e216-48bf-8a38-d4900fe657a5",
+      "run_status": "success",
+      "support_tier": "deterministic_bundle",
+      "terraform_validate": "failed",
+      "failure_reason": "Invalid Terraform references to arn_prefix_access_logs in s3_bucket_access_logging.tf"
+    }
+  ],
+  "missing_required_candidates": [
+    "WI-7",
+    "WI-12",
+    "WI-13",
+    "WI-14"
+  ],
+  "live_defects": [
+    "CloudTrail deterministic bundle fails terraform validate",
+    "S3.9 deterministic bundle fails terraform validate",
+    "S3.9 remediation-options default_inputs includes create_log_bucket but create API rejects that field"
+  ]
+}

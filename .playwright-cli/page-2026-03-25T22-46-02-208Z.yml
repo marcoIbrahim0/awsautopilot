@@ -1,0 +1,141 @@
+- generic [active] [ref=e1]:
+  - status [ref=e2]
+  - generic [ref=e5]:
+    - complementary [ref=e6]:
+      - navigation [ref=e10]:
+        - link "Findings" [ref=e11] [cursor=pointer]:
+          - /url: /findings
+          - img [ref=e13]
+          - generic: Findings
+        - link "Accounts" [ref=e15] [cursor=pointer]:
+          - /url: /accounts
+          - img [ref=e17]
+          - generic: Accounts
+        - link "Settings" [ref=e19] [cursor=pointer]:
+          - /url: /settings
+          - img [ref=e21]
+          - generic: Settings
+        - link "Top Risks" [ref=e24] [cursor=pointer]:
+          - /url: /top-risks
+          - img [ref=e26]
+          - generic: Top Risks
+        - link "Exports" [ref=e28] [cursor=pointer]:
+          - /url: /exports
+          - img [ref=e30]
+          - generic: Exports
+        - link "Help" [ref=e32] [cursor=pointer]:
+          - /url: /help
+          - img [ref=e34]
+          - generic: Help
+      - button "Pin sidebar open" [ref=e39]:
+        - img [ref=e40]
+    - generic [ref=e42]:
+      - banner [ref=e43]:
+        - heading "Finding Detail" [level=1] [ref=e45]
+        - generic [ref=e46]:
+          - button "Switch to light mode" [ref=e47]:
+            - img [ref=e48]
+          - button "Notifications" [ref=e51]:
+            - img [ref=e52]
+          - button "Profile menu" [ref=e54]:
+            - generic [ref=e55]: U
+      - main [ref=e56]:
+        - generic [ref=e58]:
+          - generic [ref=e59]:
+            - link "Back to Findings" [ref=e60] [cursor=pointer]:
+              - /url: /findings
+              - img [ref=e61]
+              - text: Back to Findings
+            - link "Need help with this finding?" [ref=e63] [cursor=pointer]:
+              - /url: /help?tab=assistant&from=%2Ffindings%2F87cab671-be7d-44a2-8d48-4badd88ca9e9&account_id=696505809372&finding_id=87cab671-be7d-44a2-8d48-4badd88ca9e9
+              - generic [ref=e64]: Need help with this finding?
+          - generic [ref=e84]:
+            - generic [ref=e85]:
+              - heading "S3 general purpose buckets should have Lifecycle configurations" [level=1] [ref=e86]
+              - generic [ref=e87]:
+                - 'generic "Source: Security Hub" [ref=e88]': Security Hub
+                - generic [ref=e89]: INFORMATIONAL
+                - generic [ref=e90]: NEW
+                - generic [ref=e91]: S3.13
+                - generic [ref=e92]: "696505809372"
+                - generic [ref=e93]: us-east-1
+              - generic [ref=e94]:
+                - generic [ref=e95]:
+                  - generic "A PR bundle was generated and run successfully, and AWS source-of-truth checks now confirm the finding is resolved." [ref=e97]: Generated and confirmed
+                  - button "Fix this finding" [ref=e98]:
+                    - generic [ref=e99]: Fix this finding
+                - link "View PR bundle group" [ref=e100] [cursor=pointer]:
+                  - /url: /actions/group?group_id=2d076270-1f7b-4c57-bc74-31197f047e5d
+                  - button "View PR bundle group" [ref=e101]:
+                    - generic [ref=e102]: View PR bundle group
+              - paragraph [ref=e104]: This control checks whether an Amazon S3 general purpose bucket has a Lifecycle configuration. The control fails if the bucket doesn't have a Lifecycle configuration. You can provide custom values for one or more if the preceding parameters, the control passes only if the policy includes the specified storage class, deletion time, and transition time.
+            - generic [ref=e105]:
+              - generic [ref=e106]:
+                - heading "Resource" [level=2] [ref=e107]
+                - generic [ref=e108]:
+                  - generic [ref=e109]:
+                    - paragraph [ref=e110]: Resource ID
+                    - paragraph [ref=e111]: arn:aws:s3:::security-autopilot-config-696505809372-us-east-1
+                  - generic [ref=e112]:
+                    - paragraph [ref=e113]: Resource Type
+                    - paragraph [ref=e114]: AwsS3Bucket
+              - generic [ref=e115]:
+                - heading "Compliance" [level=2] [ref=e116]
+                - generic [ref=e117]:
+                  - generic [ref=e118]:
+                    - paragraph [ref=e119]: Source
+                    - paragraph [ref=e120]: Security Hub
+                  - generic [ref=e121]:
+                    - paragraph [ref=e122]: Control ID
+                    - paragraph [ref=e123]: S3.13
+                    - paragraph [ref=e124]: "Remediation family: S3.11"
+                  - generic [ref=e125]:
+                    - paragraph [ref=e126]: Standard
+                    - paragraph [ref=e127]: standards/aws-foundational-security-best-practices/v/1.0.0
+              - generic [ref=e128]:
+                - heading "Timeline" [level=2] [ref=e129]
+                - generic [ref=e130]:
+                  - generic [ref=e131]:
+                    - paragraph [ref=e132]: First Observed
+                    - paragraph [ref=e133]: 3/24/2026, 7:22:55 PM
+                  - generic [ref=e134]:
+                    - paragraph [ref=e135]: Last Observed
+                    - paragraph [ref=e136]: 3/25/2026, 1:23:50 AM
+                  - generic [ref=e137]:
+                    - paragraph [ref=e138]: Last Updated
+                    - paragraph [ref=e139]: 3/25/2026, 1:24:29 AM
+              - generic [ref=e140]:
+                - heading "Control Plane" [level=2] [ref=e141]
+                - generic [ref=e142]:
+                  - generic [ref=e143]:
+                    - paragraph [ref=e144]: Shadow Status
+                    - generic [ref=e145]:
+                      - generic [ref=e146]: OPEN
+                      - generic [ref=e147]: inventory_confirmed_non_compliant
+                  - generic [ref=e148]:
+                    - paragraph [ref=e149]: Shadow Event Time
+                    - paragraph [ref=e150]: 3/25/2026, 8:01:01 PM
+                  - generic [ref=e151]:
+                    - paragraph [ref=e152]: Shadow Evaluated At
+                    - paragraph [ref=e153]: 3/25/2026, 8:01:18 PM
+                  - generic [ref=e154]:
+                    - paragraph [ref=e155]: Fingerprint
+                    - paragraph [ref=e156]: 696505809372|us-east-1|arn:aws:s3:::security-autopilot-config-696505809372-us-east-1|S3.11
+              - generic [ref=e157]:
+                - heading "Identifiers" [level=2] [ref=e158]
+                - generic [ref=e159]:
+                  - generic [ref=e160]:
+                    - paragraph [ref=e161]: Finding ID
+                    - generic [ref=e162]:
+                      - paragraph [ref=e163]: arn:aws:securityhub:us-east-1:696505809372:security-control/S3.13/finding/7eda278d-98d8-4469-ba13-2baf2220fd94
+                      - button "Copy Finding ID" [ref=e164]:
+                        - img [ref=e165]
+                  - generic [ref=e167]:
+                    - paragraph [ref=e168]: Internal ID
+                    - paragraph [ref=e169]: 87cab671-be7d-44a2-8d48-4badd88ca9e9
+            - button "Raw Security Hub JSON" [ref=e171]:
+              - generic [ref=e172]: Raw Security Hub JSON
+              - img [ref=e173]
+  - button "Open Next.js Dev Tools" [ref=e79] [cursor=pointer]:
+    - img [ref=e80]
+  - alert [ref=e83]

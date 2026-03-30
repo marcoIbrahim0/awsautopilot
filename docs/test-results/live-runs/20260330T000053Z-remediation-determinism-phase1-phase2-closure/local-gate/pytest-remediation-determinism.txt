@@ -1,0 +1,116 @@
+PYTHONPATH=. ./venv/bin/pytest tests/test_worker_ingest.py -k 'semantic_split or S3_13 or lifecycle'
+============================= test session starts ==============================
+platform darwin -- Python 3.12.4, pytest-8.4.2, pluggy-1.6.0
+rootdir: /Users/marcomaher/AWS Security Autopilot
+configfile: pytest.ini
+plugins: anyio-4.12.1, asyncio-0.26.0
+asyncio: mode=Mode.AUTO, asyncio_default_fixture_loop_scope=function, asyncio_default_test_loop_scope=function
+collected 29 items / 25 deselected / 4 selected
+
+tests/test_worker_ingest.py ....                                         [100%]
+
+======================= 4 passed, 25 deselected in 0.11s =======================
+
+PYTHONPATH=. ./venv/bin/pytest tests/test_action_engine_merge.py -k 'lifecycle'
+============================= test session starts ==============================
+platform darwin -- Python 3.12.4, pytest-8.4.2, pluggy-1.6.0
+rootdir: /Users/marcomaher/AWS Security Autopilot
+configfile: pytest.ini
+plugins: anyio-4.12.1, asyncio-0.26.0
+asyncio: mode=Mode.AUTO, asyncio_default_fixture_loop_scope=function, asyncio_default_test_loop_scope=function
+collected 19 items / 16 deselected / 3 selected
+
+tests/test_action_engine_merge.py ...                                    [100%]
+
+======================= 3 passed, 16 deselected in 0.03s =======================
+
+PYTHONPATH=. ./venv/bin/pytest tests/test_remediation_runtime_checks.py -k 'lifecycle'
+============================= test session starts ==============================
+platform darwin -- Python 3.12.4, pytest-8.4.2, pluggy-1.6.0
+rootdir: /Users/marcomaher/AWS Security Autopilot
+configfile: pytest.ini
+plugins: anyio-4.12.1, asyncio-0.26.0
+asyncio: mode=Mode.AUTO, asyncio_default_fixture_loop_scope=function, asyncio_default_test_loop_scope=function
+collected 34 items / 31 deselected / 3 selected
+
+tests/test_remediation_runtime_checks.py ...                             [100%]
+
+======================= 3 passed, 31 deselected in 0.03s =======================
+
+PYTHONPATH=. ./venv/bin/pytest tests/test_remediation_profile_options_preview.py -k 's3_11'
+============================= test session starts ==============================
+platform darwin -- Python 3.12.4, pytest-8.4.2, pluggy-1.6.0
+rootdir: /Users/marcomaher/AWS Security Autopilot
+configfile: pytest.ini
+plugins: anyio-4.12.1, asyncio-0.26.0
+asyncio: mode=Mode.AUTO, asyncio_default_fixture_loop_scope=function, asyncio_default_test_loop_scope=function
+collected 41 items / 37 deselected / 4 selected
+
+tests/test_remediation_profile_options_preview.py ....                   [100%]
+
+======================= 4 passed, 37 deselected in 0.05s =======================
+
+PYTHONPATH=. ./venv/bin/pytest tests/test_remediation_run_resolution_create.py -k 's3_11'
+============================= test session starts ==============================
+platform darwin -- Python 3.12.4, pytest-8.4.2, pluggy-1.6.0
+rootdir: /Users/marcomaher/AWS Security Autopilot
+configfile: pytest.ini
+plugins: anyio-4.12.1, asyncio-0.26.0
+asyncio: mode=Mode.AUTO, asyncio_default_fixture_loop_scope=function, asyncio_default_test_loop_scope=function
+collected 43 items / 39 deselected / 4 selected
+
+tests/test_remediation_run_resolution_create.py ....                     [100%]
+
+======================= 4 passed, 39 deselected in 0.20s =======================
+
+PYTHONPATH=. ./venv/bin/pytest tests/test_step7_components.py -k 's3_11 or lifecycle'
+============================= test session starts ==============================
+platform darwin -- Python 3.12.4, pytest-8.4.2, pluggy-1.6.0
+rootdir: /Users/marcomaher/AWS Security Autopilot
+configfile: pytest.ini
+plugins: anyio-4.12.1, asyncio-0.26.0
+asyncio: mode=Mode.AUTO, asyncio_default_fixture_loop_scope=function, asyncio_default_test_loop_scope=function
+collected 161 items / 146 deselected / 15 selected
+
+tests/test_step7_components.py ...............                           [100%]
+
+====================== 15 passed, 146 deselected in 0.06s ======================
+
+PYTHONPATH=. ./venv/bin/pytest tests/test_remediation_run_worker.py -k 's3_11 or lifecycle'
+============================= test session starts ==============================
+platform darwin -- Python 3.12.4, pytest-8.4.2, pluggy-1.6.0
+rootdir: /Users/marcomaher/AWS Security Autopilot
+configfile: pytest.ini
+plugins: anyio-4.12.1, asyncio-0.26.0
+asyncio: mode=Mode.AUTO, asyncio_default_fixture_loop_scope=function, asyncio_default_test_loop_scope=function
+collected 50 items / 48 deselected / 2 selected
+
+tests/test_remediation_run_worker.py ..                                  [100%]
+
+======================= 2 passed, 48 deselected in 0.24s =======================
+
+PYTHONPATH=. ./venv/bin/pytest tests/test_inventory_reconcile.py -k 'test_config_1_selective_resource_scope_is_open_even_with_explicit_resource_types or test_s3_targeted_missing_bucket_emits_deleted_resource_snapshot or noncurrent_expiration'
+============================= test session starts ==============================
+platform darwin -- Python 3.12.4, pytest-8.4.2, pluggy-1.6.0
+rootdir: /Users/marcomaher/AWS Security Autopilot
+configfile: pytest.ini
+plugins: anyio-4.12.1, asyncio-0.26.0
+asyncio: mode=Mode.AUTO, asyncio_default_fixture_loop_scope=function, asyncio_default_test_loop_scope=function
+collected 88 items / 85 deselected / 3 selected
+
+tests/test_inventory_reconcile.py ...                                    [100%]
+
+======================= 3 passed, 85 deselected in 0.04s =======================
+
+PYTHONPATH=. ./venv/bin/pytest tests/test_step7_components.py -k 'preserves_noncurrent_rules'
+============================= test session starts ==============================
+platform darwin -- Python 3.12.4, pytest-8.4.2, pluggy-1.6.0
+rootdir: /Users/marcomaher/AWS Security Autopilot
+configfile: pytest.ini
+plugins: anyio-4.12.1, asyncio-0.26.0
+asyncio: mode=Mode.AUTO, asyncio_default_fixture_loop_scope=function, asyncio_default_test_loop_scope=function
+collected 161 items / 160 deselected / 1 selected
+
+tests/test_step7_components.py .                                         [100%]
+
+====================== 1 passed, 160 deselected in 0.04s =======================

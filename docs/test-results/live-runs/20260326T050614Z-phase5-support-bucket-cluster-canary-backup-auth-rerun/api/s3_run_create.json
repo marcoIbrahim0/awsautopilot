@@ -1,0 +1,11 @@
+{
+  "action_id": "5f5d8617-4da8-4830-a1dc-6b4e98f6b0b0",
+  "created_at": "2026-03-26T05:06:24.199552+00:00",
+  "id": "7fe2766d-7c8e-41de-b0ab-bc616b53978a",
+  "manual_high_risk": false,
+  "mode": "pr_only",
+  "pre_execution_notice": null,
+  "runbook_url": null,
+  "status": "pending",
+  "updated_at": "2026-03-26T05:06:24.199552+00:00"
+}

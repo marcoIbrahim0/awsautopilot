@@ -1,0 +1,16 @@
+{
+    "Policy": {
+        "PolicyName": "SecurityAutopilotReadRolePolicy",
+        "PolicyId": "ANPA2EKX3HHOATUSVIBC4",
+        "Arn": "arn:aws:iam::696505809372:policy/SecurityAutopilotReadRolePolicy",
+        "Path": "/",
+        "DefaultVersionId": "v8",
+        "AttachmentCount": 2,
+        "PermissionsBoundaryUsageCount": 0,
+        "IsAttachable": true,
+        "Description": "Minimal permissions for Security Hub findings ingestion + optional identity validation.",
+        "CreateDate": "2026-03-11T14:16:09+00:00",
+        "UpdateDate": "2026-03-25T22:49:31+00:00",
+        "Tags": []
+    }
+}

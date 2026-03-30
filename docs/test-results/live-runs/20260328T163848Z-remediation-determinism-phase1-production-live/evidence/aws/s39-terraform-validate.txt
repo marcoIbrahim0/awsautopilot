@@ -1,0 +1,16 @@
+
+Error: Invalid reference
+
+  on s3_bucket_access_logging.tf line 82, in data "aws_iam_policy_document" "ssl_only_access_logs":
+  82:       "${arn_prefix_access_logs}",
+
+A reference to a resource type must be followed by at least one attribute
+access, specifying the resource name.
+
+Error: Invalid reference
+
+  on s3_bucket_access_logging.tf line 83, in data "aws_iam_policy_document" "ssl_only_access_logs":
+  83:       "${arn_prefix_access_logs}/*",
+
+A reference to a resource type must be followed by at least one attribute
+access, specifying the resource name.

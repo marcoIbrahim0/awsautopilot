@@ -1,0 +1,29 @@
+{
+  "action_id": "4736ed63-fa17-45ea-ab33-5b7c514b31f4",
+  "action_type": "s3_block_public_access",
+  "blocked_reasons": [],
+  "control_id": "S3.1",
+  "decision_rationale": "Compatibility resolver defaulted to the compatible profile 's3_account_block_public_access_pr_bundle' for strategy 's3_account_block_public_access_pr_bundle'. Run creation did not require additional risk-only acceptance.",
+  "decision_summary": "Compatibility resolver defaulted to the compatible profile 's3_account_block_public_access_pr_bundle' for strategy 's3_account_block_public_access_pr_bundle'. Run creation did not require additional risk-only acceptance.",
+  "decision_version": "resolver/v1",
+  "finding_coverage": {},
+  "folder": "executable/actions/01-aws-account-696505809372-4736ed63",
+  "has_runnable_terraform": true,
+  "index": 1,
+  "missing_defaults": [],
+  "missing_inputs": [],
+  "outcome": "executable_bundle_generated",
+  "preservation_summary": {
+    "single_profile_compatible": true,
+    "strategy_only_supported": true
+  },
+  "profile_id": "s3_account_block_public_access_pr_bundle",
+  "rejected_profiles": [],
+  "strategy_id": "s3_account_block_public_access_pr_bundle",
+  "strategy_inputs": {},
+  "support_tier": "deterministic_bundle",
+  "target_id": "696505809372|us-east-1|AWS::::Account:696505809372|S3.1",
+  "tier": "executable",
+  "tier_root": "executable/actions",
+  "title": "S3 general purpose buckets should have block public access settings enabled"
+}

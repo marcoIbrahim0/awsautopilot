@@ -1,0 +1,13 @@
+{
+  "id": "997f70a9-04ac-495b-a434-9a52083b5777",
+  "action_type": "s3_bucket_lifecycle_configuration",
+  "account_id": "696505809372",
+  "region": "eu-north-1",
+  "counters": {
+    "run_successful": 12,
+    "run_not_successful": 0,
+    "metadata_only": 1,
+    "not_run_yet": 0,
+    "total_actions": 13
+  }
+}

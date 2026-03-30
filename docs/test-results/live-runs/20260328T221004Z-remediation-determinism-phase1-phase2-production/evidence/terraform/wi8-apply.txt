@@ -1,0 +1,56 @@
+
+Terraform used the selected providers to generate the following execution
+plan. Resource actions are indicated with the following symbols:
+  + create
+
+Terraform will perform the following actions:
+
+  # aws_vpc_security_group_ingress_rule.bastion_rdp["sg-085d69a76707542b2"] will be created
+  + resource "aws_vpc_security_group_ingress_rule" "bastion_rdp" {
+      + arn                          = (known after apply)
+      + description                  = "RDP from approved bastion security group sg-085d69a76707542b2 - Security Autopilot"
+      + from_port                    = 3389
+      + id                           = (known after apply)
+      + ip_protocol                  = "tcp"
+      + referenced_security_group_id = "sg-085d69a76707542b2"
+      + security_group_id            = "sg-0ef32ca8805a55a8b"
+      + security_group_rule_id       = (known after apply)
+      + tags_all                     = {}
+      + to_port                      = 3389
+    }
+
+  # aws_vpc_security_group_ingress_rule.bastion_ssh["sg-085d69a76707542b2"] will be created
+  + resource "aws_vpc_security_group_ingress_rule" "bastion_ssh" {
+      + arn                          = (known after apply)
+      + description                  = "SSH from approved bastion security group sg-085d69a76707542b2 - Security Autopilot"
+      + from_port                    = 22
+      + id                           = (known after apply)
+      + ip_protocol                  = "tcp"
+      + referenced_security_group_id = "sg-085d69a76707542b2"
+      + security_group_id            = "sg-0ef32ca8805a55a8b"
+      + security_group_rule_id       = (known after apply)
+      + tags_all                     = {}
+      + to_port                      = 22
+    }
+
+  # null_resource.revoke_public_admin_ingress will be created
+  + resource "null_resource" "revoke_public_admin_ingress" {
+      + id       = (known after apply)
+      + triggers = {
+          + "region"            = "eu-north-1"
+          + "security_group_id" = "sg-0ef32ca8805a55a8b"
+        }
+    }
+
+Plan: 3 to add, 0 to change, 0 to destroy.
+null_resource.revoke_public_admin_ingress: Creating...
+null_resource.revoke_public_admin_ingress: Provisioning with 'local-exec'...
+null_resource.revoke_public_admin_ingress (local-exec): Executing: ["/bin/bash" "-c" "set +e\naws ec2 revoke-security-group-ingress --region \"eu-north-1\" --group-id \"sg-0ef32ca8805a55a8b\" --ip-permissions 'IpProtocol=tcp,FromPort=22,ToPort=22,IpRanges=[{CidrIp=0.0.0.0/0}]' >/dev/null 2>&1 || true\naws ec2 revoke-security-group-ingress --region \"eu-north-1\" --group-id \"sg-0ef32ca8805a55a8b\" --ip-permissions 'IpProtocol=tcp,FromPort=3389,ToPort=3389,IpRanges=[{CidrIp=0.0.0.0/0}]' >/dev/null 2>&1 || true\naws ec2 revoke-security-group-ingress --region \"eu-north-1\" --group-id \"sg-0ef32ca8805a55a8b\" --ip-permissions 'IpProtocol=tcp,FromPort=22,ToPort=22,Ipv6Ranges=[{CidrIpv6=::/0}]' >/dev/null 2>&1 || true\naws ec2 revoke-security-group-ingress --region \"eu-north-1\" --group-id \"sg-0ef32ca8805a55a8b\" --ip-permissions 'IpProtocol=tcp,FromPort=3389,ToPort=3389,Ipv6Ranges=[{CidrIpv6=::/0}]' >/dev/null 2>&1 || true\nexit 0\n"]
+null_resource.revoke_public_admin_ingress: Still creating... [00m10s elapsed]
+null_resource.revoke_public_admin_ingress: Creation complete after 12s [id=6922099160536107615]
+aws_vpc_security_group_ingress_rule.bastion_ssh["sg-085d69a76707542b2"]: Creating...
+aws_vpc_security_group_ingress_rule.bastion_rdp["sg-085d69a76707542b2"]: Creating...
+aws_vpc_security_group_ingress_rule.bastion_ssh["sg-085d69a76707542b2"]: Creation complete after 2s [id=sgr-0d8837460036a325e]
+aws_vpc_security_group_ingress_rule.bastion_rdp["sg-085d69a76707542b2"]: Creation complete after 2s [id=sgr-099ed29049610b0e5]
+
+Apply complete! Resources: 3 added, 0 changed, 0 destroyed.

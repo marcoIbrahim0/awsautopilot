@@ -1,0 +1,35 @@
+Phase 2 action-resolution lag local regression gate
+Run ID: 20260330T012757Z-phase2-action-resolution-lag-closure
+Date: 2026-03-30 UTC
+
+Executed commands and observed results:
+
+1. PYTHONPATH=. ./venv/bin/pytest tests/test_worker_ingest.py -k 'semantic_split or S3_13 or lifecycle'
+   Result: 4 passed, 25 deselected
+
+2. PYTHONPATH=. ./venv/bin/pytest tests/test_action_engine_merge.py -k 'lifecycle'
+   Result: 3 passed, 16 deselected
+
+3. PYTHONPATH=. ./venv/bin/pytest tests/test_remediation_runtime_checks.py -k 'lifecycle'
+   Result: 3 passed, 31 deselected
+
+4. PYTHONPATH=. ./venv/bin/pytest tests/test_remediation_profile_options_preview.py -k 's3_11'
+   Result: 4 passed, 37 deselected
+
+5. PYTHONPATH=. ./venv/bin/pytest tests/test_remediation_run_resolution_create.py -k 's3_11'
+   Result: 4 passed, 39 deselected
+
+6. PYTHONPATH=. ./venv/bin/pytest tests/test_step7_components.py -k 's3_11 or lifecycle'
+   Result: 15 passed, 146 deselected
+
+7. PYTHONPATH=. ./venv/bin/pytest tests/test_remediation_run_worker.py -k 's3_11 or lifecycle'
+   Result: 2 passed, 48 deselected
+
+8. PYTHONPATH=. ./venv/bin/pytest tests/test_reconcile_inventory_shard_worker.py -q
+   Result: 7 passed
+
+9. PYTHONPATH=. ./venv/bin/pytest tests/test_remediation_runs_api.py -q -k 'trigger_reeval'
+   Result: 3 passed, 119 deselected
+
+10. PYTHONPATH=. ./venv/bin/pytest tests/test_action_engine_merge.py -q -k 'shadow or orphan or lifecycle'
+    Result: 9 passed, 10 deselected

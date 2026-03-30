@@ -254,6 +254,7 @@ def test_s3_2_create_keeps_standard_strategy_executable_for_private_bucket_scope
             "action_id": str(action.id),
             "mode": "pr_only",
             "strategy_id": "s3_bucket_block_public_access_standard",
+            "risk_acknowledged": True,
         },
         runtime_signals={
             "s3_bucket_policy_public": False,
@@ -303,6 +304,7 @@ def test_s3_2_create_routes_public_non_website_bucket_to_review_policy_scrub_pro
             "action_id": str(action.id),
             "mode": "pr_only",
             "strategy_id": "s3_bucket_block_public_access_standard",
+            "risk_acknowledged": True,
         },
         runtime_signals={
             "s3_bucket_policy_public": True,
@@ -900,6 +902,48 @@ def test_s3_11_create_preserves_executable_support_tier_after_risk_acknowledgeme
     assert resolution["profile_id"] == "s3_enable_abort_incomplete_uploads"
     assert resolution["support_tier"] == "deterministic_bundle"
     assert resolution["blocked_reasons"] == []
+    assert _queued_payload(mock_sqs)["resolution"]["support_tier"] == "deterministic_bundle"
+
+
+def test_s3_11_create_keeps_apply_time_merge_executable_without_lifecycle_json(
+    client: TestClient,
+) -> None:
+    tenant_id = uuid.uuid4()
+    tenant = _mock_tenant()
+    tenant.id = tenant_id
+    user = _mock_user(tenant_id)
+    action = _mock_action(tenant_id, action_type="s3_bucket_lifecycle_configuration")
+    action.target_id = "123456789012|us-east-1|arn:aws:s3:::lifecycle-bucket|S3.11"
+    action.resource_id = "arn:aws:s3:::lifecycle-bucket"
+    session = _mock_async_session(tenant, action, None, None)
+    _install_refresh(session)
+
+    response, mock_sqs = _post_create(
+        client,
+        session,
+        user,
+        {
+            "action_id": str(action.id),
+            "mode": "pr_only",
+            "strategy_id": "s3_enable_abort_incomplete_uploads",
+        },
+        runtime_signals={
+            "s3_lifecycle_analysis_possible": False,
+            "s3_lifecycle_analysis_error": "AccessDenied",
+            "evidence": {
+                "target_bucket": "lifecycle-bucket",
+                "existing_lifecycle_capture_error": "AccessDenied",
+            },
+        },
+        risk_snapshot={"checks": [], "recommendation": None, "warnings": [], "evidence": {}},
+    )
+
+    resolution = _added_run(session).artifacts["resolution"]
+    assert response.status_code == 201
+    assert resolution["support_tier"] == "deterministic_bundle"
+    assert resolution["blocked_reasons"] == []
+    assert resolution["preservation_summary"]["apply_time_merge"] is True
+    assert "AccessDenied" in resolution["preservation_summary"]["apply_time_merge_reason"]
     assert _queued_payload(mock_sqs)["resolution"]["support_tier"] == "deterministic_bundle"
 
 

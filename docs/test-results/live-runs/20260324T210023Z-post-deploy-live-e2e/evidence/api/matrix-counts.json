@@ -1,0 +1,6 @@
+{
+  "s3_eu_north_1": 0,
+  "ebs_snapshot_eu_north_1": 0,
+  "aws_config_us_east_1": 1,
+  "enable_guardduty_us_east_1": 1
+}

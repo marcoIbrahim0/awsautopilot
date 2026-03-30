@@ -1,0 +1,43 @@
+{
+  "run_id": "20260330T012757Z-phase2-action-resolution-lag-closure",
+  "date_utc": "2026-03-30",
+  "api_base": "https://api.ocypheris.com",
+  "tenant": {
+    "name": "Marco",
+    "tenant_id": "e4e07aa8-b8ea-4c1d-9fd7-4362a2fc1195"
+  },
+  "aws": {
+    "account_id": "696505809372",
+    "region": "eu-north-1",
+    "profile": "test28-root",
+    "terraform_mirror": "/tmp/terraformrc-codex"
+  },
+  "verdict": {
+    "phase_2": "PASS",
+    "gate_2": "PASS",
+    "wi_1_live_conclusion": "NO_TRUTHFUL_OPEN_ADDITIVE_MERGE_CANDIDATE",
+    "action_resolution_lag": "FIXED_ON_PRODUCTION"
+  },
+  "deploy": {
+    "script": "scripts/deploy_saas_serverless.sh",
+    "image_tag": "20260330T013924Z",
+    "log_path": "deploy/deploy-serverless.log"
+  },
+  "proof_target": {
+    "action_id": "53c07253-a9b1-4044-92f9-750063d30b59",
+    "finding_id": "7adc461d-a5d9-44af-bc4a-764a4abb3500",
+    "resource_id": "arn:aws:s3:::phase2-wi1-lifecycle-696505809372-20260329004157"
+  },
+  "predeploy_truth": {
+    "trigger_reeval_enqueued_jobs": 10,
+    "aws_head_bucket_not_found": true,
+    "action_status": "open",
+    "finding_status": "NEW"
+  },
+  "postdeploy_truth": {
+    "trigger_reeval_enqueued_jobs": 1,
+    "action_status": "resolved",
+    "finding_status": "RESOLVED",
+    "shadow_reason": "inventory_resource_deleted"
+  }
+}

@@ -1,0 +1,3 @@
+$ PYTHONPATH=. ./venv/bin/pytest tests/test_remediation_profile_options_preview.py -q -k 's3_2 or oac'
+........                                                                 [100%]
+8 passed, 30 deselected in 0.07s

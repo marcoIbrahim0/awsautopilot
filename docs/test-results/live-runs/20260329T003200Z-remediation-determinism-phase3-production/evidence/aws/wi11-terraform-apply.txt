@@ -1,0 +1,25 @@
+
+Terraform used the selected providers to generate the following execution
+plan. Resource actions are indicated with the following symbols:
+  + create
+
+Terraform will perform the following actions:
+
+  # terraform_data.security_autopilot will be created
+  + resource "terraform_data" "security_autopilot" {
+      + id               = (known after apply)
+      + triggers_replace = {
+          + abort_incomplete_multipart_days = "7"
+          + bucket_name                     = "security-autopilot-access-logs-696505809372-r221001"
+          + remediation_region              = "eu-north-1"
+        }
+    }
+
+Plan: 1 to add, 0 to change, 0 to destroy.
+terraform_data.security_autopilot: Creating...
+terraform_data.security_autopilot: Provisioning with 'local-exec'...
+terraform_data.security_autopilot (local-exec): Executing: ["/bin/bash" "-c" "set -euo pipefail\nexport BUCKET_NAME=\"security-autopilot-access-logs-696505809372-r221001\"\nexport REGION=\"eu-north-1\"\nexport ABORT_INCOMPLETE_MULTIPART_DAYS=\"7\"\n\npython3 ./scripts/s3_lifecycle_merge.py\n"]
+terraform_data.security_autopilot (local-exec): Merged lifecycle configuration for security-autopilot-access-logs-696505809372-r221001. Rollback snapshot retained at .s3-lifecycle-rollback/lifecycle_snapshot.json.
+terraform_data.security_autopilot: Creation complete after 3s [id=de816016-bc7e-610f-a8ac-6166f03ac1b2]
+
+Apply complete! Resources: 1 added, 0 changed, 0 destroyed.

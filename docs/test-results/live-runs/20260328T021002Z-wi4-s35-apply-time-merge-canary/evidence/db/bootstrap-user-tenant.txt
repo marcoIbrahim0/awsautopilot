@@ -1,0 +1,5 @@
+              tenant_id               |        external_id        |               user_id                |               email               | email_verified | token_version 
+--------------------------------------+---------------------------+--------------------------------------+-----------------------------------+----------------+---------------
+ c72adafc-0989-47ec-8cce-8ecfecba1e47 | ocypheris-p2-e2e-20260312 | 7fef9b6a-8986-4e42-8ea7-2dcc65c0ac64 | wi4-canary-20260328@ocypheris.com | t              |             0
+(1 row)
+

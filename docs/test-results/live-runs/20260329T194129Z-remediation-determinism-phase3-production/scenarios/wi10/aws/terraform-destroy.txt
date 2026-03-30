@@ -1,0 +1,8 @@
+data.aws_s3_bucket_policy.existing: Reading...
+
+Error: reading S3 Bucket (sa-wi13-14-nopolicy-696505809372-20260328201935) Policy: couldn't find resource
+
+  with data.aws_s3_bucket_policy.existing,
+  on s3_bucket_block_public_access.tf line 9, in data "aws_s3_bucket_policy" "existing":
+   9: data "aws_s3_bucket_policy" "existing" {
+

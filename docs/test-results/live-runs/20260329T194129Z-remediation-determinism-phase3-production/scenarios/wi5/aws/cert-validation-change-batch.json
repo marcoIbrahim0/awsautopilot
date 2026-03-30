@@ -1,0 +1,16 @@
+{
+  "Comment": "WI-5 ACM DNS validation",
+  "Changes": [
+    {
+      "Action": "UPSERT",
+      "ResourceRecordSet": {
+        "Name": "_b1ce87aef1c13e39692e78e5918d8077.wi5-gate3-696505809372.ocypheris.com.",
+        "Type": "CNAME",
+        "TTL": 300,
+        "ResourceRecords": [
+          {"Value": "_1d3156031ecd2e78d7a69bb88b75b7fe.jkddzztszm.acm-validations.aws."}
+        ]
+      }
+    }
+  ]
+}

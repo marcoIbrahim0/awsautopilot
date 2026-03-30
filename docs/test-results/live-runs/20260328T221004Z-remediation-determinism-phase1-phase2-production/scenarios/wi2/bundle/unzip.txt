@@ -1,0 +1,9 @@
+Archive:  docs/test-results/live-runs/20260328T221004Z-remediation-determinism-phase1-phase2-production/scenarios/wi2/bundle/pr-bundle.zip
+  inflating: docs/test-results/live-runs/20260328T221004Z-remediation-determinism-phase1-phase2-production/scenarios/wi2/bundle/extracted/README.txt  
+  inflating: docs/test-results/live-runs/20260328T221004Z-remediation-determinism-phase1-phase2-production/scenarios/wi2/bundle/extracted/pr_automation/control_mapping_context.json  
+  inflating: docs/test-results/live-runs/20260328T221004Z-remediation-determinism-phase1-phase2-production/scenarios/wi2/bundle/extracted/pr_automation/diff_summary.json  
+  inflating: docs/test-results/live-runs/20260328T221004Z-remediation-determinism-phase1-phase2-production/scenarios/wi2/bundle/extracted/pr_automation/rollback_notes.md  
+  inflating: docs/test-results/live-runs/20260328T221004Z-remediation-determinism-phase1-phase2-production/scenarios/wi2/bundle/extracted/providers.tf  
+  inflating: docs/test-results/live-runs/20260328T221004Z-remediation-determinism-phase1-phase2-production/scenarios/wi2/bundle/extracted/rollback/sg_restore.py  
+  inflating: docs/test-results/live-runs/20260328T221004Z-remediation-determinism-phase1-phase2-production/scenarios/wi2/bundle/extracted/scripts/sg_capture_state.py  
+  inflating: docs/test-results/live-runs/20260328T221004Z-remediation-determinism-phase1-phase2-production/scenarios/wi2/bundle/extracted/sg_restrict_public_ports.tf  

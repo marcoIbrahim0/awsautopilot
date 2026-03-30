@@ -1,0 +1,277 @@
+{
+  "total": 42,
+  "items": [
+    {
+      "id": "0b87839b-28f5-4150-af26-74cf2b1af3a3",
+      "action_type": "s3_bucket_block_public_access",
+      "control_id": "S3.2",
+      "target_id": "696505809372|eu-north-1|arn:aws:s3:::security-autopilot-w6-envready-s315-exec-696505809372|S3.2",
+      "resource_id": "arn:aws:s3:::security-autopilot-w6-envready-s315-exec-696505809372",
+      "updated_at": "2026-03-28T02:18:19.470676+00:00"
+    },
+    {
+      "id": "352ac9b2-d343-40ac-b427-4c4f285615ef",
+      "action_type": "s3_bucket_block_public_access",
+      "control_id": "S3.2",
+      "target_id": "696505809372|eu-north-1|arn:aws:s3:::security-autopilot-w6-envready-s311-review-696505809372|S3.2",
+      "resource_id": "arn:aws:s3:::security-autopilot-w6-envready-s311-review-696505809372",
+      "updated_at": "2026-03-28T02:18:19.470676+00:00"
+    },
+    {
+      "id": "08a9f629-3bfa-46a1-bd88-e22027f7e133",
+      "action_type": "s3_bucket_block_public_access",
+      "control_id": "S3.2",
+      "target_id": "696505809372|eu-north-1|AWS::::Account:696505809372|S3.2",
+      "resource_id": "AWS::::Account:696505809372",
+      "updated_at": "2026-03-28T02:18:19.470676+00:00"
+    },
+    {
+      "id": "18e459b1-3bc2-47b4-a520-c955e921c75f",
+      "action_type": "s3_block_public_access",
+      "control_id": "S3.1",
+      "target_id": "696505809372|eu-north-1|AWS::::Account:696505809372|S3.1",
+      "resource_id": "AWS::::Account:696505809372",
+      "updated_at": "2026-03-28T02:18:19.470676+00:00"
+    },
+    {
+      "id": "90a9507a-7a74-4e6f-a2ff-b78712719388",
+      "action_type": "s3_bucket_encryption_kms",
+      "control_id": "S3.15",
+      "target_id": "696505809372|eu-north-1|arn:aws:s3:::sa-wi13-14-nopolicy-696505809372-20260328201935|S3.15",
+      "resource_id": "arn:aws:s3:::sa-wi13-14-nopolicy-696505809372-20260328201935",
+      "updated_at": "2026-03-28T20:22:57.064427+00:00"
+    },
+    {
+      "id": "78237cc2-e47f-4f0f-80de-22b08d8725c7",
+      "action_type": "s3_bucket_require_ssl",
+      "control_id": "S3.5",
+      "target_id": "696505809372|eu-north-1|arn:aws:s3:::sa-wi13-14-nopolicy-696505809372-20260328201935|S3.5",
+      "resource_id": "arn:aws:s3:::sa-wi13-14-nopolicy-696505809372-20260328201935",
+      "updated_at": "2026-03-28T20:22:57.064427+00:00"
+    },
+    {
+      "id": "96bd1efb-91ee-4b22-9e1e-29613c8492aa",
+      "action_type": "s3_bucket_require_ssl",
+      "control_id": "S3.5",
+      "target_id": "696505809372|eu-north-1|arn:aws:s3:::security-autopilot-access-logs-696505809372-r221001|S3.5",
+      "resource_id": "arn:aws:s3:::security-autopilot-access-logs-696505809372-r221001",
+      "updated_at": "2026-03-28T20:22:57.064427+00:00"
+    },
+    {
+      "id": "d33c0b28-2a54-4623-8a5d-1f9bffc4884d",
+      "action_type": "s3_bucket_require_ssl",
+      "control_id": "S3.5",
+      "target_id": "696505809372|eu-north-1|arn:aws:s3:::security-autopilot-access-logs-696505809372-r94854|S3.5",
+      "resource_id": "arn:aws:s3:::security-autopilot-access-logs-696505809372-r94854",
+      "updated_at": "2026-03-28T20:22:57.064427+00:00"
+    },
+    {
+      "id": "ec2c5925-08d5-437c-8019-90f703484649",
+      "action_type": "s3_bucket_require_ssl",
+      "control_id": "S3.5",
+      "target_id": "696505809372|eu-north-1|arn:aws:s3:::security-autopilot-access-logs-696505809372-r222018|S3.5",
+      "resource_id": "arn:aws:s3:::security-autopilot-access-logs-696505809372-r222018",
+      "updated_at": "2026-03-28T02:18:19.470676+00:00"
+    },
+    {
+      "id": "5571e909-6491-4077-818e-5441ae0dc95d",
+      "action_type": "s3_bucket_block_public_access",
+      "control_id": "S3.2",
+      "target_id": "696505809372|eu-north-1|arn:aws:s3:::security-autopilot-access-logs-696505809372-r221001-access-logs|S3.2",
+      "resource_id": "arn:aws:s3:::security-autopilot-access-logs-696505809372-r221001-access-logs",
+      "updated_at": "2026-03-28T20:22:57.064427+00:00"
+    },
+    {
+      "id": "bdfa85bc-b3a3-4456-b8d9-9ed1dd895ad3",
+      "action_type": "s3_bucket_block_public_access",
+      "control_id": "S3.2",
+      "target_id": "696505809372|eu-north-1|arn:aws:s3:::sa-wi5-site-696505809372-20260328t164043z|S3.2",
+      "resource_id": "arn:aws:s3:::sa-wi5-site-696505809372-20260328t164043z",
+      "updated_at": "2026-03-28T20:22:57.064427+00:00"
+    },
+    {
+      "id": "cdb53f5c-8701-497d-a866-4256cddd9d66",
+      "action_type": "s3_bucket_block_public_access",
+      "control_id": "S3.2",
+      "target_id": "696505809372|eu-north-1|arn:aws:s3:::ocypheris-live-ct-20260328t181200z-eu-north-1|S3.2",
+      "resource_id": "arn:aws:s3:::ocypheris-live-ct-20260328t181200z-eu-north-1",
+      "updated_at": "2026-03-28T20:22:57.064427+00:00"
+    },
+    {
+      "id": "2904172f-0491-4248-afca-af30be896885",
+      "action_type": "s3_bucket_require_ssl",
+      "control_id": "S3.5",
+      "target_id": "696505809372|eu-north-1|AWS::::Account:696505809372|S3.5",
+      "resource_id": "AWS::::Account:696505809372",
+      "updated_at": "2026-03-28T02:18:19.470676+00:00"
+    },
+    {
+      "id": "7249615a-d298-4278-9f9f-e41a04cb2811",
+      "action_type": "s3_bucket_encryption_kms",
+      "control_id": "S3.15",
+      "target_id": "696505809372|eu-north-1|arn:aws:s3:::security-autopilot-access-logs-696505809372-r221001|S3.15",
+      "resource_id": "arn:aws:s3:::security-autopilot-access-logs-696505809372-r221001",
+      "updated_at": "2026-03-28T20:22:57.064427+00:00"
+    },
+    {
+      "id": "b74b1748-222a-44f5-bd02-93d1e3ea5d34",
+      "action_type": "s3_bucket_encryption_kms",
+      "control_id": "S3.15",
+      "target_id": "696505809372|eu-north-1|arn:aws:s3:::security-autopilot-access-logs-696505809372-r222018|S3.15",
+      "resource_id": "arn:aws:s3:::security-autopilot-access-logs-696505809372-r222018",
+      "updated_at": "2026-03-28T20:22:57.064427+00:00"
+    },
+    {
+      "id": "398a13c7-d1fc-44f6-8621-ea7c4bf9da88",
+      "action_type": "s3_bucket_encryption_kms",
+      "control_id": "S3.15",
+      "target_id": "696505809372|eu-north-1|arn:aws:s3:::security-autopilot-access-logs-696505809372-r94854|S3.15",
+      "resource_id": "arn:aws:s3:::security-autopilot-access-logs-696505809372-r94854",
+      "updated_at": "2026-03-28T02:18:19.470676+00:00"
+    },
+    {
+      "id": "0fd42f91-d019-4b8b-a9ae-cdf93b99cdeb",
+      "action_type": "s3_bucket_access_logging",
+      "control_id": "S3.9",
+      "target_id": "696505809372|eu-north-1|AWS::::Account:696505809372|S3.9",
+      "resource_id": "AWS::::Account:696505809372",
+      "updated_at": "2026-03-28T02:18:19.470676+00:00"
+    },
+    {
+      "id": "cbe0d2c3-c609-4aa2-a12f-6afb336cd507",
+      "action_type": "s3_bucket_lifecycle_configuration",
+      "control_id": "S3.11",
+      "target_id": "696505809372|eu-north-1|AWS::::Account:696505809372|S3.11",
+      "resource_id": "AWS::::Account:696505809372",
+      "updated_at": "2026-03-28T02:18:19.470676+00:00"
+    },
+    {
+      "id": "15891d06-c639-4692-881d-05fdcca5d581",
+      "action_type": "s3_bucket_encryption_kms",
+      "control_id": "S3.15",
+      "target_id": "696505809372|eu-north-1|arn:aws:s3:::ocypheris-live-ct-20260328t181200z-eu-north-1|S3.15",
+      "resource_id": "arn:aws:s3:::ocypheris-live-ct-20260328t181200z-eu-north-1",
+      "updated_at": "2026-03-28T20:22:57.064427+00:00"
+    },
+    {
+      "id": "4fe5d11f-81f1-48f6-b1eb-2fca55cee9d9",
+      "action_type": "s3_bucket_encryption_kms",
+      "control_id": "S3.15",
+      "target_id": "696505809372|eu-north-1|arn:aws:s3:::security-autopilot-access-logs-696505809372-r221001-access-logs|S3.15",
+      "resource_id": "arn:aws:s3:::security-autopilot-access-logs-696505809372-r221001-access-logs",
+      "updated_at": "2026-03-28T20:22:57.064427+00:00"
+    },
+    {
+      "id": "c5c8cb79-6e08-4341-9301-4e9f2272cb0e",
+      "action_type": "s3_bucket_encryption_kms",
+      "control_id": "S3.15",
+      "target_id": "696505809372|eu-north-1|arn:aws:s3:::sa-wi5-site-696505809372-20260328t164043z|S3.15",
+      "resource_id": "arn:aws:s3:::sa-wi5-site-696505809372-20260328t164043z",
+      "updated_at": "2026-03-28T20:22:57.064427+00:00"
+    },
+    {
+      "id": "0886946b-cf32-49cb-8f0e-5dcb07433426",
+      "action_type": "s3_bucket_require_ssl",
+      "control_id": "S3.5",
+      "target_id": "696505809372|eu-north-1|arn:aws:s3:::security-autopilot-access-logs-696505809372-r221001-access-logs|S3.5",
+      "resource_id": "arn:aws:s3:::security-autopilot-access-logs-696505809372-r221001-access-logs",
+      "updated_at": "2026-03-28T20:22:57.064427+00:00"
+    },
+    {
+      "id": "2cdace24-a63d-481d-81f7-f5bda82b8a80",
+      "action_type": "s3_bucket_require_ssl",
+      "control_id": "S3.5",
+      "target_id": "696505809372|eu-north-1|arn:aws:s3:::ocypheris-live-ct-20260328t181200z-eu-north-1|S3.5",
+      "resource_id": "arn:aws:s3:::ocypheris-live-ct-20260328t181200z-eu-north-1",
+      "updated_at": "2026-03-28T20:22:57.064427+00:00"
+    },
+    {
+      "id": "bcd7f695-772d-418b-921b-a2f9ca3eaa47",
+      "action_type": "s3_bucket_require_ssl",
+      "control_id": "S3.5",
+      "target_id": "696505809372|eu-north-1|arn:aws:s3:::sa-wi5-site-696505809372-20260328t164043z|S3.5",
+      "resource_id": "arn:aws:s3:::sa-wi5-site-696505809372-20260328t164043z",
+      "updated_at": "2026-03-28T20:22:57.064427+00:00"
+    },
+    {
+      "id": "19a9b0f0-de47-4a5b-982f-8d3c876c2064",
+      "action_type": "s3_bucket_access_logging",
+      "control_id": "S3.9",
+      "target_id": "696505809372|eu-north-1|arn:aws:s3:::security-autopilot-access-logs-696505809372-r221001|S3.9",
+      "resource_id": "arn:aws:s3:::security-autopilot-access-logs-696505809372-r221001",
+      "updated_at": "2026-03-28T20:42:56.723662+00:00"
+    },
+    {
+      "id": "51038315-855b-4113-a0d0-0db8391aeece",
+      "action_type": "s3_bucket_access_logging",
+      "control_id": "S3.9",
+      "target_id": "696505809372|eu-north-1|arn:aws:s3:::security-autopilot-access-logs-696505809372-r94854|S3.9",
+      "resource_id": "arn:aws:s3:::security-autopilot-access-logs-696505809372-r94854",
+      "updated_at": "2026-03-28T20:22:57.064427+00:00"
+    },
+    {
+      "id": "cc3ba387-feb0-42a6-a6b6-6e18f2a1dc65",
+      "action_type": "s3_bucket_access_logging",
+      "control_id": "S3.9",
+      "target_id": "696505809372|eu-north-1|arn:aws:s3:::security-autopilot-access-logs-696505809372-r222018|S3.9",
+      "resource_id": "arn:aws:s3:::security-autopilot-access-logs-696505809372-r222018",
+      "updated_at": "2026-03-28T02:18:19.470676+00:00"
+    },
+    {
+      "id": "8ab29997-bb6c-41fe-ba0c-26f03523f0ed",
+      "action_type": "s3_bucket_lifecycle_configuration",
+      "control_id": "S3.11",
+      "target_id": "696505809372|eu-north-1|arn:aws:s3:::security-autopilot-access-logs-696505809372-r221001|S3.11",
+      "resource_id": "arn:aws:s3:::security-autopilot-access-logs-696505809372-r221001",
+      "updated_at": "2026-03-28T20:22:57.064427+00:00"
+    },
+    {
+      "id": "37e0f71d-4805-46d0-9f9f-bf4342d7e63c",
+      "action_type": "s3_bucket_lifecycle_configuration",
+      "control_id": "S3.11",
+      "target_id": "696505809372|eu-north-1|arn:aws:s3:::security-autopilot-access-logs-696505809372-r221001-access-logs|S3.11",
+      "resource_id": "arn:aws:s3:::security-autopilot-access-logs-696505809372-r221001-access-logs",
+      "updated_at": "2026-03-28T20:22:57.064427+00:00"
+    },
+    {
+      "id": "a9e5a989-3dba-4114-aeaf-2ddac120ac0c",
+      "action_type": "s3_bucket_lifecycle_configuration",
+      "control_id": "S3.11",
+      "target_id": "696505809372|eu-north-1|arn:aws:s3:::ocypheris-live-ct-20260328t181200z-eu-north-1|S3.11",
+      "resource_id": "arn:aws:s3:::ocypheris-live-ct-20260328t181200z-eu-north-1",
+      "updated_at": "2026-03-28T20:22:57.064427+00:00"
+    },
+    {
+      "id": "abaa9de7-ac08-4b7c-8660-93695e992c1a",
+      "action_type": "s3_bucket_lifecycle_configuration",
+      "control_id": "S3.11",
+      "target_id": "696505809372|eu-north-1|arn:aws:s3:::sa-wi5-site-696505809372-20260328t164043z|S3.11",
+      "resource_id": "arn:aws:s3:::sa-wi5-site-696505809372-20260328t164043z",
+      "updated_at": "2026-03-28T20:22:57.064427+00:00"
+    },
+    {
+      "id": "0197deac-4964-41c5-92a1-f1ee3c224dbb",
+      "action_type": "s3_bucket_access_logging",
+      "control_id": "S3.9",
+      "target_id": "696505809372|eu-north-1|arn:aws:s3:::sa-wi5-site-696505809372-20260328t164043z|S3.9",
+      "resource_id": "arn:aws:s3:::sa-wi5-site-696505809372-20260328t164043z",
+      "updated_at": "2026-03-28T20:22:57.064427+00:00"
+    },
+    {
+      "id": "6efea359-8c2a-4b28-8165-ee61690b5a8e",
+      "action_type": "s3_bucket_access_logging",
+      "control_id": "S3.9",
+      "target_id": "696505809372|eu-north-1|arn:aws:s3:::ocypheris-live-ct-20260328t181200z-eu-north-1|S3.9",
+      "resource_id": "arn:aws:s3:::ocypheris-live-ct-20260328t181200z-eu-north-1",
+      "updated_at": "2026-03-28T20:22:57.064427+00:00"
+    },
+    {
+      "id": "bed34478-fc8a-4714-bb40-e52cfbc8bf9b",
+      "action_type": "s3_bucket_access_logging",
+      "control_id": "S3.9",
+      "target_id": "696505809372|eu-north-1|arn:aws:s3:::security-autopilot-access-logs-696505809372-r221001-access-logs|S3.9",
+      "resource_id": "arn:aws:s3:::security-autopilot-access-logs-696505809372-r221001-access-logs",
+      "updated_at": "2026-03-28T20:22:57.064427+00:00"
+    }
+  ]
+}

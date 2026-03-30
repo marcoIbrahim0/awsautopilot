@@ -1,0 +1,17 @@
+{
+  "name": "finding-historical-resolved",
+  "url": "https://ocypheris.com/findings/20e1eb80-f39c-49cd-8be1-c42e46aa5ac9",
+  "currentUrl": "https://ocypheris.com/findings/20e1eb80-f39c-49cd-8be1-c42e46aa5ac9",
+  "title": "AWS Security Autopilot",
+  "found": [
+    {
+      "text": "Resolved history",
+      "found": false
+    },
+    {
+      "text": "This finding is already resolved, so there is no current remediation action to generate.",
+      "found": true
+    }
+  ],
+  "bodySnippet": "Findings\nAccounts\nSettings\nTop Risks\nExports\nHelp\nAudit Log\nFinding Detail\n28\nM\nBack to Findings\nNeed help with this finding?\nS3 general purpose buckets should be encrypted at rest with AWS KMS keys\nSECURITY HUB\nINFORMATIONAL\nRESOLVED\nS3.17\n696505809372\nEU-NORTH-1\nRESOLVED HISTORY\nFix this finding\n\nThis finding is already resolved, so there is no current remediation action to generate. Open settings\n\nView PR bundle group\nSuppress Finding\n\nThis control checks whether an Amazon S3 general purpose bucket is encrypted with an AWS KMS key (SSE-KMS or DSSE-KMS). The control fails if the bucket is encrypted with default encryption (SSE-S3).\n\nRESOURCE\n\nResource ID\n\narn:aws:s3:::security-autopilot-w6-strict-s315-exec-696505809372\n\nResource Type\n\nAwsS3Bucket\n\nCOMPLIANCE\n\nSource\n\nSecurity Hub\n\nControl ID\n\nS3.17\n\nRemediation family: S3.15\n\nStandard\n\nstandards/nist-800-53/v/5.0.0\n\nTIMELINE\n\nFirst Observed\n\n3/16/2026, 1:31:45 AM\n\nLast Observed\n\n3/25/2026, 4:27:23 AM\n\nLast Updated\n\n3/25/2026, 4:27:40 AM\n\nCONTROL PLANE\n\nShadow Status\n\nRESOLVED\ninventory_confirmed_compliant\n\nShadow Event Time\n\n3/25/2026, 4:28:20 AM\n\nShadow Evaluated At\n\n3/25/2026, 4:31:07 AM\n\nFingerprint\n\n696505809372|eu-north-1|arn:aws:s3:::security-autopilot-w6-strict-s315-exec-696505809372|S3.15\n\nIDENTIFIERS\n\nFinding ID\n\narn:aws:securityhub:eu-north-1:696505809372:security-control/S3.17/finding/3e164775-f8b9-498f-9e33-9d3e3b29c0fd\n\nInternal ID\n\n20e1eb80-f39c-49cd-8be1-c42e46aa5ac9\n\nRAW SECURITY HUB JSON\n\nOCYPHERIS\n\nAsk AI"
+}

@@ -1,0 +1,70 @@
+[
+  {
+    "name": "findings-default-open",
+    "url": "https://ocypheris.com/findings",
+    "currentUrl": "https://ocypheris.com/findings",
+    "title": "AWS Security Autopilot",
+    "found": [
+      {
+        "text": "Findings",
+        "found": true
+      },
+      {
+        "text": "Status: Open",
+        "found": true
+      }
+    ],
+    "bodySnippet": "Findings\nAccounts\nSettings\nTop Risks\nExports\nHelp\nAudit Log\nFindings\n28\nM\nTry: root access key or public S3 bucket\nSearch\nFLAT VIEW ONLY\nGrouped\nFlat\nRefresh\nAll\nCritical(3)\nHigh\nMedium\nLow\nSTATUS\nOpen\nACCOUNT\nAll Accounts\nREGION\nAll Regions\nIDS\nACTIVE:\nStatus: Open\nClear All\nGROUP BY\nSeverity\nRule\nAdd Grouping\nClear\nCRITICAL\n5 groups · 7 findings\nCOLLAPSE\nConfig.1\n2 groups · 2 findings\nCOLLAPSE\nAWS Config should be enabled and use the service-linked role for resource recording\nCONFIG.1\n·\nAwsAccount\nExpand\n1 CRITICAL\n1 finding\nacross AwsAccount\n·\n696505809372\n·\neu-north-1\nGENERATED, AWAITING AWS VERIFICATION\nGenerate PR Bundle\nView details\nView PR bundle group\nSuppress Group\nAcknowledge Risk\nMark False Positive\n\nThe fix was applied successfully, but AWS source-of-truth confirmation has not arrived after 12 hours. Check Security Hub/reconciliation and investigate why the resolved state has not propagated.\n\nAWS Config should be enabled and use the service-linked role for resource recording\nCONFIG.1\n·\nAwsAccount\nExpand\n1 CRITICAL\n1 finding\nacross AwsAccount\n·\n696505809372\n·\nus-east-1\nGENERATED, AWAITING AWS VERIFICATION\nGenerate PR Bundle\nView details\nView PR bundle group\nSuppress Group\nAcknowledge Risk\nMark False Positive\n\nThe fix was applied successfully, but AWS source-of-truth confirmation has not arrived after 12 hours. Check Security Hub/reconciliation and investigate why the resolved state has not propagated.\n\nEC2.19\n1 group · 2 findings\nEXPAND\nIAM.4\n2 groups · 3 findings\nEXPAND\nHIGH\n3 groups · 7 findings\nEXPAND\nMEDIUM\n2 groups · 2 findings\nEXPAND\nINFORMATIONAL\n9 groups · 22 findings\nEXPAND\n\nOCYPHERIS\n\nAsk AI"
+  },
+  {
+    "name": "finding-historical-resolved",
+    "url": "https://ocypheris.com/findings/20e1eb80-f39c-49cd-8be1-c42e46aa5ac9",
+    "currentUrl": "https://ocypheris.com/findings/20e1eb80-f39c-49cd-8be1-c42e46aa5ac9",
+    "title": "AWS Security Autopilot",
+    "found": [
+      {
+        "text": "Resolved history",
+        "found": false
+      },
+      {
+        "text": "This finding is already resolved, so there is no current remediation action to generate.",
+        "found": true
+      }
+    ],
+    "bodySnippet": "Findings\nAccounts\nSettings\nTop Risks\nExports\nHelp\nAudit Log\nFinding Detail\n28\nM\nBack to Findings\nNeed help with this finding?\nS3 general purpose buckets should be encrypted at rest with AWS KMS keys\nSECURITY HUB\nINFORMATIONAL\nRESOLVED\nS3.17\n696505809372\nEU-NORTH-1\nRESOLVED HISTORY\nFix this finding\n\nThis finding is already resolved, so there is no current remediation action to generate. Open settings\n\nView PR bundle group\nSuppress Finding\n\nThis control checks whether an Amazon S3 general purpose bucket is encrypted with an AWS KMS key (SSE-KMS or DSSE-KMS). The control fails if the bucket is encrypted with default encryption (SSE-S3).\n\nRESOURCE\n\nResource ID\n\narn:aws:s3:::security-autopilot-w6-strict-s315-exec-696505809372\n\nResource Type\n\nAwsS3Bucket\n\nCOMPLIANCE\n\nSource\n\nSecurity Hub\n\nControl ID\n\nS3.17\n\nRemediation family: S3.15\n\nStandard\n\nstandards/nist-800-53/v/5.0.0\n\nTIMELINE\n\nFirst Observed\n\n3/16/2026, 1:31:45 AM\n\nLast Observed\n\n3/25/2026, 4:27:23 AM\n\nLast Updated\n\n3/25/2026, 4:27:40 AM\n\nCONTROL PLANE\n\nShadow Status\n\nRESOLVED\ninventory_confirmed_compliant\n\nShadow Event Time\n\n3/25/2026, 4:28:20 AM\n\nShadow Evaluated At\n\n3/25/2026, 4:31:07 AM\n\nFingerprint\n\n696505809372|eu-north-1|arn:aws:s3:::security-autopilot-w6-strict-s315-exec-696505809372|S3.15\n\nIDENTIFIERS\n\nFinding ID\n\narn:aws:securityhub:eu-north-1:696505809372:security-control/S3.17/finding/3e164775-f8b9-498f-9e33-9d3e3b29c0fd\n\nInternal ID\n\n20e1eb80-f39c-49cd-8be1-c42e46aa5ac9\n\nRAW SECURITY HUB JSON\n\nOCYPHERIS\n\nAsk AI"
+  },
+  {
+    "name": "finding-managed-account-scope",
+    "url": "https://ocypheris.com/findings/451488ac-8ce5-45d3-8831-162228242381",
+    "currentUrl": "https://ocypheris.com/findings/451488ac-8ce5-45d3-8831-162228242381",
+    "title": "AWS Security Autopilot",
+    "found": [
+      {
+        "text": "Managed at account scope",
+        "found": false
+      },
+      {
+        "text": "This finding family is remediated at account scope. Open the account-level row for the runnable fix.",
+        "found": true
+      }
+    ],
+    "bodySnippet": "Findings\nAccounts\nSettings\nTop Risks\nExports\nHelp\nAudit Log\nFinding Detail\n28\nM\nBack to Findings\nNeed help with this finding?\nS3 general purpose buckets should require requests to use SSL\nSECURITY HUB\nINFORMATIONAL\nRESOLVED\nS3.5\n696505809372\nEU-NORTH-1\nMANAGED AT ACCOUNT SCOPE\nFix this finding\n\nThis finding family is remediated at account scope. Open the account-level row for the runnable fix. Open settings\n\nView PR bundle group\nSuppress Finding\n\nThis control checks whether an Amazon S3 general purpose bucket has a policy that requires requests to use SSL. The control fails if the bucket policy doesn't require requests to use SSL.\n\nRESOURCE\n\nResource ID\n\narn:aws:s3:::security-autopilot-w6-strict-s315-exec-696505809372\n\nResource Type\n\nAwsS3Bucket\n\nCOMPLIANCE\n\nSource\n\nSecurity Hub\n\nControl ID\n\nS3.5\n\nStandard\n\nstandards/aws-foundational-security-best-practices/v/1.0.0\n\nTIMELINE\n\nFirst Observed\n\n3/16/2026, 1:31:41 AM\n\nLast Observed\n\n3/25/2026, 4:27:23 AM\n\nLast Updated\n\n3/25/2026, 4:27:35 AM\n\nCONTROL PLANE\n\nShadow Status\n\nRESOLVED\ninventory_confirmed_compliant\n\nShadow Event Time\n\n3/25/2026, 4:28:20 AM\n\nShadow Evaluated At\n\n3/25/2026, 4:31:07 AM\n\nFingerprint\n\n696505809372|eu-north-1|arn:aws:s3:::security-autopilot-w6-strict-s315-exec-696505809372|S3.5\n\nIDENTIFIERS\n\nFinding ID\n\narn:aws:securityhub:eu-north-1:696505809372:security-control/S3.5/finding/9f570e6f-af87-49a0-98d1-547ae7f96370\n\nInternal ID\n\n451488ac-8ce5-45d3-8831-162228242381\n\nRAW SECURITY HUB JSON\n\nOCYPHERIS\n\nAsk AI"
+  },
+  {
+    "name": "finding-managed-resource-scope",
+    "url": "https://ocypheris.com/findings/d903df85-8486-4e6c-a6fe-83dc82199a34",
+    "currentUrl": "https://ocypheris.com/findings/d903df85-8486-4e6c-a6fe-83dc82199a34",
+    "title": "AWS Security Autopilot",
+    "found": [
+      {
+        "text": "Managed on resource rows",
+        "found": false
+      },
+      {
+        "text": "This finding family is remediated on affected resource rows. Open the resource-level row for the runnable fix.",
+        "found": true
+      }
+    ],
+    "bodySnippet": "Findings\nAccounts\nSettings\nTop Risks\nExports\nHelp\nAudit Log\nFinding Detail\n28\nM\nBack to Findings\nNeed help with this finding?\nSecurity groups should only allow unrestricted incoming traffic for authorized ports\nSECURITY HUB\nINFORMATIONAL\nRESOLVED\nEC2.18\n696505809372\nEU-NORTH-1\nMANAGED ON RESOURCE ROWS\nFix this finding\n\nThis finding family is remediated on affected resource rows. Open the resource-level row for the runnable fix. Open settings\n\nView PR bundle group\nSuppress Finding\n\nThis control checks whether an Amazon EC2 security group permits unrestricted incoming traffic from unauthorized ports. The control status is determined as follows: If you use the default value for 'authorizedTcpPorts', the control fails if the security group permits unrestricted incoming traffic from any port other than ports 80 and 443; If you provide custom values for 'authorizedTcpPorts' or 'authorizedUdpPorts', the control fails if the security group permits unrestricted incoming traffic from any unlisted port; If no parameter is used, the control fails for any security group that has an unrestricted inbound traffic rule.\n\nRESOURCE\n\nResource ID\n\nAWS::::Account:696505809372\n\nResource Type\n\nAwsAccount\n\nCOMPLIANCE\n\nSource\n\nSecurity Hub\n\nControl ID\n\nEC2.18\n\nRemediation family: EC2.53\n\nStandard\n\nstandards/aws-foundational-security-best-practices/v/1.0.0\n\nTIMELINE\n\nFirst Observed\n\n3/12/2026, 2:43:34 PM\n\nLast Observed\n\n3/15/2026, 2:57:51 PM\n\nLast Updated\n\n3/15/2026, 10:46:03 PM\n\nIDENTIFIERS\n\nFinding ID\n\narn:aws:securityhub:eu-north-1:696505809372:security-control/EC2.18/finding/5e6067d0-d10b-4972-b3ca-3c6e69ae2701\n\nInternal ID\n\nd903df85-8486-4e6c-a6fe-83dc82199a34\n\nRAW SECURITY HUB JSON\n\nOCYPHERIS\n\nAsk AI"
+  }
+]

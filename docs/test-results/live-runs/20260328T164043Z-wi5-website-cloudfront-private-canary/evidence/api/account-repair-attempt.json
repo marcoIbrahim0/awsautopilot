@@ -1,0 +1,58 @@
+{
+  "validate": {
+    "status_code": 200,
+    "body": {
+      "status": "error",
+      "account_id": "696505809372",
+      "last_validated_at": "2026-03-28T16:49:35.502388Z",
+      "permissions_ok": false,
+      "missing_permissions": [],
+      "warnings": [],
+      "required_permissions": [
+        "securityhub:GetFindings",
+        "ec2:DescribeSecurityGroups",
+        "config:DescribeConfigurationRecorders",
+        "config:DescribeDeliveryChannels",
+        "config:DescribeConfigRules",
+        "config:DescribeComplianceByConfigRule",
+        "config:GetComplianceDetailsByConfigRule",
+        "s3:ListAllMyBuckets",
+        "s3:GetBucketPublicAccessBlock",
+        "s3:GetBucketPolicyStatus",
+        "s3:GetBucketPolicy",
+        "s3:GetBucketLocation",
+        "s3:GetEncryptionConfiguration",
+        "s3:GetBucketLogging",
+        "s3:GetLifecycleConfiguration"
+      ],
+      "authoritative_mode_allowed": false,
+      "authoritative_mode_block_reasons": [
+        "ReadRole validation failed; authoritative mode is blocked."
+      ]
+    }
+  },
+  "patch_status_validated": {
+    "status_code": 200,
+    "body": {
+      "id": "56a0a77d-1a64-41bf-93d3-c181b0fd4cf9",
+      "account_id": "696505809372",
+      "role_read_arn": "arn:aws:iam::696505809372:role/SecurityAutopilotReadRole",
+      "role_write_arn": null,
+      "regions": [
+        "eu-north-1",
+        "us-east-1"
+      ],
+      "status": "validated",
+      "last_validated_at": "2026-03-28T16:49:35.502388Z",
+      "last_synced_at": null,
+      "created_at": "2026-03-24T19:06:22.721836Z",
+      "updated_at": "2026-03-28T16:49:36.268871Z"
+    }
+  },
+  "service_readiness_after": {
+    "status_code": 400,
+    "body": {
+      "detail": "Failed to check service readiness: Access denied. Check role ARN and trust policy."
+    }
+  }
+}

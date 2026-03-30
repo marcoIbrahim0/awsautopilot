@@ -1,0 +1,42 @@
+{
+  "ingest2": {
+    "status_code": 202,
+    "body": {
+      "account_id": "696505809372",
+      "jobs_queued": 1,
+      "regions": [
+        "eu-north-1"
+      ],
+      "message_ids": [
+        "0392333c-49be-47f8-b302-08755d342e62"
+      ],
+      "message": "Ingestion jobs queued successfully"
+    }
+  },
+  "compute2": {
+    "status_code": 202,
+    "body": {
+      "message": "Action computation job queued",
+      "tenant_id": "c3351a02-0bc2-4449-beed-d59d7ac937d0",
+      "scope": {
+        "account_id": "696505809372",
+        "region": "eu-north-1"
+      }
+    }
+  },
+  "findings_any": {
+    "status_code": 200,
+    "body": {
+      "items": [],
+      "total": 0
+    }
+  },
+  "actions_any": {
+    "status_code": 200,
+    "body": {
+      "items": [],
+      "total": 0,
+      "owner_queue_counters": null
+    }
+  }
+}

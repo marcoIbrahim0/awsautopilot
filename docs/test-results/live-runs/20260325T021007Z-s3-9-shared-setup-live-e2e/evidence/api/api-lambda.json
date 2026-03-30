@@ -1,0 +1,5 @@
+{
+    "name": "security-autopilot-dev-api",
+    "image": "029037611564.dkr.ecr.eu-north-1.amazonaws.com/security-autopilot-dev-saas-api:20260325T021017Z",
+    "last_modified": "2026-03-25T02:13:06.000+0000"
+}

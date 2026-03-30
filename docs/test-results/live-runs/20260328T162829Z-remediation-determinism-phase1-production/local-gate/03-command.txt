@@ -1,0 +1,3 @@
+$ PYTHONPATH=. ./venv/bin/pytest tests/test_remediation_runtime_checks.py -q -k 's3_2 or bucket_policy_status or oac'
+......                                                                   [100%]
+6 passed, 28 deselected in 0.03s

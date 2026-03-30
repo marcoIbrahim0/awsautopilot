@@ -1,0 +1,56 @@
+{
+  "run_id": "20260329T003200Z-remediation-determinism-phase3-production",
+  "date_utc": "2026-03-29",
+  "surface": "https://api.ocypheris.com",
+  "tenant": {
+    "name": "Marco",
+    "id": "e4e07aa8-b8ea-4c1d-9fd7-4362a2fc1195"
+  },
+  "canary_account_id": "696505809372",
+  "region": "eu-north-1",
+  "gate_status": {
+    "gate_3a_preflight_and_parity": "BLOCKED",
+    "gate_3b_local_regression": "PASS",
+    "gate_3c_required_production_scenarios": "PARTIAL",
+    "gate_3d_grouped_production_proof": "NOT_RUN",
+    "gate_3e_retained_evidence": "PARTIAL",
+    "final_decision": "BLOCKED"
+  },
+  "work_items": {
+    "WI-4": {
+      "status": "PASS",
+      "notes": "Production create/apply/rollback proof retained with apply_time_merge=true on action 78237cc2-e47f-4f0f-80de-22b08d8725c7."
+    },
+    "WI-5": {
+      "status": "PARITY_ONLY",
+      "notes": "Production options and preview now expose s3_migrate_website_cloudfront_private after the read-role GetBucketWebsite fix, but no retained apply/rollback proof was executed in this run."
+    },
+    "WI-9": {
+      "status": "PARITY_ONLY",
+      "notes": "Production preview retained apply_time_merge=true for OAC bucket-policy capture failure, but no retained apply/rollback proof was executed in this run."
+    },
+    "WI-10": {
+      "status": "BLOCKED",
+      "notes": "No truthful production public non-website candidate could be seeded because account-level S3 Block Public Access still has BlockPublicPolicy=true."
+    },
+    "WI-11": {
+      "status": "PASS",
+      "notes": "Production create/apply/rollback proof retained with apply_time_merge=true on action 8ab29997-bb6c-41fe-ba0c-26f03523f0ed."
+    }
+  },
+  "local_gate": {
+    "status": "PASS",
+    "transcripts": [
+      "local-gate/01-risk-runtime.txt",
+      "local-gate/02-profile-options.txt",
+      "local-gate/03-run-create.txt",
+      "local-gate/04-grouped-report.txt",
+      "local-gate/05-worker-bundle.txt"
+    ]
+  },
+  "environment_mutations": [
+    "SecurityAutopilotReadRolePolicy default version advanced to v10 to include s3:GetBucketWebsite.",
+    "WI-4 candidate bucket was temporarily given a deny-only bucket policy to force apply-time merge, then restored to NoSuchBucketPolicy.",
+    "WI-11 candidate bucket was temporarily given a deny-lifecycle bucket policy statement for SecurityAutopilotReadRole, then restored to its prior policy."
+  ]
+}

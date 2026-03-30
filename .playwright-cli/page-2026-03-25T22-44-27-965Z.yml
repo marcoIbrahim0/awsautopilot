@@ -1,0 +1,120 @@
+- generic [active] [ref=e1]:
+  - status [ref=e2]
+  - generic [ref=e5]:
+    - complementary [ref=e6]:
+      - navigation [ref=e10]:
+        - link "Findings" [ref=e11] [cursor=pointer]:
+          - /url: /findings
+          - img [ref=e13]
+          - generic: Findings
+        - link "Accounts" [ref=e15] [cursor=pointer]:
+          - /url: /accounts
+          - img [ref=e17]
+          - generic: Accounts
+        - link "Settings" [ref=e19] [cursor=pointer]:
+          - /url: /settings
+          - img [ref=e21]
+          - generic: Settings
+        - link "Top Risks" [ref=e24] [cursor=pointer]:
+          - /url: /top-risks
+          - img [ref=e26]
+          - generic: Top Risks
+        - link "Exports" [ref=e28] [cursor=pointer]:
+          - /url: /exports
+          - img [ref=e30]
+          - generic: Exports
+        - link "Help" [ref=e32] [cursor=pointer]:
+          - /url: /help
+          - img [ref=e34]
+          - generic: Help
+      - button "Pin sidebar open" [ref=e39]:
+        - img [ref=e40]
+    - generic [ref=e42]:
+      - banner [ref=e43]:
+        - heading "Findings" [level=1] [ref=e45]
+        - generic [ref=e46]:
+          - button "Switch to light mode" [ref=e47]:
+            - img [ref=e48]
+          - button "Notifications" [ref=e51]:
+            - img [ref=e52]
+          - button "Profile menu" [ref=e54]:
+            - generic [ref=e55]: U
+      - main [ref=e56]:
+        - generic [ref=e59]:
+          - generic [ref=e60]:
+            - generic [ref=e61]:
+              - generic [ref=e63]:
+                - img [ref=e64]
+                - generic [ref=e67]:
+                  - generic: "Try: root access key or public S3 bucket"
+                  - textbox "Search" [ref=e68]
+                - button "Search" [ref=e69]
+              - generic: Flat View Only
+            - generic [ref=e70]:
+              - generic [ref=e71]:
+                - button "Grouped" [ref=e72]
+                - button "Flat" [ref=e73]
+              - button "Refresh" [disabled] [ref=e74]:
+                - generic [ref=e75]:
+                  - img [ref=e76]
+                  - text: Refresh
+          - generic [ref=e78]:
+            - generic [ref=e81]:
+              - button "All" [ref=e82]
+              - button "Critical" [ref=e83]
+              - button "High" [ref=e84]
+              - button "Medium" [ref=e85]
+              - button "Low" [ref=e86]
+            - generic [ref=e87]:
+              - generic [ref=e88]:
+                - generic [ref=e89]: Status
+                - button "All Statuses" [ref=e90]:
+                  - generic [ref=e91]:
+                    - generic [ref=e92]: All Statuses
+                    - img [ref=e93]
+              - generic [ref=e95]:
+                - generic [ref=e96]: Account
+                - button "All Accounts" [ref=e97]:
+                  - generic [ref=e98]:
+                    - generic [ref=e99]: All Accounts
+                    - img [ref=e100]
+              - generic [ref=e102]:
+                - generic [ref=e103]: Region
+                - button "All Regions" [ref=e104]:
+                  - generic [ref=e105]:
+                    - generic [ref=e106]: All Regions
+                    - img [ref=e107]
+              - generic [ref=e109]:
+                - generic [ref=e110]: IDs
+                - generic [ref=e111]:
+                  - textbox "Control ID" [ref=e112]: EC2.53
+                  - textbox "Resource ID" [ref=e113]
+          - generic [ref=e114]:
+            - generic [ref=e115]: "Active:"
+            - generic [ref=e116]:
+              - text: "Control ID: EC2.53"
+              - button [ref=e117]:
+                - img [ref=e118]
+            - button "Clear All" [ref=e120]
+          - generic [ref=e122]:
+            - generic [ref=e123]: Group by
+            - generic [ref=e124]:
+              - generic [ref=e126]:
+                - generic [ref=e127]:
+                  - img [ref=e128]
+                  - generic [ref=e135]: Severity
+                  - button "Remove Severity grouping" [ref=e136]:
+                    - img [ref=e137]
+                - img [ref=e139]
+              - generic [ref=e143]:
+                - img [ref=e144]
+                - generic [ref=e151]: Rule
+                - button "Remove Rule grouping" [ref=e152]:
+                  - img [ref=e153]
+            - button "Add Grouping" [ref=e156]:
+              - img [ref=e157]
+              - text: Add Grouping
+            - button "Clear" [ref=e159]
+  - button "Open Next.js Dev Tools" [ref=e175] [cursor=pointer]:
+    - img [ref=e176]
+  - alert [ref=e179]

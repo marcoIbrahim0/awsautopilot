@@ -1,0 +1,43 @@
+{
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Sid": "AllowAssumeFromSaaSAccountWithExternalId",
+            "Effect": "Allow",
+            "Principal": {
+                "AWS": "arn:aws:iam::029037611564:root"
+            },
+            "Action": "sts:AssumeRole",
+            "Condition": {
+                "StringEquals": {
+                    "sts:ExternalId": "ext-1f274864a7704551"
+                },
+                "ArnEquals": {
+                    "aws:PrincipalArn": [
+                        "arn:aws:iam::029037611564:role/security-autopilot-dev-lambda-api",
+                        "arn:aws:iam::029037611564:role/security-autopilot-dev-lambda-worker"
+                    ]
+                }
+            }
+        },
+        {
+            "Sid": "AllowSessionAuditContextFromSaaSAccount",
+            "Effect": "Allow",
+            "Principal": {
+                "AWS": "arn:aws:iam::029037611564:root"
+            },
+            "Action": [
+                "sts:SetSourceIdentity",
+                "sts:TagSession"
+            ],
+            "Condition": {
+                "ArnEquals": {
+                    "aws:PrincipalArn": [
+                        "arn:aws:iam::029037611564:role/security-autopilot-dev-lambda-api",
+                        "arn:aws:iam::029037611564:role/security-autopilot-dev-lambda-worker"
+                    ]
+                }
+            }
+        }
+    ]
+}

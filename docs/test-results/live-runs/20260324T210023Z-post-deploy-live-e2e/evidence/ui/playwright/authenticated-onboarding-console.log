@@ -1,0 +1,9 @@
+Total messages: 7 (Errors: 7, Warnings: 0)
+
+[ERROR] Failed to load resource: the server responded with a status of 401 () @ https://api.ocypheris.com/api/auth/me:0
+[ERROR] Failed to load resource: the server responded with a status of 401 () @ https://api.ocypheris.com/api/auth/login:0
+[ERROR] Failed to load resource: the server responded with a status of 401 () @ https://api.ocypheris.com/api/auth/login:0
+[ERROR] Failed to load resource: the server responded with a status of 401 () @ https://api.ocypheris.com/api/auth/me:0
+[ERROR] Failed to load resource: the server responded with a status of 401 () @ https://api.ocypheris.com/api/findings?limit=20&offset=0:0
+[ERROR] [errorLogger] {name: TypeError, message: Failed to fetch, context: Object} @ https://ocypheris.com/_next/static/chunks/app/error-b31a1e02d4680cec.js:0
+[ERROR] Failed to load resource: the server responded with a status of 401 () @ https://api.ocypheris.com/api/auth/me:0

@@ -1,0 +1,7 @@
+{
+  "version": 1,
+  "bucket_name": "security-autopilot-access-logs-696505809372-r221001",
+  "region": "eu-north-1",
+  "lifecycle_exists": false,
+  "lifecycle_document": null
+}

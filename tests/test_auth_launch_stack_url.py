@@ -25,6 +25,7 @@ def test_build_read_role_launch_stack_url_includes_execution_role_params_when_se
 
     params = _fragment_params(url)
 
+    assert "#/stacks/create/review?" in url
     assert params["param_SaaSExecutionRoleArns"] == [
         "arn:aws:iam::029037611564:role/security-autopilot-dev-lambda-api,"
         "arn:aws:iam::029037611564:role/security-autopilot-dev-lambda-worker"
@@ -41,4 +42,5 @@ def test_build_read_role_launch_stack_url_omits_execution_role_param_when_empty(
 
     params = _fragment_params(url)
 
+    assert "#/stacks/create/review?" in url
     assert "param_SaaSExecutionRoleArns" not in params

@@ -3,6 +3,7 @@ from __future__ import annotations
 import logging
 import os
 import ssl
+import sys
 from dataclasses import dataclass
 from functools import lru_cache
 from urllib.parse import parse_qs, urlencode, urlparse, urlunparse
@@ -66,8 +67,18 @@ def build_sync_connect_args(url: str) -> dict[str, object]:
     return {"sslmode": "require"} if "neon" in url.lower() else {}
 
 
+def _running_under_pytest() -> bool:
+    argv0 = os.path.basename(sys.argv[0]).lower() if sys.argv else ""
+    return (
+        "pytest" in sys.modules
+        or argv0.endswith("pytest")
+        or argv0.endswith("py.test")
+        or bool(os.getenv("PYTEST_CURRENT_TEST"))
+    )
+
+
 def _should_skip_probe() -> bool:
-    return settings.ENV.lower() == "test" or bool(os.getenv("PYTEST_CURRENT_TEST"))
+    return settings.ENV.lower() == "test" or _running_under_pytest()
 
 
 def _candidate_urls() -> list[ResolvedDatabaseUrls]:

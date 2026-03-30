@@ -1,0 +1,2 @@
+
+An error occurred (AccessDenied) when calling the GetBucketPolicy operation: User: arn:aws:sts::696505809372:assumed-role/CodexP2SecurityHubImportRole/wi4-s35-verify is not authorized to perform: s3:GetBucketPolicy on resource: "arn:aws:s3:::security-autopilot-access-logs-696505809372-r221001" with an explicit deny in a resource-based policy

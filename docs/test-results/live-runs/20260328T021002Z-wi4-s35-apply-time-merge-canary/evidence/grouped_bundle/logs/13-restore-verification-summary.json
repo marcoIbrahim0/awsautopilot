@@ -1,0 +1,16 @@
+{
+  "r222018": {
+    "post_apply_has_deny": true,
+    "post_restore_has_deny": false,
+    "restored_matches_derived_policy": true
+  },
+  "r94854": {
+    "post_apply_has_deny": true,
+    "post_restore_has_deny": false,
+    "restored_matches_derived_policy": true
+  },
+  "r221001": {
+    "post_restore_has_deny": false,
+    "restored_matches_exact_pre_apply": true
+  }
+}

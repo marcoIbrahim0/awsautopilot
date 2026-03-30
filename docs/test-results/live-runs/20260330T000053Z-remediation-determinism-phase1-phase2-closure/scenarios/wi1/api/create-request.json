@@ -1,0 +1,1 @@
+{"action_id":"8d9e8cc1-949a-412d-8db0-98923b513518","mode":"pr_only","strategy_id":"s3_enable_abort_incomplete_uploads","strategy_inputs":{"abort_days":7},"risk_acknowledged":true}

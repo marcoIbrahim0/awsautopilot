@@ -1,0 +1,15 @@
+{
+  "TransitionDefaultMinimumObjectSize": "all_storage_classes_128K",
+  "Rules": [
+    {
+      "Expiration": {
+        "Days": 180
+      },
+      "ID": "expire-access-logs",
+      "Filter": {
+        "Prefix": ""
+      },
+      "Status": "Enabled"
+    }
+  ]
+}

@@ -1,5 +1,915 @@
 # Task Log
 
+## Add remediation operator UX implementation plan (2026-03-30)
+
+**Task:** Create a new implementation plan for frontend-first remediation UX improvements that build user-facing value on top of the now-closed remediation-determinism phases.
+
+**Files modified:**
+- `/Users/marcomaher/AWS Security Autopilot/docs/features/remediation-operator-ux-implementation-plan.md`
+- `/Users/marcomaher/AWS Security Autopilot/docs/features/README.md`
+- `/Users/marcomaher/AWS Security Autopilot/docs/README.md`
+- `/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md`
+- `/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md`
+
+**What was done:**
+- Added a new active feature plan under `docs/features/` for the requested remediation operator UX improvements.
+- Scoped the plan explicitly to the frontend-first items requested:
+  - clearer UI labels for outcome types
+  - better wording around review-required vs manual-only
+  - improved layout for rationale, preservation evidence, and follow-up steps
+  - stronger guided-review UX using existing data
+  - better grouping and prioritization in the frontend from existing fields
+  - better navigation from blockers to the right settings page
+- Documented:
+  - goals and non-goals
+  - existing product baseline
+  - data assumptions using current API contracts
+  - workstreams, delivery order, candidate frontend touchpoints, acceptance criteria, and guardrails
+- Kept the plan truthful to current product scope by marking it planned and by explicitly stating that the default assumption is no backend work unless a concrete contract gap is discovered.
+- Cross-linked the new plan from the active features index and the top-level docs index.
+
+**Validation:**
+- Reviewed the active docs structure and linked the new plan from:
+  - `docs/features/README.md`
+  - `docs/README.md`
+- Confirmed the plan uses current repo paths and existing frontend/API surfaces rather than placeholders.
+
+**Open questions / TODOs:**
+- This task created the implementation plan only. No frontend behavior changed yet.
+- When implementation starts, the first slice should likely be the shared outcome-label language and review/manual wording cleanup because that is the lowest-risk highest-clarity improvement.
+
+## Audit and finish remediation-determinism frontend UI wiring (2026-03-30)
+
+**Task:** Audit the production-closed remediation-determinism phases against the shipped frontend, identify any remaining UI-only gaps, wire the missing product surface if needed, and update focused tests plus docs/history.
+
+**Files modified:**
+- `/Users/marcomaher/AWS Security Autopilot/frontend/src/lib/api.ts`
+- `/Users/marcomaher/AWS Security Autopilot/frontend/src/components/RemediationModal.tsx`
+- `/Users/marcomaher/AWS Security Autopilot/frontend/src/components/RemediationModal.test.tsx`
+- `/Users/marcomaher/AWS Security Autopilot/docs/prod-readiness/remediation-determinism-hardening-implementation-plan.md`
+- `/Users/marcomaher/AWS Security Autopilot/docs/prod-readiness/README.md`
+- `/Users/marcomaher/AWS Security Autopilot/docs/live-e2e-testing/README.md`
+- `/Users/marcomaher/AWS Security Autopilot/docs/README.md`
+- `/Users/marcomaher/AWS Security Autopilot/docs/features/shared-execution-guidance.md`
+- `/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md`
+- `/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md`
+
+**What was done:**
+- Re-read the binding `.cursor` rules and March 28-30 retained signoff history, then treated the March 30 Phase 1, Phase 2, Phase 3, and umbrella signoff packages as the authoritative runtime truth rather than re-proving backend closure.
+- Audited the likely frontend surfaces and the matching backend contracts:
+  - single-action launch/detail flows
+  - remediation options and preview
+  - grouped bundle outcomes
+  - findings-level post-apply cues
+  - remediation-run progress and artifact visibility
+  - `/attack-paths` deep-link and context surfaces
+- Confirmed that most closed phase capabilities were already visible in the product UI:
+  - `ActionDetailModal` already exposed action state, refresh cues, execution guidance, implementation artifacts, grouped history, and attack-path links
+  - `RemediationRunProgress` already exposed generated artifacts, closure proof, and evidence pointers
+  - grouped mixed-tier and follow-up UX was already present on `frontend/src/app/actions/group/page.tsx`
+  - finding cards and grouped finding cards already exposed pending-confirmation and follow-up state
+  - `/attack-paths` already carried the bounded attack-path/context story needed for the Phase 3 surfaces
+- Identified one real frontend gap: `GET /api/actions/{id}/remediation-preview` already returned canonical resolver metadata for review-only/manual branches, but the single-action `RemediationModal` did not render that metadata. This made some Phase 2 and Phase 3 decisions clearer on grouped pages than on the single-action operator path.
+- Extended the typed preview contract in `frontend/src/lib/api.ts` and added a new `Execution decision` section to `RemediationModal` so the single-action flow now shows:
+  - support tier
+  - decision rationale
+  - blocked or downgraded reasons
+  - missing tenant defaults
+  - preservation evidence
+- Added a focused modal test that proves review-required preview decisions render in the browser surface, then updated the active docs to state explicitly that the retained closed phases are now fully wired in-product and to separate that from the still-intentional runbook/customer-apply work.
+
+**Validation:**
+- `cd frontend && npm run test:ui -- --run src/components/RemediationModal.test.tsx`
+  - `20 passed`
+- `cd frontend && npm run test:ui -- --run src/components/ActionDetailModal.test.tsx src/components/RemediationModal.test.tsx src/components/RemediationRunProgress.test.tsx src/app/actions/group/page.test.tsx src/app/findings/FindingGroupCard.test.tsx src/app/findings/FindingCard.test.tsx src/app/attack-paths/page.test.tsx`
+  - `68 passed`
+
+**Open questions / TODOs:**
+- The remediation-determinism frontend audit does not change the intentional boundary that bundle apply, rollback, customer-owned DNS/ACM work, and retained signoff package generation remain operator/runbook tasks rather than browser-executed product flows.
+- This pass scoped only the real UI gap that blocked honest frontend signoff. If future work expands direct-fix support or new resolver metadata, those surfaces should be audited separately instead of assuming the current modal is exhaustive forever.
+
+## Finish the umbrella remediation-determinism production signoff cleanup (2026-03-30)
+
+**Task:** Finish the non-code umbrella cleanup after Gate 1, Gate 2, and Gate 3 were individually closed: normalize the remaining March 30 closure package metadata, add one final production-signoff index package, reconcile the stale Gate 0 / Gate 4 / Gate 5 checklist language in the main hardening plan, and explicitly record the non-blocking March 30 attack-path worker issue.
+
+**Files modified:**
+- `/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260330T012757Z-phase2-action-resolution-lag-closure/00-run-metadata.md`
+- `/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260330T012757Z-phase2-action-resolution-lag-closure/summary.json`
+- `/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260330T021500Z-remediation-determinism-production-signoff/README.md`
+- `/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260330T021500Z-remediation-determinism-production-signoff/00-run-metadata.md`
+- `/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260330T021500Z-remediation-determinism-production-signoff/summary.json`
+- `/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260330T021500Z-remediation-determinism-production-signoff/notes/final-summary.md`
+- `/Users/marcomaher/AWS Security Autopilot/docs/live-e2e-testing/README.md`
+- `/Users/marcomaher/AWS Security Autopilot/docs/prod-readiness/README.md`
+- `/Users/marcomaher/AWS Security Autopilot/docs/prod-readiness/remediation-determinism-hardening-implementation-plan.md`
+- `/Users/marcomaher/AWS Security Autopilot/docs/README.md`
+- `/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md`
+- `/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md`
+
+**What was done:**
+- Re-read the current exit-gate section in the hardening plan and confirmed the remaining unchecked items were umbrella-doc drift, not missing production proof.
+- Added the missing package metadata files to the March 30 Phase 2 closure package so it now has:
+  - `00-run-metadata.md`
+  - `summary.json`
+- Created a final combined signoff package under `docs/test-results/live-runs/20260330T021500Z-remediation-determinism-production-signoff/` with:
+  - `README.md`
+  - `00-run-metadata.md`
+  - `summary.json`
+  - `notes/final-summary.md`
+- Used that new package as the final umbrella signoff index that points to the authoritative retained closure packages for:
+  - Gate 1 / Phase 1
+  - Gate 2 / Phase 2
+  - Gate 3 / Phase 3
+- Updated the main implementation plan so the remaining stale checklist items now match retained truth:
+  - Gate 0 prerequisites marked passed
+  - Gate 1B now marks `WI-12` passed
+  - Gate 4 live acceptance language now reflects the real signoff contract: authoritative no-candidate conclusions count where applicable, applied scenarios require retained apply plus production-visibility plus rollback/cleanup evidence, and grouped proof is required only for the grouped-capable phases in this signoff
+  - Gate 5 now points at the final umbrella signoff package naming and purpose
+  - the production-ready exit gate now marks Gate 0, Gate 4, and Gate 5 passed
+- Updated the docs indexes so the new umbrella package is discoverable from:
+  - `docs/live-e2e-testing/README.md`
+  - `docs/prod-readiness/README.md`
+  - `docs/README.md`
+- Recorded the separate March 30 `attack_path_materialization` duplicate-key issue as non-blocking adjacent follow-up instead of leaving it implicit in the retained worker logs.
+
+**Validation:**
+- `jq . /Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260330T011601Z-phase1-action-resolution-closure/summary.json`
+- Reviewed retained authoritative package set:
+  - `20260330T011601Z-phase1-action-resolution-closure`
+  - `20260330T012757Z-phase2-action-resolution-lag-closure`
+  - `20260329T194129Z-remediation-determinism-phase3-production`
+- Re-checked the main implementation-plan exit gate after patching and confirmed Gate 0 through Gate 5 now align with the retained March 30 production truth.
+
+**Open questions / remaining TODOs:**
+- The March 30 `attack_path_materialization` duplicate-key issue on `attack_path_materialized_summaries` remains a real adjacent runtime follow-up, but it is not a remediation-determinism signoff blocker.
+
+## Close the remaining Phase 1 production blocker by fixing post-apply action-resolution lag (2026-03-30)
+
+**Task:** Close Phase 1 completely on production by fixing the remaining post-apply action-resolution lag, prove the defect truthfully on `https://api.ocypheris.com`, deploy only the minimal worker/runtime fix, re-prove closure on production without `scripts/recompute_account_actions.py` or DB repair, and publish the retained package plus active docs/history updates.
+
+**Files modified:**
+- `/Users/marcomaher/AWS Security Autopilot/backend/workers/jobs/reconcile_inventory_shard.py`
+- `/Users/marcomaher/AWS Security Autopilot/backend/workers/jobs/ingest_control_plane_events.py`
+- `/Users/marcomaher/AWS Security Autopilot/tests/test_reconcile_inventory_shard_worker.py`
+- `/Users/marcomaher/AWS Security Autopilot/tests/test_ingest_control_plane_events.py`
+- `/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260330T011601Z-phase1-action-resolution-closure/README.md`
+- `/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260330T011601Z-phase1-action-resolution-closure/00-run-metadata.md`
+- `/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260330T011601Z-phase1-action-resolution-closure/summary.json`
+- `/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260330T011601Z-phase1-action-resolution-closure/notes/final-summary.md`
+- `/Users/marcomaher/AWS Security Autopilot/docs/live-e2e-testing/README.md`
+- `/Users/marcomaher/AWS Security Autopilot/docs/prod-readiness/README.md`
+- `/Users/marcomaher/AWS Security Autopilot/docs/prod-readiness/remediation-determinism-hardening-implementation-plan.md`
+- `/Users/marcomaher/AWS Security Autopilot/docs/README.md`
+- `/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md`
+- `/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md`
+
+**What was done:**
+- Reproduced the blocker truthfully on production before editing runtime behavior:
+  - used live action `54b0d584-d60a-409d-86e3-5458bd8054b1` for bucket `security-autopilot-w6-envready-s311-exec-696505809372`
+  - generated production remediation run `b9c90690-f124-491b-922d-2ac0bb8ff252`
+  - downloaded the live bundle, ran local `terraform init` / `validate` / `plan` / `apply`, and confirmed AWS lifecycle state converged
+  - retained proof that the action still remained `open` after truthful post-apply production re-evaluation
+  - retained proof that a manual scoped `POST /api/actions/compute` closed that same action immediately, isolating the defect to the shadow-status-to-compute handoff rather than action-engine merge logic
+- Landed the minimal runtime fix:
+  - `backend/workers/jobs/reconcile_inventory_shard.py` now enqueues scoped compute whenever reconciliation changes effective status and the ingest queue is configured, regardless of shadow mode
+  - `backend/workers/jobs/ingest_control_plane_events.py` now enqueues scoped compute in shadow mode when the event path applied at least one effective-state change, instead of returning early
+- Added focused regression coverage:
+  - `tests/test_reconcile_inventory_shard_worker.py` now covers shadow-mode compute enqueue on changed-status reconcile
+  - `tests/test_ingest_control_plane_events.py` now covers shadow-mode enqueue, no-op, and duplicate event paths
+- Ran the targeted local verification slice:
+  - `PYTHONPATH=. ./venv/bin/pytest tests/test_reconcile_inventory_shard_worker.py`
+  - `PYTHONPATH=. ./venv/bin/pytest tests/test_ingest_control_plane_events.py`
+  - `PYTHONPATH=. ./venv/bin/pytest tests/test_action_engine_merge.py -k 'shadow or resolved'`
+- Deployed only the intended runtime change to production from isolated temp worktree `/tmp/aws-security-autopilot-phase1-deploy` because the main `master` worktree was already very dirty.
+  - `scripts/deploy_saas_serverless.sh` completed successfully
+  - retained deploy transcript under `docs/test-results/live-runs/20260330T011601Z-phase1-action-resolution-closure/deploy-serverless.log`
+  - live image tag deployed: `20260330T013354Z`
+- Re-proved the production path after deploy using the same live action family:
+  - truthfully reopened the bucket by deleting lifecycle configuration
+  - generated fresh production run `ec7fa11c-e4d0-4f54-a26a-084e3aa92d39`
+  - reran local Terraform `init` / `validate` / `plan` / `apply`
+  - captured the initial post-deploy failure mode showing canary `SecurityAutopilotReadRole` trust was broken for truthful worker `AssumeRole`
+  - repaired the canary trust policy and retained both the original and updated trust JSON
+  - enqueued one targeted internal production reconcile shard for the exact bucket scope after the trust repair
+  - retained proof that the action transitioned to `resolved` automatically with no manual compute and no direct DB mutation
+- Restored AWS truth by deleting the lifecycle configuration again after the post-deploy proof and retained cleanup evidence showing the bucket returned to the original no-lifecycle state.
+- Authored the new authoritative retained package under `docs/test-results/live-runs/20260330T011601Z-phase1-action-resolution-closure/` and updated the active docs/indexes so Gate 1 is now recorded as `PASS`.
+
+**Validation:**
+- `PYTHONPATH=. ./venv/bin/pytest tests/test_reconcile_inventory_shard_worker.py`
+- `PYTHONPATH=. ./venv/bin/pytest tests/test_ingest_control_plane_events.py`
+- `PYTHONPATH=. ./venv/bin/pytest tests/test_action_engine_merge.py -k 'shadow or resolved'`
+- `scripts/deploy_saas_serverless.sh`
+- Production predeploy proof:
+  - live run `b9c90690-f124-491b-922d-2ac0bb8ff252`
+  - AWS apply succeeded
+  - action `54b0d584-d60a-409d-86e3-5458bd8054b1` stayed `open` until manual scoped compute
+- Production postdeploy proof:
+  - live run `ec7fa11c-e4d0-4f54-a26a-084e3aa92d39`
+  - targeted internal reconcile after canary trust repair closed the same action family automatically with no manual compute
+
+**Open questions / remaining TODOs:**
+- AWS cleanup is complete and the bucket is back to the original no-lifecycle state, but the retained cleanup action reopen polls stayed noisy and were not used as the signoff proof.
+- The canary `SecurityAutopilotReadRole` trust repair was intentionally left in place because future truthful production reruns need that path to remain functional.
+
+## Reconcile Gate 3 active-doc status and re-check Phase 1 and Phase 2 closure state (2026-03-30)
+
+**Task:** Verify that the March 30 WI-5 closure is reflected across the active docs, patch any stale current-status references, and re-check the latest retained truth for Gate 1 and Gate 2.
+
+**Files modified:**
+- `/Users/marcomaher/AWS Security Autopilot/docs/prod-readiness/remediation-determinism-hardening-implementation-plan.md`
+- `/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md`
+- `/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md`
+
+**What was done:**
+- Re-read the active retained Phase 3 `PASS` package and the March 30 Phase 1 + Phase 2 closure package before making any doc changes.
+- Verified the active indexes already reflected Gate 3 as `PASS`; the stale current-status source was the main implementation plan.
+- Updated the implementation plan so the active Gate 3 current-status section now matches the retained March 29 rerun plus March 30 WI-5 closure follow-up.
+- Updated the same plan so the WI-5 work-item section now reflects the truthful production `PASS` path instead of the superseded March 28 blocker note.
+- Marked the Gate 3A through Gate 3E checklist state in the active plan as passed, consistent with the retained authoritative package.
+- Re-checked Gate 1 and Gate 2 against the latest retained March 30 closure package:
+  - Gate 1 remains `BLOCKED`, but no longer because of `WI-12`; `WI-12` is closed truthfully and the remaining blocker is the post-apply action-resolution lag.
+  - Gate 2 remains `BLOCKED`; `WI-2` and `WI-8` are still passed, while the March 30 retained truth shows no truthful open `WI-1` additive-merge candidate under corrected live semantics and the same lag bug still leaves `S3.11` actions open after findings resolve.
+
+**Open questions / remaining TODOs:**
+- The main hardening plan is now aligned for Gate 3, but the overall signoff still remains `NO-GO` until the post-apply action-resolution lag is fixed and re-proven on production for Gate 1 and Gate 2.
+
+## Close WI-5 and Gate 3 on production (2026-03-30)
+
+**Task:** Finish the real WI-5 production proof after the delegated DNS and ACM prerequisites were prepared: confirm public delegation and ACM issuance, rerun production preview/create for action `352ac9b2-d343-40ac-b427-4c4f285615ef`, execute the generated bundle locally with the retained provider-mirror workaround, capture AWS post-state plus recompute evidence, roll back truthfully to exact baseline, and update the authoritative retained package plus active docs indexes to `PASS`.
+
+**Files modified:**
+- `/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260329T194129Z-remediation-determinism-phase3-production/scenarios/wi5/api/*`
+- `/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260329T194129Z-remediation-determinism-phase3-production/scenarios/wi5/aws/*`
+- `/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260329T194129Z-remediation-determinism-phase3-production/scenarios/wi5/bundle/*`
+- `/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260329T194129Z-remediation-determinism-phase3-production/scenarios/wi5/recompute/*`
+- `/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260329T194129Z-remediation-determinism-phase3-production/README.md`
+- `/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260329T194129Z-remediation-determinism-phase3-production/00-run-metadata.md`
+- `/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260329T194129Z-remediation-determinism-phase3-production/summary.json`
+- `/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260329T194129Z-remediation-determinism-phase3-production/notes/final-summary.md`
+- `/Users/marcomaher/AWS Security Autopilot/docs/live-e2e-testing/README.md`
+- `/Users/marcomaher/AWS Security Autopilot/docs/prod-readiness/README.md`
+- `/Users/marcomaher/AWS Security Autopilot/docs/README.md`
+- `/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md`
+- `/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md`
+
+**What was done:**
+- Verified the delegated subdomain `wi5-gate3-696505809372.ocypheris.com` was publicly authoritative through Cloudflare parent-zone `NS` delegation to Route53 zone `Z081885955B6GUR4IL7E`.
+- Confirmed ACM certificate `arn:aws:acm:us-east-1:696505809372:certificate/509785ff-eef1-4071-bddc-d275f1dfa6ed` reached `ISSUED` and retained both direct resolution evidence and ACM describe output.
+- Re-ran live production preview/create for action `352ac9b2-d343-40ac-b427-4c4f285615ef` with the real alias, Route53 zone, and ACM inputs:
+  - preview resolved to executable `s3_migrate_website_cloudfront_private`
+  - production create returned run `ff6dea42-dbdc-42f1-996f-da437ad48e4c`
+  - final run detail retained `status=success` / `outcome=PR bundle generated`
+- Downloaded the fresh production bundle into `scenarios/wi5/bundle/extracted-real/` without overwriting the original failed March 29 bundle artifacts.
+- Executed the generated Terraform locally with a retained per-run CLI config `scenarios/wi5/aws/terraformrc-real.tfrc` pointing at `~/.terraform.d/plugin-cache`:
+  - first mirror attempt reproduced the self-install trap when `TF_PLUGIN_CACHE_DIR` and the mirror path were the same
+  - reran `terraform init` successfully with the mirror-only config
+  - retained successful `terraform init`, `validate`, `plan`, and `apply`
+- Captured successful AWS post-state:
+  - CloudFront distribution `E3VUPASYW2QL80`
+  - OAC `EDLL3VYQR916E`
+  - Route53 `A` / `AAAA` aliases targeting `dxxm59bao95gt.cloudfront.net`
+  - `get-bucket-website` failing with `NoSuchWebsiteConfiguration`
+  - bucket-level PAB all `true`
+  - bucket policy preserving `AllowImportRoleBucketReadinessChecks` and `DenyInsecureTransport` while adding `AllowCloudFrontReadOnly`
+- Retained recompute evidence:
+  - scoped local `scripts/recompute_account_actions.py` output
+  - production `/api/actions/compute` queue response
+  - post-recompute action detail snapshots
+- Executed truthful rollback:
+  - `terraform destroy` removed the generated CloudFront distribution, OAC, and Route53 alias records
+  - manual restore re-applied the captured website configuration because destroy does not restore S3 website hosting
+  - manual restore also re-applied the original bucket policy and the baseline all-false bucket-level Public Access Block configuration because destroy removes the managed replacements rather than restoring the original state
+- Verified post-rollback baseline:
+  - `NoSuchDistribution` for `E3VUPASYW2QL80`
+  - `NoSuchOriginAccessControl` for `EDLL3VYQR916E`
+  - Route53 zone back to `NS` / `SOA` only for the delegated apex
+  - website configuration restored to `IndexDocument=index.html`
+  - bucket policy restored to the original two statements
+  - bucket-level PAB restored to all four flags `false`
+- Updated the retained package, docs indexes, and task history so `WI-5` is now `PASS` and Gate 3 is now `PASS`.
+
+**Validation:**
+- `dig +trace NS wi5-gate3-696505809372.ocypheris.com` reached the delegated Route53 nameservers publicly.
+- `aws acm describe-certificate` for `arn:aws:acm:us-east-1:696505809372:certificate/509785ff-eef1-4071-bddc-d275f1dfa6ed` returned `ISSUED`.
+- Production preview/create accepted the real WI-5 DNS and ACM inputs and returned successful bundle run `ff6dea42-dbdc-42f1-996f-da437ad48e4c`.
+- Local Terraform apply succeeded without `InvalidViewerCertificate`, and retained post-state plus rollback evidence show exact baseline restoration.
+
+**Open questions / remaining TODOs:**
+- None for Gate 3 closure. The delegated Route53 zone and Amazon-issued ACM certificate remain in the canary account as the retained truthful WI-5 path for any future regression rerun.
+
+## Prepare the real WI-5 delegated DNS and ACM path for Gate 3 closure (2026-03-30)
+
+**Task:** Execute the WI-5 closure plan as far as possible from this workspace: establish a real delegated Route53 subdomain in canary account `696505809372`, request a real `us-east-1` ACM public certificate for the WI-5 hostname, re-sweep the live production action, and update the retained package with the exact remaining blocker if external DNS delegation is still required.
+
+**Files modified:**
+- `/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260329T194129Z-remediation-determinism-phase3-production/scenarios/wi5/aws/create-hosted-zone-real.json`
+- `/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260329T194129Z-remediation-determinism-phase3-production/scenarios/wi5/aws/alias-domain-real.txt`
+- `/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260329T194129Z-remediation-determinism-phase3-production/scenarios/wi5/aws/request-certificate-real.json`
+- `/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260329T194129Z-remediation-determinism-phase3-production/scenarios/wi5/aws/describe-certificate-real.json`
+- `/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260329T194129Z-remediation-determinism-phase3-production/scenarios/wi5/aws/cert-validation-change-batch.json`
+- `/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260329T194129Z-remediation-determinism-phase3-production/scenarios/wi5/aws/cert-validation-record-change.json`
+- `/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260329T194129Z-remediation-determinism-phase3-production/scenarios/wi5/aws/parent-delegation-handoff.md`
+- `/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260329T194129Z-remediation-determinism-phase3-production/scenarios/wi5/api/login-marco-rerun.json`
+- `/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260329T194129Z-remediation-determinism-phase3-production/scenarios/wi5/api/action-detail-rerun.json`
+- `/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260329T194129Z-remediation-determinism-phase3-production/scenarios/wi5/api/options-rerun.json`
+- `/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260329T194129Z-remediation-determinism-phase3-production/README.md`
+- `/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260329T194129Z-remediation-determinism-phase3-production/notes/final-summary.md`
+- `/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md`
+- `/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md`
+
+**What was done:**
+- Re-read the binding `.cursor` rules, active notes, docs index, the March 29 retained package, and the Gate 3 implementation plan before continuing WI-5.
+- Confirmed from live AWS that the canary account still had no Route53 public hosted zones and no acceptable CloudFront-safe certificate path; the only existing `us-east-1` cert was imported test material.
+- Chose a fresh real delegated hostname under the production domain: `wi5-gate3-696505809372.ocypheris.com`.
+- Created the new public Route53 hosted zone in account `696505809372`:
+  - zone id `Z081885955B6GUR4IL7E`
+  - nameservers:
+    - `ns-1780.awsdns-30.co.uk`
+    - `ns-47.awsdns-05.com`
+    - `ns-1270.awsdns-30.org`
+    - `ns-1018.awsdns-63.net`
+- Requested a real Amazon-issued ACM certificate in `us-east-1` for `wi5-gate3-696505809372.ocypheris.com`:
+  - certificate ARN `arn:aws:acm:us-east-1:696505809372:certificate/509785ff-eef1-4071-bddc-d275f1dfa6ed`
+  - current status `PENDING_VALIDATION`
+- Captured the ACM DNS validation record and inserted it into the new Route53 hosted zone, so certificate issuance will complete automatically once the parent delegation is live.
+- Re-authenticated to `https://api.ocypheris.com` as tenant `Marco`, re-swept action `352ac9b2-d343-40ac-b427-4c4f285615ef`, and retained updated action detail plus remediation options:
+  - action is still `open`
+  - target bucket is still `security-autopilot-w6-envready-s311-review-696505809372`
+  - website hosting is still detected
+  - `s3_migrate_website_cloudfront_private` remains the correct WI-5 branch and still becomes executable once the required DNS and ACM inputs are supplied
+- Attempted to automate the parent-zone delegation through the current Cloudflare setup:
+  - the checked-in Worker account for `ocypheris.com` is reachable through Wrangler auth
+  - direct DNS mutation was not available from the current local Cloudflare auth path
+  - browser automation reached the Cloudflare login wall rather than an already-authenticated dashboard session
+- Added a retained handoff file with the exact NS delegation and ACM state needed to finish WI-5 from the parent DNS authority.
+- Updated the retained package root summary files so the current authoritative blocker is now the missing parent-zone delegation and resulting ACM `ISSUED` status, not the earlier imported test certificate experiment.
+
+**Validation:**
+- Route53 hosted zone `Z081885955B6GUR4IL7E` exists in canary account `696505809372` and now contains the zone apex NS/SOA plus the ACM validation CNAME.
+- ACM certificate `arn:aws:acm:us-east-1:696505809372:certificate/509785ff-eef1-4071-bddc-d275f1dfa6ed` is present in `us-east-1` as `AMAZON_ISSUED` / `PENDING_VALIDATION`.
+- Production `GET /api/actions/352ac9b2-d343-40ac-b427-4c4f285615ef` still shows the same open WI-5 candidate.
+- Production `GET /api/actions/352ac9b2-d343-40ac-b427-4c4f285615ef/remediation-options` still exposes `s3_migrate_website_cloudfront_private` for this action.
+
+**Open questions / TODOs:**
+- External DNS delegation is still required before WI-5 can continue:
+  - add `NS` records for `wi5-gate3-696505809372.ocypheris.com` in the authoritative parent zone (`ocypheris.com`) pointing to:
+    - `ns-1780.awsdns-30.co.uk`
+    - `ns-47.awsdns-05.com`
+    - `ns-1270.awsdns-30.org`
+    - `ns-1018.awsdns-63.net`
+- Once the delegation propagates and ACM moves to `ISSUED`, rerun WI-5 preview/create with:
+  - `aliases=["wi5-gate3-696505809372.ocypheris.com"]`
+  - `route53_hosted_zone_id="Z081885955B6GUR4IL7E"`
+  - `acm_certificate_arn="arn:aws:acm:us-east-1:696505809372:certificate/509785ff-eef1-4071-bddc-d275f1dfa6ed"`
+- Gate 3 remains `BLOCKED` only because this parent-zone delegation has not yet been completed.
+
+## Continue the Phase 3 production-only remediation determinism gate on production (2026-03-29)
+
+**Task:** Continue the retained Gate 3 production package against `https://api.ocypheris.com`, keep the canary account scoped to `696505809372` in `eu-north-1`, finish the missing truthful Phase 3 production proofs where possible, and publish the final retained go/no-go state even if Gate 3 remains blocked.
+
+**Files modified:**
+- `/Users/marcomaher/AWS Security Autopilot/backend/services/database_failover.py`
+- `/Users/marcomaher/AWS Security Autopilot/backend/services/pr_bundle.py`
+- `/Users/marcomaher/AWS Security Autopilot/tests/test_database_failover.py`
+- `/Users/marcomaher/AWS Security Autopilot/tests/test_step7_components.py`
+- `/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260329T194129Z-remediation-determinism-phase3-production/README.md`
+- `/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260329T194129Z-remediation-determinism-phase3-production/00-run-metadata.md`
+- `/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260329T194129Z-remediation-determinism-phase3-production/summary.json`
+- `/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260329T194129Z-remediation-determinism-phase3-production/notes/final-summary.md`
+- `/Users/marcomaher/AWS Security Autopilot/docs/live-e2e-testing/README.md`
+- `/Users/marcomaher/AWS Security Autopilot/docs/prod-readiness/README.md`
+- `/Users/marcomaher/AWS Security Autopilot/docs/README.md`
+- `/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md`
+- `/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md`
+
+**What was done:**
+- Re-read the binding `.cursor` rules, active notes, docs indexes, the Gate 3 implementation plan, the retained March 29 package, and the relevant Phase 1/2 retained production packages before continuing the live gate.
+- Created the new retained rerun package under `/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260329T194129Z-remediation-determinism-phase3-production/` and kept `20260329T003200Z-remediation-determinism-phase3-production` as predecessor context rather than editing it in place.
+- Re-ran Gate 3A preflight and retained the full evidence set:
+  - production `health` and `ready`
+  - tenant auth for `Marco`
+  - canary account listing
+  - local `terraform` / `aws`
+  - production control-plane readiness for account `696505809372`
+- Repaired a stale Gate 3A blocker truthfully before running any live scenario:
+  - the control plane was stale for `eu-north-1`
+  - rotated the production control-plane token
+  - replayed the production synthetic-event intake path
+  - retained the before/after readiness evidence proving freshness returned healthy
+- Re-ran the exact Gate 3B local regression inventory unchanged and retained all five transcripts under the new package.
+- Fixed one fresh current-head regression that blocked Gate 3B:
+  - hardened `backend/services/database_failover.py` so the failover probe also skips reliably during pytest bootstrap
+  - added focused regression coverage in `tests/test_database_failover.py`
+  - updated `tests/test_step7_components.py` so Terraform validation uses a per-test CLI config mirror instead of `TF_PLUGIN_CACHE_DIR`, matching the retained production workaround
+  - reran the unchanged Gate 3B inventory after that fix and retained the final green transcripts
+- Completed the truthful `WI-5` production attempt end to end up to the real infrastructure blocker:
+  - selected the live website-enabled action `352ac9b2-d343-40ac-b427-4c4f285615ef`
+  - proved `website_configured=true`
+  - created a disposable Route53 hosted zone and imported temporary certificate material for the requested alias
+  - retained production preview, create response, run detail, bundle download, Terraform `init`, `validate`, and `plan`
+  - reached `terraform apply`, which failed truthfully at CloudFront distribution creation with `InvalidViewerCertificate` because the imported certificate was not issued by a trusted certificate authority
+  - cleaned up the temporary OAC, hosted zone, and imported certificate and retained that cleanup proof
+- Completed full truthful `WI-9` production proof:
+  - selected action `0b87839b-28f5-4150-af26-74cf2b1af3a3`
+  - forced the truthful bucket-policy capture failure by temporarily denying `s3:GetBucketPolicy` to the canary read role
+  - retained production options, preview, create response, final run detail, bundle download, Terraform `init` / `validate` / `plan` / `apply`, AWS post-state, recompute, and rollback
+  - rollback restored the exact pre-apply bucket policy and exact pre-apply public-access-block state
+- Attempted the preferred grouped `S3.11` proof first, as required:
+  - created grouped run `2bec16bc-99dd-42fd-964c-e4ee4d02467e` from group `9a904e6a-3ab8-4eca-be92-b727b0aacf67`
+  - generated and executed the grouped bundle locally with the canary AWS profile plus Terraform mirror config
+  - the truthful live group still contained five deleted buckets, so the customer-run bundle hit `NoSuchBucket` on those stale members and the callback finalized the group as failed
+  - cleaned up the 14 successfully applied lifecycle changes and retained exact cleanup verification
+- Completed Gate 3D through the allowed grouped `S3.2` fallback:
+  - created grouped run `6a81a863-514f-4ed4-b00a-388682a36cc4` from group `2990907c-b6bb-4821-9825-a523cb380bf5`
+  - used a mixed-tier request so only two live members were executable:
+    - `688f5ed0-9594-4df1-9883-cc17feca62f8`
+    - `0b87839b-28f5-4150-af26-74cf2b1af3a3`
+  - all stale or unsuitable members were retained as metadata-only manual-guidance artifacts
+  - executed the grouped bundle locally, retained the callback-backed `finished` status, captured AWS post-state, then rolled back both executable members to exact baseline
+  - retained recompute output showing the grouped counters moved to `run_successful=2`, `metadata_only=8`, `not_run_yet=0`
+- Completed full truthful `WI-10` production proof after the user approved the temporary account-level S3 Public Access Block change:
+  - captured the user-approved account-level S3 Public Access Block disablement on account `696505809372`
+  - seeded a truthful public non-website candidate on bucket `sa-wi13-14-nopolicy-696505809372-20260328201935`
+  - retained production options and preview proving the `review_required_bundle` public-policy-scrub branch on the real production surface
+  - surfaced two current-head WI-10 bundle regressions truthfully in production:
+    - single-statement public-policy normalization generated Terraform that failed `plan`
+    - fully scrubbed policies generated Terraform that tried to write `Statement = []` and failed `apply`
+  - fixed both defects minimally in `backend/services/pr_bundle.py`, extended focused regression coverage in `tests/test_step7_components.py`, reran the focused local Terraform slice, and retained `local-gate/06-wi10-public-policy-scrub-regression-fix.txt`
+  - deployed the backend twice through `scripts/deploy_saas_serverless.sh`, retained both deploy transcripts plus the required separate Alembic upgrade transcripts, and then regenerated the production bundle each time
+  - completed the final corrected production WI-10 rerun with create response, final run detail, bundle download, Terraform `init` / `validate` / `plan` / `apply`, AWS post-state, recompute transcript, rollback, and final restoration of the original account-level S3 Public Access Block settings
+  - retained the truthful intermediate regression artifacts under `scenarios/wi10/` so the package shows the full sequence from first blocker to final corrected proof
+- Published the new retained package root files plus final blocked status:
+  - `README.md`
+  - `00-run-metadata.md`
+  - `summary.json`
+  - `notes/final-summary.md`
+- Updated the active docs indexes so the new rerun package is the current discoverable Phase 3 reference and the earlier March 29 package is now explicitly historical predecessor context.
+
+**Validation:**
+- Gate 3B transcripts retained under `/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260329T194129Z-remediation-determinism-phase3-production/local-gate/` with final results:
+  - `01-risk-runtime.txt`: `12 passed, 44 deselected`
+  - `02-profile-options.txt`: `17 passed, 33 deselected`
+  - `03-run-create.txt`: `15 passed, 28 deselected`
+  - `04-grouped-report.txt`: `6 passed, 31 deselected`
+  - `05-worker-bundle.txt`: `35 passed, 174 deselected`
+- Focused WI-10 regression slice retained under `/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260329T194129Z-remediation-determinism-phase3-production/local-gate/06-wi10-public-policy-scrub-regression-fix.txt` with final result `4 passed, 156 deselected`.
+- `WI-9` retained production proof completed under `/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260329T194129Z-remediation-determinism-phase3-production/scenarios/wi9/`.
+- Grouped fallback proof completed under `/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260329T194129Z-remediation-determinism-phase3-production/scenarios/grouped/`, including callback finalization, rollback verification, and recompute output.
+- `WI-10` retained production proof completed under `/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260329T194129Z-remediation-determinism-phase3-production/scenarios/wi10/`, including the two surfaced current-head regression artifacts and the final corrected production apply/rollback proof.
+
+**Open questions / TODOs:**
+- `WI-5` still requires a real trusted `us-east-1` ACM certificate plus usable DNS ownership path before a truthful full production website-to-CloudFront private-origin apply can pass.
+- Gate 3 remains `BLOCKED` only because `WI-5` is still unresolved; `WI-10` is now fully proven on production.
+
+## Execute the Phase 3 production-only remediation determinism attempt on production (2026-03-29)
+
+**Task:** Execute the new Gate 3 live-production contract from `docs/prod-readiness/remediation-determinism-hardening-implementation-plan.md` against `https://api.ocypheris.com`, use only canary account `696505809372` in `eu-north-1`, retain truthful proof for `WI-4`, `WI-5`, `WI-9`, `WI-10`, and `WI-11`, and publish the final production-only outcome even if the phase remains blocked.
+
+**Files modified:**
+- `/Users/marcomaher/AWS Security Autopilot/tests/test_remediation_run_resolution_create.py`
+- `/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260329T003200Z-remediation-determinism-phase3-production/README.md`
+- `/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260329T003200Z-remediation-determinism-phase3-production/00-run-metadata.md`
+- `/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260329T003200Z-remediation-determinism-phase3-production/summary.json`
+- `/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260329T003200Z-remediation-determinism-phase3-production/notes/final-summary.md`
+- `/Users/marcomaher/AWS Security Autopilot/docs/live-e2e-testing/README.md`
+- `/Users/marcomaher/AWS Security Autopilot/docs/prod-readiness/README.md`
+- `/Users/marcomaher/AWS Security Autopilot/docs/README.md`
+- `/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md`
+- `/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md`
+
+**What was done:**
+- Re-read the binding `.cursor` rules, project status, task index, relevant March 28 Phase 1/2 remediation entries, the active docs indexes, and the new Gate 3 plan before running production.
+- Created the retained package under `/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260329T003200Z-remediation-determinism-phase3-production/` and recorded the Gate 3 structure there (`README.md`, `00-run-metadata.md`, `summary.json`, `notes/final-summary.md`, local-gate transcripts, API evidence, AWS evidence, and extracted bundle proof).
+- Ran the exact five-command Gate 3B local regression inventory and retained each transcript under `local-gate/`.
+- Fixed one stale local regression before Gate 3B could pass:
+  - updated [tests/test_remediation_run_resolution_create.py](/Users/marcomaher/AWS%20Security%20Autopilot/tests/test_remediation_run_resolution_create.py) so the `WI-10` public-policy-scrub create-path test now includes the required `risk_acknowledged=true` input
+  - reran the Gate 3B slice unchanged after that fix and retained the final passing transcript
+- Completed Gate 3A preflight against production:
+  - confirmed `https://api.ocypheris.com/health` and `/ready`
+  - authenticated as tenant `Marco`
+  - confirmed canary account `696505809372` is connected in `eu-north-1`
+  - verified local `terraform`, `aws`, and working canary profile access
+- Closed the known `WI-5` canary read-role gap truthfully by updating the live canary read-role policy baseline so `arn:aws:iam::696505809372:policy/SecurityAutopilotReadRolePolicy` defaulted to version `v10` with `s3:GetBucketWebsite` included.
+- Re-ran production parity checks after the read-role update:
+  - `WI-5`: production remediation-options for website action `352ac9b2-d343-40ac-b427-4c4f285615ef` now surfaced `website_configured=true`, and production preview accepted `strategy_id=s3_migrate_website_cloudfront_private`
+  - `WI-9`: production preview for action `0b87839b-28f5-4150-af26-74cf2b1af3a3` remained executable after a truthful policy-read deny and surfaced `apply_time_merge=true`
+  - `WI-11`: production options/preview for action `8ab29997-bb6c-41fe-ba0c-26f03523f0ed` remained executable after a truthful lifecycle-read deny and surfaced `apply_time_merge=true`
+- Attempted a truthful `WI-10` candidate and retained the actual blocker:
+  - selected public non-website action `688f5ed0-9594-4df1-9883-cc17feca62f8`
+  - verified bucket-level PAB was open
+  - retained that account-level S3 Public Access Block on account `696505809372` still has `BlockPublicPolicy=true`
+  - retained the failed `put-bucket-policy` attempt showing AWS would not allow seeding an unconditional public bucket policy in this canary account, so the required production `review_required_bundle` branch could not be exercised truthfully in this run
+- Completed full retained single-run production proof for `WI-11`:
+  - generated production run `5c63c954-1ec3-44e5-b36b-55b1b9410371`
+  - downloaded and extracted the live bundle
+  - retained Terraform `init`, `validate`, `plan`, `apply`
+  - verified AWS post-state added abort rule `security-autopilot-abort-incomplete-multipart`
+  - ran the bundle rollback helper and retained exact lifecycle-restore verification
+  - restored the original deny-policy mutation after the proof
+- Completed full retained single-run production proof for `WI-4`:
+  - generated production run `dd8d9b9d-4dd8-4587-a7ed-00f17e1a48bb`
+  - downloaded and extracted the live bundle
+  - retained pre-apply policy capture, Terraform `init`, `validate`, `plan`, `apply`
+  - verified AWS post-state contained both the original read-role deny and the new SSL-only deny
+  - retained rollback via `terraform destroy` plus bundle restore helper, then cleaned the bucket back to its true no-policy pre-test state
+- Used a local Terraform CLI config mirror (`/tmp/wi11.tfrc`) pointing at `~/.terraform.d/plugin-cache` because plain `terraform init` hung on provider installation during retained bundle execution; kept that workaround out of repo scope and retained it only in the evidence transcripts.
+- Published the truthful final status as `BLOCKED` because Gate 3C and Gate 3D are still incomplete:
+  - `WI-4`: `PASS`
+  - `WI-11`: `PASS`
+  - `WI-5`: parity proved, but no full production apply/rollback proof in this run
+  - `WI-9`: parity proved, but no full production apply/rollback proof in this run
+  - `WI-10`: blocked by account-level `BlockPublicPolicy=true`, so no truthful production candidate could be created
+  - grouped Phase 3 proof was not executed
+
+**Validation:**
+- Gate 3B transcripts retained under `/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260329T003200Z-remediation-determinism-phase3-production/local-gate/` with final results:
+  - `01-risk-runtime.txt`: `12 passed, 44 deselected`
+  - `02-profile-options.txt`: `17 passed, 33 deselected`
+  - `03-run-create.txt`: `15 passed, 28 deselected`
+  - `04-grouped-report.txt`: `6 passed, 31 deselected`
+  - `05-worker-bundle.txt`: `35 passed, 174 deselected`
+- Production auth and preflight evidence retained under `/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260329T003200Z-remediation-determinism-phase3-production/evidence/api/`.
+- `WI-11` retained production proof under `/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260329T003200Z-remediation-determinism-phase3-production/evidence/aws/wi11-*` and `/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260329T003200Z-remediation-determinism-phase3-production/evidence/bundles/wi11/`.
+- `WI-4` retained production proof under `/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260329T003200Z-remediation-determinism-phase3-production/evidence/aws/wi4-*` and `/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260329T003200Z-remediation-determinism-phase3-production/evidence/bundles/wi4/`.
+- `WI-10` blocker evidence retained under:
+  - `/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260329T003200Z-remediation-determinism-phase3-production/evidence/aws/wi10-account-public-access-block.json`
+  - `/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260329T003200Z-remediation-determinism-phase3-production/evidence/aws/wi10-put-public-policy.stderr.txt`
+
+**Open questions / TODOs:**
+- Phase 3 is still `BLOCKED` for production-ready signoff until one truthful production run also proves `WI-5`, `WI-9`, and one grouped mixed-tier Phase 3 path, in addition to resolving the current `WI-10` candidate gap.
+- The canary account read-role policy baseline now intentionally includes `s3:GetBucketWebsite` in default version `v10`; keep that as the new expected baseline unless a narrower replacement is introduced intentionally.
+- `WI-10` cannot be closed in this canary account while account-level `BlockPublicPolicy=true` prevents seeding a truthful public non-website bucket-policy case; either a different truthful production candidate must surface naturally or the canary-account policy baseline must be changed through an approved path before rerun.
+
+## Close the WI-1 production finding-materialization gap and re-test the live gate on production (2026-03-29)
+
+**Task:** Implement the WI-1 production-closure plan on `master`: diagnose the missing live S3.11 bucket candidate on the real production path, patch only the minimal code needed, deploy through the repo-supported runtime path, re-run the live proof on `https://api.ocypheris.com`, and retain the truthful final result even if WI-1 stays blocked.
+
+**Files modified:**
+- `/Users/marcomaher/AWS Security Autopilot/backend/workers/services/shadow_state.py`
+- `/Users/marcomaher/AWS Security Autopilot/tests/test_shadow_state.py`
+- `/Users/marcomaher/AWS Security Autopilot/tests/test_action_engine_merge.py`
+- `/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260329T002042Z-wi1-production-closure/README.md`
+- `/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260329T002042Z-wi1-production-closure/00-run-metadata.md`
+- `/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260329T002042Z-wi1-production-closure/summary.json`
+- `/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260329T002042Z-wi1-production-closure/notes/final-summary.md`
+- `/Users/marcomaher/AWS Security Autopilot/docs/live-e2e-testing/README.md`
+- `/Users/marcomaher/AWS Security Autopilot/docs/prod-readiness/README.md`
+- `/Users/marcomaher/AWS Security Autopilot/docs/prod-readiness/remediation-determinism-hardening-implementation-plan.md`
+- `/Users/marcomaher/AWS Security Autopilot/docs/README.md`
+- `/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md`
+- `/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md`
+
+**What was done:**
+- Re-read the binding `.cursor` rules, project status, task index, relevant task-log history, and docs before changing code or rerunning production.
+- Reproduced the live pre-fix WI-1 failure boundary on the real production path:
+  - seeded a fresh canary bucket with the retained renderable lifecycle shape
+  - confirmed AWS truth for the lifecycle JSON
+  - verified production ingest still ended `no_changes_detected` with `updated_findings_count=0`
+  - verified the exact bucket still had `0` findings and `0` actions after ingest
+- Traced the actual code gap to [backend/workers/services/shadow_state.py](/Users/marcomaher/AWS%20Security%20Autopilot/backend/workers/services/shadow_state.py):
+  - reconcile inventory already evaluated the bucket truthfully
+  - `upsert_shadow_state()` only overlaid `shadow_*` fields onto existing findings
+  - when no Security Hub row existed, reconcile logged `matched zero rows` and stopped, so production could never surface a finding or action from inventory alone
+- Implemented the narrowest additive fix:
+  - materialize one in-scope inventory-backed finding when reconcile has stable canonical keys and no existing finding row
+  - preserve truthful source metadata as `source=event_monitor_shadow`
+  - keep the existing authoritative-promotion behavior for real `security_hub` rows unchanged
+- Added focused regressions:
+  - `tests/test_shadow_state.py` now proves zero-row overlay materializes the bucket-scoped S3.11 finding and reuses a pending materialized finding in the same session
+  - `tests/test_action_engine_merge.py` now proves a bucket-scoped S3.11 target does not collide with a legacy account-scoped S3.11 action target
+- Ran the requested focused regression slice locally:
+  - `tests/test_shadow_state.py`
+  - `tests/test_action_engine_merge.py`
+  - `tests/test_worker_ingest.py -k 'semantic_split or S3_13 or lifecycle'`
+  - `tests/test_action_engine_merge.py -k 'lifecycle'`
+  - `tests/test_remediation_runtime_checks.py -k 'lifecycle'`
+  - `tests/test_remediation_profile_options_preview.py -k 's3_11'`
+  - `tests/test_remediation_run_resolution_create.py -k 's3_11'`
+  - `tests/test_step7_components.py -k 's3_11 or lifecycle'`
+  - `tests/test_remediation_run_worker.py -k 's3_11 or lifecycle'`
+- Deployed production through the repo-supported path:
+  - ran [scripts/deploy_saas_serverless.sh](/Users/marcomaher/AWS%20Security%20Autopilot/scripts/deploy_saas_serverless.sh)
+  - runtime rolled to image tag `20260329T003636Z`
+  - build stack stayed unchanged, runtime stack updated successfully, and runtime/DB alignment stayed at head before and after the scripted Alembic step
+- Re-ran the live WI-1 proof on production after deploy:
+  - authenticated again through the browser-like curl login flow
+  - seeded fresh bucket `phase2-wi1-lifecycle-696505809372-20260329004157`
+  - confirmed AWS-side lifecycle readback
+  - retained the full post-deploy ingest poll chain
+  - retained the full reconcile and compute proof chain
+- Captured the truthful final outcome:
+  - post-deploy ingest still did not surface the bucket
+  - post-deploy reconcile now surfaced truthful finding `e14c5cb6-9ccd-413a-9dbe-f0b49a6e47d3`
+  - the new live finding is bucket-scoped `S3.11`, `source=event_monitor_shadow`, and `status=RESOLVED`
+  - `shadow.status_reason=inventory_confirmed_compliant`
+  - post-deploy compute still surfaced `0` actions for the bucket
+  - because the seeded lifecycle rule is already compliant under the current S3.11 inventory semantics, there was no truthful open action to preview, create, or apply
+- Cleaned up both temporary seed buckets at the end of the run and retained the new production package under `/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260329T002042Z-wi1-production-closure/`.
+
+**Validation:**
+- Focused local regression commands all passed; the retained result counts are recorded in [00-run-metadata.md](/Users/marcomaher/AWS%20Security%20Autopilot/docs/test-results/live-runs/20260329T002042Z-wi1-production-closure/00-run-metadata.md).
+- Production deploy transcript retained in [notes/deploy-runtime.log](/Users/marcomaher/AWS%20Security%20Autopilot/docs/test-results/live-runs/20260329T002042Z-wi1-production-closure/notes/deploy-runtime.log).
+- Post-deploy ingest proof retained in:
+  - `/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260329T002042Z-wi1-production-closure/scenarios/wi1/ingest-progress-postdeploy-*.json`
+  - `/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260329T002042Z-wi1-production-closure/scenarios/wi1/findings-post-ingest-postdeploy-s311.json`
+  - `/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260329T002042Z-wi1-production-closure/scenarios/wi1/actions-post-ingest-postdeploy.json`
+- Post-deploy reconcile/compute proof retained in:
+  - `/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260329T002042Z-wi1-production-closure/scenarios/wi1/findings-after-reconcile-postdeploy-5-s311.json`
+  - `/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260329T002042Z-wi1-production-closure/scenarios/wi1/findings-post-compute-postdeploy-s311.json`
+  - `/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260329T002042Z-wi1-production-closure/scenarios/wi1/actions-post-compute-postdeploy.json`
+- Cleanup proof retained under `/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260329T002042Z-wi1-production-closure/evidence/aws/cleanup-*.stderr.txt`.
+
+**Open questions / TODOs:**
+- `WI-1` remains `BLOCKED` for production-ready signoff even after the finding-materialization fix, because the truthful seeded lifecycle bucket resolves as compliant and still provides no open action for additive-merge execution proof.
+- Security Hub ingest still does not surface the seeded lifecycle bucket, so the current live truth path for this case is reconcile/inventory rather than Security Hub.
+- The broader retained Phase 2 blockers from March 28 still stand outside this narrow closure run: `WI-12` lacks a truthful production candidate, and the earlier post-apply production lag remains open for the already-proven `WI-2`, `WI-8`, and grouped executable S3.11 paths.
+
+## Add the remediation determinism Phase 3 production-only live-test gate (2026-03-29)
+
+**Task:** Extend the remediation determinism implementation handoff with a Phase 3 production-ready gate for the apply-time data-source wave, using the same production-only signoff contract as the March 28, 2026 Phase 1 and Phase 2 gates.
+
+**Files modified:**
+- `/Users/marcomaher/AWS Security Autopilot/docs/prod-readiness/remediation-determinism-hardening-implementation-plan.md`
+- `/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md`
+- `/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md`
+
+**What was done:**
+- Re-read the binding `.cursor` rules, project status, task index, relevant March 28 retained task-log entries, and the active docs before changing the production-readiness handoff.
+- Extended the `Production-Ready Validation Gates` section in the remediation determinism plan with a new Phase 3 gate scoped only to the apply-time data-source wave:
+  - `WI-4`
+  - `WI-5`
+  - `WI-9`
+  - `WI-10`
+  - `WI-11`
+- Locked the new Phase 3 gate to the same production-only contract used by the current Phase 1 and Phase 2 signoff:
+  - accepted live surface is `https://api.ocypheris.com`
+  - canary account stays `696505809372` in `eu-north-1`
+  - isolated runtime or current-head live packages remain historical context only and do not satisfy production-ready proof
+- Added explicit retained starting-state language for each Phase 3 work item:
+  - `WI-4` isolated-runtime proof only
+  - `WI-5` blocked on production deploy parity plus missing `s3:GetBucketWebsite`
+  - `WI-9` / `WI-10` / `WI-11` implemented locally only with no retained production proof
+- Added the new Gate 3 subsections:
+  - Gate 3A preflight and deploy-parity requirements
+  - Gate 3B consolidated local regression gate
+  - Gate 3C required production scenarios
+  - Gate 3D grouped mixed-tier production proof
+  - Gate 3E retained Phase 3 evidence package and cross-link contract
+- Renumbered the existing shared execution and retained-evidence sections so the document now reads cleanly as:
+  - Gate 3 = Phase 3 production-ready gate
+  - Gate 4 = production live execution
+  - Gate 5 = retained evidence and signoff
+- Updated the final exit gate so the Phase 3 gate cannot be claimed complete unless all new Gate 3A through Gate 3E requirements are met.
+
+**Validation:**
+- Documentation-only change; no code tests were run.
+- Re-read the updated tail of `/Users/marcomaher/AWS Security Autopilot/docs/prod-readiness/remediation-determinism-hardening-implementation-plan.md` to confirm:
+  - the new Phase 3 gate is present
+  - the existing Phase 1 and Phase 2 gates remain intact
+  - the shared execution and retained-evidence sections were renumbered consistently
+  - the production-ready exit checklist now includes the new Phase 3 gate requirements
+
+**Open questions / TODOs:**
+- No retained Phase 3 production package exists yet under `docs/test-results/live-runs/<RUN_ID>-remediation-determinism-phase3-production/`; the new gate remains planning-only until a real production run is executed and retained.
+- `WI-5` still has the known production blocker pair documented in the plan: missing deployed strategy parity and missing canary read-role `s3:GetBucketWebsite`.
+
+## Execute the Phase 2 production-only remediation determinism handoff on `master` (2026-03-28)
+
+**Task:** Stay on `master`, rerun the exact Phase 2 local gate, use only `https://api.ocypheris.com` plus the real canary AWS account to prove `WI-1`, `WI-2`, `WI-8`, retain one grouped mixed-tier Phase 2 run, clean up temporary AWS mutations, and publish the final retained Phase 1 + Phase 2 production package.
+
+**Files modified:**
+- `/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260328T221004Z-remediation-determinism-phase1-phase2-production/README.md`
+- `/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260328T221004Z-remediation-determinism-phase1-phase2-production/00-run-metadata.md`
+- `/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260328T221004Z-remediation-determinism-phase1-phase2-production/summary.json`
+- `/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260328T221004Z-remediation-determinism-phase1-phase2-production/notes/final-summary.md`
+- `/Users/marcomaher/AWS Security Autopilot/docs/live-e2e-testing/README.md`
+- `/Users/marcomaher/AWS Security Autopilot/docs/prod-readiness/remediation-determinism-hardening-implementation-plan.md`
+- `/Users/marcomaher/AWS Security Autopilot/docs/README.md`
+- `/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md`
+- `/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md`
+
+**What was done:**
+- Re-read the binding `.cursor` rules, project status, task index, relevant task-log entries, and `docs/README.md` before executing the production-only Phase 2 handoff.
+- Reconfirmed the repo constraint still held on `master` at commit `481b5a00f8ec00f26174d20350e2bf740e5d856e`.
+- Created the retained evidence package under `/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260328T221004Z-remediation-determinism-phase1-phase2-production/` and reran the exact eight-command Phase 2 Gate 2A test list unchanged.
+- Authenticated to production through the browser-like login flow, verified `/health` and `/ready`, confirmed tenant `Marco` plus canary account `696505809372`, refreshed production ingest/compute, and captured current live action candidates.
+- Checked tenant remediation settings early, proved the initial approved bastion SG list was empty, created real canary bastion SG `sg-085d69a76707542b2`, patched `/api/users/me/remediation-settings`, and later restored those settings after the live proof completed.
+- Attempted `WI-1` truthfully on production:
+  - validated that natural S3.11 candidates did not have captured lifecycle configs suitable for additive merge proof
+  - seeded real bucket `phase2-wi1-lifecycle-696505809372-20260328224331` with a renderable lifecycle config
+  - reran production ingest plus scoped recompute
+  - retained that no truthful production action ever surfaced for the seeded bucket, so `WI-1` remains blocked
+- Proved `WI-2` `ssm_only` live on production with action `58a22607-666e-4016-8fe3-4ce62a235a6e` and run `0f96058b-40a5-4bee-b084-52302d5b8235`:
+  - retained options, preview, create, run detail, bundle download, Terraform `init` / `validate` / `plan` / `apply`, AWS post-state, completed-ingest follow-up, and rollback
+  - verified AWS removed public `22/3389` and did not add replacement SSH/RDP rules
+- Proved `WI-8` `bastion_sg_reference` live on production with action `dfa0a526-87b8-4670-92d7-401a611f58f5` and run `1988eb39-8dc8-41dc-8acf-2d1e21937974`:
+  - retained options, preview, create, run detail, bundle download, Terraform `init` / `validate` / `plan` / `apply`, AWS post-state, scoped recompute follow-up, and rollback
+  - verified AWS replaced public `22/3389` with SG-source ingress from approved bastion SG `sg-085d69a76707542b2`
+- Proved one grouped mixed-tier Phase 2 run live through action group `9a904e6a-3ab8-4eca-be92-b727b0aacf67`, group run `cfe0eaa2-0be2-4ff9-a907-2f56aaf336b0`, and remediation run `864fe109-17e9-4e3b-b752-5bc31de86957`:
+  - bundle contained two executable S3.11 actions and five `manual_guidance_only` siblings
+  - `run_all.sh` executed successfully, callback finalization completed on production, AWS lifecycle rules were added to the two executable buckets, and rollback removed those lifecycle rules afterward
+- Cleaned up the temporary AWS-side test state:
+  - rolled back `WI-2`
+  - rolled back `WI-8`, deleted the temporary bastion SG, and restored tenant remediation settings
+  - removed the grouped-run S3 lifecycle rules
+  - removed the temporary `WI-1` seed bucket and lifecycle config
+- Updated the retained package and active docs to record the real outcome: `WI-2` and `WI-8` passed live, grouped Phase 2 passed live, `WI-1` remains blocked, and overall Phase 1 + Phase 2 stays `NO-GO`.
+
+**Validation:**
+- Local Gate 2A transcripts retained under `/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260328T221004Z-remediation-determinism-phase1-phase2-production/local-gate/`
+- `WI-2` live proof retained under `/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260328T221004Z-remediation-determinism-phase1-phase2-production/scenarios/wi2/`
+- `WI-8` live proof retained under `/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260328T221004Z-remediation-determinism-phase1-phase2-production/scenarios/wi8/`
+- Grouped mixed-tier proof retained under `/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260328T221004Z-remediation-determinism-phase1-phase2-production/scenarios/grouped/`
+- Scoped recompute transcripts retained under `/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260328T221004Z-remediation-determinism-phase1-phase2-production/evidence/recompute/`
+
+**Open questions / TODOs:**
+- `WI-1` still needs a truthful live production candidate with captured renderable lifecycle evidence before Phase 2 can close.
+- `WI-12` is still missing a truthful production candidate.
+- The earlier retained post-apply finding/action lag reproduced again after `WI-2`, `WI-8`, and the grouped executable S3.11 run, so overall production-ready signoff remains `NO-GO` even though the new AWS-side bundle proofs succeeded.
+
+## Investigate authoritative production path for `WI-7` and reclassify the Phase 1 gate (2026-03-28)
+
+**Task:** Stay on `master`, use only the production surface at `https://api.ocypheris.com`, verify what live store/path production is actually using for S3-family actions, run one bounded truthful AWS-side seed attempt for `WI-7`, and update the retained docs/tasks to reflect a real `WAIVED / DEFERRED` outcome if no truthful candidate exists.
+
+**Files modified:**
+- `/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260328T205427Z-wi7-production-authoritative-path/README.md`
+- `/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260328T205427Z-wi7-production-authoritative-path/notes/final-summary.md`
+- `/Users/marcomaher/AWS Security Autopilot/docs/live-e2e-testing/README.md`
+- `/Users/marcomaher/AWS Security Autopilot/docs/prod-readiness/README.md`
+- `/Users/marcomaher/AWS Security Autopilot/docs/prod-readiness/remediation-determinism-hardening-implementation-plan.md`
+- `/Users/marcomaher/AWS Security Autopilot/docs/README.md`
+- `/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md`
+- `/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md`
+
+**What was done:**
+- Re-read the binding `.cursor` rules, project status, task index, relevant task-log history, and `docs/README.md` before resuming the production-only `WI-7` investigation.
+- Reconfirmed from current code that `WI-7` is an implementation/proof-availability problem rather than an obvious missing-code problem:
+  - `backend/services/action_engine.py` still derives modern `target_id` values from `resource_id`
+  - `backend/services/remediation_runtime_checks.py` still falls back from stale `target_id` to `resource_id`
+  - `backend/services/pr_bundle.py` still falls back from stale `target_id` to `resource_id`
+- Authenticated to production successfully for tenant `Marco` using the browser-like login flow and retained the new investigation package under `/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260328T205427Z-wi7-production-authoritative-path/`.
+- Verified the current production data-path behavior instead of assuming the older standby-DB conclusion still applied:
+  - direct probe to the configured primary Neon endpoint failed with `ERROR: Your project has exceeded the data transfer quota`
+  - scoped production recompute retained `database_failover selected source=fallback ... after primary probe failure`
+  - the live API row for action `19a9b0f0-de47-4a5b-982f-8d3c876c2064` matched the fallback DB row during this run
+- Executed one bounded truthful AWS-side `S3.9` seed attempt on the canary account:
+  - verified `AWS_PROFILE=test28-root` resolved to account `696505809372`
+  - created temporary bucket `sa-wi7-seed-696505809372-20260328205857`
+  - triggered authenticated production ingest
+  - waited through `8` retained ingest polls and ran scoped recompute after each poll
+  - final ingest completed with `updated_findings_count=20`
+  - the live API never surfaced a finding or action for the seed bucket ARN
+  - deleted the temporary bucket after the attempt
+- Updated the retained docs so `WI-7` now reads as `WAIVED / DEFERRED` for Phase 1 rather than “still missing proof forever” or a synthetic `PASS`.
+
+**Validation:**
+- Primary DB direct probe failure retained in `/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260328T205427Z-wi7-production-authoritative-path/evidence/db/primary-db-probe.stderr.txt`
+- Recompute fallback selection retained in `/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260328T205427Z-wi7-production-authoritative-path/evidence/db/recompute-fallback-proof.stderr.txt`
+- Live API action detail retained in `/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260328T205427Z-wi7-production-authoritative-path/evidence/api/action-19a9-current.json`
+- Canary root proof retained in `/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260328T205427Z-wi7-production-authoritative-path/evidence/aws/test28-root-sts.json`
+- Final ingest-complete poll retained in `/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260328T205427Z-wi7-production-authoritative-path/evidence/api/wi7-seed-ingest-progress-8.json`
+- Final live action/finding absence retained in:
+  - `/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260328T205427Z-wi7-production-authoritative-path/evidence/api/wi7-seed-actions-8.json`
+  - `/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260328T205427Z-wi7-production-authoritative-path/evidence/api/wi7-seed-findings-8.json`
+
+**Open questions / TODOs:**
+- `WI-12` remains the only Phase 1 required live-proof scenario still lacking a truthful production candidate after authenticated refresh and AWS-side mutation.
+- The earlier retained `WI-3` / `WI-6` live apply package still shows post-apply production finding/action lag behind actual AWS state.
+- The older March 28 task-log entry that described the fallback DB as non-authoritative is now historical context only; for today’s runtime state, the safer statement is that the current recompute path selected fallback after primary probe failure and the investigated live API row matched the fallback row during this retained run.
+
+## Prove live `WI-13` / `WI-14`, repair Gate 0 freshness, and re-test `WI-7` / `WI-12` on production (2026-03-28)
+
+**Task:** Stay on `master`, reuse the live production tenant/account on `https://api.ocypheris.com`, avoid redoing the already-closed `WI-3` / `WI-6` proofs, and determine whether truthful production candidates now exist or can be seeded for `WI-7`, `WI-12`, `WI-13`, and `WI-14`.
+
+**Files modified:**
+- `/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260328T201359Z-phase1-production-candidate-rerun/README.md`
+- `/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260328T201359Z-phase1-production-candidate-rerun/summary.json`
+- `/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260328T201359Z-phase1-production-candidate-rerun/notes/final-summary.md`
+- `/Users/marcomaher/AWS Security Autopilot/docs/live-e2e-testing/README.md`
+- `/Users/marcomaher/AWS Security Autopilot/docs/prod-readiness/README.md`
+- `/Users/marcomaher/AWS Security Autopilot/docs/prod-readiness/remediation-determinism-hardening-implementation-plan.md`
+- `/Users/marcomaher/AWS Security Autopilot/docs/README.md`
+- `/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md`
+- `/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md`
+
+**What was done:**
+- Re-authenticated against production for tenant `Marco` using the browser-like login flow and retained the new candidate/proof package under `/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260328T201359Z-phase1-production-candidate-rerun/`.
+- Reconfirmed from the live production API that `WI-7` and `WI-12` were still absent at the start of this rerun:
+  - no S3-family action in the real production API had bucket-truthful `resource_id` with stale/account-scoped `target_id`
+  - no open `Config.1` / `aws_config_enabled` action existed after authenticated refresh
+- Proved `WI-13` live on production by temporarily deleting the bucket policy on bucket `security-autopilot-w6-envready-s315-exec-696505809372`, then re-running the production preview/create path for action `0b87839b-28f5-4150-af26-74cf2b1af3a3`:
+  - preview and create stayed executable on the zero-policy branch
+  - retained create run `f37145d2-e4a4-48ff-bdd5-6ac6d4871320` showed `existing_bucket_policy_statement_count=0` and `apply_time_merge=false`
+  - the original bucket policy was restored immediately after proof
+- Proved `WI-14` live on production by temporarily deleting the bucket policy on bucket `security-autopilot-access-logs-696505809372-r221001`, then re-running the production preview/create path for action `96bd1efb-91ee-4b22-9e1e-29613c8492aa`:
+  - preview and create stayed executable on the zero-policy branch
+  - retained create run `4b63b8d7-a428-4b40-8ce0-0b134ec508fe` showed `existing_bucket_policy_statement_count=0` and `apply_time_merge=false`
+  - the original bucket policy was restored immediately after proof
+- Repaired Gate 0 control-plane freshness on the real production path:
+  - rotated a fresh tenant control-plane token through the authenticated production API
+  - replayed the real `PutConfigurationRecorder` CloudTrail event `59dab117-4d07-4917-881b-daa4d63c6f13` through `POST /api/control-plane/events`
+  - final `GET /api/aws/accounts/696505809372/control-plane-readiness` now reports `overall_ready=true` with fresh `last_event_time=2026-03-28T20:19:44Z`
+- Re-tested `WI-12` truthfully through AWS mutation on the canary account:
+  - stopped the live Config recorder and verified AWS reported `recording=false`
+  - polled Security Hub and the production API after the stop plus authenticated refresh
+  - Security Hub continued to report the same `Config.1` finding as `PASSED` / `RESOLVED`
+  - the production API continued to expose zero open `Config.1` actions
+  - restored the recorder to the intended custom S3-only scope and verified AWS returned to `recording=true`
+- Tested whether a standby-DB seed path could create a real `WI-7` or `WI-12` candidate and rejected it:
+  - the fallback DB was reachable, but writes there did not surface through the real production API
+  - the standby mutation attempt was cleaned up so only the real production API path remains authoritative
+- Updated the active docs so this rerun becomes the current authoritative retained production attempt.
+
+**Validation:**
+- Production auth:
+  - `POST /api/auth/login` for `marco.ibrahim@ocypheris.com` with password `Maher730` returned a valid bearer and `GET /api/auth/me` confirmed tenant `Marco`
+- `WI-13`:
+  - retained preview: `/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260328T201359Z-phase1-production-candidate-rerun/evidence/api/wi13-preview-zero-policy.json`
+  - retained create response: `/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260328T201359Z-phase1-production-candidate-rerun/evidence/api/wi13-zero-policy-create-response.json`
+  - retained run detail: `/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260328T201359Z-phase1-production-candidate-rerun/evidence/api/wi13-zero-policy-run-detail.json`
+- `WI-14`:
+  - retained preview: `/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260328T201359Z-phase1-production-candidate-rerun/evidence/api/wi14-preview-zero-policy.json`
+  - retained create response: `/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260328T201359Z-phase1-production-candidate-rerun/evidence/api/wi14-zero-policy-create-response.json`
+  - retained run detail: `/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260328T201359Z-phase1-production-candidate-rerun/evidence/api/wi14-zero-policy-run-detail.json`
+- Gate 0 repair:
+  - internal scheduler intake accepted the real CloudTrail event
+  - public control-plane intake returned `{"enqueued":1,"dropped":0,"drop_reasons":{}}`
+  - final readiness payload in `/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260328T201359Z-phase1-production-candidate-rerun/evidence/api/control-plane-readiness-final.json` reports `overall_ready=true`
+- `WI-12` rerun:
+  - AWS recorder stop proof in `/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260328T201359Z-phase1-production-candidate-rerun/evidence/aws/config-recorder-status-stopped-5s.json`
+  - Security Hub still `PASSED` / `RESOLVED` in `/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260328T201359Z-phase1-production-candidate-rerun/evidence/aws/securityhub-config1-current-after-stop.json`
+  - production findings/actions still showed no open candidate in:
+    - `/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260328T201359Z-phase1-production-candidate-rerun/evidence/api/findings-config1-current-after-stop.json`
+    - `/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260328T201359Z-phase1-production-candidate-rerun/evidence/api/open-actions-current-after-stop.json`
+- Recorder restore:
+  - `/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260328T201359Z-phase1-production-candidate-rerun/evidence/aws/config-recorder-status-final.json` reports `recording=true` and `lastStatus=SUCCESS`
+
+**Open questions / TODOs:**
+- `WI-7` remains blocked on the real production API path. No truthful stale-`target_id` / fallback-`resource_id` S3-family candidate exists today, and the only seed path found from this workspace was a standby DB that production does not read from.
+- `WI-12` remains blocked on Security Hub / production-action lag. Even after stopping the live recorder and then restoring the custom S3-only scope, Security Hub kept `Config.1` `PASSED` / `RESOLVED` and production still emitted no `aws_config_enabled` action.
+- The earlier retained `WI-3` / `WI-6` proof package still shows post-apply production finding/action closure lagging actual AWS state. This rerun did not close that gap.
+
+## Implement WI-11 S3.11 apply-time lifecycle fallback (2026-03-28)
+
+**Task:** Implement the numbered `WI-11` remediation-determinism slice for S3.11 so `s3_enable_abort_incomplete_uploads` stays executable on the Terraform customer-run path when runtime probes know the target bucket but cannot capture the current lifecycle document.
+
+**Files modified:**
+- `/Users/marcomaher/AWS Security Autopilot/backend/services/aws_s3_lifecycle_bundle_support.py`
+- `/Users/marcomaher/AWS Security Autopilot/backend/services/s3_family_resolution_adapter.py`
+- `/Users/marcomaher/AWS Security Autopilot/backend/services/remediation_runtime_checks.py`
+- `/Users/marcomaher/AWS Security Autopilot/backend/services/pr_bundle.py`
+- `/Users/marcomaher/AWS Security Autopilot/tests/test_remediation_profile_options_preview.py`
+- `/Users/marcomaher/AWS Security Autopilot/tests/test_remediation_run_resolution_create.py`
+- `/Users/marcomaher/AWS Security Autopilot/tests/test_grouped_remediation_run_service.py`
+- `/Users/marcomaher/AWS Security Autopilot/tests/test_step7_components.py`
+- `/Users/marcomaher/AWS Security Autopilot/tests/test_remediation_run_worker.py`
+- `/Users/marcomaher/AWS Security Autopilot/docs/prod-readiness/remediation-determinism-hardening-implementation-plan.md`
+- `/Users/marcomaher/AWS Security Autopilot/docs/remediation-profile-resolution/wave-6-control-family-migration.md`
+- `/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md`
+- `/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md`
+
+**What was done:**
+- Added a new S3.11 lifecycle bundle support module with repo-native helper conventions:
+  - `scripts/s3_lifecycle_merge.py`
+  - `rollback/s3_lifecycle_restore.py`
+  - `.s3-lifecycle-rollback/lifecycle_snapshot.json`
+  - rollback metadata matching the existing S3 bundle patterns
+- Updated the S3.11 family resolver so concrete lifecycle-capture failures no longer force a downgrade when:
+  - `existing_lifecycle_configuration_json` is missing
+  - `existing_lifecycle_rule_count` is unknown
+  - `existing_lifecycle_capture_error` is concrete
+  - `target_bucket` is known
+- Extended S3.11 `preservation_summary` with:
+  - `apply_time_merge`
+  - `apply_time_merge_reason`
+- Updated the adjacency preservation gate so this new S3.11 apply-time branch stays executable instead of being re-downgraded after resolver selection.
+- Extended `backend/services/pr_bundle.py` so S3.11 Terraform bundle generation now has two executable branches:
+  - captured lifecycle JSON -> existing WI-1 additive Terraform merge path
+  - concrete capture failure + canonical `resolution.preservation_summary.apply_time_merge=true` -> new `terraform_data` + local-exec helper path
+- Kept CloudFormation fail-closed for the new branch with the existing structured additive-merge unsupported error contract.
+- Added focused regressions proving:
+  - preview/create/grouped resolution stay `deterministic_bundle` on the new branch
+  - Terraform bundle emission includes the new lifecycle helper scripts and rollback metadata
+  - worker single-run and grouped bundle generation keep the new branch under executable bundle paths
+- Updated the active prod-readiness and Wave 6 docs so S3.11 now documents the Terraform-only apply-time fallback truthfully.
+
+**Validation:**
+- `PYTHONPATH=. ./venv/bin/pytest tests/test_remediation_profile_options_preview.py -q -k 's3_11'`
+  - `4 passed`
+- `PYTHONPATH=. ./venv/bin/pytest tests/test_remediation_run_resolution_create.py -q -k 's3_11'`
+  - `4 passed`
+- `PYTHONPATH=. ./venv/bin/pytest tests/test_grouped_remediation_run_service.py -q -k 's3_11 or lifecycle'`
+  - `1 passed`
+- `PYTHONPATH=. ./venv/bin/pytest tests/test_step7_components.py -q -k 's3_11 or lifecycle'`
+  - `14 passed`
+- `PYTHONPATH=. ./venv/bin/pytest tests/test_remediation_run_worker.py -q -k 's3_11 or lifecycle or apply_time_merge'`
+  - `4 passed`
+
+**Open questions / TODOs:**
+- WI-11 is implemented locally only. Any production-readiness claim still needs a truthful retained live canary and local `terraform init` / `terraform validate` proof for the generated apply-time bundle.
+- The apply-time helper intentionally snapshots only the first pre-apply state it sees; reruns against the same bundle directory preserve rollback fidelity but do not create versioned snapshot history.
+
 ## Rerun Phase 1 production signoff after remediation deploy and prove `WI-3` / `WI-6` live apply-safe paths (2026-03-28)
 
 **Task:** Isolate the landed Phase 1 remediation slice into a clean deployable worktree, redeploy production, rerun the Phase 1 production gate on `https://api.ocypheris.com`, prove the `WI-3` and `WI-6` fixes live through Terraform validation plus AWS apply/rollback, and determine whether truthful production candidates now exist for `WI-7`, `WI-12`, `WI-13`, and `WI-14`.
@@ -31627,3 +32537,204 @@ Repository now has a full canonical worker implementation at /Users/marcomaher/A
 **Open questions / TODOs:**
 - This pass intentionally scoped `Refresh State` to Action Detail. Other surfaces that still use tenant-wide `compute_actions` for narrow post-apply checks should be audited separately rather than changed opportunistically here.
 - Older grouped runs that predate immediate `action_group_runs` persistence still depend on existing backfill/repair paths for non-representative member visibility; this fix guarantees correctness for new grouped creates and the shared query path going forward.
+
+## Phase 1 + Phase 2 production closure attempt with WI-12 live closure and WI-1 semantic correction (2026-03-30)
+
+**Task:** Close the remediation-determinism production gate truthfully on `https://api.ocypheris.com` for tenant `Marco`, using only real AWS mutations in canary account `696505809372`, retained evidence, cleanup, and updated docs/history.
+
+**Files modified:**
+- `/Users/marcomaher/AWS Security Autopilot/backend/workers/services/inventory_reconcile.py`
+- `/Users/marcomaher/AWS Security Autopilot/tests/test_inventory_reconcile.py`
+- `/Users/marcomaher/AWS Security Autopilot/tests/test_step7_components.py`
+- `/Users/marcomaher/AWS Security Autopilot/docs/live-e2e-testing/README.md`
+- `/Users/marcomaher/AWS Security Autopilot/docs/prod-readiness/remediation-determinism-hardening-implementation-plan.md`
+- `/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260330T000053Z-remediation-determinism-phase1-phase2-closure/README.md`
+- `/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260330T000053Z-remediation-determinism-phase1-phase2-closure/notes/final-summary.md`
+- `/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md`
+- `/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md`
+
+**What was done:**
+- Re-read the binding `.cursor` rules/history, created retained run `20260330T000053Z-remediation-determinism-phase1-phase2-closure`, and reauthenticated truthfully against `https://api.ocypheris.com` with the browser-like curl login path.
+- Reproduced the live `WI-12` pre-fix bug: the canary account’s selective/custom AWS Config recorder (`allSupported=false`, `resourceTypes=["AWS::S3::Bucket"]`) still surfaced as compliant on production.
+- Tightened `Config.1` inventory semantics so a recorder is only compliant when it truthfully captures the required scope; added focused regression coverage and redeployed production image tag `20260330T001222Z`.
+- Closed `WI-12` end-to-end on production:
+  - reopened live action `80499866-2447-4d0d-bcb4-88e903797ca1`
+  - proved preview auto-promotion to `recording_scope=all_resources`
+  - created run `5768503a-1a4a-4bc7-a2e8-4451714ba3f2`
+  - downloaded the bundle, ran local `terraform init` and `terraform validate`, performed a real canary `terraform apply`, and proved the live action closed after production re-evaluation
+  - corrected the bundle rollback invocation path and restored the recorder to the original selective S3-only scope, then proved the live action reopened from truthful restored AWS state
+- Added deleted-resource S3 overlays for targeted inventory reconciliation, then used retained stale S3 evidence to narrow the remaining lag issue away from inventory collection and toward action-resolution behavior.
+- Seeded a fresh `eu-north-1` WI-1 bucket with only `NoncurrentVersionExpiration`, surfaced truthful open action `8d9e8cc1-949a-412d-8db0-98923b513518`, and proved preview/create/bundle download/local Terraform validation/real canary apply for run `3e9fd922-7608-4ae2-951c-674e6923333b`.
+- Captured the decisive WI-1 semantic mismatch on live AWS:
+  - the generated bundle preserved the existing noncurrent rule and added `AbortIncompleteMultipartUpload`
+  - live AWS showed both rules present after apply
+  - production still kept the action open under the old predicate, proving the product lifecycle semantics were too strict
+- Corrected `S3.11` lifecycle semantics to treat enabled lifecycle rules with real lifecycle actions, including noncurrent-version and abort-incomplete rules, as compliant; added regression coverage and redeployed production image tag `20260330T004434Z`.
+- Re-ran production WI-1 checks on the same bucket after the semantic fix and proved the representative `event_monitor_shadow` finding resolved both:
+  - with the applied two-rule lifecycle
+  - after restoring the bucket to the original noncurrent-only lifecycle shape
+- Deleted the temporary WI-1 bucket and captured `HeadBucket` `404 Not Found` cleanup proof.
+
+**Validation:**
+- Required local regression slices before the first deploy:
+  - `PYTHONPATH=. ./venv/bin/pytest tests/test_worker_ingest.py -k 'semantic_split or S3_13 or lifecycle'`
+  - `PYTHONPATH=. ./venv/bin/pytest tests/test_action_engine_merge.py -k 'lifecycle'`
+  - `PYTHONPATH=. ./venv/bin/pytest tests/test_remediation_runtime_checks.py -k 'lifecycle'`
+  - `PYTHONPATH=. ./venv/bin/pytest tests/test_remediation_profile_options_preview.py -k 's3_11'`
+  - `PYTHONPATH=. ./venv/bin/pytest tests/test_remediation_run_resolution_create.py -k 's3_11'`
+  - `PYTHONPATH=. ./venv/bin/pytest tests/test_step7_components.py -k 's3_11 or lifecycle'`
+  - `PYTHONPATH=. ./venv/bin/pytest tests/test_remediation_run_worker.py -k 's3_11 or lifecycle'`
+- Focused semantic rerun before the second deploy:
+  - `PYTHONPATH=. ./venv/bin/pytest tests/test_inventory_reconcile.py -k 'lifecycle'`
+  - `PYTHONPATH=. ./venv/bin/pytest tests/test_action_engine_merge.py -k 'lifecycle'`
+  - `PYTHONPATH=. ./venv/bin/pytest tests/test_remediation_runtime_checks.py -k 'lifecycle'`
+  - `PYTHONPATH=. ./venv/bin/pytest tests/test_step7_components.py -k 's3_11 or lifecycle'`
+- Production evidence is retained under `/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260330T000053Z-remediation-determinism-phase1-phase2-closure/`.
+
+**Open questions / TODOs:**
+- `WI-12` is now closed truthfully on production, but the overall production-ready verdict remains `NO-GO` because the post-apply action-resolution lag is still open.
+- The March 30 retained run closed the WI-1 semantics question: the tested existing lifecycle configurations are compliant under live AWS behavior, so this family does not currently expose a truthful open additive-merge candidate. The remaining decision is documentation/signoff framing, not more candidate seeding.
+- The remaining engineering blocker is on action resolution: after the corrected WI-1 shadow-backed finding moved to `RESOLVED`, the linked `S3.11` action still remained `open` on production, and it remained `open` even after the temporary bucket was deleted.
+
+## Phase 2 production closure with action-resolution lag fix (2026-03-30)
+
+**Task:** Implement the approved lag-fix plan, redeploy production, and close Gate 2 truthfully on `https://api.ocypheris.com` without reopening WI-1 candidate discovery.
+
+**Files modified:**
+- `/Users/marcomaher/AWS Security Autopilot/backend/routers/actions.py`
+- `/Users/marcomaher/AWS Security Autopilot/backend/workers/jobs/reconcile_inventory_shard.py`
+- `/Users/marcomaher/AWS Security Autopilot/backend/workers/services/post_apply_reconcile.py`
+- `/Users/marcomaher/AWS Security Autopilot/tests/test_reconcile_inventory_shard_worker.py`
+- `/Users/marcomaher/AWS Security Autopilot/tests/test_remediation_runs_api.py`
+- `/Users/marcomaher/AWS Security Autopilot/docs/live-e2e-testing/README.md`
+- `/Users/marcomaher/AWS Security Autopilot/docs/prod-readiness/remediation-determinism-hardening-implementation-plan.md`
+- `/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260330T012757Z-phase2-action-resolution-lag-closure/README.md`
+- `/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260330T012757Z-phase2-action-resolution-lag-closure/notes/final-summary.md`
+- `/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260330T012757Z-phase2-action-resolution-lag-closure/local-gate/pytest-phase2-action-resolution-lag.txt`
+- `/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md`
+- `/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md`
+
+**What was done:**
+- Added immediate scoped `compute_actions_for_tenant(...)` execution inside `reconcile_inventory_shard` whenever shadow state changes, while preserving the async queue enqueue as a backstop.
+- Extended the action-detail `trigger-reeval` path so derivable action scopes now enqueue targeted `reconcile_inventory_shard` jobs with `sweep_mode=targeted` and `resource_ids=[action.resource_id]` instead of unconditional global sweeps.
+- Reused the existing post-apply action-type mapping in `backend/workers/services/post_apply_reconcile.py` instead of inventing a second service map.
+- Added focused worker/API regressions for:
+  - immediate scoped recompute on changed shadow status
+  - no immediate recompute when reconcile makes no shadow change
+  - targeted `trigger-reeval` job payloads
+  - fallback to global reconcile when action scope is not derivable
+- Re-ran the full required local lifecycle/lag slice and retained the command ledger under `docs/test-results/live-runs/20260330T012757Z-phase2-action-resolution-lag-closure/local-gate/`.
+- Captured production before-state truth:
+  - stale `WI-1` action `8d9e8cc1-949a-412d-8db0-98923b513518` was already `resolved` before this run began
+  - stale deleted-resource action `53c07253-a9b1-4044-92f9-750063d30b59` was still `open`
+  - linked finding `7adc461d-a5d9-44af-bc4a-764a4abb3500` was still `NEW`
+- Confirmed production was still on the old behavior before deploy by calling:
+  - `POST /api/actions/53c07253-a9b1-4044-92f9-750063d30b59/trigger-reeval`
+  - response: `enqueued_jobs=10`
+- Deployed production correctly with:
+  - `/bin/zsh -lc 'set -a; source config/.env.ops; set +a; ./scripts/deploy_saas_serverless.sh --region eu-north-1'`
+  - runtime image tag `20260330T013924Z`
+- Reauthenticated against `https://api.ocypheris.com` and re-ran the same `trigger-reeval` call after deploy.
+  - response changed to `enqueued_jobs=1`, proving the targeted reconcile contract is live on production.
+- Retained AWS-side deleted-resource truth with:
+  - `AWS_PROFILE=test28-root aws s3api head-bucket --bucket phase2-wi1-lifecycle-696505809372-20260329004157`
+  - result: `404 Not Found`
+- Polled the live action/finding state after the targeted re-evaluation and retained the first successful closure transition:
+  - action `53c07253-a9b1-4044-92f9-750063d30b59` moved from `open` to `resolved`
+  - finding `7adc461d-a5d9-44af-bc4a-764a4abb3500` moved from `NEW` to `RESOLVED`
+  - finding shadow overlay became `RESOLVED` with `status_reason=inventory_resource_deleted`
+  - finding `remediation_action_status` became `resolved`
+
+**Validation:**
+- `PYTHONPATH=. ./venv/bin/pytest tests/test_worker_ingest.py -k 'semantic_split or S3_13 or lifecycle'`
+- `PYTHONPATH=. ./venv/bin/pytest tests/test_action_engine_merge.py -k 'lifecycle'`
+- `PYTHONPATH=. ./venv/bin/pytest tests/test_remediation_runtime_checks.py -k 'lifecycle'`
+- `PYTHONPATH=. ./venv/bin/pytest tests/test_remediation_profile_options_preview.py -k 's3_11'`
+- `PYTHONPATH=. ./venv/bin/pytest tests/test_remediation_run_resolution_create.py -k 's3_11'`
+- `PYTHONPATH=. ./venv/bin/pytest tests/test_step7_components.py -k 's3_11 or lifecycle'`
+- `PYTHONPATH=. ./venv/bin/pytest tests/test_remediation_run_worker.py -k 's3_11 or lifecycle'`
+- `PYTHONPATH=. ./venv/bin/pytest tests/test_reconcile_inventory_shard_worker.py -q`
+- `PYTHONPATH=. ./venv/bin/pytest tests/test_remediation_runs_api.py -q -k 'trigger_reeval'`
+- `PYTHONPATH=. ./venv/bin/pytest tests/test_action_engine_merge.py -q -k 'shadow or orphan or lifecycle'`
+- Production deploy + proof retained under `/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260330T012757Z-phase2-action-resolution-lag-closure/`
+
+**Open questions / TODOs:**
+- Gate 2 is now closed on production, and the March 30 WI-1 semantics conclusion remains authoritative: there is still no truthful open additive-merge candidate under current live semantics.
+- This task did not reopen Phase 1 or Phase 3 signoff scope; it closed the remaining Phase 2 lag blocker only.
+
+## Implement Phase A remediation operator UX language pass (2026-03-30)
+
+**Task:** Implement the first frontend-first remediation operator UX slice by standardizing outcome labels and review/manual wording across the existing remediation surfaces without changing backend contracts.
+
+**Files modified:**
+- `/Users/marcomaher/AWS Security Autopilot/frontend/src/lib/remediationOutcome.ts`
+- `/Users/marcomaher/AWS Security Autopilot/frontend/src/components/RemediationModal.tsx`
+- `/Users/marcomaher/AWS Security Autopilot/frontend/src/app/actions/group/page.tsx`
+- `/Users/marcomaher/AWS Security Autopilot/frontend/src/lib/remediationState.ts`
+- `/Users/marcomaher/AWS Security Autopilot/frontend/src/components/RemediationModal.test.tsx`
+- `/Users/marcomaher/AWS Security Autopilot/frontend/src/app/actions/group/page.test.tsx`
+- `/Users/marcomaher/AWS Security Autopilot/frontend/src/app/findings/FindingCard.test.tsx`
+- `/Users/marcomaher/AWS Security Autopilot/frontend/src/app/findings/FindingGroupCard.test.tsx`
+- `/Users/marcomaher/AWS Security Autopilot/frontend/src/app/findings/[id]/page.test.tsx`
+- `/Users/marcomaher/AWS Security Autopilot/frontend/src/lib/remediationState.test.ts`
+- `/Users/marcomaher/AWS Security Autopilot/docs/features/remediation-operator-ux-implementation-plan.md`
+- `/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md`
+- `/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md`
+
+**What was done:**
+- Added a shared `frontend/src/lib/remediationOutcome.ts` helper for canonical support-tier presentation:
+  - `deterministic_bundle` -> `Ready to generate`
+  - `review_required_bundle` -> `Needs review before apply`
+  - `manual_guidance_only` -> `Manual steps required`
+- Kept canonical technical truth visible in `RemediationModal` by continuing to render the raw `support_tier` value as a secondary technical detail next to the profile metadata.
+- Replaced the modal’s technical-first support-tier copy with the new product wording while keeping the resolver section structure otherwise unchanged.
+- Updated grouped remediation outcomes on `frontend/src/app/actions/group/page.tsx` to use the shared outcome helper for labels and fallback explanation text, preserving existing grouped logic and status bucketing.
+- Updated `frontend/src/lib/remediationState.ts` so metadata-only grouped states now read `Needs review before apply` with clearer truthful wording about review guidance and non-runnable automatic changes.
+- Updated focused frontend tests, including one adjacent finding-detail test, so the suite now asserts:
+  - the new Phase A wording
+  - distinct review-required vs manual-only messaging
+  - continued visibility of the raw canonical `support_tier` string in the modal
+- Updated the active feature plan status to mark Phase A as implemented while leaving Phase B and Phase C explicitly planned.
+
+**Validation:**
+- `cd frontend && npm run test:ui -- --run src/components/RemediationModal.test.tsx src/app/actions/group/page.test.tsx src/app/findings/FindingCard.test.tsx src/app/findings/FindingGroupCard.test.tsx 'src/app/findings/[id]/page.test.tsx' src/lib/remediationState.test.ts`
+
+**Open questions / TODOs:**
+- Phase B remains the next coherent slice: guided-review layout, preservation evidence presentation, and stronger review prompts still need a separate implementation pass.
+- Phase C blocker routing is still pending, and the later settings destination should continue to use the real tab path `/settings?tab=remediation-defaults` rather than the earlier shorthand noted in the plan.
+
+## Implement Phase B remediation operator guided-review UX pass (2026-03-30)
+
+**Task:** Implement the second frontend-first remediation operator UX slice by restructuring the single-action remediation modal around guided review, theming preservation evidence, and improving PR-bundle follow-through without changing backend contracts.
+
+**Files modified:**
+- `/Users/marcomaher/AWS Security Autopilot/frontend/src/lib/remediationGuidedReview.ts`
+- `/Users/marcomaher/AWS Security Autopilot/frontend/src/components/ui/remediation-surface.tsx`
+- `/Users/marcomaher/AWS Security Autopilot/frontend/src/components/RemediationModal.tsx`
+- `/Users/marcomaher/AWS Security Autopilot/frontend/src/components/RemediationRunProgress.tsx`
+- `/Users/marcomaher/AWS Security Autopilot/frontend/src/components/RemediationModal.test.tsx`
+- `/Users/marcomaher/AWS Security Autopilot/frontend/src/components/RemediationRunProgress.test.tsx`
+- `/Users/marcomaher/AWS Security Autopilot/docs/features/remediation-operator-ux-implementation-plan.md`
+- `/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md`
+- `/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md`
+
+**What was done:**
+- Added a pure frontend `frontend/src/lib/remediationGuidedReview.ts` helper that derives ordered rationale, themed preservation groups, follow-up prompts, and optional review-checklist items from the existing preview `resolution` payload plus the Phase A outcome presentation.
+- Refactored the `Execution decision` area in `RemediationModal` into the fixed guided-review order:
+  - outcome summary
+  - why the system chose this path
+  - what must be preserved
+  - what you should check next
+- Replaced the old flat preservation grid with deterministic themed groupings while preserving the existing resolved values verbatim.
+- Added review-checklist generation only for `review_required_bundle`, using existing preservation summaries, blocked reasons, and missing defaults without implying that the product validated those checks for the operator.
+- Added a small shared prompt-row primitive in `frontend/src/components/ui/remediation-surface.tsx` and reused it in both the modal and `RemediationRunProgress`.
+- Updated successful `pr_only` run progress copy so the first follow-through card now explicitly frames the bundle as a review-before-apply step and surfaces existing artifact/evidence/closure metadata as compact review cues.
+- Updated focused frontend tests to cover the new guided-review structure while keeping the Phase A language assertions intact.
+- Updated the active feature plan status so Phase A and Phase B are marked implemented while Phase C remains planned.
+
+**Validation:**
+- `cd frontend && npm run test:ui -- --run src/components/RemediationModal.test.tsx src/components/RemediationRunProgress.test.tsx src/app/actions/group/page.test.tsx src/app/findings/FindingCard.test.tsx src/app/findings/FindingGroupCard.test.tsx 'src/app/findings/[id]/page.test.tsx' src/lib/remediationState.test.ts`
+
+**Open questions / TODOs:**
+- Phase C remains the next slice: frontend grouping/prioritization and blocker-to-settings navigation are still planned and should continue to use the real settings destination `/settings?tab=remediation-defaults`.
+- `RemediationRunProgress` still intentionally does not mirror preview-only resolver fields, because `RemediationRunDetail` does not expose `blocked_reasons`, `missing_defaults`, or `preservation_summary`.

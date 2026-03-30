@@ -1,0 +1,23 @@
+{
+  "action_results": [
+    {
+      "action_id": "c6c920fd-b9f6-4015-8ede-a072d5ad22c5",
+      "execution_status": "success"
+    }
+  ],
+  "shared_execution_results": [
+    {
+      "details": {
+        "destination_bucket_name": "sa-access-logs-696505809372-use1-r0325225420",
+        "source_bucket_names": [
+          "security-autopilot-config-696505809372-us-east-1"
+        ]
+      },
+      "execution_error_code": null,
+      "execution_error_message": null,
+      "execution_status": "success",
+      "folder": "executable/actions/00-shared-01-sa-access-logs-696505809372-use1-r032522",
+      "kind": "s3_access_logging_destination_setup"
+    }
+  ]
+}

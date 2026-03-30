@@ -1,0 +1,23 @@
+{
+    "Role": {
+        "Path": "/",
+        "RoleName": "CodexWI4LocalApiRole",
+        "RoleId": "AROAQNQWGZIWKAJ5VRM3E",
+        "Arn": "arn:aws:iam::029037611564:role/CodexWI4LocalApiRole",
+        "CreateDate": "2026-03-28T02:28:46+00:00",
+        "AssumeRolePolicyDocument": {
+            "Version": "2012-10-17",
+            "Statement": [
+                {
+                    "Effect": "Allow",
+                    "Principal": {
+                        "AWS": "arn:aws:iam::029037611564:user/AutoPilotAdmin"
+                    },
+                    "Action": "sts:AssumeRole"
+                }
+            ]
+        },
+        "MaxSessionDuration": 3600,
+        "RoleLastUsed": {}
+    }
+}

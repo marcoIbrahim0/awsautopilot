@@ -150,6 +150,7 @@ def _group_action_resolution_payload(
     missing_inputs: list[str] | None = None,
     missing_defaults: list[str] | None = None,
     blocked_reasons: list[str] | None = None,
+    preservation_summary: dict | None = None,
 ) -> dict:
     inputs = dict(strategy_inputs or {})
     resolved_profile_id = profile_id or strategy_id
@@ -168,7 +169,7 @@ def _group_action_resolution_payload(
             "blocked_reasons": list(blocked_reasons or []),
             "rejected_profiles": [],
             "finding_coverage": dict(finding_coverage or {}),
-            "preservation_summary": {},
+            "preservation_summary": dict(preservation_summary or {}),
             "decision_rationale": decision_rationale,
             "decision_version": "resolver/v1",
         },
@@ -635,6 +636,92 @@ def test_pr_only_non_executable_resolution_is_forwarded_and_sets_guidance_outcom
     assert run.status == RemediationRunStatus.success
     assert run.outcome == "Non-executable remediation guidance bundle generated"
     assert "Non-executable remediation guidance bundle generated" in (run.logs or "")
+
+
+def test_pr_only_apply_time_merge_resolution_generates_executable_s3_ssl_bundle() -> None:
+    job = _make_job(mode="pr_only")
+    job["strategy_id"] = "s3_enforce_ssl_strict_deny"
+    job["resolution"] = {
+        "strategy_id": "s3_enforce_ssl_strict_deny",
+        "profile_id": "s3_enforce_ssl_strict_deny",
+        "support_tier": "deterministic_bundle",
+        "blocked_reasons": [],
+        "preservation_summary": {
+            "apply_time_merge": True,
+            "apply_time_merge_reason": "Runtime capture failed (AccessDenied).",
+        },
+        "decision_rationale": "Apply-time merge is allowed.",
+    }
+    run = _mock_run_with_action("s3_bucket_require_ssl")
+    run.action.region = "us-east-1"
+    run.action.control_id = "S3.5"
+    run.action.target_id = "123456789012|us-east-1|arn:aws:s3:::ssl-bucket|S3.5"
+    run.action.resource_id = "arn:aws:s3:::ssl-bucket"
+    run.artifacts = {"selected_strategy": "s3_enforce_ssl_strict_deny"}
+
+    result1 = MagicMock()
+    result1.scalar_one_or_none.return_value = run
+    mock_session = MagicMock()
+    mock_session.execute.side_effect = [result1]
+    mock_session.flush = MagicMock()
+
+    with patch("backend.workers.jobs.remediation_run.session_scope") as mock_scope:
+        ctx = MagicMock()
+        ctx.__enter__.return_value = mock_session
+        ctx.__exit__.return_value = False
+        mock_scope.return_value = ctx
+        execute_remediation_run_job(job)
+
+    assert run.status == RemediationRunStatus.success
+    assert run.outcome == "PR bundle generated"
+    files_by_path = _bundle_files_by_path(run)
+    assert "s3_bucket_require_ssl.tf" in files_by_path
+    assert "terraform.auto.tfvars.json" not in files_by_path
+    assert "scripts/s3_policy_capture.py" in files_by_path
+    assert 'data "aws_s3_bucket_policy" "existing"' in files_by_path["s3_bucket_require_ssl.tf"]
+
+
+def test_pr_only_apply_time_merge_resolution_generates_executable_s3_11_bundle() -> None:
+    job = _make_job(mode="pr_only")
+    job["strategy_id"] = "s3_enable_abort_incomplete_uploads"
+    job["resolution"] = {
+        "strategy_id": "s3_enable_abort_incomplete_uploads",
+        "profile_id": "s3_enable_abort_incomplete_uploads",
+        "support_tier": "deterministic_bundle",
+        "blocked_reasons": [],
+        "preservation_summary": {
+            "apply_time_merge": True,
+            "apply_time_merge_reason": "Runtime capture failed (AccessDenied).",
+        },
+        "decision_rationale": "Apply-time lifecycle merge is allowed.",
+    }
+    run = _mock_run_with_action("s3_bucket_lifecycle_configuration")
+    run.action.region = "us-east-1"
+    run.action.control_id = "S3.11"
+    run.action.target_id = "123456789012|us-east-1|arn:aws:s3:::lifecycle-bucket|S3.11"
+    run.action.resource_id = "arn:aws:s3:::lifecycle-bucket"
+    run.artifacts = {"selected_strategy": "s3_enable_abort_incomplete_uploads"}
+
+    result1 = MagicMock()
+    result1.scalar_one_or_none.return_value = run
+    mock_session = MagicMock()
+    mock_session.execute.side_effect = [result1]
+    mock_session.flush = MagicMock()
+
+    with patch("backend.workers.jobs.remediation_run.session_scope") as mock_scope:
+        ctx = MagicMock()
+        ctx.__enter__.return_value = mock_session
+        ctx.__exit__.return_value = False
+        mock_scope.return_value = ctx
+        execute_remediation_run_job(job)
+
+    assert run.status == RemediationRunStatus.success
+    assert run.outcome == "PR bundle generated"
+    files_by_path = _bundle_files_by_path(run)
+    assert "s3_bucket_lifecycle_configuration.tf" in files_by_path
+    assert "scripts/s3_lifecycle_merge.py" in files_by_path
+    assert "rollback/s3_lifecycle_restore.py" in files_by_path
+    assert 'resource "terraform_data" "security_autopilot"' in files_by_path["s3_bucket_lifecycle_configuration.tf"]
 
 
 def test_pr_only_generation_structured_error_persists_error_artifact() -> None:
@@ -1400,6 +1487,87 @@ def test_group_pr_bundle_mixed_tier_preserves_prefixed_config_rollback_entry_met
     action_entry = next(item for item in manifest["actions"] if item["action_id"] == str(run.action.id))
     assert action_entry["bundle_rollback_command"].startswith("python3 ./executable/actions/")
     assert action_entry["bundle_rollback_command"].endswith("/rollback/aws_config_restore.py")
+
+
+def test_group_pr_bundle_places_s3_ssl_apply_time_merge_under_executable_actions() -> None:
+    job = _make_job(mode="pr_only")
+    run = _mock_run_with_action("s3_bucket_require_ssl")
+    run.action.region = "us-east-1"
+    run.action.control_id = "S3.5"
+    run.action.target_id = "123456789012|us-east-1|arn:aws:s3:::ssl-bucket|S3.5"
+    run.action.resource_id = "arn:aws:s3:::ssl-bucket"
+    job["group_action_ids"] = [str(run.action.id)]
+    job["action_resolutions"] = [
+        _group_action_resolution_payload(
+            action_id=run.action.id,
+            strategy_id="s3_enforce_ssl_strict_deny",
+            support_tier="deterministic_bundle",
+            decision_rationale="Apply-time merge is allowed.",
+            preservation_summary={
+                "apply_time_merge": True,
+                "apply_time_merge_reason": "Runtime capture failed (AccessDenied).",
+            },
+        )
+    ]
+    run.artifacts = {"selected_strategy": "s3_enforce_ssl_strict_deny"}
+    mock_session = _mock_group_session(run, [run.action])
+
+    with patch("backend.workers.jobs.remediation_run.session_scope") as mock_scope:
+        ctx = MagicMock()
+        ctx.__enter__.return_value = mock_session
+        ctx.__exit__.return_value = False
+        mock_scope.return_value = ctx
+        execute_remediation_run_job(job)
+
+    assert run.status == RemediationRunStatus.success
+    files_by_path = _bundle_files_by_path(run)
+    executable_paths = [path for path in files_by_path if path.startswith("executable/actions/")]
+    assert any(path.endswith("/s3_bucket_require_ssl.tf") for path in executable_paths)
+    assert not any(path.endswith("terraform.auto.tfvars.json") for path in executable_paths)
+    manifest = json.loads(files_by_path["bundle_manifest.json"])
+    assert manifest["actions"][0]["tier_root"] == "executable/actions"
+    assert manifest["actions"][0]["has_runnable_terraform"] is True
+
+
+def test_group_pr_bundle_places_s3_11_apply_time_merge_under_executable_actions() -> None:
+    job = _make_job(mode="pr_only")
+    run = _mock_run_with_action("s3_bucket_lifecycle_configuration")
+    run.action.region = "us-east-1"
+    run.action.control_id = "S3.11"
+    run.action.target_id = "123456789012|us-east-1|arn:aws:s3:::lifecycle-bucket|S3.11"
+    run.action.resource_id = "arn:aws:s3:::lifecycle-bucket"
+    job["group_action_ids"] = [str(run.action.id)]
+    job["action_resolutions"] = [
+        _group_action_resolution_payload(
+            action_id=run.action.id,
+            strategy_id="s3_enable_abort_incomplete_uploads",
+            support_tier="deterministic_bundle",
+            decision_rationale="Apply-time lifecycle merge is allowed.",
+            preservation_summary={
+                "apply_time_merge": True,
+                "apply_time_merge_reason": "Runtime capture failed (AccessDenied).",
+            },
+        )
+    ]
+    run.artifacts = {"selected_strategy": "s3_enable_abort_incomplete_uploads"}
+    mock_session = _mock_group_session(run, [run.action])
+
+    with patch("backend.workers.jobs.remediation_run.session_scope") as mock_scope:
+        ctx = MagicMock()
+        ctx.__enter__.return_value = mock_session
+        ctx.__exit__.return_value = False
+        mock_scope.return_value = ctx
+        execute_remediation_run_job(job)
+
+    assert run.status == RemediationRunStatus.success
+    files_by_path = _bundle_files_by_path(run)
+    executable_paths = [path for path in files_by_path if path.startswith("executable/actions/")]
+    assert any(path.endswith("/s3_bucket_lifecycle_configuration.tf") for path in executable_paths)
+    assert any(path.endswith("/scripts/s3_lifecycle_merge.py") for path in executable_paths)
+    assert any(path.endswith("/rollback/s3_lifecycle_restore.py") for path in executable_paths)
+    manifest = json.loads(files_by_path["bundle_manifest.json"])
+    assert manifest["actions"][0]["tier_root"] == "executable/actions"
+    assert manifest["actions"][0]["has_runnable_terraform"] is True
 
 
 def test_group_pr_bundle_reporting_wrapper_includes_non_executable_results() -> None:

@@ -1,0 +1,12 @@
+{
+  "delivery_bucket_name": "security-autopilot-config-696505809372-eu-north-1",
+  "delivery_channel_exists": true,
+  "delivery_channel_name": "default",
+  "recorder_all_supported": false,
+  "recorder_exists": true,
+  "recorder_name": "default",
+  "recording_before": true,
+  "target_bucket_existed_before": true,
+  "target_bucket_name": "security-autopilot-config-696505809372-eu-north-1",
+  "version": 1
+}

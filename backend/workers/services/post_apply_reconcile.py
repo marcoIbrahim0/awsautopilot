@@ -35,6 +35,13 @@ _SERVICE_PREFIXES: tuple[tuple[str, str], ...] = (
     ("cloudtrail_", "cloudtrail"),
     ("config_", "config"),
 )
+_EXACT_ACTION_TYPE_SERVICES: dict[str, str] = {
+    "aws_config_enabled": "config",
+    "cloudtrail_enabled": "cloudtrail",
+    "enable_guardduty": "guardduty",
+    "enable_security_hub": "securityhub",
+    "sg_restrict_public_ports": "ec2",
+}
 
 
 def _coerce_int(value: object, default: int) -> int:
@@ -102,6 +109,9 @@ def _service_for_action(action_type: object) -> str | None:
     token = str(action_type or "").strip().lower()
     if not token:
         return None
+    exact = _EXACT_ACTION_TYPE_SERVICES.get(token)
+    if exact:
+        return exact
     for prefix, service in _SERVICE_PREFIXES:
         if token.startswith(prefix):
             return service
@@ -114,6 +124,16 @@ def _resource_id_for_action(action: Action) -> str | None:
         return resource_id
     target_id = str(getattr(action, "target_id", "") or "").strip()
     return target_id or None
+
+
+def reconcile_service_for_action_type(action_type: object) -> str | None:
+    """Return the reconcile inventory service for an action type when derivable."""
+    return _service_for_action(action_type)
+
+
+def reconcile_resource_id_for_action(action: Action) -> str | None:
+    """Return the resource identifier suitable for targeted reconcile when derivable."""
+    return _resource_id_for_action(action)
 
 
 def _snapshot_summary(snapshot: dict[str, Any]) -> dict[str, Any]:

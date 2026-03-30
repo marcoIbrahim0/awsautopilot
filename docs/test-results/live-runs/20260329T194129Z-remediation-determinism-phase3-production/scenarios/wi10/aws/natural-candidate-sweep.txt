@@ -1,0 +1,82 @@
+BUCKET security-autopilot-w6-envready-s315-exec-696505809372
+{
+    "BucketArn": "arn:aws:s3:::security-autopilot-w6-envready-s315-exec-696505809372",
+    "BucketRegion": "eu-north-1",
+    "AccessPointAlias": false
+}
+{
+    "PolicyStatus": {
+        "IsPublic": false
+    }
+}
+
+An error occurred (NoSuchWebsiteConfiguration) when calling the GetBucketWebsite operation: The specified bucket does not have a website configuration
+
+BUCKET security-autopilot-w6-envready-s311-review-696505809372
+{
+    "BucketArn": "arn:aws:s3:::security-autopilot-w6-envready-s311-review-696505809372",
+    "BucketRegion": "eu-north-1",
+    "AccessPointAlias": false
+}
+{
+    "PolicyStatus": {
+        "IsPublic": false
+    }
+}
+{
+    "IndexDocument": {
+        "Suffix": "index.html"
+    }
+}
+
+BUCKET sa-wi13-14-nopolicy-696505809372-20260328201935
+{
+    "BucketArn": "arn:aws:s3:::sa-wi13-14-nopolicy-696505809372-20260328201935",
+    "BucketRegion": "eu-north-1",
+    "AccessPointAlias": false
+}
+
+An error occurred (NoSuchBucketPolicy) when calling the GetBucketPolicyStatus operation: The bucket policy does not exist
+
+An error occurred (NoSuchWebsiteConfiguration) when calling the GetBucketWebsite operation: The specified bucket does not have a website configuration
+
+BUCKET sa-wi7-seed-696505809372-20260328205857
+
+An error occurred (404) when calling the HeadBucket operation: Not Found
+
+An error occurred (NoSuchBucket) when calling the GetBucketPolicyStatus operation: The specified bucket does not exist
+
+An error occurred (NoSuchBucket) when calling the GetBucketWebsite operation: The specified bucket does not exist
+
+BUCKET security-autopilot-access-logs-696505809372-r221001-access-logs
+
+An error occurred (404) when calling the HeadBucket operation: Not Found
+
+An error occurred (NoSuchBucket) when calling the GetBucketPolicyStatus operation: The specified bucket does not exist
+
+An error occurred (NoSuchBucket) when calling the GetBucketWebsite operation: The specified bucket does not exist
+
+BUCKET phase2-wi1-lifecycle-696505809372-20260328224331
+
+An error occurred (404) when calling the HeadBucket operation: Not Found
+
+An error occurred (NoSuchBucket) when calling the GetBucketPolicyStatus operation: The specified bucket does not exist
+
+An error occurred (NoSuchBucket) when calling the GetBucketWebsite operation: The specified bucket does not exist
+
+BUCKET sa-wi5-site-696505809372-20260328t164043z
+
+An error occurred (404) when calling the HeadBucket operation: Not Found
+
+An error occurred (NoSuchBucket) when calling the GetBucketPolicyStatus operation: The specified bucket does not exist
+
+An error occurred (NoSuchBucket) when calling the GetBucketWebsite operation: The specified bucket does not exist
+
+BUCKET ocypheris-live-ct-20260328t181200z-eu-north-1
+
+An error occurred (404) when calling the HeadBucket operation: Not Found
+
+An error occurred (NoSuchBucket) when calling the GetBucketPolicyStatus operation: The specified bucket does not exist
+
+An error occurred (NoSuchBucket) when calling the GetBucketWebsite operation: The specified bucket does not exist
+

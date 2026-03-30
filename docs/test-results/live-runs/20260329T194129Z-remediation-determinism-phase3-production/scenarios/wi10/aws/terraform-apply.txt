@@ -1,0 +1,15 @@
+terraform_data.delete_bucket_policy[0]: Creating...
+terraform_data.delete_bucket_policy[0]: Provisioning with 'local-exec'...
+terraform_data.delete_bucket_policy[0] (local-exec): Executing: ["/bin/bash" "-c" "set -euo pipefail\naws s3api delete-bucket-policy --bucket \"sa-wi13-14-nopolicy-696505809372-20260328201935\"\n"]
+terraform_data.delete_bucket_policy[0]: Creation complete after 1s [id=7c9a4386-b8f1-baa9-53f6-7871a15a2a14]
+aws_s3_bucket_public_access_block.security_autopilot: Creating...
+aws_s3_bucket_public_access_block.security_autopilot: Creation complete after 1s [id=sa-wi13-14-nopolicy-696505809372-20260328201935]
+
+Apply complete! Resources: 2 added, 0 changed, 0 destroyed.
+
+Outputs:
+
+removed_statement_count = 1
+removed_statement_identifiers = [
+  "AllowPublicReadForGate3WI10",
+]

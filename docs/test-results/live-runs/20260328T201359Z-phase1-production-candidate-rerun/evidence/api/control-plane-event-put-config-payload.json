@@ -1,0 +1,68 @@
+{
+  "events": [
+    {
+      "tenant_id": "e4e07aa8-b8ea-4c1d-9fd7-4362a2fc1195",
+      "account_id": "696505809372",
+      "region": "eu-north-1",
+      "event": {
+        "version": "0",
+        "id": "59dab117-4d07-4917-881b-daa4d63c6f13",
+        "detail-type": "AWS API Call via CloudTrail",
+        "source": "aws.config",
+        "account": "696505809372",
+        "time": "2026-03-28T22:19:44+02:00",
+        "region": "eu-north-1",
+        "detail": {
+          "eventVersion": "1.11",
+          "userIdentity": {
+            "type": "Root",
+            "principalId": "696505809372",
+            "arn": "arn:aws:iam::696505809372:root",
+            "accountId": "696505809372",
+            "accessKeyId": "AKIA2EKX3HHON3VGIFNM"
+          },
+          "eventTime": "2026-03-28T20:19:44Z",
+          "eventSource": "config.amazonaws.com",
+          "eventName": "PutConfigurationRecorder",
+          "awsRegion": "eu-north-1",
+          "sourceIPAddress": "41.40.130.125",
+          "userAgent": "aws-cli/2.33.0 md/awscrt#0.29.1 ua/2.1 os/macos#25.1.0 md/arch#arm64 lang/python#3.13.11 md/pyimpl#CPython m/E,n,b,Z cfg/retry-mode#standard md/installer#exe md/prompt#off md/command#configservice.put-configuration-recorder",
+          "requestParameters": {
+            "configurationRecorder": {
+              "roleARN": "arn:aws:iam::696505809372:role/aws-service-role/config.amazonaws.com/AWSServiceRoleForConfig",
+              "name": "default",
+              "recordingGroup": {
+                "allSupported": false,
+                "includeGlobalResourceTypes": false,
+                "recordingStrategy": {
+                  "useOnly": "INCLUSION_BY_RESOURCE_TYPES"
+                },
+                "resourceTypes": [
+                  "AWS::S3::Bucket"
+                ]
+              },
+              "recordingMode": {
+                "recordingFrequency": "CONTINUOUS"
+              }
+            }
+          },
+          "responseElements": null,
+          "requestID": "78ce675e-8d2d-47db-8270-75bb25e60f80",
+          "eventID": "59dab117-4d07-4917-881b-daa4d63c6f13",
+          "readOnly": false,
+          "eventType": "AwsApiCall",
+          "managementEvent": true,
+          "recipientAccountId": "696505809372",
+          "eventCategory": "Management",
+          "tlsDetails": {
+            "tlsVersion": "TLSv1.3",
+            "cipherSuite": "TLS_AES_128_GCM_SHA256",
+            "clientProvidedHostHeader": "config.eu-north-1.amazonaws.com"
+          }
+        }
+      },
+      "event_id": "59dab117-4d07-4917-881b-daa4d63c6f13",
+      "intake_time": "2026-03-28T22:19:44+02:00"
+    }
+  ]
+}

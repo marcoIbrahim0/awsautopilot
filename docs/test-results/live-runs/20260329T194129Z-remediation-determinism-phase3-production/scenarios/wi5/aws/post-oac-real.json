@@ -1,0 +1,13 @@
+{
+    "ETag": "ETVPDKIKX0DER",
+    "OriginAccessControl": {
+        "Id": "EDLL3VYQR916E",
+        "OriginAccessControlConfig": {
+            "Name": "security-autopilot-oac-a95f256f7ffa",
+            "Description": "OAC for Security Autopilot website migration",
+            "SigningProtocol": "sigv4",
+            "SigningBehavior": "always",
+            "OriginAccessControlOriginType": "s3"
+        }
+    }
+}

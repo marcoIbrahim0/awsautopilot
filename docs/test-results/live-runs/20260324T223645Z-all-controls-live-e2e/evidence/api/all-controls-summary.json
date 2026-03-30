@@ -1,0 +1,411 @@
+[
+  {
+    "group_id": "ff032063-af10-4693-bf9c-31c33b6a28ce",
+    "action_type": "sg_restrict_public_ports",
+    "region": "eu-north-1",
+    "controls": [
+      "EC2.53"
+    ],
+    "member_count": 4,
+    "can_generate_bundle": true,
+    "bundle_generation_blocked_reason": null,
+    "latest_statuses": [
+      "not_run_yet"
+    ],
+    "latest_run_status": null,
+    "latest_run_id": null,
+    "support_tiers_seen": [
+      "deterministic_bundle",
+      "review_required_bundle",
+      "manual_guidance_only"
+    ]
+  },
+  {
+    "group_id": "f5936cb5-8ab3-42ca-aa72-60d27bf88c3d",
+    "action_type": "s3_bucket_block_public_access",
+    "region": "eu-north-1",
+    "controls": [
+      "S3.2"
+    ],
+    "member_count": 3,
+    "can_generate_bundle": true,
+    "bundle_generation_blocked_reason": null,
+    "latest_statuses": [
+      "not_run_yet"
+    ],
+    "latest_run_status": null,
+    "latest_run_id": null,
+    "support_tiers_seen": [
+      "manual_guidance_only"
+    ]
+  },
+  {
+    "group_id": "f32ef69f-75a6-4b17-bb32-dcc8682ace7f",
+    "action_type": "ssm_block_public_sharing",
+    "region": "eu-north-1",
+    "controls": [
+      "SSM.7"
+    ],
+    "member_count": 1,
+    "can_generate_bundle": true,
+    "bundle_generation_blocked_reason": null,
+    "latest_statuses": [
+      "not_run_yet"
+    ],
+    "latest_run_status": null,
+    "latest_run_id": null,
+    "support_tiers_seen": [
+      "deterministic_bundle",
+      "manual_guidance_only"
+    ]
+  },
+  {
+    "group_id": "da34fc57-1e82-4d70-b637-e38bf5bf5b51",
+    "action_type": "ebs_snapshot_block_public_access",
+    "region": "eu-north-1",
+    "controls": [
+      "EC2.182"
+    ],
+    "member_count": 2,
+    "can_generate_bundle": true,
+    "bundle_generation_blocked_reason": null,
+    "latest_statuses": [
+      "run_successful_confirmed"
+    ],
+    "latest_run_status": null,
+    "latest_run_id": null,
+    "support_tiers_seen": [
+      "deterministic_bundle",
+      "manual_guidance_only"
+    ]
+  },
+  {
+    "group_id": "cde98a9b-c168-4bfe-a456-fabd61cb0faf",
+    "action_type": "ebs_default_encryption",
+    "region": "us-east-1",
+    "controls": [
+      "EC2.7"
+    ],
+    "member_count": 1,
+    "can_generate_bundle": true,
+    "bundle_generation_blocked_reason": null,
+    "latest_statuses": [
+      "not_run_yet"
+    ],
+    "latest_run_status": null,
+    "latest_run_id": null,
+    "support_tiers_seen": [
+      "deterministic_bundle"
+    ]
+  },
+  {
+    "group_id": "cc08cf10-f948-46ae-8b42-22d9891d9ef4",
+    "action_type": "ebs_default_encryption",
+    "region": "eu-north-1",
+    "controls": [
+      "EC2.7"
+    ],
+    "member_count": 1,
+    "can_generate_bundle": true,
+    "bundle_generation_blocked_reason": null,
+    "latest_statuses": [
+      "not_run_yet"
+    ],
+    "latest_run_status": null,
+    "latest_run_id": null,
+    "support_tiers_seen": [
+      "deterministic_bundle"
+    ]
+  },
+  {
+    "group_id": "c91803c4-63c4-4bbe-93ca-722bef8833fc",
+    "action_type": "s3_bucket_access_logging",
+    "region": "us-east-1",
+    "controls": [
+      "S3.9"
+    ],
+    "member_count": 1,
+    "can_generate_bundle": true,
+    "bundle_generation_blocked_reason": null,
+    "latest_statuses": [
+      "not_run_yet"
+    ],
+    "latest_run_status": null,
+    "latest_run_id": null,
+    "support_tiers_seen": [
+      "review_required_bundle"
+    ]
+  },
+  {
+    "group_id": "bb4292fb-683e-4b1e-b5b5-38df426ba32e",
+    "action_type": "s3_bucket_require_ssl",
+    "region": "us-east-1",
+    "controls": [
+      "S3.5"
+    ],
+    "member_count": 1,
+    "can_generate_bundle": true,
+    "bundle_generation_blocked_reason": null,
+    "latest_statuses": [
+      "not_run_yet"
+    ],
+    "latest_run_status": null,
+    "latest_run_id": null,
+    "support_tiers_seen": [
+      "deterministic_bundle",
+      "manual_guidance_only"
+    ]
+  },
+  {
+    "group_id": "aa087d9a-0547-4d76-bd51-f4eeb0005e83",
+    "action_type": "s3_bucket_require_ssl",
+    "region": "eu-north-1",
+    "controls": [
+      "S3.5"
+    ],
+    "member_count": 3,
+    "can_generate_bundle": true,
+    "bundle_generation_blocked_reason": null,
+    "latest_statuses": [
+      "not_run_yet"
+    ],
+    "latest_run_status": null,
+    "latest_run_id": null,
+    "support_tiers_seen": [
+      "deterministic_bundle",
+      "manual_guidance_only"
+    ]
+  },
+  {
+    "group_id": "a8ee0fbb-aa3a-4b54-a512-53bba77766ad",
+    "action_type": "s3_block_public_access",
+    "region": "us-east-1",
+    "controls": [
+      "S3.1"
+    ],
+    "member_count": 1,
+    "can_generate_bundle": true,
+    "bundle_generation_blocked_reason": null,
+    "latest_statuses": [
+      "not_run_yet"
+    ],
+    "latest_run_status": null,
+    "latest_run_id": null,
+    "support_tiers_seen": [
+      "deterministic_bundle"
+    ]
+  },
+  {
+    "group_id": "997f70a9-04ac-495b-a434-9a52083b5777",
+    "action_type": "s3_bucket_lifecycle_configuration",
+    "region": "eu-north-1",
+    "controls": [
+      "S3.11"
+    ],
+    "member_count": 13,
+    "can_generate_bundle": true,
+    "bundle_generation_blocked_reason": null,
+    "latest_statuses": [
+      "not_run_yet"
+    ],
+    "latest_run_status": null,
+    "latest_run_id": null,
+    "support_tiers_seen": [
+      "deterministic_bundle"
+    ]
+  },
+  {
+    "group_id": "978b0514-da93-4a44-94d6-cbee9144813a",
+    "action_type": "s3_block_public_access",
+    "region": "eu-north-1",
+    "controls": [
+      "S3.1"
+    ],
+    "member_count": 1,
+    "can_generate_bundle": true,
+    "bundle_generation_blocked_reason": null,
+    "latest_statuses": [
+      "run_successful_confirmed"
+    ],
+    "latest_run_status": null,
+    "latest_run_id": null,
+    "support_tiers_seen": [
+      "deterministic_bundle"
+    ]
+  },
+  {
+    "group_id": "91add132-cc7c-4d5d-b343-bea9696af6de",
+    "action_type": "iam_root_access_key_absent",
+    "region": "eu-north-1",
+    "controls": [
+      "IAM.4"
+    ],
+    "member_count": 1,
+    "can_generate_bundle": true,
+    "bundle_generation_blocked_reason": null,
+    "latest_statuses": [
+      "not_run_yet"
+    ],
+    "latest_run_status": null,
+    "latest_run_id": null,
+    "support_tiers_seen": [
+      "manual_guidance_only"
+    ]
+  },
+  {
+    "group_id": "8d0b831d-8c37-48eb-b1f2-099d6271faaa",
+    "action_type": "s3_bucket_access_logging",
+    "region": "eu-north-1",
+    "controls": [
+      "S3.9"
+    ],
+    "member_count": 14,
+    "can_generate_bundle": true,
+    "bundle_generation_blocked_reason": null,
+    "latest_statuses": [
+      "not_run_yet"
+    ],
+    "latest_run_status": null,
+    "latest_run_id": null,
+    "support_tiers_seen": [
+      "review_required_bundle"
+    ]
+  },
+  {
+    "group_id": "763ce593-dfc9-4109-82c3-7c47125354c2",
+    "action_type": "enable_guardduty",
+    "region": "eu-north-1",
+    "controls": [
+      "GuardDuty.1"
+    ],
+    "member_count": 1,
+    "can_generate_bundle": true,
+    "bundle_generation_blocked_reason": null,
+    "latest_statuses": [
+      "run_finished_metadata_only"
+    ],
+    "latest_run_status": null,
+    "latest_run_id": null,
+    "support_tiers_seen": [
+      "deterministic_bundle"
+    ]
+  },
+  {
+    "group_id": "661a96a0-0453-4df2-a48f-cb8d312659d6",
+    "action_type": "aws_config_enabled",
+    "region": "us-east-1",
+    "controls": [
+      "Config.1"
+    ],
+    "member_count": 1,
+    "can_generate_bundle": true,
+    "bundle_generation_blocked_reason": null,
+    "latest_statuses": [
+      "run_successful_pending_confirmation"
+    ],
+    "latest_run_status": null,
+    "latest_run_id": null,
+    "support_tiers_seen": [
+      "deterministic_bundle",
+      "review_required_bundle",
+      "manual_guidance_only"
+    ]
+  },
+  {
+    "group_id": "40ffa223-7869-4d43-abfe-ae991b0187cb",
+    "action_type": "iam_root_access_key_absent",
+    "region": "us-east-1",
+    "controls": [
+      "IAM.4"
+    ],
+    "member_count": 1,
+    "can_generate_bundle": true,
+    "bundle_generation_blocked_reason": null,
+    "latest_statuses": [
+      "not_run_yet"
+    ],
+    "latest_run_status": null,
+    "latest_run_id": null,
+    "support_tiers_seen": [
+      "manual_guidance_only"
+    ]
+  },
+  {
+    "group_id": "2d076270-1f7b-4c57-bc74-31197f047e5d",
+    "action_type": "s3_bucket_lifecycle_configuration",
+    "region": "us-east-1",
+    "controls": [
+      "S3.11"
+    ],
+    "member_count": 1,
+    "can_generate_bundle": true,
+    "bundle_generation_blocked_reason": null,
+    "latest_statuses": [
+      "not_run_yet"
+    ],
+    "latest_run_status": null,
+    "latest_run_id": null,
+    "support_tiers_seen": [
+      "deterministic_bundle"
+    ]
+  },
+  {
+    "group_id": "0e5457b7-ecba-491b-a04d-5e592b3727e3",
+    "action_type": "cloudtrail_enabled",
+    "region": "eu-north-1",
+    "controls": [
+      "CloudTrail.1"
+    ],
+    "member_count": 1,
+    "can_generate_bundle": true,
+    "bundle_generation_blocked_reason": null,
+    "latest_statuses": [
+      "run_successful_confirmed"
+    ],
+    "latest_run_status": null,
+    "latest_run_id": null,
+    "support_tiers_seen": [
+      "review_required_bundle"
+    ]
+  },
+  {
+    "group_id": "049d8f9e-ab73-411a-8dd2-1494efc60ada",
+    "action_type": "enable_guardduty",
+    "region": "us-east-1",
+    "controls": [
+      "GuardDuty.1"
+    ],
+    "member_count": 1,
+    "can_generate_bundle": true,
+    "bundle_generation_blocked_reason": null,
+    "latest_statuses": [
+      "run_finished_metadata_only"
+    ],
+    "latest_run_status": null,
+    "latest_run_id": null,
+    "support_tiers_seen": [
+      "deterministic_bundle"
+    ]
+  },
+  {
+    "group_id": "03352204-291a-4b40-bfc6-9913c42148ac",
+    "action_type": "aws_config_enabled",
+    "region": "eu-north-1",
+    "controls": [
+      "Config.1"
+    ],
+    "member_count": 1,
+    "can_generate_bundle": true,
+    "bundle_generation_blocked_reason": null,
+    "latest_statuses": [
+      "run_successful_pending_confirmation"
+    ],
+    "latest_run_status": null,
+    "latest_run_id": null,
+    "support_tiers_seen": [
+      "deterministic_bundle",
+      "review_required_bundle",
+      "manual_guidance_only"
+    ]
+  }
+]

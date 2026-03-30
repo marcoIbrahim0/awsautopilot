@@ -1,0 +1,23 @@
+HTTP/2 200 
+date: Wed, 25 Mar 2026 00:25:40 GMT
+content-type: text/html; charset=utf-8
+cache-control: s-maxage=31536000
+etag: "12z436fmv8i989"
+strict-transport-security: max-age=63072000; includeSubDomains; preload
+vary: rsc, next-router-state-tree, next-router-prefetch, next-router-segment-prefetch
+content-security-policy: default-src 'self'; base-uri 'self'; frame-ancestors 'none'; object-src 'none'; script-src 'self' 'unsafe-inline' https://static.cloudflareinsights.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; img-src 'self' data: blob: https:; font-src 'self' data: https://fonts.gstatic.com; connect-src 'self' https:; frame-src 'none'; form-action 'self'; upgrade-insecure-requests
+permissions-policy: camera=(), microphone=(), geolocation=()
+referrer-policy: strict-origin-when-cross-origin
+x-content-type-options: nosniff
+x-frame-options: DENY
+x-nextjs-cache: MISS
+x-nextjs-prerender: 1
+x-nextjs-stale-time: 300
+x-opennext: 1
+x-powered-by: Next.js
+report-to: {"group":"cf-nel","max_age":604800,"endpoints":[{"url":"https://a.nel.cloudflare.com/report/v4?s=dImcXvPOO8MuNNaOmnIld59wu9LTGR7g9pWYR7ZslayTltf8OnJK%2Fzb%2Fz6t020Vt79PFSCAW3tbrfKUUXdXvOkrXoasvWGdMygE62aU%3D"}]}
+nel: {"report_to":"cf-nel","success_fraction":0.0,"max_age":604800}
+server: cloudflare
+cf-ray: 9e19c796cee9e22c-MRS
+alt-svc: h3=":443"; ma=86400
+

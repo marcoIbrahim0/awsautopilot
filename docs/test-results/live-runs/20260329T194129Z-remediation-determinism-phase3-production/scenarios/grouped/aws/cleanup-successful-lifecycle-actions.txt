@@ -1,0 +1,70 @@
+DELETE sa-wi13-14-nopolicy-696505809372-20260328201935
+VERIFY sa-wi13-14-nopolicy-696505809372-20260328201935
+
+An error occurred (NoSuchLifecycleConfiguration) when calling the GetBucketLifecycleConfiguration operation: The lifecycle configuration does not exist
+
+DELETE security-autopilot-access-logs-696505809372-r221001
+VERIFY security-autopilot-access-logs-696505809372-r221001
+
+An error occurred (NoSuchLifecycleConfiguration) when calling the GetBucketLifecycleConfiguration operation: The lifecycle configuration does not exist
+
+DELETE security-autopilot-w6-envready-cloudtrail-696505809372
+VERIFY security-autopilot-w6-envready-cloudtrail-696505809372
+
+An error occurred (NoSuchLifecycleConfiguration) when calling the GetBucketLifecycleConfiguration operation: The lifecycle configuration does not exist
+
+DELETE config-bucket-696505809372
+VERIFY config-bucket-696505809372
+
+An error occurred (NoSuchLifecycleConfiguration) when calling the GetBucketLifecycleConfiguration operation: The lifecycle configuration does not exist
+
+DELETE security-autopilot-w6-envready-s311-exec-696505809372
+VERIFY security-autopilot-w6-envready-s311-exec-696505809372
+
+An error occurred (NoSuchLifecycleConfiguration) when calling the GetBucketLifecycleConfiguration operation: The lifecycle configuration does not exist
+
+DELETE security-autopilot-w6-strict-s311-exec-696505809372
+VERIFY security-autopilot-w6-strict-s311-exec-696505809372
+
+An error occurred (NoSuchLifecycleConfiguration) when calling the GetBucketLifecycleConfiguration operation: The lifecycle configuration does not exist
+
+DELETE security-autopilot-w6-envready-accesslogs-696505809372
+VERIFY security-autopilot-w6-envready-accesslogs-696505809372
+
+An error occurred (NoSuchLifecycleConfiguration) when calling the GetBucketLifecycleConfiguration operation: The lifecycle configuration does not exist
+
+DELETE security-autopilot-w6-strict-s311-manual-696505809372
+VERIFY security-autopilot-w6-strict-s311-manual-696505809372
+
+An error occurred (NoSuchLifecycleConfiguration) when calling the GetBucketLifecycleConfiguration operation: The lifecycle configuration does not exist
+
+DELETE ocypheris-live-ct-20260323162333-eu-north-1
+VERIFY ocypheris-live-ct-20260323162333-eu-north-1
+
+An error occurred (NoSuchLifecycleConfiguration) when calling the GetBucketLifecycleConfiguration operation: The lifecycle configuration does not exist
+
+DELETE security-autopilot-w6-strict-s315-manual-696505809372
+VERIFY security-autopilot-w6-strict-s315-manual-696505809372
+
+An error occurred (NoSuchLifecycleConfiguration) when calling the GetBucketLifecycleConfiguration operation: The lifecycle configuration does not exist
+
+DELETE security-autopilot-w6-strict-s315-exec-696505809372
+VERIFY security-autopilot-w6-strict-s315-exec-696505809372
+
+An error occurred (NoSuchLifecycleConfiguration) when calling the GetBucketLifecycleConfiguration operation: The lifecycle configuration does not exist
+
+DELETE security-autopilot-config-696505809372-eu-north-1
+VERIFY security-autopilot-config-696505809372-eu-north-1
+
+An error occurred (NoSuchLifecycleConfiguration) when calling the GetBucketLifecycleConfiguration operation: The lifecycle configuration does not exist
+
+DELETE security-autopilot-w6-envready-config-696505809372
+VERIFY security-autopilot-w6-envready-config-696505809372
+
+An error occurred (NoSuchLifecycleConfiguration) when calling the GetBucketLifecycleConfiguration operation: The lifecycle configuration does not exist
+
+DELETE security-autopilot-w6-envready-s315-exec-696505809372
+VERIFY security-autopilot-w6-envready-s315-exec-696505809372
+
+An error occurred (NoSuchLifecycleConfiguration) when calling the GetBucketLifecycleConfiguration operation: The lifecycle configuration does not exist
+

@@ -1,0 +1,7 @@
+Archive:  /Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260330T000053Z-remediation-determinism-phase1-phase2-closure/scenarios/wi1/bundle/pr-bundle.zip
+  inflating: /Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260330T000053Z-remediation-determinism-phase1-phase2-closure/scenarios/wi1/bundle/extracted/README.txt  
+  inflating: /Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260330T000053Z-remediation-determinism-phase1-phase2-closure/scenarios/wi1/bundle/extracted/pr_automation/control_mapping_context.json  
+  inflating: /Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260330T000053Z-remediation-determinism-phase1-phase2-closure/scenarios/wi1/bundle/extracted/pr_automation/diff_summary.json  
+  inflating: /Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260330T000053Z-remediation-determinism-phase1-phase2-closure/scenarios/wi1/bundle/extracted/pr_automation/rollback_notes.md  
+  inflating: /Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260330T000053Z-remediation-determinism-phase1-phase2-closure/scenarios/wi1/bundle/extracted/providers.tf  
+  inflating: /Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260330T000053Z-remediation-determinism-phase1-phase2-closure/scenarios/wi1/bundle/extracted/s3_bucket_lifecycle_configuration.tf  

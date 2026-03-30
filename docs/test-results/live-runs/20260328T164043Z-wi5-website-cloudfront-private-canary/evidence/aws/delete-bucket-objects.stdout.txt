@@ -1,0 +1,2 @@
+delete: s3://sa-wi5-site-696505809372-20260328t164043z/index.html
+delete: s3://sa-wi5-site-696505809372-20260328t164043z/error.html

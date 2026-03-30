@@ -1,0 +1,9 @@
+Archive:  /Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260328T221004Z-remediation-determinism-phase1-phase2-production/scenarios/wi8/bundle/pr-bundle.zip
+  inflating: /Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260328T221004Z-remediation-determinism-phase1-phase2-production/scenarios/wi8/bundle/extracted/README.txt  
+  inflating: /Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260328T221004Z-remediation-determinism-phase1-phase2-production/scenarios/wi8/bundle/extracted/pr_automation/control_mapping_context.json  
+  inflating: /Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260328T221004Z-remediation-determinism-phase1-phase2-production/scenarios/wi8/bundle/extracted/pr_automation/diff_summary.json  
+  inflating: /Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260328T221004Z-remediation-determinism-phase1-phase2-production/scenarios/wi8/bundle/extracted/pr_automation/rollback_notes.md  
+  inflating: /Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260328T221004Z-remediation-determinism-phase1-phase2-production/scenarios/wi8/bundle/extracted/providers.tf  
+  inflating: /Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260328T221004Z-remediation-determinism-phase1-phase2-production/scenarios/wi8/bundle/extracted/rollback/sg_restore.py  
+  inflating: /Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260328T221004Z-remediation-determinism-phase1-phase2-production/scenarios/wi8/bundle/extracted/scripts/sg_capture_state.py  
+  inflating: /Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260328T221004Z-remediation-determinism-phase1-phase2-production/scenarios/wi8/bundle/extracted/sg_restrict_public_ports.tf  

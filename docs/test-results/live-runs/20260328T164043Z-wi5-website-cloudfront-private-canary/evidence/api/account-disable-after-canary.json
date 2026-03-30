@@ -1,0 +1,18 @@
+{
+  "status_code": 200,
+  "body": {
+    "id": "56a0a77d-1a64-41bf-93d3-c181b0fd4cf9",
+    "account_id": "696505809372",
+    "role_read_arn": "arn:aws:iam::696505809372:role/SecurityAutopilotReadRole",
+    "role_write_arn": null,
+    "regions": [
+      "eu-north-1",
+      "us-east-1"
+    ],
+    "status": "disabled",
+    "last_validated_at": "2026-03-28T16:52:37.696676Z",
+    "last_synced_at": null,
+    "created_at": "2026-03-24T19:06:22.721836Z",
+    "updated_at": "2026-03-28T17:05:15.098296Z"
+  }
+}

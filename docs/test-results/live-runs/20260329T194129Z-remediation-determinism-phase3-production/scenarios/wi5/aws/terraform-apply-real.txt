@@ -1,0 +1,49 @@
+aws_cloudfront_origin_access_control.security_autopilot: Creating...
+aws_cloudfront_origin_access_control.security_autopilot: Creation complete after 1s [id=EDLL3VYQR916E]
+aws_cloudfront_distribution.security_autopilot: Creating...
+aws_cloudfront_distribution.security_autopilot: Still creating... [00m10s elapsed]
+aws_cloudfront_distribution.security_autopilot: Still creating... [00m20s elapsed]
+aws_cloudfront_distribution.security_autopilot: Still creating... [00m30s elapsed]
+aws_cloudfront_distribution.security_autopilot: Still creating... [00m40s elapsed]
+aws_cloudfront_distribution.security_autopilot: Still creating... [00m50s elapsed]
+aws_cloudfront_distribution.security_autopilot: Still creating... [01m00s elapsed]
+aws_cloudfront_distribution.security_autopilot: Still creating... [01m10s elapsed]
+aws_cloudfront_distribution.security_autopilot: Still creating... [01m20s elapsed]
+aws_cloudfront_distribution.security_autopilot: Still creating... [01m30s elapsed]
+aws_cloudfront_distribution.security_autopilot: Still creating... [01m40s elapsed]
+aws_cloudfront_distribution.security_autopilot: Still creating... [01m50s elapsed]
+aws_cloudfront_distribution.security_autopilot: Still creating... [02m00s elapsed]
+aws_cloudfront_distribution.security_autopilot: Still creating... [02m10s elapsed]
+aws_cloudfront_distribution.security_autopilot: Still creating... [02m20s elapsed]
+aws_cloudfront_distribution.security_autopilot: Still creating... [02m30s elapsed]
+aws_cloudfront_distribution.security_autopilot: Creation complete after 2m38s [id=E3VUPASYW2QL80]
+data.aws_iam_policy_document.bucket_policy: Reading...
+data.aws_iam_policy_document.bucket_policy: Read complete after 0s [id=2915260774]
+aws_s3_bucket_policy.security_autopilot: Creating...
+aws_s3_bucket_policy.security_autopilot: Creation complete after 1s [id=security-autopilot-w6-envready-s311-review-696505809372]
+aws_route53_record.website_ipv6["wi5-gate3-696505809372.ocypheris.com"]: Creating...
+aws_route53_record.website_ipv4["wi5-gate3-696505809372.ocypheris.com"]: Creating...
+aws_route53_record.website_ipv4["wi5-gate3-696505809372.ocypheris.com"]: Still creating... [00m10s elapsed]
+aws_route53_record.website_ipv6["wi5-gate3-696505809372.ocypheris.com"]: Still creating... [00m10s elapsed]
+aws_route53_record.website_ipv6["wi5-gate3-696505809372.ocypheris.com"]: Still creating... [00m20s elapsed]
+aws_route53_record.website_ipv4["wi5-gate3-696505809372.ocypheris.com"]: Still creating... [00m20s elapsed]
+aws_route53_record.website_ipv4["wi5-gate3-696505809372.ocypheris.com"]: Still creating... [00m30s elapsed]
+aws_route53_record.website_ipv6["wi5-gate3-696505809372.ocypheris.com"]: Still creating... [00m30s elapsed]
+aws_route53_record.website_ipv6["wi5-gate3-696505809372.ocypheris.com"]: Creation complete after 33s [id=Z081885955B6GUR4IL7E_wi5-gate3-696505809372.ocypheris.com_AAAA]
+aws_route53_record.website_ipv4["wi5-gate3-696505809372.ocypheris.com"]: Creation complete after 33s [id=Z081885955B6GUR4IL7E_wi5-gate3-696505809372.ocypheris.com_A]
+null_resource.disable_bucket_website: Creating...
+null_resource.disable_bucket_website: Provisioning with 'local-exec'...
+null_resource.disable_bucket_website (local-exec): Executing: ["/bin/bash" "-c" "set -euo pipefail\naws s3api delete-bucket-website --bucket \"security-autopilot-w6-envready-s311-review-696505809372\" --region \"eu-north-1\"\n"]
+null_resource.disable_bucket_website: Creation complete after 2s [id=280799755198281464]
+aws_s3_bucket_public_access_block.security_autopilot: Creating...
+aws_s3_bucket_public_access_block.security_autopilot: Creation complete after 1s [id=security-autopilot-w6-envready-s311-review-696505809372]
+
+Apply complete! Resources: 7 added, 0 changed, 0 destroyed.
+
+Outputs:
+
+cloudfront_distribution_id = "E3VUPASYW2QL80"
+cloudfront_domain_name = "dxxm59bao95gt.cloudfront.net"
+website_aliases = tolist([
+  "wi5-gate3-696505809372.ocypheris.com",
+])

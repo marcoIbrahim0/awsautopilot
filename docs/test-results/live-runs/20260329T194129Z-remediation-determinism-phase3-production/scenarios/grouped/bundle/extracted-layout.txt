@@ -1,0 +1,10 @@
+/docs/test-results/live-runs/20260329T194129Z-remediation-determinism-phase3-production/scenarios/grouped/bundle/extracted/README_GROUP.txt
+/docs/test-results/live-runs/20260329T194129Z-remediation-determinism-phase3-production/scenarios/grouped/bundle/extracted/bundle_manifest.json
+/docs/test-results/live-runs/20260329T194129Z-remediation-determinism-phase3-production/scenarios/grouped/bundle/extracted/decision_log.md
+/docs/test-results/live-runs/20260329T194129Z-remediation-determinism-phase3-production/scenarios/grouped/bundle/extracted/finding_coverage.json
+/docs/test-results/live-runs/20260329T194129Z-remediation-determinism-phase3-production/scenarios/grouped/bundle/extracted/pr_automation/control_mapping_context.json
+/docs/test-results/live-runs/20260329T194129Z-remediation-determinism-phase3-production/scenarios/grouped/bundle/extracted/pr_automation/diff_summary.json
+/docs/test-results/live-runs/20260329T194129Z-remediation-determinism-phase3-production/scenarios/grouped/bundle/extracted/pr_automation/rollback_notes.md
+/docs/test-results/live-runs/20260329T194129Z-remediation-determinism-phase3-production/scenarios/grouped/bundle/extracted/replay_group_run_reports.sh
+/docs/test-results/live-runs/20260329T194129Z-remediation-determinism-phase3-production/scenarios/grouped/bundle/extracted/run_actions.sh
+/docs/test-results/live-runs/20260329T194129Z-remediation-determinism-phase3-production/scenarios/grouped/bundle/extracted/run_all.sh

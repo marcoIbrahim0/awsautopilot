@@ -1,0 +1,3 @@
+Total messages: 1 (Errors: 1, Warnings: 0)
+
+[ERROR] Failed to load resource: the server responded with a status of 401 () @ https://api.ocypheris.com/api/auth/me:0

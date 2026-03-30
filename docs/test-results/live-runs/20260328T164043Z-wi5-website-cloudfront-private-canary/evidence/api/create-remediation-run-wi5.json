@@ -1,0 +1,9 @@
+{
+  "status_code": 400,
+  "body": {
+    "detail": {
+      "error": "Invalid strategy selection",
+      "detail": "Unknown strategy_id 's3_migrate_website_cloudfront_private' for action_type 's3_bucket_block_public_access'."
+    }
+  }
+}

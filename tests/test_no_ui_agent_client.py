@@ -96,3 +96,62 @@ def test_client_retries_transient_http_error_then_raises(monkeypatch) -> None:
         assert exc.status_code == 503
 
     assert attempts["count"] == 3
+
+
+def test_get_remediation_preview_encodes_strategy_inputs_query(monkeypatch) -> None:
+    captured: dict[str, object] = {}
+
+    def fake_urlopen(request, *args, **kwargs):
+        del args, kwargs
+        captured["url"] = request.full_url
+        return _FakeResponse(b"{}")
+
+    monkeypatch.setattr(client_mod, "urlopen", fake_urlopen)
+
+    client = SaaSApiClient("https://api.ocypheris.com", retries=0)
+    client.set_access_token("token")
+    payload = client.get_remediation_preview(
+        "action-1",
+        strategy_id="cloudtrail_enable_guided",
+        profile_id="cloudtrail_enable_guided",
+        strategy_inputs={"trail_bucket_name": "logs-bucket", "create_bucket_if_missing": True},
+    )
+
+    assert payload == {}
+    url = str(captured["url"])
+    assert "/api/actions/action-1/remediation-preview?" in url
+    assert "strategy_id=cloudtrail_enable_guided" in url
+    assert "profile_id=cloudtrail_enable_guided" in url
+    assert "strategy_inputs=" in url
+
+
+def test_create_pr_bundle_run_includes_guided_payload_fields(monkeypatch) -> None:
+    captured: dict[str, object] = {}
+
+    def fake_urlopen(request, *args, **kwargs):
+        del args, kwargs
+        captured["body"] = json.loads(request.data.decode("utf-8"))
+        return _FakeResponse(b"{\"id\":\"run-1\"}")
+
+    monkeypatch.setattr(client_mod, "urlopen", fake_urlopen)
+
+    client = SaaSApiClient("https://api.ocypheris.com", retries=0)
+    client.set_access_token("token")
+    payload = client.create_pr_bundle_run(
+        "action-1",
+        "cloudtrail_enable_guided",
+        profile_id="cloudtrail_enable_guided",
+        strategy_inputs={"trail_bucket_name": "logs-bucket", "create_bucket_if_missing": True},
+        bucket_creation_acknowledged=True,
+    )
+
+    assert payload == {"id": "run-1"}
+    assert captured["body"] == {
+        "action_id": "action-1",
+        "mode": "pr_only",
+        "risk_acknowledged": True,
+        "strategy_id": "cloudtrail_enable_guided",
+        "profile_id": "cloudtrail_enable_guided",
+        "strategy_inputs": {"trail_bucket_name": "logs-bucket", "create_bucket_if_missing": True},
+        "bucket_creation_acknowledged": True,
+    }

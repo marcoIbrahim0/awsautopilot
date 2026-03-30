@@ -1,0 +1,51 @@
+{
+  "run_id": "20260329T002042Z-wi1-production-closure",
+  "created_at_utc": "2026-03-29T00:20:42Z",
+  "completed_at_utc": "2026-03-29T00:52:00Z",
+  "branch": "master",
+  "commit": "481b5a00f8ec00f26174d20350e2bf740e5d856e",
+  "api_base": "https://api.ocypheris.com",
+  "tenant": {
+    "name": "Marco",
+    "id": "e4e07aa8-b8ea-4c1d-9fd7-4362a2fc1195"
+  },
+  "canary": {
+    "account_id": "696505809372",
+    "region": "eu-north-1",
+    "aws_profile": "test28-root"
+  },
+  "deploy": {
+    "status": "pass",
+    "runtime_image_tag": "20260329T003636Z"
+  },
+  "gate_status": {
+    "local_regression": "pass",
+    "wi_1_live_closure": "blocked"
+  },
+  "fix_boundary": {
+    "category": "finding_materialization",
+    "status": "fixed",
+    "notes": "Production reconcile now materializes a truthful inventory-backed bucket-scoped S3.11 finding when Security Hub never produced a row."
+  },
+  "work_items": [
+    {
+      "wi": "WI-1",
+      "control": "S3.11",
+      "status": "blocked",
+      "production_proof": false,
+      "seed_bucket": "phase2-wi1-lifecycle-696505809372-20260329004157",
+      "finding_materialized": true,
+      "finding_id": "e14c5cb6-9ccd-413a-9dbe-f0b49a6e47d3",
+      "finding_source": "event_monitor_shadow",
+      "finding_status": "RESOLVED",
+      "shadow_status_reason": "inventory_confirmed_compliant",
+      "action_present": false,
+      "notes": "Post-deploy ingest still returned no_changes_detected, but reconcile plus compute now surfaced a truthful resolved finding. Because the seeded lifecycle rule is compliant, production still exposes no open action and the additive-merge execution chain cannot be claimed truthfully."
+    }
+  ],
+  "retained_blockers": [
+    "Security Hub ingest still does not surface the seeded lifecycle bucket",
+    "The truthful seeded lifecycle bucket resolves as compliant after reconcile, so production still provides no open WI-1 action to preview or create",
+    "WI-1 therefore remains BLOCKED even though the missing-finding materialization bug is fixed"
+  ]
+}

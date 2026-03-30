@@ -1,0 +1,725 @@
+{
+  "s3_bucket_block_public_access": [
+    {
+      "id": "0b87839b-28f5-4150-af26-74cf2b1af3a3",
+      "target_id": "696505809372|eu-north-1|arn:aws:s3:::security-autopilot-w6-envready-s315-exec-696505809372|S3.2",
+      "recommended_profile_id": "s3_bucket_block_public_access_manual_preservation",
+      "support_tiers": [
+        "manual_guidance_only",
+        "manual_guidance_only",
+        "review_required_bundle"
+      ],
+      "blocked_reasons": [
+        "Runtime evidence could not prove the bucket is private and website hosting is disabled.",
+        "Unable to inspect bucket website configuration (AccessDenied)."
+      ],
+      "dependency_checks": [
+        {
+          "code": "s3_public_access_dependency",
+          "status": "warn",
+          "message": "Runtime probes could not fully determine bucket public-access posture. Validate direct bucket access dependencies before applying this strategy. Analyze the affected S3 bucket policy/ACL/public-access-block settings, the bucket KMS key policy/grants (if SSE-KMS), CloudFront OAC/OAI configuration, and any VPC endpoint or cross-account IAM principals that access the bucket. If IAM Access Analyzer is enabled in this account/region, this validation can be automated."
+        },
+        {
+          "code": "access_path_evidence_unavailable",
+          "status": "fail",
+          "message": "Unable to inspect bucket website configuration (AccessDenied)."
+        }
+      ],
+      "apply_time_merge": false,
+      "public_policy_scrub_available": false,
+      "website_configured": null,
+      "existing_bucket_policy_capture_error": null,
+      "existing_lifecycle_capture_error": null,
+      "existing_lifecycle_rule_count": null
+    },
+    {
+      "id": "352ac9b2-d343-40ac-b427-4c4f285615ef",
+      "target_id": "696505809372|eu-north-1|arn:aws:s3:::security-autopilot-w6-envready-s311-review-696505809372|S3.2",
+      "recommended_profile_id": "s3_bucket_block_public_access_manual_preservation",
+      "support_tiers": [
+        "manual_guidance_only",
+        "manual_guidance_only",
+        "review_required_bundle"
+      ],
+      "blocked_reasons": [
+        "Runtime evidence could not prove the bucket is private and website hosting is disabled.",
+        "Unable to inspect bucket website configuration (AccessDenied)."
+      ],
+      "dependency_checks": [
+        {
+          "code": "s3_public_access_dependency",
+          "status": "warn",
+          "message": "Runtime probes could not fully determine bucket public-access posture. Validate direct bucket access dependencies before applying this strategy. Analyze the affected S3 bucket policy/ACL/public-access-block settings, the bucket KMS key policy/grants (if SSE-KMS), CloudFront OAC/OAI configuration, and any VPC endpoint or cross-account IAM principals that access the bucket. If IAM Access Analyzer is enabled in this account/region, this validation can be automated."
+        },
+        {
+          "code": "access_path_evidence_unavailable",
+          "status": "fail",
+          "message": "Unable to inspect bucket website configuration (AccessDenied)."
+        }
+      ],
+      "apply_time_merge": false,
+      "public_policy_scrub_available": false,
+      "website_configured": null,
+      "existing_bucket_policy_capture_error": null,
+      "existing_lifecycle_capture_error": null,
+      "existing_lifecycle_rule_count": null
+    },
+    {
+      "id": "688f5ed0-9594-4df1-9883-cc17feca62f8",
+      "target_id": "696505809372|eu-north-1|arn:aws:s3:::sa-wi13-14-nopolicy-696505809372-20260328201935|S3.2",
+      "recommended_profile_id": "s3_bucket_block_public_access_manual_preservation",
+      "support_tiers": [
+        "manual_guidance_only",
+        "manual_guidance_only",
+        "review_required_bundle"
+      ],
+      "blocked_reasons": [
+        "Runtime evidence could not prove the bucket is private and website hosting is disabled.",
+        "Unable to inspect bucket website configuration (AccessDenied)."
+      ],
+      "dependency_checks": [
+        {
+          "code": "s3_public_access_dependency",
+          "status": "warn",
+          "message": "Runtime probes could not fully determine bucket public-access posture. Validate direct bucket access dependencies before applying this strategy. Analyze the affected S3 bucket policy/ACL/public-access-block settings, the bucket KMS key policy/grants (if SSE-KMS), CloudFront OAC/OAI configuration, and any VPC endpoint or cross-account IAM principals that access the bucket. If IAM Access Analyzer is enabled in this account/region, this validation can be automated."
+        },
+        {
+          "code": "access_path_evidence_unavailable",
+          "status": "fail",
+          "message": "Unable to inspect bucket website configuration (AccessDenied)."
+        }
+      ],
+      "apply_time_merge": false,
+      "public_policy_scrub_available": false,
+      "website_configured": null,
+      "existing_bucket_policy_capture_error": null,
+      "existing_lifecycle_capture_error": null,
+      "existing_lifecycle_rule_count": null
+    },
+    {
+      "id": "4a965fac-c139-46e3-8594-11058b1dfe24",
+      "target_id": "696505809372|eu-north-1|arn:aws:s3:::sa-wi7-seed-696505809372-20260328205857|S3.2",
+      "recommended_profile_id": "s3_bucket_block_public_access_manual_preservation",
+      "support_tiers": [
+        "manual_guidance_only",
+        "manual_guidance_only",
+        "review_required_bundle"
+      ],
+      "blocked_reasons": [
+        "Runtime evidence could not prove the bucket is private and website hosting is disabled."
+      ],
+      "dependency_checks": [
+        {
+          "code": "s3_public_access_dependency",
+          "status": "warn",
+          "message": "Runtime probes could not fully determine bucket public-access posture. Validate direct bucket access dependencies before applying this strategy. Analyze the affected S3 bucket policy/ACL/public-access-block settings, the bucket KMS key policy/grants (if SSE-KMS), CloudFront OAC/OAI configuration, and any VPC endpoint or cross-account IAM principals that access the bucket. If IAM Access Analyzer is enabled in this account/region, this validation can be automated."
+        }
+      ],
+      "apply_time_merge": false,
+      "public_policy_scrub_available": false,
+      "website_configured": null,
+      "existing_bucket_policy_capture_error": null,
+      "existing_lifecycle_capture_error": null,
+      "existing_lifecycle_rule_count": null
+    },
+    {
+      "id": "5571e909-6491-4077-818e-5441ae0dc95d",
+      "target_id": "696505809372|eu-north-1|arn:aws:s3:::security-autopilot-access-logs-696505809372-r221001-access-logs|S3.2",
+      "recommended_profile_id": "s3_bucket_block_public_access_manual_preservation",
+      "support_tiers": [
+        "manual_guidance_only",
+        "manual_guidance_only",
+        "review_required_bundle"
+      ],
+      "blocked_reasons": [
+        "Runtime evidence could not prove the bucket is private and website hosting is disabled."
+      ],
+      "dependency_checks": [
+        {
+          "code": "s3_public_access_dependency",
+          "status": "warn",
+          "message": "Runtime probes could not fully determine bucket public-access posture. Validate direct bucket access dependencies before applying this strategy. Analyze the affected S3 bucket policy/ACL/public-access-block settings, the bucket KMS key policy/grants (if SSE-KMS), CloudFront OAC/OAI configuration, and any VPC endpoint or cross-account IAM principals that access the bucket. If IAM Access Analyzer is enabled in this account/region, this validation can be automated."
+        }
+      ],
+      "apply_time_merge": false,
+      "public_policy_scrub_available": false,
+      "website_configured": null,
+      "existing_bucket_policy_capture_error": null,
+      "existing_lifecycle_capture_error": null,
+      "existing_lifecycle_rule_count": null
+    },
+    {
+      "id": "7522bc9f-5cab-4bad-908b-a382045f8d87",
+      "target_id": "696505809372|eu-north-1|arn:aws:s3:::phase2-wi1-lifecycle-696505809372-20260328224331|S3.2",
+      "recommended_profile_id": "s3_bucket_block_public_access_manual_preservation",
+      "support_tiers": [
+        "manual_guidance_only",
+        "manual_guidance_only",
+        "review_required_bundle"
+      ],
+      "blocked_reasons": [
+        "Runtime evidence could not prove the bucket is private and website hosting is disabled."
+      ],
+      "dependency_checks": [
+        {
+          "code": "s3_public_access_dependency",
+          "status": "warn",
+          "message": "Runtime probes could not fully determine bucket public-access posture. Validate direct bucket access dependencies before applying this strategy. Analyze the affected S3 bucket policy/ACL/public-access-block settings, the bucket KMS key policy/grants (if SSE-KMS), CloudFront OAC/OAI configuration, and any VPC endpoint or cross-account IAM principals that access the bucket. If IAM Access Analyzer is enabled in this account/region, this validation can be automated."
+        }
+      ],
+      "apply_time_merge": false,
+      "public_policy_scrub_available": false,
+      "website_configured": null,
+      "existing_bucket_policy_capture_error": null,
+      "existing_lifecycle_capture_error": null,
+      "existing_lifecycle_rule_count": null
+    },
+    {
+      "id": "bdfa85bc-b3a3-4456-b8d9-9ed1dd895ad3",
+      "target_id": "696505809372|eu-north-1|arn:aws:s3:::sa-wi5-site-696505809372-20260328t164043z|S3.2",
+      "recommended_profile_id": "s3_bucket_block_public_access_manual_preservation",
+      "support_tiers": [
+        "manual_guidance_only",
+        "manual_guidance_only",
+        "review_required_bundle"
+      ],
+      "blocked_reasons": [
+        "Runtime evidence could not prove the bucket is private and website hosting is disabled."
+      ],
+      "dependency_checks": [
+        {
+          "code": "s3_public_access_dependency",
+          "status": "warn",
+          "message": "Runtime probes could not fully determine bucket public-access posture. Validate direct bucket access dependencies before applying this strategy. Analyze the affected S3 bucket policy/ACL/public-access-block settings, the bucket KMS key policy/grants (if SSE-KMS), CloudFront OAC/OAI configuration, and any VPC endpoint or cross-account IAM principals that access the bucket. If IAM Access Analyzer is enabled in this account/region, this validation can be automated."
+        }
+      ],
+      "apply_time_merge": false,
+      "public_policy_scrub_available": false,
+      "website_configured": null,
+      "existing_bucket_policy_capture_error": null,
+      "existing_lifecycle_capture_error": null,
+      "existing_lifecycle_rule_count": null
+    },
+    {
+      "id": "cdb53f5c-8701-497d-a866-4256cddd9d66",
+      "target_id": "696505809372|eu-north-1|arn:aws:s3:::ocypheris-live-ct-20260328t181200z-eu-north-1|S3.2",
+      "recommended_profile_id": "s3_bucket_block_public_access_manual_preservation",
+      "support_tiers": [
+        "manual_guidance_only",
+        "manual_guidance_only",
+        "review_required_bundle"
+      ],
+      "blocked_reasons": [
+        "Runtime evidence could not prove the bucket is private and website hosting is disabled."
+      ],
+      "dependency_checks": [
+        {
+          "code": "s3_public_access_dependency",
+          "status": "warn",
+          "message": "Runtime probes could not fully determine bucket public-access posture. Validate direct bucket access dependencies before applying this strategy. Analyze the affected S3 bucket policy/ACL/public-access-block settings, the bucket KMS key policy/grants (if SSE-KMS), CloudFront OAC/OAI configuration, and any VPC endpoint or cross-account IAM principals that access the bucket. If IAM Access Analyzer is enabled in this account/region, this validation can be automated."
+        }
+      ],
+      "apply_time_merge": false,
+      "public_policy_scrub_available": false,
+      "website_configured": null,
+      "existing_bucket_policy_capture_error": null,
+      "existing_lifecycle_capture_error": null,
+      "existing_lifecycle_rule_count": null
+    }
+  ],
+  "s3_bucket_lifecycle_configuration": [
+    {
+      "id": "cbe0d2c3-c609-4aa2-a12f-6afb336cd507",
+      "target_id": "696505809372|eu-north-1|AWS::::Account:696505809372|S3.11",
+      "recommended_profile_id": "s3_enable_abort_incomplete_uploads",
+      "support_tiers": [
+        "manual_guidance_only"
+      ],
+      "blocked_reasons": [
+        "Lifecycle preservation evidence is missing for additive merge review.",
+        "Downgrade to review_required_bundle when existing lifecycle rules are detected but the lifecycle document was not captured for additive review."
+      ],
+      "dependency_checks": [
+        {
+          "code": "risk_evaluation_not_specialized",
+          "status": "unknown",
+          "message": "No specialized dependency checks are available for this strategy yet."
+        },
+        {
+          "code": "adjacency_safety_unproven",
+          "status": "fail",
+          "message": "Downgrade to review_required_bundle when existing lifecycle rules are detected but the lifecycle document was not captured for additive review."
+        }
+      ],
+      "apply_time_merge": null,
+      "public_policy_scrub_available": null,
+      "website_configured": null,
+      "existing_bucket_policy_capture_error": null,
+      "existing_lifecycle_capture_error": null,
+      "existing_lifecycle_rule_count": null
+    },
+    {
+      "id": "4b97cf9a-f514-4033-b54e-dd679c427cd9",
+      "target_id": "696505809372|eu-north-1|arn:aws:s3:::sa-wi13-14-nopolicy-696505809372-20260328201935|S3.11",
+      "recommended_profile_id": "s3_enable_abort_incomplete_uploads",
+      "support_tiers": [
+        "deterministic_bundle"
+      ],
+      "blocked_reasons": [],
+      "dependency_checks": [
+        {
+          "code": "risk_evaluation_not_specialized",
+          "status": "unknown",
+          "message": "No specialized dependency checks are available for this strategy yet."
+        }
+      ],
+      "apply_time_merge": null,
+      "public_policy_scrub_available": null,
+      "website_configured": null,
+      "existing_bucket_policy_capture_error": null,
+      "existing_lifecycle_capture_error": null,
+      "existing_lifecycle_rule_count": 0
+    },
+    {
+      "id": "8ab29997-bb6c-41fe-ba0c-26f03523f0ed",
+      "target_id": "696505809372|eu-north-1|arn:aws:s3:::security-autopilot-access-logs-696505809372-r221001|S3.11",
+      "recommended_profile_id": "s3_enable_abort_incomplete_uploads",
+      "support_tiers": [
+        "deterministic_bundle"
+      ],
+      "blocked_reasons": [],
+      "dependency_checks": [
+        {
+          "code": "risk_evaluation_not_specialized",
+          "status": "unknown",
+          "message": "No specialized dependency checks are available for this strategy yet."
+        }
+      ],
+      "apply_time_merge": null,
+      "public_policy_scrub_available": null,
+      "website_configured": null,
+      "existing_bucket_policy_capture_error": null,
+      "existing_lifecycle_capture_error": null,
+      "existing_lifecycle_rule_count": 0
+    },
+    {
+      "id": "ba09febf-3385-40ec-a11b-707cd082b798",
+      "target_id": "696505809372|eu-north-1|arn:aws:s3:::security-autopilot-w6-envready-s315-exec-696505809372|S3.11",
+      "recommended_profile_id": "s3_enable_abort_incomplete_uploads",
+      "support_tiers": [
+        "deterministic_bundle"
+      ],
+      "blocked_reasons": [],
+      "dependency_checks": [
+        {
+          "code": "risk_evaluation_not_specialized",
+          "status": "unknown",
+          "message": "No specialized dependency checks are available for this strategy yet."
+        }
+      ],
+      "apply_time_merge": null,
+      "public_policy_scrub_available": null,
+      "website_configured": null,
+      "existing_bucket_policy_capture_error": null,
+      "existing_lifecycle_capture_error": null,
+      "existing_lifecycle_rule_count": 1
+    },
+    {
+      "id": "04996269-922e-453e-9aa9-aac21366e24b",
+      "target_id": "696505809372|eu-north-1|arn:aws:s3:::security-autopilot-w6-envready-cloudtrail-696505809372|S3.11",
+      "recommended_profile_id": "s3_enable_abort_incomplete_uploads",
+      "support_tiers": [
+        "deterministic_bundle"
+      ],
+      "blocked_reasons": [],
+      "dependency_checks": [
+        {
+          "code": "risk_evaluation_not_specialized",
+          "status": "unknown",
+          "message": "No specialized dependency checks are available for this strategy yet."
+        }
+      ],
+      "apply_time_merge": null,
+      "public_policy_scrub_available": null,
+      "website_configured": null,
+      "existing_bucket_policy_capture_error": null,
+      "existing_lifecycle_capture_error": null,
+      "existing_lifecycle_rule_count": 1
+    },
+    {
+      "id": "176c29ed-fcec-4934-a1ab-344bb4b6f444",
+      "target_id": "696505809372|eu-north-1|arn:aws:s3:::sa-wi7-seed-696505809372-20260328205857|S3.11",
+      "recommended_profile_id": "s3_enable_abort_incomplete_uploads",
+      "support_tiers": [
+        "manual_guidance_only"
+      ],
+      "blocked_reasons": [
+        "NoSuchBucket",
+        "Lifecycle preservation evidence is missing for additive merge review.",
+        "Downgrade to review_required_bundle when existing lifecycle rules are detected but the lifecycle document was not captured for additive review."
+      ],
+      "dependency_checks": [
+        {
+          "code": "risk_evaluation_not_specialized",
+          "status": "unknown",
+          "message": "No specialized dependency checks are available for this strategy yet."
+        },
+        {
+          "code": "adjacency_safety_unproven",
+          "status": "fail",
+          "message": "Downgrade to review_required_bundle when existing lifecycle rules are detected but the lifecycle document was not captured for additive review."
+        }
+      ],
+      "apply_time_merge": null,
+      "public_policy_scrub_available": null,
+      "website_configured": null,
+      "existing_bucket_policy_capture_error": null,
+      "existing_lifecycle_capture_error": null,
+      "existing_lifecycle_rule_count": null
+    },
+    {
+      "id": "33ed3776-00f0-4d99-b3ad-316f97c08a1a",
+      "target_id": "696505809372|eu-north-1|arn:aws:s3:::config-bucket-696505809372|S3.11",
+      "recommended_profile_id": "s3_enable_abort_incomplete_uploads",
+      "support_tiers": [
+        "deterministic_bundle"
+      ],
+      "blocked_reasons": [],
+      "dependency_checks": [
+        {
+          "code": "risk_evaluation_not_specialized",
+          "status": "unknown",
+          "message": "No specialized dependency checks are available for this strategy yet."
+        }
+      ],
+      "apply_time_merge": null,
+      "public_policy_scrub_available": null,
+      "website_configured": null,
+      "existing_bucket_policy_capture_error": null,
+      "existing_lifecycle_capture_error": null,
+      "existing_lifecycle_rule_count": 1
+    },
+    {
+      "id": "37e0f71d-4805-46d0-9f9f-bf4342d7e63c",
+      "target_id": "696505809372|eu-north-1|arn:aws:s3:::security-autopilot-access-logs-696505809372-r221001-access-logs|S3.11",
+      "recommended_profile_id": "s3_enable_abort_incomplete_uploads",
+      "support_tiers": [
+        "manual_guidance_only"
+      ],
+      "blocked_reasons": [
+        "NoSuchBucket",
+        "Lifecycle preservation evidence is missing for additive merge review.",
+        "Downgrade to review_required_bundle when existing lifecycle rules are detected but the lifecycle document was not captured for additive review."
+      ],
+      "dependency_checks": [
+        {
+          "code": "risk_evaluation_not_specialized",
+          "status": "unknown",
+          "message": "No specialized dependency checks are available for this strategy yet."
+        },
+        {
+          "code": "adjacency_safety_unproven",
+          "status": "fail",
+          "message": "Downgrade to review_required_bundle when existing lifecycle rules are detected but the lifecycle document was not captured for additive review."
+        }
+      ],
+      "apply_time_merge": null,
+      "public_policy_scrub_available": null,
+      "website_configured": null,
+      "existing_bucket_policy_capture_error": null,
+      "existing_lifecycle_capture_error": null,
+      "existing_lifecycle_rule_count": null
+    },
+    {
+      "id": "54b0d584-d60a-409d-86e3-5458bd8054b1",
+      "target_id": "696505809372|eu-north-1|arn:aws:s3:::security-autopilot-w6-envready-s311-exec-696505809372|S3.11",
+      "recommended_profile_id": "s3_enable_abort_incomplete_uploads",
+      "support_tiers": [
+        "deterministic_bundle"
+      ],
+      "blocked_reasons": [],
+      "dependency_checks": [
+        {
+          "code": "risk_evaluation_not_specialized",
+          "status": "unknown",
+          "message": "No specialized dependency checks are available for this strategy yet."
+        }
+      ],
+      "apply_time_merge": null,
+      "public_policy_scrub_available": null,
+      "website_configured": null,
+      "existing_bucket_policy_capture_error": null,
+      "existing_lifecycle_capture_error": null,
+      "existing_lifecycle_rule_count": 1
+    },
+    {
+      "id": "6cb0769e-5bd2-48cf-a4c8-0ea00684f44d",
+      "target_id": "696505809372|eu-north-1|arn:aws:s3:::security-autopilot-w6-strict-s311-exec-696505809372|S3.11",
+      "recommended_profile_id": "s3_enable_abort_incomplete_uploads",
+      "support_tiers": [
+        "deterministic_bundle"
+      ],
+      "blocked_reasons": [],
+      "dependency_checks": [
+        {
+          "code": "risk_evaluation_not_specialized",
+          "status": "unknown",
+          "message": "No specialized dependency checks are available for this strategy yet."
+        }
+      ],
+      "apply_time_merge": null,
+      "public_policy_scrub_available": null,
+      "website_configured": null,
+      "existing_bucket_policy_capture_error": null,
+      "existing_lifecycle_capture_error": null,
+      "existing_lifecycle_rule_count": 1
+    },
+    {
+      "id": "747e6a9e-ead9-4e60-810f-fdf6b3f7ef2d",
+      "target_id": "696505809372|eu-north-1|arn:aws:s3:::security-autopilot-w6-envready-accesslogs-696505809372|S3.11",
+      "recommended_profile_id": "s3_enable_abort_incomplete_uploads",
+      "support_tiers": [
+        "deterministic_bundle"
+      ],
+      "blocked_reasons": [],
+      "dependency_checks": [
+        {
+          "code": "risk_evaluation_not_specialized",
+          "status": "unknown",
+          "message": "No specialized dependency checks are available for this strategy yet."
+        }
+      ],
+      "apply_time_merge": null,
+      "public_policy_scrub_available": null,
+      "website_configured": null,
+      "existing_bucket_policy_capture_error": null,
+      "existing_lifecycle_capture_error": null,
+      "existing_lifecycle_rule_count": 1
+    },
+    {
+      "id": "8ada62c8-36e1-4f90-afbb-3ab89b18096e",
+      "target_id": "696505809372|eu-north-1|arn:aws:s3:::security-autopilot-w6-strict-s311-manual-696505809372|S3.11",
+      "recommended_profile_id": "s3_enable_abort_incomplete_uploads",
+      "support_tiers": [
+        "deterministic_bundle"
+      ],
+      "blocked_reasons": [],
+      "dependency_checks": [
+        {
+          "code": "risk_evaluation_not_specialized",
+          "status": "unknown",
+          "message": "No specialized dependency checks are available for this strategy yet."
+        }
+      ],
+      "apply_time_merge": null,
+      "public_policy_scrub_available": null,
+      "website_configured": null,
+      "existing_bucket_policy_capture_error": null,
+      "existing_lifecycle_capture_error": null,
+      "existing_lifecycle_rule_count": 1
+    },
+    {
+      "id": "8edeb7f6-556e-412c-9f59-905c8a83f452",
+      "target_id": "696505809372|eu-north-1|arn:aws:s3:::ocypheris-live-ct-20260323162333-eu-north-1|S3.11",
+      "recommended_profile_id": "s3_enable_abort_incomplete_uploads",
+      "support_tiers": [
+        "deterministic_bundle"
+      ],
+      "blocked_reasons": [],
+      "dependency_checks": [
+        {
+          "code": "risk_evaluation_not_specialized",
+          "status": "unknown",
+          "message": "No specialized dependency checks are available for this strategy yet."
+        }
+      ],
+      "apply_time_merge": null,
+      "public_policy_scrub_available": null,
+      "website_configured": null,
+      "existing_bucket_policy_capture_error": null,
+      "existing_lifecycle_capture_error": null,
+      "existing_lifecycle_rule_count": 1
+    },
+    {
+      "id": "971002ff-f70b-4f64-bc1f-8ae9c1f9f600",
+      "target_id": "696505809372|eu-north-1|arn:aws:s3:::security-autopilot-w6-strict-s315-manual-696505809372|S3.11",
+      "recommended_profile_id": "s3_enable_abort_incomplete_uploads",
+      "support_tiers": [
+        "deterministic_bundle"
+      ],
+      "blocked_reasons": [],
+      "dependency_checks": [
+        {
+          "code": "risk_evaluation_not_specialized",
+          "status": "unknown",
+          "message": "No specialized dependency checks are available for this strategy yet."
+        }
+      ],
+      "apply_time_merge": null,
+      "public_policy_scrub_available": null,
+      "website_configured": null,
+      "existing_bucket_policy_capture_error": null,
+      "existing_lifecycle_capture_error": null,
+      "existing_lifecycle_rule_count": 1
+    },
+    {
+      "id": "a9e5a989-3dba-4114-aeaf-2ddac120ac0c",
+      "target_id": "696505809372|eu-north-1|arn:aws:s3:::ocypheris-live-ct-20260328t181200z-eu-north-1|S3.11",
+      "recommended_profile_id": "s3_enable_abort_incomplete_uploads",
+      "support_tiers": [
+        "manual_guidance_only"
+      ],
+      "blocked_reasons": [
+        "NoSuchBucket",
+        "Lifecycle preservation evidence is missing for additive merge review.",
+        "Downgrade to review_required_bundle when existing lifecycle rules are detected but the lifecycle document was not captured for additive review."
+      ],
+      "dependency_checks": [
+        {
+          "code": "risk_evaluation_not_specialized",
+          "status": "unknown",
+          "message": "No specialized dependency checks are available for this strategy yet."
+        },
+        {
+          "code": "adjacency_safety_unproven",
+          "status": "fail",
+          "message": "Downgrade to review_required_bundle when existing lifecycle rules are detected but the lifecycle document was not captured for additive review."
+        }
+      ],
+      "apply_time_merge": null,
+      "public_policy_scrub_available": null,
+      "website_configured": null,
+      "existing_bucket_policy_capture_error": null,
+      "existing_lifecycle_capture_error": null,
+      "existing_lifecycle_rule_count": null
+    },
+    {
+      "id": "abaa9de7-ac08-4b7c-8660-93695e992c1a",
+      "target_id": "696505809372|eu-north-1|arn:aws:s3:::sa-wi5-site-696505809372-20260328t164043z|S3.11",
+      "recommended_profile_id": "s3_enable_abort_incomplete_uploads",
+      "support_tiers": [
+        "manual_guidance_only"
+      ],
+      "blocked_reasons": [
+        "NoSuchBucket",
+        "Lifecycle preservation evidence is missing for additive merge review.",
+        "Downgrade to review_required_bundle when existing lifecycle rules are detected but the lifecycle document was not captured for additive review."
+      ],
+      "dependency_checks": [
+        {
+          "code": "risk_evaluation_not_specialized",
+          "status": "unknown",
+          "message": "No specialized dependency checks are available for this strategy yet."
+        },
+        {
+          "code": "adjacency_safety_unproven",
+          "status": "fail",
+          "message": "Downgrade to review_required_bundle when existing lifecycle rules are detected but the lifecycle document was not captured for additive review."
+        }
+      ],
+      "apply_time_merge": null,
+      "public_policy_scrub_available": null,
+      "website_configured": null,
+      "existing_bucket_policy_capture_error": null,
+      "existing_lifecycle_capture_error": null,
+      "existing_lifecycle_rule_count": null
+    },
+    {
+      "id": "d108dd29-a89d-45d3-b2d5-9689d9699d5e",
+      "target_id": "696505809372|eu-north-1|arn:aws:s3:::security-autopilot-w6-strict-s315-exec-696505809372|S3.11",
+      "recommended_profile_id": "s3_enable_abort_incomplete_uploads",
+      "support_tiers": [
+        "deterministic_bundle"
+      ],
+      "blocked_reasons": [],
+      "dependency_checks": [
+        {
+          "code": "risk_evaluation_not_specialized",
+          "status": "unknown",
+          "message": "No specialized dependency checks are available for this strategy yet."
+        }
+      ],
+      "apply_time_merge": null,
+      "public_policy_scrub_available": null,
+      "website_configured": null,
+      "existing_bucket_policy_capture_error": null,
+      "existing_lifecycle_capture_error": null,
+      "existing_lifecycle_rule_count": 1
+    },
+    {
+      "id": "d3419cb8-984b-4c95-817d-83dd3b394b98",
+      "target_id": "696505809372|eu-north-1|arn:aws:s3:::security-autopilot-config-696505809372-eu-north-1|S3.11",
+      "recommended_profile_id": "s3_enable_abort_incomplete_uploads",
+      "support_tiers": [
+        "deterministic_bundle"
+      ],
+      "blocked_reasons": [],
+      "dependency_checks": [
+        {
+          "code": "risk_evaluation_not_specialized",
+          "status": "unknown",
+          "message": "No specialized dependency checks are available for this strategy yet."
+        }
+      ],
+      "apply_time_merge": null,
+      "public_policy_scrub_available": null,
+      "website_configured": null,
+      "existing_bucket_policy_capture_error": null,
+      "existing_lifecycle_capture_error": null,
+      "existing_lifecycle_rule_count": 1
+    },
+    {
+      "id": "da9d8713-383d-415e-b2fa-7b0b5039ff94",
+      "target_id": "696505809372|eu-north-1|arn:aws:s3:::security-autopilot-w6-envready-config-696505809372|S3.11",
+      "recommended_profile_id": "s3_enable_abort_incomplete_uploads",
+      "support_tiers": [
+        "deterministic_bundle"
+      ],
+      "blocked_reasons": [],
+      "dependency_checks": [
+        {
+          "code": "risk_evaluation_not_specialized",
+          "status": "unknown",
+          "message": "No specialized dependency checks are available for this strategy yet."
+        }
+      ],
+      "apply_time_merge": null,
+      "public_policy_scrub_available": null,
+      "website_configured": null,
+      "existing_bucket_policy_capture_error": null,
+      "existing_lifecycle_capture_error": null,
+      "existing_lifecycle_rule_count": 1
+    },
+    {
+      "id": "deb71e7d-1fc9-4108-a466-859fe51c52ef",
+      "target_id": "696505809372|eu-north-1|arn:aws:s3:::phase2-wi1-lifecycle-696505809372-20260328224331|S3.11",
+      "recommended_profile_id": "s3_enable_abort_incomplete_uploads",
+      "support_tiers": [
+        "manual_guidance_only"
+      ],
+      "blocked_reasons": [
+        "NoSuchBucket",
+        "Lifecycle preservation evidence is missing for additive merge review.",
+        "Downgrade to review_required_bundle when existing lifecycle rules are detected but the lifecycle document was not captured for additive review."
+      ],
+      "dependency_checks": [
+        {
+          "code": "risk_evaluation_not_specialized",
+          "status": "unknown",
+          "message": "No specialized dependency checks are available for this strategy yet."
+        },
+        {
+          "code": "adjacency_safety_unproven",
+          "status": "fail",
+          "message": "Downgrade to review_required_bundle when existing lifecycle rules are detected but the lifecycle document was not captured for additive review."
+        }
+      ],
+      "apply_time_merge": null,
+      "public_policy_scrub_available": null,
+      "website_configured": null,
+      "existing_bucket_policy_capture_error": null,
+      "existing_lifecycle_capture_error": null,
+      "existing_lifecycle_rule_count": null
+    }
+  ]
+}

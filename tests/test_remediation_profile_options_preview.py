@@ -1526,6 +1526,62 @@ def test_s3_11_preview_requires_lifecycle_document_capture_for_existing_rules(cl
     assert resolution["preservation_summary"]["additive_merge_safe"] is False
 
 
+def test_s3_11_preview_keeps_concrete_capture_failure_executable_via_apply_time_merge(
+    client: TestClient,
+) -> None:
+    tenant = _mock_tenant()
+    user = _mock_user(tenant.id)
+    action = _mock_action("s3_bucket_lifecycle_configuration")
+    action.tenant_id = tenant.id
+    action.target_id = "123456789012|us-east-1|arn:aws:s3:::lifecycle-bucket|S3.11"
+    action.resource_id = "arn:aws:s3:::lifecycle-bucket"
+    account = _mock_account()
+
+    async def mock_get_db() -> AsyncGenerator[MagicMock, None]:
+        yield _mock_async_session(tenant, action, account)
+
+    async def mock_get_optional_user() -> MagicMock:
+        return user
+
+    from backend.auth import get_optional_user
+
+    app.dependency_overrides[get_db] = mock_get_db
+    app.dependency_overrides[get_optional_user] = mock_get_optional_user
+    with patch(
+        "backend.routers.actions.collect_runtime_risk_signals",
+        return_value={
+            "s3_lifecycle_analysis_possible": False,
+            "s3_lifecycle_analysis_error": "AccessDenied",
+            "evidence": {
+                "target_bucket": "lifecycle-bucket",
+                "existing_lifecycle_capture_error": "AccessDenied",
+            },
+        },
+    ), patch(
+        "backend.routers.actions.evaluate_strategy_impact",
+        return_value={"checks": [], "warnings": [], "recommendation": None, "evidence": {}},
+    ):
+        try:
+            response = client.get(
+                f"/api/actions/{action.id}/remediation-preview",
+                params={
+                    "mode": "pr_only",
+                    "strategy_id": "s3_enable_abort_incomplete_uploads",
+                },
+            )
+        finally:
+            app.dependency_overrides.pop(get_db, None)
+            app.dependency_overrides.pop(get_optional_user, None)
+
+    assert response.status_code == 200
+    resolution = response.json()["resolution"]
+    assert resolution["support_tier"] == "deterministic_bundle"
+    assert resolution["blocked_reasons"] == []
+    assert resolution["preservation_summary"]["apply_time_merge"] is True
+    assert "AccessDenied" in resolution["preservation_summary"]["apply_time_merge_reason"]
+    assert resolution["preservation_summary"]["existing_lifecycle_configuration_captured"] is False
+
+
 def test_s3_11_preview_keeps_renderable_captured_lifecycle_executable(client: TestClient) -> None:
     tenant = _mock_tenant()
     user = _mock_user(tenant.id)

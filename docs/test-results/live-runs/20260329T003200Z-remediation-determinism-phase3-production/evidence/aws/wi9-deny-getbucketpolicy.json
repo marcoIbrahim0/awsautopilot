@@ -1,0 +1,18 @@
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "DenyReadRoleGetBucketPolicyForParityCheck",
+      "Effect": "Deny",
+      "Principal": {
+        "AWS": "arn:aws:iam::696505809372:role/SecurityAutopilotReadRole"
+      },
+      "Action": [
+        "s3:GetBucketPolicy"
+      ],
+      "Resource": [
+        "arn:aws:s3:::security-autopilot-w6-envready-s315-exec-696505809372"
+      ]
+    }
+  ]
+}

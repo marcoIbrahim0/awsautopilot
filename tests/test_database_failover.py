@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import sys
+
 from backend.services import database_failover as failover
 
 
@@ -64,3 +66,11 @@ def test_resolve_database_urls_skips_probe_in_test_context(monkeypatch) -> None:
 
     assert resolved.source == "primary"
     assert resolved.sync_url == "postgresql://primary-host/app"
+
+
+def test_should_skip_probe_during_pytest_bootstrap(monkeypatch) -> None:
+    monkeypatch.setattr(failover.settings, "ENV", "development")
+    monkeypatch.delenv("PYTEST_CURRENT_TEST", raising=False)
+    monkeypatch.setitem(sys.modules, "pytest", object())
+
+    assert failover._should_skip_probe() is True
