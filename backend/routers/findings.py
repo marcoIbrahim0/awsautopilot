@@ -224,6 +224,9 @@ class FindingGroupItem(BaseModel):
     status_message: str | None = None
     status_severity: str | None = None
     followup_kind: str | None = None
+    remediation_visibility_reason: str | None = None
+    remediation_scope_owner: str | None = None
+    remediation_scope_message: str | None = None
 
 
 class FindingsGroupedResponse(BaseModel):
@@ -891,6 +894,43 @@ async def _fetch_action_hints_for_group_rows(
     return hints
 
 
+def _group_row_finding_map(rows: list[object]) -> dict[uuid.UUID, tuple[str, str, str, str]]:
+    mapping: dict[uuid.UUID, tuple[str, str, str, str]] = {}
+    for row in rows:
+        group_key = _group_hint_key(
+            getattr(row, "control_id", None),
+            getattr(row, "resource_type", None),
+            getattr(row, "account_id", None),
+            getattr(row, "region", None),
+        )
+        for finding_id in getattr(row, "finding_ids", []) or []:
+            if finding_id is not None:
+                mapping[finding_id] = group_key
+    return mapping
+
+
+async def _fetch_visibility_hints_for_group_rows(
+    db: AsyncSession,
+    tenant_id: uuid.UUID,
+    rows: list[object],
+) -> dict[tuple[str, str, str, str], dict]:
+    finding_to_group = _group_row_finding_map(rows)
+    remediation_hints = await get_remediation_hints_for_findings(db, tenant_id, list(finding_to_group))
+    grouped_hints: dict[tuple[str, str, str, str], dict] = {}
+    for finding_id, group_key in finding_to_group.items():
+        if group_key in grouped_hints:
+            continue
+        hint = remediation_hints.get(finding_id) or {}
+        if not hint.get("remediation_visibility_reason"):
+            continue
+        grouped_hints[group_key] = {
+            "remediation_visibility_reason": hint.get("remediation_visibility_reason"),
+            "remediation_scope_owner": hint.get("remediation_scope_owner"),
+            "remediation_scope_message": hint.get("remediation_scope_message"),
+        }
+    return grouped_hints
+
+
 def _row_to_group_item(row: object, hint: dict) -> FindingGroupItem:
     """Map one SQLAlchemy grouped row + action hint → FindingGroupItem."""
     return FindingGroupItem(
@@ -916,6 +956,9 @@ def _row_to_group_item(row: object, hint: dict) -> FindingGroupItem:
         status_message=hint.get("status_message"),
         status_severity=hint.get("status_severity"),
         followup_kind=hint.get("followup_kind"),
+        remediation_visibility_reason=hint.get("remediation_visibility_reason"),
+        remediation_scope_owner=hint.get("remediation_scope_owner"),
+        remediation_scope_message=hint.get("remediation_scope_message"),
     )
 
 
@@ -988,15 +1031,22 @@ async def list_findings_grouped(
     rows_result = await db.execute(grouped_q.limit(limit).offset(offset))
     rows = rows_result.all()
 
-    hints_by_group = await _fetch_action_hints_for_group_rows(db, tenant_uuid, rows)
+    action_hints_by_group = await _fetch_action_hints_for_group_rows(db, tenant_uuid, rows)
+    visibility_hints_by_group = await _fetch_visibility_hints_for_group_rows(db, tenant_uuid, rows)
 
     items = [
         _row_to_group_item(
             row,
-            hints_by_group.get(
-                _group_hint_key(row.control_id, row.resource_type, row.account_id, row.region),
-                {},
-            ),
+            {
+                **visibility_hints_by_group.get(
+                    _group_hint_key(row.control_id, row.resource_type, row.account_id, row.region),
+                    {},
+                ),
+                **action_hints_by_group.get(
+                    _group_hint_key(row.control_id, row.resource_type, row.account_id, row.region),
+                    {},
+                ),
+            },
         )
         for row in rows
     ]

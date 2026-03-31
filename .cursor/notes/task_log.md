@@ -1,5 +1,52 @@
 # Task Log
 
+## Fix grouped findings remediation visibility for account-scoped EC2 SG aliases (2026-03-31)
+
+**Task:** Make grouped/status-filtered `EC2.13` / `EC2.18` / `EC2.19` account-scoped findings return the same `managed_on_resource_scope` visibility hint as flat findings when sibling SG-scoped actions exist, so grouped cards stop falling back to the generic `No remediation action yet` message.
+
+**Files modified:**
+- `/Users/marcomaher/AWS Security Autopilot/backend/routers/findings.py`
+- `/Users/marcomaher/AWS Security Autopilot/tests/test_findings_grouped_action_hints.py`
+- `/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md`
+- `/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md`
+
+**What was done:**
+- Verified the remaining production bug is specifically in the grouped findings path, not the frontend card renderer:
+  - flat findings already carry `remediation_visibility_reason` / `remediation_scope_message`
+  - grouped findings only returned direct executable action hints and dropped visibility-only hints for account-scoped rows with sibling SG actions
+- Extended the grouped findings response model in `backend/routers/findings.py` to include:
+  - `remediation_visibility_reason`
+  - `remediation_scope_owner`
+  - `remediation_scope_message`
+- Added a small grouped-hints adapter in `backend/routers/findings.py` that:
+  - maps grouped rows back to their member `finding_ids`
+  - reuses `get_remediation_hints_for_findings(...)` for those member findings
+  - lifts the first non-null visibility hint back onto the grouped row when no direct grouped action is attached
+- Kept direct action hints and grouped-run status selection unchanged; the patch only fills the missing grouped visibility-hint contract.
+- Added a focused regression in `tests/test_findings_grouped_action_hints.py` that covers the real account-scoped SG alias case:
+  - grouped `EC2.19` / `AwsAccount` row
+  - no direct remediation action linked to the grouped row
+  - sibling `sg_restrict_public_ports` action exists in the same account/region
+  - expected grouped response is `managed_on_resource_scope`
+
+**Validation / outcome:**
+- `python3.10 -m py_compile backend/routers/findings.py tests/test_findings_grouped_action_hints.py`
+  - passed
+- Direct async verification against the patched grouped endpoint contract with mocked DB responses and import bootstrapped through the fallback Neon URL:
+  - grouped response now returns:
+    - `remediation_visibility_reason='managed_on_resource_scope'`
+    - `remediation_scope_owner='resource'`
+    - non-null `remediation_scope_message`
+  - result: `grouped-hint-ok`
+- Direct async verification of the pre-existing flat findings hint path:
+  - `get_remediation_hints_for_findings(...)` still returns `managed_on_resource_scope`
+  - result: `flat-hint-ok`
+- Focused `pytest` slice could not be executed normally in this workspace because the available Homebrew `pytest` lacks `pytest-asyncio`, while the repo’s expected `./venv/bin/pytest` environment is absent in this checkout.
+
+**Open questions / TODOs:**
+- Deploy this branch and verify on `https://ocypheris.com` that grouped/status-filtered `EC2.13` / `EC2.18` / `EC2.19` cards now show the scoped resource-row guidance instead of the generic fallback.
+- If any grouped cards still show the fallback after deploy, inspect the live grouped API payload for missing `remediation_visibility_reason` rather than re-checking the frontend renderer first.
+
 ## Preserve current local master state on master (2026-03-31)
 
 **Task:** Preserve the current local `master` working tree on `master` without cleaning, deleting, or reverting any files.
