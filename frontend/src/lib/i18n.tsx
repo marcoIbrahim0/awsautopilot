@@ -1,26 +1,24 @@
 'use client';
 
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import React, { createContext, useContext, useState, ReactNode } from 'react';
 import { translations, Language } from '@/locales/translations';
 
 interface LanguageContextType {
     language: Language;
     setLanguage: (lang: Language) => void;
-    t: (keyPath: string) => string | any;
+    t: (keyPath: string) => string;
 }
 
 const LanguageContext = createContext<LanguageContextType | undefined>(undefined);
 
 export function LanguageProvider({ children }: { children: ReactNode }) {
-    const [language, setLanguageState] = useState<Language>('en');
-
-    useEffect(() => {
-        // Check local storage on mount
-        const storedLang = localStorage.getItem('site_language') as Language;
-        if (storedLang && ['en', 'de', 'fr'].includes(storedLang)) {
-            setLanguageState(storedLang);
+    const [language, setLanguageState] = useState<Language>(() => {
+        if (typeof window === 'undefined') {
+            return 'en';
         }
-    }, []);
+        const storedLang = localStorage.getItem('site_language');
+        return storedLang === 'de' || storedLang === 'fr' || storedLang === 'en' ? storedLang : 'en';
+    });
 
     const setLanguage = (lang: Language) => {
         if (typeof document !== 'undefined' && document.startViewTransition) {
@@ -34,16 +32,24 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
         }
     };
 
-    const t = (keyPath: string): string | any => {
+    const t = (keyPath: string): string => {
         const keys = keyPath.split('.');
-        let current: any = translations[language];
+        let current: unknown = translations[language];
 
         for (const key of keys) {
-            if (current[key] === undefined) {
+            if (
+                typeof current !== 'object' ||
+                current === null ||
+                !(key in (current as Record<string, unknown>))
+            ) {
                 console.warn(`Translation key not found: ${language}.${keyPath}`);
                 return keyPath;
             }
-            current = current[key];
+            current = (current as Record<string, unknown>)[key];
+        }
+        if (typeof current !== 'string') {
+            console.warn(`Translation key did not resolve to a string: ${language}.${keyPath}`);
+            return keyPath;
         }
         return current;
     };

@@ -5,6 +5,10 @@ import { vi } from 'vitest';
 import FindingDetailPage from './page';
 import { getFinding } from '@/lib/api';
 
+function createParams(id: string): Promise<{ id: string }> {
+  return Promise.resolve({ id });
+}
+
 vi.mock('react', async () => {
   const actual = await vi.importActual<typeof import('react')>('react');
   return {
@@ -135,7 +139,7 @@ describe('Finding detail remediation state', () => {
   it('shows explicit confirmed remediation state on the finding detail page', async () => {
     mockedGetFinding.mockResolvedValue(baseFinding);
 
-    render(<FindingDetailPage params={{ id: 'f-1' } as any} />);
+    render(<FindingDetailPage params={createParams('f-1')} />);
 
     await waitFor(() => {
       expect(mockedGetFinding).toHaveBeenCalledWith('f-1', undefined);
@@ -154,7 +158,7 @@ describe('Finding detail remediation state', () => {
       remediation_action_group_status_bucket: 'run_finished_metadata_only',
     });
 
-    render(<FindingDetailPage params={{ id: 'f-1' } as any} />);
+    render(<FindingDetailPage params={createParams('f-1')} />);
 
     const badge = (await screen.findByText('Needs review before apply')).closest('span');
     expect(badge).toHaveAttribute(
@@ -166,7 +170,7 @@ describe('Finding detail remediation state', () => {
   it('shows source control and remediation family details on the finding detail page', async () => {
     mockedGetFinding.mockResolvedValue(baseFinding);
 
-    render(<FindingDetailPage params={{ id: 'f-1' } as any} />);
+    render(<FindingDetailPage params={createParams('f-1')} />);
 
     expect(await screen.findAllByText('S3.13')).toHaveLength(2);
     expect(screen.getByText('Remediation family: S3.11')).toBeInTheDocument();

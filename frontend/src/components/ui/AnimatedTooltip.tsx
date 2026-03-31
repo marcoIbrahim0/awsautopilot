@@ -217,7 +217,6 @@ export function AnimatedTooltip({
   tapToToggle = false,
   autoFlip = false,
 }: AnimatedTooltipProps) {
-  const [mounted, setMounted] = useState(false);
   const [visible, setVisible] = useState(false);
   const [touchVisible, setTouchVisible] = useState(false);
   const [tooltipLayout, setTooltipLayout] = useState<TooltipLayout | null>(null);
@@ -277,11 +276,6 @@ export function AnimatedTooltip({
   }, []);
 
   useEffect(() => {
-    setMounted(true);
-    return () => setMounted(false);
-  }, []);
-
-  useEffect(() => {
     return () => {
       if (timeoutRef.current) clearTimeout(timeoutRef.current);
     };
@@ -298,11 +292,6 @@ export function AnimatedTooltip({
       document.removeEventListener('pointerdown', handleDocumentPointerDown);
     };
   }, [touchVisible]);
-
-  useEffect(() => {
-    if (show) return;
-    setTooltipLayout(null);
-  }, [show]);
 
   useLayoutEffect(() => {
     if (!show || !triggerNode || !tooltipNode) return;
@@ -341,7 +330,7 @@ export function AnimatedTooltip({
   }
 
   const tooltipPortal =
-    mounted && typeof document !== 'undefined'
+    typeof document !== 'undefined'
       ? createPortal(
           <AnimatePresence>
             {show && (

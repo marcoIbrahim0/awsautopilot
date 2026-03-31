@@ -304,7 +304,7 @@ function ActionButton({
 }: ButtonHTMLAttributes<HTMLButtonElement> & { loading?: boolean; tone?: ActionTone }) {
   const toneClass =
     tone === 'primary'
-      ? 'bg-[#0B71FF] text-white shadow-[0_0_16px_rgba(11,113,255,0.4)] hover:-translate-y-0.5 hover:shadow-[0_0_24px_rgba(11,113,255,0.6)]'
+      ? 'bg-[#0457C8] text-white shadow-[0_0_16px_rgba(4,87,200,0.4)] hover:-translate-y-0.5 hover:shadow-[0_0_24px_rgba(4,87,200,0.6)]'
       : tone === 'secondary'
         ? 'onboarding-button-secondary'
         : 'onboarding-button-ghost border border-transparent';
@@ -1265,8 +1265,8 @@ export default function OnboardingPage() {
                 <p className="onboarding-display text-lg font-bold tracking-[0.04em] text-[var(--onboarding-text-strong)]">AWS Link</p>
               </div>
 
+              <div className="onboarding-step-track absolute bottom-4 left-[11px] top-4 w-px" aria-hidden="true" />
               <ol className="relative space-y-6">
-                <div className="onboarding-step-track absolute bottom-4 left-[11px] top-4 w-px" />
                 {SIDEBAR_STEP_LABELS.map((sidebarStep, index) => {
                   const step = STEP_ORDER[index];
                   const isActive = index === currentStepIndex;

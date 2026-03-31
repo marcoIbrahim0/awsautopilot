@@ -18,9 +18,17 @@ const THRESHOLDS = {
 };
 
 const FLOWS = [
-  { id: 'onboarding', name: 'Onboarding', path: '/onboarding', onboardingComplete: false },
-  { id: 'settings', name: 'Settings', path: '/settings?tab=team', onboardingComplete: true },
-  { id: 'findings', name: 'Findings', path: '/findings', onboardingComplete: true },
+  { id: 'onboarding', name: 'Onboarding', path: '/onboarding', onboardingComplete: false, readySelector: 'h1:has-text("Welcome")' },
+  {
+    id: 'settings',
+    name: 'Settings',
+    path: '/settings',
+    onboardingComplete: true,
+    readySelector: 'h1:has-text("Settings")',
+    tabLabel: 'Team',
+    tabReadySelector: '#settings-panel-team',
+  },
+  { id: 'findings', name: 'Findings', path: '/findings', onboardingComplete: true, readySelector: 'h1:has-text("Findings")' },
 ];
 
 const SAMPLE_ACCOUNT = {
@@ -157,8 +165,49 @@ async function setupApiMocks(page, flow) {
       return;
     }
 
+    if (pathname === '/api/findings/grouped' && method === 'GET') {
+      await respondJson(route, 200, {
+        items: [],
+        total: 0,
+      });
+      return;
+    }
+
     if (pathname === '/api/actions' && method === 'GET') {
       await respondJson(route, 200, { items: [], total: 0 });
+      return;
+    }
+
+    if (pathname === '/api/notifications' && method === 'GET') {
+      await respondJson(route, 200, { items: [], total: 0, unread_total: 0 });
+      return;
+    }
+
+    if (pathname.startsWith('/api/notifications/jobs/') && method === 'PUT') {
+      await respondJson(route, 200, {
+        id: 'notification-job-001',
+        kind: 'job',
+        source: 'background_job',
+        severity: 'info',
+        status: 'queued',
+        title: 'Mock job',
+        message: 'Mock job notification',
+        detail: null,
+        progress: null,
+        action_url: null,
+        target_type: null,
+        target_id: null,
+        client_key: 'mock-job',
+        created_at: '2026-02-17T18:00:00Z',
+        updated_at: '2026-02-17T18:00:00Z',
+        read_at: null,
+        archived_at: null,
+      });
+      return;
+    }
+
+    if (pathname === '/api/notifications/state' && method === 'PATCH') {
+      await respondJson(route, 200, { updated: 0 });
       return;
     }
 
@@ -279,12 +328,22 @@ async function analyzeFlow(browser, flow) {
   const context = await browser.newContext({
     viewport: { width: 1440, height: 1024 },
     colorScheme: 'dark',
+    bypassCSP: true,
   });
   const page = await context.newPage();
+  page.setDefaultNavigationTimeout(90_000);
   await setupApiMocks(page, flow);
 
-  await page.goto(new URL(flow.path, BASE_URL).toString(), { waitUntil: 'domcontentloaded' });
-  await page.waitForLoadState('networkidle');
+  await page.goto(new URL(flow.path, BASE_URL).toString(), {
+    waitUntil: 'commit',
+    timeout: 90_000,
+  });
+  await page.waitForSelector(flow.readySelector, { timeout: 90_000, state: 'attached' });
+  if (flow.tabLabel && flow.tabReadySelector) {
+    await page.getByRole('tab', { name: flow.tabLabel, exact: true }).click();
+    await page.waitForSelector(flow.tabReadySelector, { timeout: 90_000, state: 'attached' });
+  }
+  await page.waitForLoadState('networkidle', { timeout: 10_000 }).catch(() => {});
   await page.waitForTimeout(750);
 
   const result = await new AxeBuilder({ page }).withTags(WCAG_TAGS).analyze();
@@ -389,6 +448,7 @@ async function main() {
   try {
     const results = [];
     for (const flow of FLOWS) {
+      console.log(`Scanning ${flow.name} (${flow.path})`);
       const flowResult = await analyzeFlow(browser, flow);
       results.push(flowResult);
       console.log(

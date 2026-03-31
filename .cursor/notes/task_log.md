@@ -1,5 +1,67 @@
 # Task Log
 
+## Repair current `master` required-check baseline before backend recovery merge (2026-03-31)
+
+**Task:** Fix the pre-existing required-check failures on top of current clean `master` so the approved backend recovery branch can be rebased and merged without weakening the required status-check policy.
+
+**Files modified:**
+- `/Users/marcomaher/AWS Security Autopilot.clean-master/tests/test_validate_account.py`
+- `/Users/marcomaher/AWS Security Autopilot.clean-master/tests/test_worker_ingest.py`
+- `/Users/marcomaher/AWS Security Autopilot.clean-master/frontend/package-lock.json`
+- `/Users/marcomaher/AWS Security Autopilot.clean-master/frontend/scripts/a11y/run-accessibility-ci.mjs`
+- `/Users/marcomaher/AWS Security Autopilot.clean-master/frontend/scripts/a11y/run-accessibility.mjs`
+- `/Users/marcomaher/AWS Security Autopilot.clean-master/frontend/src/app/attack-paths/AttackPathsPageClient.tsx`
+- `/Users/marcomaher/AWS Security Autopilot.clean-master/frontend/src/app/findings/FindingCard.test.tsx`
+- `/Users/marcomaher/AWS Security Autopilot.clean-master/frontend/src/app/findings/FindingGroupCard.tsx`
+- `/Users/marcomaher/AWS Security Autopilot.clean-master/frontend/src/app/findings/GroupingControlBar.tsx`
+- `/Users/marcomaher/AWS Security Autopilot.clean-master/frontend/src/app/findings/SeverityTabs.tsx`
+- `/Users/marcomaher/AWS Security Autopilot.clean-master/frontend/src/app/findings/SourceTabs.tsx`
+- `/Users/marcomaher/AWS Security Autopilot.clean-master/frontend/src/app/findings/[id]/page.test.tsx`
+- `/Users/marcomaher/AWS Security Autopilot.clean-master/frontend/src/app/findings/page.tsx`
+- `/Users/marcomaher/AWS Security Autopilot.clean-master/frontend/src/app/legal/cookies/page.tsx`
+- `/Users/marcomaher/AWS Security Autopilot.clean-master/frontend/src/app/onboarding/page.tsx`
+- `/Users/marcomaher/AWS Security Autopilot.clean-master/frontend/src/app/signup/page.tsx`
+- `/Users/marcomaher/AWS Security Autopilot.clean-master/frontend/src/components/ui/AnimatedTooltip.tsx`
+- `/Users/marcomaher/AWS Security Autopilot.clean-master/frontend/src/components/ui/NoiseBackground.tsx`
+- `/Users/marcomaher/AWS Security Autopilot.clean-master/frontend/src/components/ui/flip-words.tsx`
+- `/Users/marcomaher/AWS Security Autopilot.clean-master/frontend/src/lib/i18n.tsx`
+- `/Users/marcomaher/AWS Security Autopilot.clean-master/.cursor/notes/task_log.md`
+- `/Users/marcomaher/AWS Security Autopilot.clean-master/.cursor/notes/task_index.md`
+
+**What was done:**
+- Updated `tests/test_validate_account.py` to match the current authenticated validation contract, including the expected unauthenticated `401` path and real async dependency overrides for the protected endpoint behavior.
+- Updated `tests/test_worker_ingest.py` so the worker ingest expectations now match the current `assume_role(..., source_identity=..., tags=...)` contract instead of the older untagged shape.
+- Cleared the current frontend lint debt on clean `master` without changing product behavior:
+  - removed or deferred synchronous set-state-in-effect patterns in the attack-path, findings, animated tooltip, noise background, flip-words, and signup surfaces
+  - tightened the i18n helper back to a string-returning contract so typecheck passes against the existing app callers
+  - removed the remaining explicit `any` usage in the affected findings tests
+  - escaped the remaining cookies-page quote text caught by the current lint rules
+- Reworked the accessibility harness so the required a11y gate now measures the production build reliably instead of the unstable dev-server path:
+  - `run-accessibility-ci.mjs` now builds first and scans a local `next start` instance
+  - `run-accessibility.mjs` now mocks the required API surfaces, bypasses local CSP for the scan context, logs per-flow progress, and activates the real Settings `Team` tab before analysis
+- Fixed the real accessibility defects surfaced by that production-backed scan:
+  - improved onboarding button contrast and repaired the invalid ordered-list child structure
+  - added discernible labels to findings filter-chip remove buttons
+  - nudged low-contrast accent treatments on the findings surface and grouping controls above WCAG AA thresholds
+- Refreshed the frontend lockfile so `npm audit --audit-level=high` passes on the current dependency graph while leaving only the existing moderate `next` advisory outside the required threshold.
+
+**Validation / outcome:**
+- Backend targeted repair slice:
+  - `PYTHONPATH=. /Users/marcomaher/AWS Security Autopilot/venv/bin/pytest tests/test_validate_account.py tests/test_worker_ingest.py -q`
+  - result: `38 passed`
+- Frontend validation:
+  - `npm run typecheck`
+  - `npm run lint -- --quiet`
+  - `npm run a11y:ci`
+  - `npm audit --audit-level=high`
+- Outcome:
+  - the previously failing Backend CI, Worker CI, Frontend CI, Frontend Accessibility, and Dependency Governance local baselines are now green on top of clean `master`
+  - the branch is ready for staging/commit/push as the CI-repair PR that should land before rebasing and merging the approved backend recovery branch
+
+**Open questions / TODOs:**
+- Commit and publish this CI-repair branch, then merge it into `master` before rebasing `codex/migrate-legacy-backend-clusters-20260331-redacted`.
+- After the CI-repair PR lands, rerun the full required-check set on the backend recovery PR and proceed with the archive/old-folder normalization steps from the approved plan.
+
 ## Finalize detached frontend recovery as the durable source of truth (2026-03-31)
 
 **Task:** Turn the March 31 detached frontend recovery into a durable source of truth by adding a frontend deploy guardrail, documenting the operator contract, and pinning the parent repo to the final recovered frontend commit from a clean root baseline.
@@ -22567,7 +22629,7 @@
 - Verified quota update became active in `eu-north-1`:
   - `ConcurrentExecutions=1000`
   - `UnreservedConcurrentExecutions=1000`
-  - Previous quota request (`8aeb788fe6e04139a8b37e6d517ba4f3mJUyDLnN`) now shows `CASE_CLOSED`.
+- Previous quota request (`[redacted-legacy-request-id]`) now shows `CASE_CLOSED`.
 - Executed serverless deploy command with worker enabled and reserved concurrency `1`:
   - Script: `/Users/marcomaher/AWS Security Autopilot/scripts/deploy_saas_serverless.sh`
   - Region: `eu-north-1`
@@ -22617,7 +22679,7 @@
   - AWS default quota value: `1000`
 - Submitted Service Quotas request via CLI:
   - Command used: `aws service-quotas request-service-quota-increase --service-code lambda --quota-code L-B99A9384 --desired-value 1001 --region eu-north-1`
-  - Request ID: `8aeb788fe6e04139a8b37e6d517ba4f3mJUyDLnN`
+- Request ID: `[redacted-legacy-request-id]`
   - Status at submission/check: `PENDING`
 - Retrieved change history and confirmed the same request appears with `PENDING` status.
 

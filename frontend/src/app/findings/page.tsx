@@ -828,7 +828,7 @@ function FindingsPageContent() {
                     <button
                       onClick={() => setViewMode('grouped')}
                       className={`px-3 py-1.5 text-sm font-medium rounded-xl transition-all ${viewMode === 'grouped'
-                        ? 'nm-neu-sm text-accent shadow-none'
+                        ? 'nm-neu-sm text-[#4D9BFF] shadow-none'
                         : 'text-muted hover:text-text'
                         }`}
                     >
@@ -837,7 +837,7 @@ function FindingsPageContent() {
                     <button
                       onClick={() => setViewMode('flat')}
                       className={`px-3 py-1.5 text-sm font-medium rounded-xl transition-all ${viewMode === 'flat'
-                        ? 'nm-neu-sm text-accent shadow-none'
+                        ? 'nm-neu-sm text-[#4D9BFF] shadow-none'
                         : 'text-muted hover:text-text'
                         }`}
                     >
@@ -967,7 +967,7 @@ function FindingsPageContent() {
                   {severity && (
                     <div className="flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium text-text nm-neu-pressed">
                       Severity: {severity}
-                      <button onClick={() => handleFilterChange(setSeverity)('')} className="ml-1 text-muted hover:text-text">
+                      <button type="button" aria-label="Remove severity filter" onClick={() => handleFilterChange(setSeverity)('')} className="ml-1 text-muted hover:text-text">
                         <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                           <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
                         </svg>
@@ -977,7 +977,7 @@ function FindingsPageContent() {
                   {source && (
                     <div className="flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium text-text nm-neu-pressed">
                       Source: {getSourceLabel(source)}
-                      <button onClick={() => handleFilterChange(setSource)('')} className="ml-1 text-muted hover:text-text">
+                      <button type="button" aria-label="Remove source filter" onClick={() => handleFilterChange(setSource)('')} className="ml-1 text-muted hover:text-text">
                         <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                           <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
                         </svg>
@@ -987,7 +987,7 @@ function FindingsPageContent() {
                   {accountId && (
                     <div className="flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium text-text nm-neu-pressed">
                       Account: {accountId}
-                      <button onClick={() => handleFilterChange(setAccountId)('')} className="ml-1 text-muted hover:text-text">
+                      <button type="button" aria-label="Remove account filter" onClick={() => handleFilterChange(setAccountId)('')} className="ml-1 text-muted hover:text-text">
                         <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                           <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
                         </svg>
@@ -997,7 +997,7 @@ function FindingsPageContent() {
                   {region && (
                     <div className="flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium text-text nm-neu-pressed">
                       Region: {region}
-                      <button onClick={() => handleFilterChange(setRegion)('')} className="ml-1 text-muted hover:text-text">
+                      <button type="button" aria-label="Remove region filter" onClick={() => handleFilterChange(setRegion)('')} className="ml-1 text-muted hover:text-text">
                         <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                           <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
                         </svg>
@@ -1007,7 +1007,7 @@ function FindingsPageContent() {
                   {status && (
                     <div className="flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium text-text nm-neu-pressed">
                       Status: {getStatusFilterLabel(status)}
-                      <button onClick={() => handleFilterChange(setStatus)('')} className="ml-1 text-muted hover:text-text">
+                      <button type="button" aria-label="Remove status filter" onClick={() => handleFilterChange(setStatus)('')} className="ml-1 text-muted hover:text-text">
                         <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                           <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
                         </svg>
@@ -1017,7 +1017,7 @@ function FindingsPageContent() {
                   {controlId && (
                     <div className="flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium text-text nm-neu-pressed">
                       Control ID: {controlId}
-                      <button onClick={() => { setControlId(''); setOffset(0); }} className="ml-1 text-muted hover:text-text">
+                      <button type="button" aria-label="Remove control ID filter" onClick={() => { setControlId(''); setOffset(0); }} className="ml-1 text-muted hover:text-text">
                         <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                           <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
                         </svg>
@@ -1027,7 +1027,7 @@ function FindingsPageContent() {
                   {resourceId && (
                     <div className="flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium text-text nm-neu-pressed">
                       Resource ID: {resourceId}
-                      <button onClick={() => { setResourceId(''); setOffset(0); }} className="ml-1 text-muted hover:text-text">
+                      <button type="button" aria-label="Remove resource ID filter" onClick={() => { setResourceId(''); setOffset(0); }} className="ml-1 text-muted hover:text-text">
                         <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                           <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
                         </svg>
@@ -1037,7 +1037,7 @@ function FindingsPageContent() {
                   {searchQuery && (
                     <div className="flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium text-text nm-neu-pressed">
                       Search: {searchQuery}
-                      <button onClick={() => setSearchQuery('')} className="ml-1 text-muted hover:text-text">
+                      <button type="button" aria-label="Remove search filter" onClick={() => setSearchQuery('')} className="ml-1 text-muted hover:text-text">
                         <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                           <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
                         </svg>
@@ -1047,7 +1047,7 @@ function FindingsPageContent() {
                   {remediationFocus && (
                     <div className="flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium text-text nm-neu-pressed">
                       Remediation: {getRemediationFocusPresentation(remediationFocus).label}
-                      <button onClick={() => setRemediationFocus('')} className="ml-1 text-muted hover:text-text">
+                      <button type="button" aria-label="Remove remediation filter" onClick={() => setRemediationFocus('')} className="ml-1 text-muted hover:text-text">
                         <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                           <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
                         </svg>
@@ -1067,7 +1067,7 @@ function FindingsPageContent() {
                       setRemediationFocus('');
                       setOffset(0);
                     }}
-                    className="text-xs font-medium text-accent hover:underline ml-2"
+                    className="ml-2 text-xs font-medium text-[#4D9BFF] hover:underline"
                   >
                     Clear All
                   </button>

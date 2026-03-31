@@ -29,7 +29,7 @@ export function SeverityTabs({ selected, onChange, counts }: SeverityTabsProps) 
               px-3 py-1.5 text-sm font-semibold rounded-xl shrink-0
               transition-all duration-300 tracking-tight
               ${isSelected
-                ? 'nm-neu-sm text-accent'
+                ? 'nm-neu-sm text-[#4D9BFF]'
                 : 'text-muted hover:text-text hover:nm-neu-sm'
               }
             `}
@@ -38,7 +38,7 @@ export function SeverityTabs({ selected, onChange, counts }: SeverityTabsProps) 
             {count !== undefined && count > 0 && (
               <span
                 className={`ml-1.5 text-xs font-mono opacity-70 ${
-                  isSelected ? 'text-accent' : 'text-muted'
+                  isSelected ? 'text-[#4D9BFF]' : 'text-muted'
                 }`}
               >
                 ({count})
