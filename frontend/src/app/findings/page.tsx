@@ -80,6 +80,7 @@ function getStatusFilterLabel(value: string): string {
 
 function FindingsPageContent() {
   const searchParams = useSearchParams();
+  const requestedViewMode = searchParams.get('view');
   const { tenantId, setTenantId } = useTenantId();
   const { isAuthenticated, user } = useAuth();
   const { jobs, addJob, updateJob, completeJob, timeoutJob, failJob } = useBackgroundJobs();
@@ -222,6 +223,10 @@ function FindingsPageContent() {
   useEffect(() => {
     if (!showContent) return;
 
+    if (requestedViewMode === 'flat' || requestedViewMode === 'grouped') {
+      setViewMode(requestedViewMode);
+    }
+
     setSeverity(normalizeCsvQueryValue(searchParams.get('severity'), true));
     setStatus(normalizeCsvQueryValue(searchParams.get('status'), true) ?? DEFAULT_OPEN_FINDINGS_STATUS);
     setSource(normalizeCsvQueryValue(searchParams.get('source'), false) ?? '');
@@ -231,7 +236,7 @@ function FindingsPageContent() {
     setResourceId(normalizeQueryValue(searchParams.get('resource_id')) ?? '');
     setOffset(0);
     setGroupsOffset(0);
-  }, [searchParams, showContent]);
+  }, [requestedViewMode, searchParams, showContent]);
 
   // Fetch backend UI meta once (scope + disabled sources).
   useEffect(() => {

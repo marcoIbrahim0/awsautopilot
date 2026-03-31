@@ -1,5 +1,48 @@
 # Task Log
 
+## Add resource-scope handoff UX to findings cards (2026-03-31)
+
+**Task:** Turn `managed_on_resource_scope` from a dead-end informational badge into a real handoff flow so summary/account rows explain what the state means and provide direct navigation to the actionable resource rows.
+
+**Files modified:**
+- `/Users/marcomaher/AWS Security Autopilot/frontend/src/lib/remediationState.ts`
+- `/Users/marcomaher/AWS Security Autopilot/frontend/src/lib/findingsHandoff.ts`
+- `/Users/marcomaher/AWS Security Autopilot/frontend/src/lib/remediationState.test.ts`
+- `/Users/marcomaher/AWS Security Autopilot/frontend/src/app/findings/FindingCard.tsx`
+- `/Users/marcomaher/AWS Security Autopilot/frontend/src/app/findings/FindingCard.test.tsx`
+- `/Users/marcomaher/AWS Security Autopilot/frontend/src/app/findings/FindingGroupCard.tsx`
+- `/Users/marcomaher/AWS Security Autopilot/frontend/src/app/findings/FindingGroupCard.test.tsx`
+- `/Users/marcomaher/AWS Security Autopilot/frontend/src/app/findings/page.tsx`
+- `/Users/marcomaher/AWS Security Autopilot/frontend/src/app/findings/page.test.tsx`
+- `/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md`
+- `/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md`
+
+**What was done:**
+- Rewrote the shared `managed_on_resource_scope` badge copy so the UI now says `Fix on resource rows` and explains that the current row is only a summary row while the runnable remediation lives on concrete resource rows.
+- Added a small shared handoff helper that builds filtered `/findings?view=flat...` URLs for resource-scope navigation without copying query-string assembly across components.
+- Updated flat finding cards so account-scoped rows with `managed_on_resource_scope` now show:
+  - primary CTA: `Open actionable rows`
+  - secondary CTA: `View details`
+  instead of a disabled `Fix this finding` dead-end.
+- Updated grouped finding cards so rows with `managed_on_resource_scope` and no direct remediation action now show:
+  - primary CTA: `Open actionable rows`
+  - secondary CTA: `Show resource rows` / `Hide resource rows`
+  while preserving the existing grouped expand path and keeping `View PR bundle group` separate when present.
+- Added minimal findings-page handoff support so `view=flat` in the query string reliably lands the user in flat mode while preserving the incoming filters.
+
+**Validation / outcome:**
+- `cd frontend && npm run test:ui -- --run src/lib/remediationState.test.ts src/app/findings/FindingCard.test.tsx src/app/findings/FindingGroupCard.test.tsx src/app/findings/page.test.tsx`
+  - passed
+- Focused assertions now cover:
+  - updated badge label and tooltip copy
+  - grouped resource-scope CTA routing
+  - flat resource-scope CTA routing
+  - findings-page `view=flat` handoff behavior
+
+**Open questions / TODOs:**
+- `managed_on_account_scope` still uses the older informational-only pattern and can adopt the same handoff UX later if desired.
+- This pass intentionally routes users to filtered flat findings rows rather than attempting to infer and jump to a single exact resource row.
+
 ## Fix grouped findings remediation visibility for account-scoped EC2 SG aliases (2026-03-31)
 
 **Task:** Make grouped/status-filtered `EC2.13` / `EC2.18` / `EC2.19` account-scoped findings return the same `managed_on_resource_scope` visibility hint as flat findings when sibling SG-scoped actions exist, so grouped cards stop falling back to the generic `No remediation action yet` message.

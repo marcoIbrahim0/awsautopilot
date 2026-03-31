@@ -104,9 +104,9 @@ describe('remediationState', () => {
       variant: 'info',
     });
     expect(getNoRemediationActionPresentationForReason('managed_on_resource_scope')).toEqual({
-      label: 'Managed on resource rows',
+      label: 'Fix on resource rows',
       description:
-        'This finding family is remediated on affected resource rows. Open the resource-level row for the runnable fix.',
+        'This is a summary row. The runnable remediation lives on the affected resource rows for this control. Open those resource rows to generate the fix.',
       variant: 'info',
     });
   });

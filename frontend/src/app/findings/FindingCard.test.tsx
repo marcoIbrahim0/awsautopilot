@@ -1,11 +1,18 @@
 import { render, screen } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import type { ReactNode } from 'react';
 import { vi } from 'vitest';
 
 import { FindingCard } from './FindingCard';
 
+const push = vi.fn();
+
 vi.mock('next/link', () => ({
   default: ({ href, children }: { href: string; children: ReactNode }) => <a href={href}>{children}</a>,
+}));
+
+vi.mock('next/navigation', () => ({
+  useRouter: () => ({ push }),
 }));
 
 const baseFinding = {
@@ -54,6 +61,10 @@ const baseFinding = {
 };
 
 describe('FindingCard risk acknowledgement rendering', () => {
+  beforeEach(() => {
+    push.mockReset();
+  });
+
   it('shows the AWS service badge when the findings payload includes it', () => {
     render(
       <FindingCard
@@ -67,7 +78,9 @@ describe('FindingCard risk acknowledgement rendering', () => {
     expect(screen.getByText('Amazon EC2')).toBeInTheDocument();
   });
 
-  it('shows the scoped remediation fallback message when no direct action exists', () => {
+  it('shows the resource-scope handoff CTA when no direct action exists', async () => {
+    const user = userEvent.setup();
+
     render(
       <FindingCard
         finding={{
@@ -81,13 +94,19 @@ describe('FindingCard risk acknowledgement rendering', () => {
       />
     );
 
-    expect(
-      screen.getByText(
-        'This finding family is remediated on affected resource rows. Open the resource-level row for the runnable fix.'
-      )
-    ).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Fix this finding' })).toBeDisabled();
-    expect(screen.getByRole('button', { name: 'View PR bundle group' })).toBeDisabled();
+    const badge = screen.getByText('Fix on resource rows').closest('span');
+    expect(badge).toHaveAttribute(
+      'title',
+      'This is a summary row. The runnable remediation lives on the affected resource rows for this control. Open those resource rows to generate the fix.'
+    );
+    expect(screen.getByRole('button', { name: 'Open actionable rows' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'View details' })).toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: 'Open actionable rows' }));
+
+    expect(push).toHaveBeenCalledWith(
+      '/findings?view=flat&account_id=123456789012&region=us-east-1&control_id=EC2.19&status=NOTIFIED&source=security_hub'
+    );
   });
 
   it('shows risk acknowledged badge when finding is acknowledged', () => {

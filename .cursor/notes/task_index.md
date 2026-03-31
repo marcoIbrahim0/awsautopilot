@@ -4,6 +4,10 @@ This index maps notable tasks to discoverable entries in `.cursor/notes/task_log
 
 ## 2026-03
 
+- [Add resource-scope handoff UX to findings cards (2026-03-31)](task_log.md#add-resource-scope-handoff-ux-to-findings-cards-2026-03-31)
+  - Turned `managed_on_resource_scope` from a passive informational state into a real handoff flow with clearer badge copy, explanatory hover help, and primary CTAs that route users to filtered flat actionable rows.
+  - Updated both flat and grouped findings cards, kept grouped in-place expansion as a secondary path, and added a small `view=flat` findings-page handoff so the CTA lands in the correct mode.
+  - Added focused frontend coverage for the shared copy, grouped/flat CTA routing, and findings-page view-mode hydration.
 - [Fix grouped findings remediation visibility for account-scoped EC2 SG aliases (2026-03-31)](task_log.md#fix-grouped-findings-remediation-visibility-for-account-scoped-ec2-sg-aliases-2026-03-31)
   - Closed the remaining grouped/status-filtered `EC2.13` / `EC2.18` / `EC2.19` gap by extending the grouped findings backend contract to carry `remediation_visibility_reason`, `remediation_scope_owner`, and `remediation_scope_message` in the same account-scope SG alias cases that flat findings already handled.
   - Kept the patch backend-small: grouped rows now reuse `get_remediation_hints_for_findings(...)` for member `finding_ids`, preserving existing action selection while lifting visibility-only hints back onto the grouped card when no direct action exists.

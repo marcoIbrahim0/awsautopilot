@@ -22,6 +22,7 @@ import {
     getNoRemediationActionPresentationForReason,
     getRemediationStatePresentation,
 } from '@/lib/remediationState';
+import { buildFindingsResourceScopeHandoffHref } from '@/lib/findingsHandoff';
 import {
     CONTROL_FAMILY_TOOLTIP,
     getFindingControlLabel,
@@ -240,6 +241,17 @@ export function FindingGroupCard({
     const isPendingOrResolved =
         normalizedActionStatus === 'open' ? false
             : !!normalizedActionStatus;
+    const isManagedOnResourceRows = group.remediation_visibility_reason === 'managed_on_resource_scope';
+    const handoffHref = isManagedOnResourceRows
+        ? buildFindingsResourceScopeHandoffHref({
+            accountId: group.account_ids.length === 1 ? group.account_ids[0] : groupActionFilters?.account_id,
+            region: group.regions.length === 1 ? group.regions[0] : groupActionFilters?.region,
+            controlId: group.control_id || groupActionFilters?.control_id,
+            status: groupActionFilters?.status,
+            severity: groupActionFilters?.severity,
+            source: groupActionFilters?.source,
+        })
+        : null;
 
     const suppressHref = (() => {
         const scopedAccountId = group.account_ids.length === 1 ? group.account_ids[0] : undefined;
@@ -422,6 +434,24 @@ export function FindingGroupCard({
                                 </Button>
                             </>
                         )
+                    ) : handoffHref ? (
+                        <div className="flex flex-wrap items-center gap-3">
+                            <Button
+                                size="sm"
+                                variant="primary"
+                                className="nm-neu-sm"
+                                onClick={() => router.push(handoffHref)}
+                            >
+                                Open actionable rows
+                            </Button>
+                            <Button
+                                size="sm"
+                                variant="secondary"
+                                onClick={() => setIsExpanded((value) => !value)}
+                            >
+                                {isExpanded ? 'Hide resource rows' : 'Show resource rows'}
+                            </Button>
+                        </div>
                     ) : (
                         <div className="flex flex-col gap-1">
                             <span title={remediationState?.description || 'No remediation action is available for this group yet.'}>
