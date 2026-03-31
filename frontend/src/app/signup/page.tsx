@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { motion } from 'motion/react';
@@ -15,13 +15,6 @@ export default function SignupPage() {
   const router = useRouter();
   const { signup, isAuthenticated, isLoading: authLoading } = useAuth();
 
-  // Already authenticated — don't let a logged-in user create a second account.
-  // Redirect immediately so stale cookies never accidentally load the old tenant.
-  if (isAuthenticated) {
-    router.replace('/');
-    return null;
-  }
-
   const [companyName, setCompanyName] = useState('');
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
@@ -29,6 +22,11 @@ export default function SignupPage() {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+
+  useEffect(() => {
+    if (!isAuthenticated) return;
+    router.replace('/');
+  }, [isAuthenticated, router]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -66,6 +64,10 @@ export default function SignupPage() {
         <NeumorphicLoader />
       </div>
     );
+  }
+
+  if (isAuthenticated) {
+    return null;
   }
 
   return (

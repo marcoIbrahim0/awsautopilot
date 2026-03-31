@@ -102,7 +102,9 @@ function ExpandedFindings({
 
     useEffect(() => {
         let cancelled = false;
-        setIsLoading(true);
+        queueMicrotask(() => {
+            setIsLoading(true);
+        });
         const filters: Record<string, string | number> = {
             limit: 50,
             offset: 0,

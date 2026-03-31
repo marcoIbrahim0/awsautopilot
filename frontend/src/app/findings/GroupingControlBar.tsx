@@ -78,7 +78,7 @@ function GroupingToken({ dim, index, total, onRemove }: TokenProps) {
     return (
         <div className="flex items-center gap-1">
             {/* Token pill */}
-            <div className="flex items-center gap-1.5 pl-2.5 pr-1.5 py-1 rounded-lg nm-neu-sm bg-transparent text-accent text-sm font-semibold select-none cursor-grab active:cursor-grabbing group">
+            <div className="flex items-center gap-1.5 pl-2.5 pr-1.5 py-1 rounded-lg nm-neu-sm bg-transparent text-[#4D9BFF] text-sm font-semibold select-none cursor-grab active:cursor-grabbing group">
                 {/* Drag handle */}
                 <svg className="w-3 h-3 opacity-40 shrink-0 group-hover:opacity-70 transition-opacity" fill="currentColor" viewBox="0 0 16 16">
                     <circle cx="5" cy="4" r="1.2" />
@@ -179,7 +179,7 @@ export function GroupingControlBar({ value, onChange }: GroupingControlBarProps)
                 <div className="relative" ref={pickerRef}>
                     <button
                         onClick={handlePickerToggle}
-                        className="flex items-center gap-1.5 px-3 py-1 rounded-lg border border-dashed border-accent/40 bg-transparent text-accent/80 text-sm hover:nm-neu-sm hover:border-transparent hover:text-accent transition-all duration-300 font-medium"
+                        className="flex items-center gap-1.5 px-3 py-1 rounded-lg border border-dashed border-[#4D9BFF]/45 bg-transparent text-[#4D9BFF] text-sm hover:nm-neu-sm hover:border-transparent hover:text-[#7CB7FF] transition-all duration-300 font-medium"
                         aria-expanded={pickerOpen}
                         aria-haspopup="listbox"
                     >

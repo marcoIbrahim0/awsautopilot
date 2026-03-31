@@ -473,6 +473,11 @@ def test_execute_ingest_job_success() -> None:
         mock_assume.assert_called_once_with(
             role_arn=mock_account.role_read_arn,
             external_id=mock_account.external_id,
+            source_identity="security-autopilot-worker",
+            tags=[
+                {"Key": "ServiceComponent", "Value": "worker"},
+                {"Key": "TenantId", "Value": str(tenant_id)},
+            ],
         )
 
 

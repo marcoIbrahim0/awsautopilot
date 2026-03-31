@@ -1,6 +1,6 @@
 "use client";
-import React, { useCallback, useEffect, useRef, useState } from "react";
-import { AnimatePresence, motion, LayoutGroup } from "motion/react";
+import React, { useCallback, useEffect, useState } from "react";
+import { AnimatePresence, motion } from "motion/react";
 import { cn } from "@/lib/utils";
 
 export const FlipWords = ({
@@ -14,29 +14,25 @@ export const FlipWords = ({
   startDelay?: number;
   className?: string;
 }) => {
-  const [currentWord, setCurrentWord] = useState(words[0]);
+  const [currentWord, setCurrentWord] = useState(words[0] ?? "");
   const [isAnimating, setIsAnimating] = useState<boolean>(false);
+  const activeWord = words.includes(currentWord) ? currentWord : (words[0] ?? "");
 
   // thanks for the fix Julian - https://github.com/Julian-AT
   const startAnimation = useCallback(() => {
-    const word = words[words.indexOf(currentWord) + 1] || words[0];
+    const word = words[words.indexOf(activeWord) + 1] || words[0] || "";
     setCurrentWord(word);
     setIsAnimating(true);
-  }, [currentWord, words]);
-
-  // Sync state if external language translations change the string props.
-  useEffect(() => {
-    setCurrentWord(words[0]);
-  }, [words[0]]);
+  }, [activeWord, words]);
 
   useEffect(() => {
     if (isAnimating) return;
-    const delay = currentWord === words[0] ? startDelay : duration;
+    const delay = activeWord === words[0] ? startDelay : duration;
     const id = setTimeout(() => {
       startAnimation();
     }, delay);
     return () => clearTimeout(id);
-  }, [isAnimating, duration, startDelay, startAnimation, currentWord, words]);
+  }, [activeWord, duration, isAnimating, startDelay, startAnimation, words]);
 
   return (
     <AnimatePresence
@@ -70,10 +66,10 @@ export const FlipWords = ({
           "z-10 inline-block relative text-left text-neutral-900 dark:text-neutral-100 px-2",
           className
         )}
-        key={currentWord}
+        key={activeWord}
       >
         {/* edit suggested by Sajal: https://x.com/DewanganSajal */}
-        {currentWord.split(" ").map((word, wordIndex) => (
+        {activeWord.split(" ").map((word, wordIndex) => (
           <motion.span
             key={word + wordIndex}
             initial={{ opacity: 0, y: 10, filter: "blur(8px)" }}

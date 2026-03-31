@@ -71,7 +71,8 @@ async function stopServer(serverProcess) {
 }
 
 async function main() {
-  const server = spawnCommand(['run', 'dev'], { PORT, HOSTNAME: '127.0.0.1' }, { detached: true });
+  await runCommand(['run', 'build']);
+  const server = spawnCommand(['run', 'start'], { PORT, HOSTNAME: '127.0.0.1' }, { detached: true });
   try {
     await waitForServer(BASE_URL, server);
     await runCommand(['run', 'a11y:scan'], { A11Y_BASE_URL: BASE_URL });

@@ -20,7 +20,7 @@ export function SourceTabs({ selected, onChange }: SourceTabsProps) {
               px-3 py-1.5 text-sm font-semibold rounded-xl shrink-0
               transition-all duration-300 tracking-tight
               ${isSelected
-                ? 'nm-neu-sm text-accent'
+                ? 'nm-neu-sm text-[#4D9BFF]'
                 : 'text-muted hover:text-text hover:nm-neu-sm'
               }
             `}

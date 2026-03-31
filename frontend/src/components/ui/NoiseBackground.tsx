@@ -1,6 +1,6 @@
 'use client';
 
-import { type CSSProperties, useId, useState, useEffect } from 'react';
+import { type CSSProperties, useId } from 'react';
 
 /**
  * Aceternity-style noise background: animated gradient + noise texture overlay.
@@ -36,11 +36,6 @@ export function NoiseBackground({
   style,
 }: NoiseBackgroundProps) {
   const id = useId().replace(/:/g, '');
-  const [mounted, setMounted] = useState(false);
-
-  useEffect(() => {
-    setMounted(true);
-  }, []);
 
   const gradientCss = gradientColors
     .map((c, i) => `${c} ${(i / (gradientColors.length - 1)) * 100}%`)
@@ -67,21 +62,18 @@ export function NoiseBackground({
           backgroundRepeat: 'no-repeat',
         }}
       />
-      {/* Noise overlay via SVG filter (only render on client to prevent useId hydration mismatch with next/dynamic) */}
-      {mounted && (
-        <svg className="absolute inset-0 w-full h-full pointer-events-none" style={{ opacity: `var(--noise-opacity)` }} aria-hidden>
-          <filter id={`noise-${id}`}>
-            <feTurbulence
-              type="fractalNoise"
-              baseFrequency="0.8"
-              numOctaves="4"
-              stitchTiles="stitch"
-            />
-            <feColorMatrix type="saturate" values="0" />
-          </filter>
-          <rect width="100%" height="100%" filter={`url(#noise-${id})`} />
-        </svg>
-      )}
+      <svg className="absolute inset-0 w-full h-full pointer-events-none" style={{ opacity: `var(--noise-opacity)` }} aria-hidden>
+        <filter id={`noise-${id}`}>
+          <feTurbulence
+            type="fractalNoise"
+            baseFrequency="0.8"
+            numOctaves="4"
+            stitchTiles="stitch"
+          />
+          <feColorMatrix type="saturate" values="0" />
+        </filter>
+        <rect width="100%" height="100%" filter={`url(#noise-${id})`} />
+      </svg>
       {backdropBlur && <div className="absolute inset-0 backdrop-blur-sm" />}
       {children && (
         <div className={`relative z-10 ${className}`}>

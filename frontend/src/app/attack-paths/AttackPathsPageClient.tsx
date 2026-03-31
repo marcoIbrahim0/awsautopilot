@@ -115,19 +115,23 @@ export default function AttackPathsPageClient() {
   );
 
   useEffect(() => {
-    setAccountId(searchParams.get('account_id') ?? '');
-    setActionId(searchParams.get('action_id') ?? '');
-    setOwnerKey(searchParams.get('owner_key') ?? '');
-    setResourceId(searchParams.get('resource_id') ?? '');
-    setStatus((searchParams.get('status') as AttackPathStatus) ?? '');
-    setView(searchParams.get('view') ?? '');
-    setPathId(searchParams.get('path_id') ?? '');
+    queueMicrotask(() => {
+      setAccountId(searchParams.get('account_id') ?? '');
+      setActionId(searchParams.get('action_id') ?? '');
+      setOwnerKey(searchParams.get('owner_key') ?? '');
+      setResourceId(searchParams.get('resource_id') ?? '');
+      setStatus((searchParams.get('status') as AttackPathStatus) ?? '');
+      setView(searchParams.get('view') ?? '');
+      setPathId(searchParams.get('path_id') ?? '');
+    });
   }, [searchKey]);
 
   useEffect(() => {
     let active = true;
-    setLoading(true);
-    setListError(null);
+    queueMicrotask(() => {
+      setLoading(true);
+      setListError(null);
+    });
     getAttackPaths(
       {
         account_id: accountId || undefined,
@@ -162,14 +166,18 @@ export default function AttackPathsPageClient() {
 
   useEffect(() => {
     if (!pathId) {
-      setSelectedPathDetail(null);
-      setDetailError(null);
+      queueMicrotask(() => {
+        setSelectedPathDetail(null);
+        setDetailError(null);
+      });
       return;
     }
 
     let active = true;
-    setDetailLoading(true);
-    setDetailError(null);
+    queueMicrotask(() => {
+      setDetailLoading(true);
+      setDetailError(null);
+    });
     getAttackPath(pathId, tenantId ?? undefined)
       .then((payload) => {
         if (active) setSelectedPathDetail(payload);

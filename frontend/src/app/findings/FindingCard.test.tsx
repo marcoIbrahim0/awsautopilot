@@ -1,10 +1,11 @@
 import { render, screen } from '@testing-library/react';
+import type { ReactNode } from 'react';
 import { vi } from 'vitest';
 
 import { FindingCard } from './FindingCard';
 
 vi.mock('next/link', () => ({
-  default: ({ href, children }: { href: string; children: any }) => <a href={href}>{children}</a>,
+  default: ({ href, children }: { href: string; children: ReactNode }) => <a href={href}>{children}</a>,
 }));
 
 const baseFinding = {

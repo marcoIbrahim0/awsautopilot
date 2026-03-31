@@ -68,14 +68,14 @@ export default function CookiePolicyPage() {
             <Section number={5} title="Functional Preferences">
                 <P>We use local storage to remember your UI choices so you do not have to reconfigure them on every visit. These are strictly functional and do not track your behaviour across the internet.</P>
                 <Ul items={[
-                    'Theme Preference (Local Storage): Remembers whether you have selected "light" or "dark" mode.',
+                    'Theme Preference (Local Storage): Remembers whether you have selected “light” or “dark” mode.',
                     'UI State (Local Storage): Remembers the collapsed/expanded state of your sidebar navigation and data table sorting preferences.'
                 ]} />
             </Section>
 
             <Section number={6} title="Analytics &amp; Performance (Currently Disabled)">
                 <P>At this time, Ocypheris does not deploy third-party analytics cookies (e.g., Google Analytics). We rely exclusively on server-side aggregated telemetry (which does not use cookies) to monitor platform health and performance.</P>
-                <P>If we introduce first-party or third-party analytics cookies in the future to understand how users interact with the marketing site, we will update this policy and present a consent banner requiring your explicit "opt-in" before such cookies are placed, in accordance with EU/UK law.</P>
+                <P>If we introduce first-party or third-party analytics cookies in the future to understand how users interact with the marketing site, we will update this policy and present a consent banner requiring your explicit &ldquo;opt-in&rdquo; before such cookies are placed, in accordance with EU/UK law.</P>
             </Section>
 
             <Section number={7} title="Managing Your Settings">
@@ -86,11 +86,11 @@ export default function CookiePolicyPage() {
                     'Your UI preferences (like dark mode) will be reset to defaults.',
                     'You will need to log in again to restore access.'
                 ]} />
-                <P>To clear your local storage specifically for Autopilot, you can click the "Log Out" button within the platform, which programmatically purges your authentication tokens and session data.</P>
+                <P>To clear your local storage specifically for Autopilot, you can click the &ldquo;Log Out&rdquo; button within the platform, which programmatically purges your authentication tokens and session data.</P>
             </Section>
 
             <Section number={8} title="Changes to This Policy">
-                <P>We may update this Cookie Policy periodically to reflect technological changes, new platform features, or regulatory requirements. We will notify you of any material changes by posting the updated policy on our website with a new "Effective Date."</P>
+                <P>We may update this Cookie Policy periodically to reflect technological changes, new platform features, or regulatory requirements. We will notify you of any material changes by posting the updated policy on our website with a new &ldquo;Effective Date.&rdquo;</P>
             </Section>
 
             <Section number={9} title="Contact Us">

@@ -2,7 +2,7 @@
 Unit tests for POST /api/aws/accounts/{account_id}/validate (Step 2.4).
 
 Tests cover:
-- Invalid tenant_id (400)
+- Invalid tenant_id under authenticated access
 - Tenant not found (404)
 - Account not found (404)
 - STS assume_role failure → status=error
@@ -13,11 +13,13 @@ Tests cover:
 from __future__ import annotations
 
 from collections.abc import AsyncGenerator
+import uuid
 from unittest.mock import AsyncMock, MagicMock, patch
 
 from botocore.exceptions import ClientError
 from fastapi.testclient import TestClient
 
+from backend.auth import get_optional_user
 from backend.database import get_db
 from backend.main import app
 from backend.models.enums import AwsAccountStatus
@@ -48,6 +50,21 @@ def _mock_account(
     return acc
 
 
+def _mock_current_user(
+    tenant_id: str = "123e4567-e89b-12d3-a456-426614174000",
+) -> MagicMock:
+    user = MagicMock()
+    user.tenant_id = uuid.UUID(tenant_id)
+    return user
+
+
+def _override_optional_user(user: MagicMock | None):
+    async def _dependency_override() -> MagicMock | None:
+        return user
+
+    return _dependency_override
+
+
 class _ConfigClientMissingComplianceSummaryOperation:
     def describe_configuration_recorders(self, **kwargs):
         return {"ConfigurationRecorders": []}
@@ -63,13 +80,27 @@ class _ConfigClientMissingComplianceSummaryOperation:
 
 
 # ---------------------------------------------------------------------------
-# 400 — Invalid tenant_id
+# 401 — Auth required before invalid tenant_id is evaluated
 # ---------------------------------------------------------------------------
-def test_validate_400_invalid_tenant_id(client: TestClient) -> None:
-    """tenant_id must be a valid UUID."""
-    r = client.post(_validate_url(), params={"tenant_id": "not-a-uuid"})
-    assert r.status_code == 400
-    assert "uuid" in r.json()["detail"].lower()
+def test_validate_401_invalid_tenant_id_without_auth(client: TestClient) -> None:
+    """Protected validation rejects unauthenticated requests before UUID parsing."""
+    app.dependency_overrides[get_optional_user] = _override_optional_user(None)
+    try:
+        with patch("backend.routers.aws_accounts.settings.ENV", "production"):
+            r = client.post(_validate_url(), params={"tenant_id": "not-a-uuid"})
+    finally:
+        app.dependency_overrides.pop(get_optional_user, None)
+    assert r.status_code == 401
+    assert "authentication required" in r.json()["detail"].lower()
+
+
+def test_validate_401_auth_required_without_token(client: TestClient) -> None:
+    """Protected validation returns 401 when unauthenticated outside local/dev fallback."""
+    with patch("backend.routers.aws_accounts.settings.ENV", "production"):
+        r = client.post(_validate_url(), params=_params())
+
+    assert r.status_code == 401
+    assert "authentication required" in r.json()["detail"].lower()
 
 
 # ---------------------------------------------------------------------------
@@ -77,6 +108,8 @@ def test_validate_400_invalid_tenant_id(client: TestClient) -> None:
 # ---------------------------------------------------------------------------
 def test_validate_404_tenant_not_found(client: TestClient) -> None:
     """Validation fails if tenant doesn't exist."""
+    current_user = _mock_current_user()
+
     async def mock_get_db() -> AsyncGenerator[MagicMock, None]:
         result = MagicMock()
         result.scalar_one_or_none.return_value = None  # No tenant
@@ -85,10 +118,12 @@ def test_validate_404_tenant_not_found(client: TestClient) -> None:
         yield session
     
     app.dependency_overrides[get_db] = mock_get_db
+    app.dependency_overrides[get_optional_user] = _override_optional_user(current_user)
     try:
-        r = client.post(_validate_url(), params=_params())
+        r = client.post(_validate_url())
     finally:
         app.dependency_overrides.pop(get_db, None)
+        app.dependency_overrides.pop(get_optional_user, None)
     
     assert r.status_code == 404
     assert "tenant" in r.json()["detail"].lower()
@@ -101,6 +136,7 @@ def test_validate_404_account_not_found(client: TestClient) -> None:
     """Validation fails if account doesn't exist for tenant."""
     tenant = MagicMock()
     tenant.external_id = "ext-123"
+    current_user = _mock_current_user()
     
     async def mock_get_db() -> AsyncGenerator[MagicMock, None]:
         result = MagicMock()
@@ -111,10 +147,12 @@ def test_validate_404_account_not_found(client: TestClient) -> None:
         yield session
     
     app.dependency_overrides[get_db] = mock_get_db
+    app.dependency_overrides[get_optional_user] = _override_optional_user(current_user)
     try:
-        r = client.post(_validate_url(), params=_params())
+        r = client.post(_validate_url())
     finally:
         app.dependency_overrides.pop(get_db, None)
+        app.dependency_overrides.pop(get_optional_user, None)
     
     assert r.status_code == 404
     assert "account" in r.json()["detail"].lower()
@@ -128,6 +166,7 @@ def test_validate_200_sts_failure(client: TestClient) -> None:
     tenant = MagicMock()
     tenant.external_id = "ext-123"
     acc = _mock_account()
+    current_user = _mock_current_user()
     
     async def mock_get_db() -> AsyncGenerator[MagicMock, None]:
         result = MagicMock()
@@ -145,10 +184,12 @@ def test_validate_200_sts_failure(client: TestClient) -> None:
     
     with patch("backend.routers.aws_accounts.assume_role", side_effect=sts_error):
         app.dependency_overrides[get_db] = mock_get_db
+        app.dependency_overrides[get_optional_user] = _override_optional_user(current_user)
         try:
-            r = client.post(_validate_url(), params=_params())
+            r = client.post(_validate_url())
         finally:
             app.dependency_overrides.pop(get_db, None)
+            app.dependency_overrides.pop(get_optional_user, None)
     
     assert r.status_code == 200
     data = r.json()
@@ -165,6 +206,7 @@ def test_validate_400_caller_identity_mismatch(client: TestClient) -> None:
     tenant = MagicMock()
     tenant.external_id = "ext-123"
     acc = _mock_account()
+    current_user = _mock_current_user()
     
     async def mock_get_db() -> AsyncGenerator[MagicMock, None]:
         result = MagicMock()
@@ -182,10 +224,12 @@ def test_validate_400_caller_identity_mismatch(client: TestClient) -> None:
     
     with patch("backend.routers.aws_accounts.assume_role", return_value=mock_boto_session):
         app.dependency_overrides[get_db] = mock_get_db
+        app.dependency_overrides[get_optional_user] = _override_optional_user(current_user)
         try:
-            r = client.post(_validate_url(), params=_params())
+            r = client.post(_validate_url())
         finally:
             app.dependency_overrides.pop(get_db, None)
+            app.dependency_overrides.pop(get_optional_user, None)
     
     assert r.status_code == 400
     assert "mismatch" in r.json()["detail"].lower()
@@ -199,6 +243,7 @@ def test_validate_200_security_hub_failure(client: TestClient) -> None:
     tenant = MagicMock()
     tenant.external_id = "ext-123"
     acc = _mock_account()
+    current_user = _mock_current_user()
     
     async def mock_get_db() -> AsyncGenerator[MagicMock, None]:
         result = MagicMock()
@@ -230,10 +275,12 @@ def test_validate_200_security_hub_failure(client: TestClient) -> None:
     
     with patch("backend.routers.aws_accounts.assume_role", return_value=mock_boto_session):
         app.dependency_overrides[get_db] = mock_get_db
+        app.dependency_overrides[get_optional_user] = _override_optional_user(current_user)
         try:
-            r = client.post(_validate_url(), params=_params())
+            r = client.post(_validate_url())
         finally:
             app.dependency_overrides.pop(get_db, None)
+            app.dependency_overrides.pop(get_optional_user, None)
     
     assert r.status_code == 200
     data = r.json()
@@ -252,6 +299,7 @@ def test_validate_200_config_probe_unavailable_fail_closed(client: TestClient) -
     tenant = MagicMock()
     tenant.external_id = "ext-123"
     acc = _mock_account()
+    current_user = _mock_current_user()
 
     async def mock_get_db() -> AsyncGenerator[MagicMock, None]:
         result = MagicMock()
@@ -289,10 +337,12 @@ def test_validate_200_config_probe_unavailable_fail_closed(client: TestClient) -
 
     with patch("backend.routers.aws_accounts.assume_role", return_value=mock_boto_session):
         app.dependency_overrides[get_db] = mock_get_db
+        app.dependency_overrides[get_optional_user] = _override_optional_user(current_user)
         try:
-            r = client.post(_validate_url(), params=_params())
+            r = client.post(_validate_url())
         finally:
             app.dependency_overrides.pop(get_db, None)
+            app.dependency_overrides.pop(get_optional_user, None)
 
     assert r.status_code == 200
     data = r.json()
@@ -317,6 +367,7 @@ def test_validate_200_success(client: TestClient) -> None:
     tenant = MagicMock()
     tenant.external_id = "ext-123"
     acc = _mock_account()
+    current_user = _mock_current_user()
     
     async def mock_get_db() -> AsyncGenerator[MagicMock, None]:
         result = MagicMock()
@@ -345,10 +396,12 @@ def test_validate_200_success(client: TestClient) -> None:
     
     with patch("backend.routers.aws_accounts.assume_role", return_value=mock_boto_session):
         app.dependency_overrides[get_db] = mock_get_db
+        app.dependency_overrides[get_optional_user] = _override_optional_user(current_user)
         try:
-            r = client.post(_validate_url(), params=_params())
+            r = client.post(_validate_url())
         finally:
             app.dependency_overrides.pop(get_db, None)
+            app.dependency_overrides.pop(get_optional_user, None)
     
     assert r.status_code == 200
     data = r.json()
