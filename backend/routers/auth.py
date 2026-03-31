@@ -1320,7 +1320,15 @@ async def rotate_control_plane_token(
     tenant = await _get_tenant_for_user(db, current_user)
     new_token = generate_control_plane_token()
     now = datetime.now(timezone.utc)
+    previous_token_grace_hours = max(1, int(settings.CONTROL_PLANE_PREVIOUS_TOKEN_GRACE_HOURS or 72))
+    previous_token_expires_at = now + timedelta(hours=previous_token_grace_hours)
     old_fingerprint = tenant.control_plane_token_fingerprint
+    previous_token_active = bool(tenant.control_plane_token and tenant.control_plane_token_revoked_at is None)
+    tenant.control_plane_previous_token = tenant.control_plane_token if previous_token_active else None
+    tenant.control_plane_previous_token_fingerprint = (
+        tenant.control_plane_token_fingerprint if previous_token_active else None
+    )
+    tenant.control_plane_previous_token_expires_at = previous_token_expires_at if previous_token_active else None
     tenant.control_plane_token = hash_control_plane_token(new_token)
     tenant.control_plane_token_fingerprint = control_plane_token_fingerprint(new_token)
     tenant.control_plane_token_created_at = now
@@ -1351,7 +1359,12 @@ async def revoke_control_plane_token(
     _require_tenant_admin(current_user)
     tenant = await _get_tenant_for_user(db, current_user)
     revoked_at = tenant.control_plane_token_revoked_at or datetime.now(timezone.utc)
-    if tenant.control_plane_token_revoked_at is None:
+    had_active_token = tenant.control_plane_token_revoked_at is None
+    had_previous_token = bool(tenant.control_plane_previous_token or tenant.control_plane_previous_token_expires_at)
+    tenant.control_plane_previous_token = None
+    tenant.control_plane_previous_token_fingerprint = None
+    tenant.control_plane_previous_token_expires_at = None
+    if had_active_token:
         tenant.control_plane_token_revoked_at = revoked_at
         _log_token_event(
             db,
@@ -1360,6 +1373,7 @@ async def revoke_control_plane_token(
             event_type="control_plane_token_revoked",
             summary=f"Revoked control-plane token ({tenant.control_plane_token_fingerprint}).",
         )
+    if had_active_token or had_previous_token:
         await db.commit()
         await db.refresh(tenant)
     return ControlPlaneTokenRevokeResponse(

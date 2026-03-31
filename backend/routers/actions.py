@@ -41,7 +41,10 @@ from backend.services.action_ownership import (
     UNASSIGNED_OWNER_TYPE,
     normalize_owner_lookup_key,
 )
-from backend.services.action_remediation_sync import apply_canonical_action_status
+from backend.services.action_remediation_sync import (
+    apply_canonical_action_status,
+    list_action_external_sync_views,
+)
 from backend.services.action_sla import (
     ActionSLAStatus as ComputedActionSLAStatus,
     action_sla_expiring_expr,
@@ -435,9 +438,43 @@ class ActionDetailResponse(BaseModel):
     recommendation: ActionRecommendationResponse
     execution_guidance: list["ActionExecutionGuidance"] = Field(default_factory=list)
     implementation_artifacts: list[ActionImplementationArtifactLink] = Field(default_factory=list)
+    external_sync: list["ActionExternalSyncProviderResponse"] = Field(default_factory=list)
     graph_context: "ActionGraphContext"
     attack_path_view: "ActionAttackPathView"
     path_id: str | None = None
+
+
+class ActionExternalSyncEventResponse(BaseModel):
+    id: str
+    source: str
+    event_type: str
+    created_at: str | None = None
+    external_status: str | None = None
+    mapped_internal_status: str | None = None
+    preferred_external_status: str | None = None
+    resolution_decision: str | None = None
+    decision_detail: str | None = None
+
+
+class ActionExternalSyncProviderResponse(BaseModel):
+    provider: str
+    external_id: str | None = None
+    external_key: str | None = None
+    external_url: str | None = None
+    external_status: str | None = None
+    sync_status: str | None = None
+    preferred_external_status: str | None = None
+    mapped_internal_status: str | None = None
+    canonical_internal_status: str | None = None
+    resolution_decision: str | None = None
+    conflict_reason: str | None = None
+    last_inbound_at: str | None = None
+    last_outbound_at: str | None = None
+    last_event_at: str | None = None
+    last_reconciled_at: str | None = None
+    assignee_sync_state: str
+    assignee_sync_detail: str | None = None
+    recent_events: list[ActionExternalSyncEventResponse] = Field(default_factory=list)
 
 
 class ExecutionGuidanceCheck(BaseModel):
@@ -1534,6 +1571,7 @@ def _action_to_detail_response(
     account: AwsAccount | None = None,
     recommendation: ActionRecommendationResponse | None = None,
     implementation_artifacts: list[ActionImplementationArtifactLink] | None = None,
+    external_sync: list[dict[str, Any]] | None = None,
     graph_context: dict[str, Any] | None = None,
     attack_path_graph_context: dict[str, Any] | None = None,
 ) -> ActionDetailResponse:
@@ -1608,6 +1646,7 @@ def _action_to_detail_response(
         recommendation=resolved_recommendation,
         execution_guidance=execution_guidance,
         implementation_artifacts=implementation_artifacts or [],
+        external_sync=[ActionExternalSyncProviderResponse(**item) for item in (external_sync or [])],
         graph_context=resolved_graph_context,
         attack_path_view=attack_path_view,
         path_id=attack_path_id_for_graph_context(attack_path_graph_context or {}, action),
@@ -3045,6 +3084,16 @@ async def get_action(
         tenant_uuid=tenant_uuid,
         action=action,
     )
+    external_sync = await db.run_sync(
+        lambda session: [
+            view.__dict__
+            for view in list_action_external_sync_views(
+                session,
+                tenant_id=tenant_uuid,
+                action=action,
+            )
+        ]
+    )
     graph_context = await _load_action_graph_context(
         db,
         tenant_uuid=tenant_uuid,
@@ -3074,6 +3123,7 @@ async def get_action(
         account=account,
         recommendation=recommendation,
         implementation_artifacts=implementation_artifacts,
+        external_sync=external_sync,
         graph_context=graph_context,
         attack_path_graph_context=attack_path_graph_context,
     )
@@ -3769,6 +3819,16 @@ async def patch_action(
         tenant_uuid=tenant_uuid,
         action=action,
     )
+    external_sync = await db.run_sync(
+        lambda session: [
+            view.__dict__
+            for view in list_action_external_sync_views(
+                session,
+                tenant_id=tenant_uuid,
+                action=action,
+            )
+        ]
+    )
     graph_context = await _load_action_graph_context(
         db,
         tenant_uuid=tenant_uuid,
@@ -3787,6 +3847,7 @@ async def patch_action(
         now=datetime.now(timezone.utc),
         account=account,
         implementation_artifacts=implementation_artifacts,
+        external_sync=external_sync,
         graph_context=graph_context,
     )
 

@@ -7,6 +7,9 @@ This index maps notable tasks to discoverable entries in `.cursor/notes/task_log
 - [Repair current `master` required-check baseline before backend recovery merge (2026-03-31)](task_log.md#repair-current-master-required-check-baseline-before-backend-recovery-merge-2026-03-31)
   - Fixed the pre-existing local failures behind Backend CI, Worker CI, Frontend CI, Frontend Accessibility, and Dependency Governance without changing the protected backend auth contract or the worker STS tagging contract.
   - Reworked the accessibility harness to scan the production build reliably, then fixed the real onboarding and findings a11y defects it surfaced so the clean `master` baseline is green before rebasing the backend recovery PR.
+- [Migrate approved legacy backend clusters into clean master (2026-03-31)](task_log.md#migrate-approved-legacy-backend-clusters-into-clean-master-2026-03-31)
+  - Moved the user-approved legacy backend slices into the clean `master` line: control-plane token grace, Jira admin/webhook sync, findings remediation visibility, root-key observer/executor hardening, and the matching digest/email/governance template changes.
+  - Brought over the corresponding focused tests and docs, kept unrelated legacy output out of the clean branch, and reconciled one remediation-runs test to the current CloudTrail bucket-ack contract.
 
 - [Finalize detached frontend recovery as the durable source of truth (2026-03-31)](task_log.md#finalize-detached-frontend-recovery-as-the-durable-source-of-truth-2026-03-31)
   - Added frontend guardrail commit `79e04da6` so `npm run preview`, `npm run deploy`, and `npm run upload` now fail unless they run from a named nested frontend checkout whose commit already matches the parent repo gitlink.

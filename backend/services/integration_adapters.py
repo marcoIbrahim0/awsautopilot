@@ -84,7 +84,14 @@ def _merge_headers(*parts: dict[str, str]) -> dict[str, str]:
     return merged
 
 
-def _json_request(*, method: str, url: str, payload: dict | None, headers: dict[str, str]) -> dict:
+def _json_request(
+    *,
+    method: str,
+    url: str,
+    payload: dict | None,
+    headers: dict[str, str],
+    provider: str | None = None,
+) -> dict:
     body = None if payload is None else json.dumps(payload, separators=(",", ":"), sort_keys=True).encode("utf-8")
     request = urllib.request.Request(url, data=body, headers=headers, method=method.upper())
     try:
@@ -92,17 +99,39 @@ def _json_request(*, method: str, url: str, payload: dict | None, headers: dict[
             raw = response.read().decode("utf-8") if response.length != 0 else ""
             return json.loads(raw) if raw else {}
     except urllib.error.HTTPError as error:
-        _raise_http_error(error)
+        _raise_http_error(error, provider=provider)
     except urllib.error.URLError as error:
         raise IntegrationAdapterUnavailableError("provider_unreachable", str(error.reason or error)) from error
 
 
-def _raise_http_error(error: urllib.error.HTTPError) -> None:
+def _raise_http_error(error: urllib.error.HTTPError, *, provider: str | None) -> None:
     body = error.read().decode("utf-8", errors="replace")
     message = body[:500] or error.reason or f"http_{error.code}"
+    code = _provider_http_error_code(provider=provider, status_code=error.code, body=body)
     if error.code in _RETRYABLE_HTTP_CODES:
-        raise IntegrationAdapterUnavailableError(f"http_{error.code}", message) from error
-    raise IntegrationAdapterValidationError(f"http_{error.code}", message) from error
+        raise IntegrationAdapterUnavailableError(code, message) from error
+    raise IntegrationAdapterValidationError(code, message) from error
+
+
+def _provider_http_error_code(*, provider: str | None, status_code: int, body: str) -> str:
+    if provider != PROVIDER_JIRA:
+        return f"http_{status_code}"
+    lowered = body.lower()
+    if status_code == 401:
+        return "jira_invalid_auth"
+    if status_code == 404 and "project" in lowered:
+        return "jira_invalid_project"
+    if "assignee" in lowered:
+        return "jira_invalid_assignee"
+    if "issuetype" in lowered:
+        return "jira_invalid_issue_type"
+    if "transition" in lowered:
+        return "jira_invalid_transition_map"
+    if status_code == 429:
+        return "jira_rate_limited"
+    if status_code >= 500:
+        return "jira_provider_unreachable"
+    return f"jira_http_{status_code}"
 
 
 def _sync_jira(*, config: dict, secret: dict, payload: dict) -> ProviderSyncResult:
@@ -117,6 +146,7 @@ def _sync_jira(*, config: dict, secret: dict, payload: dict) -> ProviderSyncResu
             url=urljoin(f"{base_url.rstrip('/')}/", "rest/api/3/issue"),
             payload=_jira_create_payload(config=config, payload=payload),
             headers=headers,
+            provider=PROVIDER_JIRA,
         )
         issue_id = str(response.get("id") or "")
         issue_key = str(response.get("key") or issue_id)
@@ -141,6 +171,7 @@ def _sync_jira(*, config: dict, secret: dict, payload: dict) -> ProviderSyncResu
         url=urljoin(f"{base_url.rstrip('/')}/", f"rest/api/3/issue/{issue_id}"),
         payload=_jira_update_payload(payload=payload),
         headers=headers,
+        provider=PROVIDER_JIRA,
     )
     _maybe_apply_jira_transition(
         base_url=base_url,
@@ -224,6 +255,7 @@ def _maybe_apply_jira_transition(
         url=urljoin(f"{base_url.rstrip('/')}/", f"rest/api/3/issue/{issue_key}/transitions"),
         payload={"transition": {"id": transition_id}},
         headers=headers,
+        provider=PROVIDER_JIRA,
     )
 
 

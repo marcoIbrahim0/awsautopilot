@@ -112,6 +112,23 @@ def render_html_section(title: str, content_html: str) -> str:
     )
 
 
+def render_text_fact_block(title: str, rows: Sequence[tuple[str, object]]) -> str:
+    lines = [title, "-" * len(title)]
+    lines.extend(
+        f"{label}: {value}"
+        for label, value in rows
+        if str(label).strip() and str(value).strip()
+    )
+    return "\n".join(lines).strip()
+
+
+def render_text_list_block(title: str, items: Sequence[str]) -> str:
+    rows = [f"• {item}" for item in items if str(item).strip()]
+    if not rows:
+        return ""
+    return "\n".join([title, "-" * len(title), *rows]).strip()
+
+
 def build_email_html_document(
     *,
     title: str,

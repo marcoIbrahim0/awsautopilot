@@ -13,6 +13,8 @@ from backend.models.action import Action
 from backend.models.action_external_link import ActionExternalLink
 from backend.models.action_remediation_sync_event import ActionRemediationSyncEvent
 from backend.models.action_remediation_sync_state import ActionRemediationSyncState
+from backend.models.tenant_integration_setting import TenantIntegrationSetting
+from backend.services.jira_admin import jira_verified_assignee_account_id
 from backend.services.action_remediation_state_machine import (
     DECISION_CANONICAL_APPLIED,
     DECISION_PRESERVE_INTERNAL,
@@ -54,6 +56,41 @@ class ReconciliationRunResult:
     planned_tasks: int
     skipped: int
     task_ids_by_tenant: dict[uuid.UUID, list[uuid.UUID]] = field(default_factory=dict)
+
+
+@dataclass(frozen=True)
+class ActionExternalSyncEventView:
+    id: str
+    source: str
+    event_type: str
+    created_at: str | None
+    external_status: str | None
+    mapped_internal_status: str | None
+    preferred_external_status: str | None
+    resolution_decision: str | None
+    decision_detail: str | None
+
+
+@dataclass(frozen=True)
+class ActionExternalSyncView:
+    provider: str
+    external_id: str | None
+    external_key: str | None
+    external_url: str | None
+    external_status: str | None
+    sync_status: str | None
+    preferred_external_status: str | None
+    mapped_internal_status: str | None
+    canonical_internal_status: str | None
+    resolution_decision: str | None
+    conflict_reason: str | None
+    last_inbound_at: str | None
+    last_outbound_at: str | None
+    last_event_at: str | None
+    last_reconciled_at: str | None
+    assignee_sync_state: str
+    assignee_sync_detail: str | None
+    recent_events: list[ActionExternalSyncEventView] = field(default_factory=list)
 
 
 def apply_canonical_action_status(
@@ -228,6 +265,31 @@ def record_reconciled_external_status(
     return ExternalObservationResult(provider_name, state.sync_status, state.mapped_internal_status, preferred)
 
 
+def list_action_external_sync_views(
+    session: Session,
+    *,
+    tenant_id: uuid.UUID,
+    action: Action,
+    limit_per_provider: int = 6,
+) -> list[ActionExternalSyncView]:
+    links = {link.provider: link for link in _list_external_links(session, tenant_id, action.id)}
+    states = {state.provider: state for state in _list_sync_states(session, tenant_id, action.id)}
+    setting_by_provider = _settings_by_provider(session, tenant_id)
+    events_by_provider = _events_by_provider(session, tenant_id=tenant_id, action_id=action.id, limit=max(1, limit_per_provider))
+    providers = sorted(set(links) | set(states))
+    return [
+        _sync_view_payload(
+            action,
+            provider=provider,
+            link=links.get(provider),
+            state=states.get(provider),
+            setting=setting_by_provider.get(provider),
+            events=events_by_provider.get(provider, []),
+        )
+        for provider in providers
+    ]
+
+
 def _apply_canonical_to_state(
     state: ActionRemediationSyncState,
     target_status: str,
@@ -344,6 +406,113 @@ def _list_external_links(
         ActionExternalLink.action_id == action_id,
     )
     return list(session.execute(stmt).scalars().all())
+
+
+def _settings_by_provider(session: Session, tenant_id: uuid.UUID) -> dict[str, TenantIntegrationSetting]:
+    stmt = select(TenantIntegrationSetting).where(TenantIntegrationSetting.tenant_id == tenant_id)
+    return {row.provider: row for row in session.execute(stmt).scalars().all()}
+
+
+def _events_by_provider(
+    session: Session,
+    *,
+    tenant_id: uuid.UUID,
+    action_id: uuid.UUID,
+    limit: int,
+) -> dict[str, list[ActionRemediationSyncEvent]]:
+    stmt = (
+        select(ActionRemediationSyncEvent)
+        .where(
+            ActionRemediationSyncEvent.tenant_id == tenant_id,
+            ActionRemediationSyncEvent.action_id == action_id,
+            ActionRemediationSyncEvent.provider.is_not(None),
+        )
+        .order_by(ActionRemediationSyncEvent.created_at.desc())
+        .limit(max(1, limit * 4))
+    )
+    grouped: dict[str, list[ActionRemediationSyncEvent]] = {}
+    for row in session.execute(stmt).scalars().all():
+        provider = str(row.provider or "").strip()
+        if not provider:
+            continue
+        bucket = grouped.setdefault(provider, [])
+        if len(bucket) < limit:
+            bucket.append(row)
+    return grouped
+
+
+def _sync_view_payload(
+    action: Action,
+    *,
+    provider: str,
+    link: ActionExternalLink | None,
+    state: ActionRemediationSyncState | None,
+    setting: TenantIntegrationSetting | None,
+    events: list[ActionRemediationSyncEvent],
+) -> ActionExternalSyncView:
+    assignee_state, assignee_detail = _assignee_sync_state(action, provider=provider, link=link, setting=setting)
+    return ActionExternalSyncView(
+        provider=provider,
+        external_id=getattr(link, "external_id", None),
+        external_key=getattr(link, "external_key", None),
+        external_url=getattr(link, "external_url", None),
+        external_status=getattr(link, "external_status", None) or getattr(state, "external_status", None),
+        sync_status=getattr(state, "sync_status", None),
+        preferred_external_status=getattr(state, "preferred_external_status", None),
+        mapped_internal_status=getattr(state, "mapped_internal_status", None),
+        canonical_internal_status=getattr(state, "canonical_internal_status", None),
+        resolution_decision=getattr(state, "resolution_decision", None),
+        conflict_reason=getattr(state, "conflict_reason", None),
+        last_inbound_at=_isoformat(getattr(link, "last_inbound_at", None)),
+        last_outbound_at=_isoformat(getattr(link, "last_outbound_at", None)),
+        last_event_at=_isoformat(getattr(state, "last_event_at", None)),
+        last_reconciled_at=_isoformat(getattr(state, "last_reconciled_at", None)),
+        assignee_sync_state=assignee_state,
+        assignee_sync_detail=assignee_detail,
+        recent_events=[_event_view_payload(event) for event in events],
+    )
+
+
+def _event_view_payload(event: ActionRemediationSyncEvent) -> ActionExternalSyncEventView:
+    return ActionExternalSyncEventView(
+        id=str(event.id),
+        source=event.source,
+        event_type=event.event_type,
+        created_at=_isoformat(event.created_at),
+        external_status=event.external_status,
+        mapped_internal_status=event.mapped_internal_status,
+        preferred_external_status=event.preferred_external_status,
+        resolution_decision=event.resolution_decision,
+        decision_detail=event.decision_detail,
+    )
+
+
+def _assignee_sync_state(
+    action: Action,
+    *,
+    provider: str,
+    link: ActionExternalLink | None,
+    setting: TenantIntegrationSetting | None,
+) -> tuple[str, str | None]:
+    if provider != "jira":
+        return "unsupported", None
+    if normalize_canonical_action_status(getattr(action, "status", "open")) == "suppressed":
+        return "not_applicable", "Suppressed actions do not require Jira assignee sync."
+    verified = None if setting is None else jira_verified_assignee_account_id(
+        setting,
+        owner_type=getattr(action, "owner_type", None),
+        owner_key=getattr(action, "owner_key", None),
+        existing_assignee_key=getattr(link, "external_assignee_key", None),
+    )
+    if verified:
+        return "verified", f"Jira assignee accountId {verified} will be used on outbound sync."
+    if str(getattr(action, "owner_type", "") or "").strip().lower() != "user":
+        return "not_user_owner", "Only user-owned actions can be assigned automatically in Jira."
+    return "unverified", "No verified Jira accountId is mapped for the current owner; outbound sync will leave the issue unassigned."
+
+
+def _isoformat(value: object | None) -> str | None:
+    return value.isoformat() if value is not None and hasattr(value, "isoformat") else None
 
 
 def _create_state_from_link(

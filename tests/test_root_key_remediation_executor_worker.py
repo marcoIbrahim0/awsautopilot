@@ -19,6 +19,7 @@ from backend.services.root_key_remediation_closure import (
     RootKeyRemediationClosureService,
 )
 from backend.services.root_key_remediation_executor_worker import (
+    FINAL_ROOT_KEY_MANUAL_DELETE_TASK_TYPE,
     RootKeyRemediationExecutorWorker,
 )
 from backend.services.root_key_remediation_state_machine import RootKeyStateMachineError
@@ -253,10 +254,8 @@ def test_disable_clean_window_success(monkeypatch: pytest.MonkeyPatch) -> None:
     artifact_mock = AsyncMock(return_value=(MagicMock(), True))
     monkeypatch.setattr(f"{module}.get_root_key_remediation_run", fake_get_run)
     monkeypatch.setattr(f"{module}.create_root_key_remediation_artifact_idempotent", artifact_mock)
-    monkeypatch.setattr(
-        f"{module}.create_root_key_external_task_idempotent",
-        AsyncMock(return_value=(MagicMock(), True)),
-    )
+    task_mock = AsyncMock(return_value=(MagicMock(), True))
+    monkeypatch.setattr(f"{module}.create_root_key_external_task_idempotent", task_mock)
 
     result = _run(
         worker.execute_disable(
@@ -279,6 +278,67 @@ def test_disable_clean_window_success(monkeypatch: pytest.MonkeyPatch) -> None:
     metadata = disable_artifacts[0].kwargs.get("metadata_json")
     assert isinstance(metadata, dict)
     assert metadata.get("window_clean") is True
+
+
+def test_disable_preserved_caller_key_requires_operator_attention(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    tenant_id = uuid.uuid4()
+    run = _build_run(
+        tenant_id=tenant_id,
+        state=RootKeyRemediationState.validation,
+        status=RootKeyRemediationRunStatus.running,
+    )
+    iam_client = _FakeIamClient([("AKIAPRESERVE0001", "Active")])
+    mutation_session = _FakeSession("AKIAPRESERVE0001", iam_client)
+    observer_session = _FakeSession("AKIAOBSERVER9001", iam_client)
+    usage_service = _FakeUsageDiscoveryService(
+        SimpleNamespace(managed_count=0, unknown_count=0, partial_data=False, retries_used=0)
+    )
+    worker = RootKeyRemediationExecutorWorker(
+        mutation_session_factory=lambda *_: mutation_session,
+        observer_session_factory=lambda *_: observer_session,
+        usage_discovery_factory=lambda: usage_service,
+    )
+    service = _state_machine(run)
+    module = "backend.services.root_key_remediation_executor_worker"
+
+    async def fake_get_run(*args: Any, **kwargs: Any) -> Any:
+        del args, kwargs
+        return run
+
+    artifact_mock = AsyncMock(return_value=(MagicMock(), True))
+    monkeypatch.setattr(f"{module}.get_root_key_remediation_run", fake_get_run)
+    monkeypatch.setattr(f"{module}.create_root_key_remediation_artifact_idempotent", artifact_mock)
+    task_mock = AsyncMock(return_value=(MagicMock(), True))
+    monkeypatch.setattr(f"{module}.create_root_key_external_task_idempotent", task_mock)
+
+    result = _run(
+        worker.execute_disable(
+            MagicMock(),
+            tenant_id=tenant_id,
+            run_id=run.id,
+            transition_id="tx-disable-preserved-caller",
+            state_machine=service,
+        )
+    )
+
+    assert result.run.state == RootKeyRemediationState.needs_attention
+    assert service.start_disable_window.await_count == 1
+    assert service.mark_needs_attention.await_count == 1
+    assert service.rollback.await_count == 0
+    assert iam_client.update_calls == []
+    disable_artifacts = [
+        call for call in artifact_mock.await_args_list if call.kwargs.get("artifact_type") == "disable_window_evidence"
+    ]
+    assert len(disable_artifacts) == 1
+    metadata = disable_artifacts[0].kwargs.get("metadata_json")
+    assert isinstance(metadata, dict)
+    assert metadata.get("window_clean") is False
+    assert metadata.get("operator_attention_reason") == "mutation_key_preserved_requires_new_credential_context"
+    assert metadata.get("disabled_summary", {}).get("caller_key_preserved") == "AKIA...0001"
+    assert task_mock.await_count == 1
+    assert task_mock.await_args.kwargs["task_type"] == FINAL_ROOT_KEY_MANUAL_DELETE_TASK_TYPE
 
 
 def test_rollback_reactivates_root_key(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -627,6 +687,161 @@ def test_delete_root_mfa_not_enrolled_marks_needs_attention(monkeypatch: pytest.
     reason = service.mark_needs_attention.await_args.kwargs["evidence_metadata"]["reason"]
     assert reason == "root_mfa_not_enrolled"
     assert iam_client.delete_calls == []
+
+
+def test_is_disable_window_clean_allows_completed_manual_final_key_handoff(monkeypatch: pytest.MonkeyPatch) -> None:
+    tenant_id = uuid.uuid4()
+    run = _build_run(
+        tenant_id=tenant_id,
+        state=RootKeyRemediationState.needs_attention,
+        status=RootKeyRemediationRunStatus.waiting_for_user,
+    )
+    worker = RootKeyRemediationExecutorWorker()
+    metadata_result = MagicMock()
+    metadata_result.scalar_one_or_none.return_value = {
+        "window_clean": False,
+        "partial_data": False,
+        "unknown_usage_count": 0,
+        "breakage_signals": [],
+        "operator_attention_reason": "mutation_key_preserved_requires_new_credential_context",
+    }
+    task_result = MagicMock()
+    task_result.scalar_one_or_none.return_value = uuid.uuid4()
+    db = MagicMock()
+    db.execute = AsyncMock(side_effect=[metadata_result, task_result])
+
+    assert _run(worker._is_disable_window_clean(db=db, run=run)) is True
+
+
+def test_is_disable_window_clean_rejects_manual_final_key_handoff_with_breakage_signals() -> None:
+    tenant_id = uuid.uuid4()
+    run = _build_run(
+        tenant_id=tenant_id,
+        state=RootKeyRemediationState.needs_attention,
+        status=RootKeyRemediationRunStatus.waiting_for_user,
+    )
+    worker = RootKeyRemediationExecutorWorker()
+    metadata_result = MagicMock()
+    metadata_result.scalar_one_or_none.return_value = {
+        "window_clean": False,
+        "partial_data": False,
+        "unknown_usage_count": 0,
+        "breakage_signals": ["usage_signal_collection_failed"],
+        "operator_attention_reason": "mutation_key_preserved_requires_new_credential_context",
+    }
+    db = MagicMock()
+    db.execute = AsyncMock(return_value=metadata_result)
+
+    assert _run(worker._is_disable_window_clean(db=db, run=run)) is False
+
+
+def test_delete_manual_final_key_handoff_finalizes_without_mutation_delete(monkeypatch: pytest.MonkeyPatch) -> None:
+    tenant_id = uuid.uuid4()
+    run = _build_run(
+        tenant_id=tenant_id,
+        state=RootKeyRemediationState.disable_window,
+        status=RootKeyRemediationRunStatus.running,
+    )
+    iam_client = _FakeIamClient([], account_mfa_enabled=1)
+    observer_session = _FakeSession("AKIAOBSERVE000020", iam_client)
+    worker = RootKeyRemediationExecutorWorker(
+        mutation_session_factory=lambda *_: observer_session,
+        observer_session_factory=lambda *_: observer_session,
+        observer_only_delete_finalize=True,
+    )
+    service = _state_machine(run)
+    module = "backend.services.root_key_remediation_executor_worker"
+
+    async def fake_get_run(*args: Any, **kwargs: Any) -> Any:
+        del args, kwargs
+        return run
+
+    monkeypatch.setattr(f"{module}.get_root_key_remediation_run", fake_get_run)
+    monkeypatch.setattr(worker, "_is_disable_window_clean", AsyncMock(return_value=True))
+    monkeypatch.setattr(worker, "_has_unknown_active_dependencies", AsyncMock(return_value=False))
+    monkeypatch.setattr(
+        module + ".settings",
+        SimpleNamespace(
+            ROOT_KEY_SAFE_REMEDIATION_DELETE_ENABLED=True,
+            ROOT_KEY_SAFE_REMEDIATION_CLOSURE_ENABLED=False,
+            AWS_REGION="eu-north-1",
+        ),
+    )
+    monkeypatch.setattr(
+        f"{module}.create_root_key_remediation_artifact_idempotent",
+        AsyncMock(return_value=(MagicMock(), True)),
+    )
+
+    result = _run(
+        worker.execute_delete(
+            MagicMock(),
+            tenant_id=tenant_id,
+            run_id=run.id,
+            transition_id="tx-delete-manual-handoff",
+            state_machine=service,
+        )
+    )
+
+    assert result.run.state == RootKeyRemediationState.completed
+    assert service.finalize_delete.await_count == 1
+    assert service.mark_needs_attention.await_count == 0
+    assert iam_client.delete_calls == []
+
+
+def test_delete_manual_final_key_handoff_blocks_when_root_key_still_present(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    tenant_id = uuid.uuid4()
+    run = _build_run(
+        tenant_id=tenant_id,
+        state=RootKeyRemediationState.disable_window,
+        status=RootKeyRemediationRunStatus.running,
+    )
+    iam_client = _FakeIamClient([("AKIADELETE0000021", "Active")], account_mfa_enabled=1)
+    observer_session = _FakeSession("AKIAOBSERVE000021", iam_client)
+    worker = RootKeyRemediationExecutorWorker(
+        mutation_session_factory=lambda *_: observer_session,
+        observer_session_factory=lambda *_: observer_session,
+        observer_only_delete_finalize=True,
+    )
+    service = _state_machine(run)
+    module = "backend.services.root_key_remediation_executor_worker"
+
+    async def fake_get_run(*args: Any, **kwargs: Any) -> Any:
+        del args, kwargs
+        return run
+
+    monkeypatch.setattr(f"{module}.get_root_key_remediation_run", fake_get_run)
+    monkeypatch.setattr(worker, "_is_disable_window_clean", AsyncMock(return_value=True))
+    monkeypatch.setattr(worker, "_has_unknown_active_dependencies", AsyncMock(return_value=False))
+    monkeypatch.setattr(
+        module + ".settings",
+        SimpleNamespace(
+            ROOT_KEY_SAFE_REMEDIATION_DELETE_ENABLED=True,
+            ROOT_KEY_SAFE_REMEDIATION_CLOSURE_ENABLED=False,
+            AWS_REGION="eu-north-1",
+        ),
+    )
+    monkeypatch.setattr(
+        f"{module}.create_root_key_remediation_artifact_idempotent",
+        AsyncMock(return_value=(MagicMock(), True)),
+    )
+
+    result = _run(
+        worker.execute_delete(
+            MagicMock(),
+            tenant_id=tenant_id,
+            run_id=run.id,
+            transition_id="tx-delete-manual-handoff-active",
+            state_machine=service,
+        )
+    )
+
+    assert result.run.state == RootKeyRemediationState.needs_attention
+    assert service.finalize_delete.await_count == 0
+    assert service.mark_needs_attention.await_count == 1
+    reason = service.mark_needs_attention.await_args.kwargs["evidence_metadata"]["reason"]
+    assert reason == "delete_active_keys_present:1"
 
 
 def test_delete_root_mfa_enrolled_allows_normal_delete_flow(monkeypatch: pytest.MonkeyPatch) -> None:

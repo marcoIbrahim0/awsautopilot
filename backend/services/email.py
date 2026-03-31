@@ -21,6 +21,18 @@ from backend.services.digest_content import (
     build_email_subject,
     get_view_in_app_url,
 )
+from backend.services.email_templates import (
+    build_email_html_document,
+    build_email_text_document,
+    join_text_blocks,
+    render_html_code_block,
+    render_html_fact_table,
+    render_html_link_box,
+    render_html_notice,
+    render_html_paragraphs,
+    render_html_section,
+    render_text_fact_block,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -103,6 +115,38 @@ class EmailService:
         except Exception as e:
             logger.error(f"Failed to send email to {to}: {e}")
             return False
+
+    def _build_email_documents(
+        self,
+        *,
+        title: str,
+        intro_lines: list[str],
+        section_blocks: list[str] | None = None,
+        sections_html: list[str] | None = None,
+        cta_label: str | None = None,
+        cta_url: str | None = None,
+        footer_lines: list[str] | None = None,
+        footer_html: str | None = None,
+        preheader: str | None = None,
+    ) -> tuple[str, str]:
+        html_body = build_email_html_document(
+            title=title,
+            intro_html=render_html_paragraphs(intro_lines),
+            sections_html=join_text_blocks(sections_html or []),
+            cta_label=cta_label,
+            cta_url=cta_url,
+            footer_html=footer_html,
+            preheader=preheader,
+        )
+        text_body = build_email_text_document(
+            title=title,
+            intro_lines=intro_lines,
+            section_blocks=join_text_blocks(section_blocks or []),
+            cta_label=cta_label,
+            cta_url=cta_url,
+            footer_lines=footer_lines,
+        )
+        return html_body, text_body
     
     def send_invite_email(
         self,
@@ -126,50 +170,30 @@ class EmailService:
         invite_url = f"{self.frontend_url}/accept-invite?token={invite_token}"
         subject = f"You've been invited to join {tenant_name} on AWS Security Autopilot"
         
-        html_body = f"""
-        <!DOCTYPE html>
-        <html>
-        <head>
-            <style>
-                body {{ font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background-color: #070B10; color: #C7D0D8; padding: 40px; }}
-                .container {{ max-width: 600px; margin: 0 auto; background-color: #101720; border-radius: 12px; padding: 32px; border: 1px solid #1F2A35; }}
-                h1 {{ color: #C7D0D8; font-size: 24px; margin-bottom: 16px; }}
-                p {{ color: #8F9BA6; line-height: 1.6; margin-bottom: 16px; }}
-                .button {{ display: inline-block; background-color: #5B87AD; color: #070B10; padding: 12px 24px; border-radius: 8px; text-decoration: none; font-weight: 600; margin: 16px 0; }}
-                .button:hover {{ background-color: #7FA6C6; }}
-                .footer {{ margin-top: 32px; padding-top: 16px; border-top: 1px solid #1F2A35; font-size: 12px; color: #8F9BA6; }}
-            </style>
-        </head>
-        <body>
-            <div class="container">
-                <h1>You're invited!</h1>
-                <p><strong>{inviter_name}</strong> has invited you to join <strong>{tenant_name}</strong> on AWS Security Autopilot.</p>
-                <p>AWS Security Autopilot helps teams secure their AWS infrastructure by operationalizing Security Hub findings.</p>
-                <a href="{invite_url}" class="button">Accept Invitation</a>
-                <p>Or copy and paste this link into your browser:</p>
-                <p style="word-break: break-all; font-size: 12px;">{invite_url}</p>
-                <div class="footer">
-                    <p>This invitation link will expire in 7 days. If you didn't expect this email, you can safely ignore it.</p>
-                </div>
-            </div>
-        </body>
-        </html>
-        """
-        
-        text_body = f"""
-You're invited to join {tenant_name} on AWS Security Autopilot!
-
-{inviter_name} has invited you to join their team.
-
-AWS Security Autopilot helps teams secure their AWS infrastructure by operationalizing Security Hub findings.
-
-Click here to accept the invitation:
-{invite_url}
-
-This invitation link will expire in 7 days.
-
-If you didn't expect this email, you can safely ignore it.
-        """
+        title = "You're invited!"
+        html_body, text_body = self._build_email_documents(
+            title=title,
+            intro_lines=[
+                f"{inviter_name} invited you to join {tenant_name} on AWS Security Autopilot.",
+                "AWS Security Autopilot helps teams secure their AWS infrastructure by operationalizing Security Hub findings.",
+            ],
+            sections_html=[
+                render_html_section("Direct link", render_html_link_box(invite_url)),
+                render_html_section(
+                    "Invitation details",
+                    render_html_notice(
+                        "This invitation link will expire in 7 days. If you didn't expect this email, you can safely ignore it."
+                    ),
+                ),
+            ],
+            section_blocks=[
+                render_text_fact_block("Direct link", [("URL", invite_url)]),
+                "This invitation link will expire in 7 days.\nIf you didn't expect this email, you can safely ignore it.",
+            ],
+            cta_label="Accept invitation",
+            cta_url=invite_url,
+            preheader=f"{inviter_name} invited you to join {tenant_name}.",
+        )
         
         # In local mode, just log the invite URL
         if self._log_only_local():
@@ -192,41 +216,27 @@ If you didn't expect this email, you can safely ignore it.
         reset_url = f"{self.frontend_url}/reset-password?token={reset_token}"
         subject = "Reset your AWS Security Autopilot password"
 
-        html_body = f"""
-        <!DOCTYPE html>
-        <html>
-        <head>
-            <style>
-                body {{ font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background-color: #070B10; color: #C7D0D8; padding: 40px; }}
-                .container {{ max-width: 600px; margin: 0 auto; background-color: #101720; border-radius: 12px; padding: 32px; border: 1px solid #1F2A35; }}
-                h1 {{ color: #C7D0D8; font-size: 24px; margin-bottom: 16px; }}
-                p {{ color: #8F9BA6; line-height: 1.6; margin-bottom: 16px; }}
-                .button {{ display: inline-block; background-color: #5B87AD; color: #070B10; padding: 12px 24px; border-radius: 8px; text-decoration: none; font-weight: 600; margin: 16px 0; }}
-                .footer {{ margin-top: 32px; padding-top: 16px; border-top: 1px solid #1F2A35; font-size: 12px; color: #8F9BA6; }}
-            </style>
-        </head>
-        <body>
-            <div class="container">
-                <h1>Reset your password</h1>
-                <p>We received a request to reset your password.</p>
-                <a href="{reset_url}" class="button">Reset password</a>
-                <p>If you did not request this change, you can ignore this email.</p>
-                <div class="footer">
-                    <p>This reset link expires in 1 hour.</p>
-                </div>
-            </div>
-        </body>
-        </html>
-        """
-        text_body = f"""
-We received a request to reset your password.
-
-Reset password:
-{reset_url}
-
-If you did not request this change, you can ignore this email.
-This reset link expires in 1 hour.
-        """.strip()
+        html_body, text_body = self._build_email_documents(
+            title="Reset your password",
+            intro_lines=[
+                "We received a request to reset your password.",
+                "If you did not request this change, you can ignore this email.",
+            ],
+            sections_html=[
+                render_html_section("Direct link", render_html_link_box(reset_url)),
+                render_html_section(
+                    "Reset link details",
+                    render_html_notice("This reset link expires in 1 hour."),
+                ),
+            ],
+            section_blocks=[
+                render_text_fact_block("Direct link", [("URL", reset_url)]),
+                "This reset link expires in 1 hour.",
+            ],
+            cta_label="Reset password",
+            cta_url=reset_url,
+            preheader="Use this secure link to reset your password.",
+        )
 
         if self._log_only_local():
             logger.info("[LOCAL MODE] Password reset email for %s", to_email)
@@ -254,11 +264,23 @@ This reset link expires in 1 hour.
         if not recipients:
             return 0, 0
         url = self._absolute_help_url(help_url)
-        html_body = (
-            f"<p>{summary}</p><p><strong>Case:</strong> {case_subject}</p>"
-            f"<p><strong>Case ID:</strong> {case_id}</p><p><a href=\"{url}\">Open support inbox</a></p>"
+        html_body, text_body = self._build_email_documents(
+            title=subject,
+            intro_lines=[summary],
+            sections_html=[
+                render_html_section(
+                    "Case details",
+                    render_html_fact_table([("Case", case_subject), ("Case ID", case_id)]),
+                ),
+                render_html_section("Direct link", render_html_link_box(url)),
+            ],
+            section_blocks=[
+                render_text_fact_block("Case details", [("Case", case_subject), ("Case ID", case_id)]),
+            ],
+            cta_label="Open support inbox",
+            cta_url=url,
+            preheader=f"Help case {case_id} requires review.",
         )
-        text_body = f"{summary}\n\nCase: {case_subject}\nCase ID: {case_id}\nOpen: {url}"
         sent = 0
         failed = 0
         for recipient in recipients:
@@ -285,11 +307,23 @@ This reset link expires in 1 hour.
     ) -> bool:
         del now
         url = self._absolute_help_url(help_url)
-        html_body = (
-            f"<p>{summary}</p><p><strong>Case:</strong> {case_subject}</p>"
-            f"<p><strong>Case ID:</strong> {case_id}</p><p><a href=\"{url}\">Open your support case</a></p>"
+        html_body, text_body = self._build_email_documents(
+            title=subject,
+            intro_lines=[summary],
+            sections_html=[
+                render_html_section(
+                    "Case details",
+                    render_html_fact_table([("Case", case_subject), ("Case ID", case_id)]),
+                ),
+                render_html_section("Direct link", render_html_link_box(url)),
+            ],
+            section_blocks=[
+                render_text_fact_block("Case details", [("Case", case_subject), ("Case ID", case_id)]),
+            ],
+            cta_label="Open your support case",
+            cta_url=url,
+            preheader=f"Support updated your help case {case_id}.",
         )
-        text_body = f"{summary}\n\nCase: {case_subject}\nCase ID: {case_id}\nOpen: {url}"
         if self._log_only_local():
             logger.info("[LOCAL MODE] Help requester email for %s -> %s", to_email, subject)
             return True
@@ -305,37 +339,17 @@ This reset link expires in 1 hour.
         Send an email-verification CTA link.
         """
         subject = "Verify your email - AWS Security Autopilot"
-        html_body = f"""
-        <!DOCTYPE html>
-        <html>
-        <head>
-            <style>
-                body {{ font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background-color: #070B10; color: #C7D0D8; padding: 40px; }}
-                .container {{ max-width: 600px; margin: 0 auto; background-color: #101720; border-radius: 12px; padding: 32px; border: 1px solid #1F2A35; }}
-                h1 {{ color: #C7D0D8; font-size: 24px; margin-bottom: 16px; }}
-                p {{ color: #8F9BA6; line-height: 1.6; margin-bottom: 16px; }}
-                .button {{ display: inline-block; background-color: #5B87AD; color: #070B10; padding: 12px 24px; border-radius: 8px; text-decoration: none; font-weight: 600; margin: 16px 0; }}
-                .footer {{ margin-top: 32px; padding-top: 16px; border-top: 1px solid #1F2A35; font-size: 12px; color: #8F9BA6; }}
-            </style>
-        </head>
-        <body>
-            <div class="container">
-                <h1>Verify your email</h1>
-                <p>Click the button below to activate your AWS Security Autopilot account.</p>
-                <a href="{verification_link}" class="button">Verify Email</a>
-                <p>If the button does not work, copy and paste this link into your browser:</p>
-                <p style="word-break: break-all; font-size: 12px;">{verification_link}</p>
-                <div class="footer">
-                    <p>If you did not create this account, you can safely ignore this email.</p>
-                </div>
-            </div>
-        </body>
-        </html>
-        """
-        text_body = (
-            "Verify your AWS Security Autopilot email address.\n\n"
-            f"Open this link to activate your account:\n{verification_link}\n\n"
-            "If you did not create this account, you can safely ignore this email."
+        html_body, text_body = self._build_email_documents(
+            title="Verify your email",
+            intro_lines=[
+                "Confirm your email address to activate your AWS Security Autopilot account.",
+                "If you did not create this account, you can safely ignore this email.",
+            ],
+            sections_html=[render_html_section("Direct link", render_html_link_box(verification_link))],
+            section_blocks=[render_text_fact_block("Direct link", [("URL", verification_link)])],
+            cta_label="Verify email",
+            cta_url=verification_link,
+            preheader="Confirm your email address to finish activating your account.",
         )
 
         if self._log_only_local():
@@ -357,31 +371,20 @@ This reset link expires in 1 hour.
         """
         purpose_text = purpose.strip() or "security verification"
         subject = f"Your AWS Security Autopilot {purpose_text} code"
-        html_body = f"""
-        <!DOCTYPE html>
-        <html>
-        <head>
-            <style>
-                body {{ font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background-color: #070B10; color: #C7D0D8; padding: 40px; }}
-                .container {{ max-width: 600px; margin: 0 auto; background-color: #101720; border-radius: 12px; padding: 32px; border: 1px solid #1F2A35; }}
-                h1 {{ color: #C7D0D8; font-size: 24px; margin-bottom: 16px; }}
-                p {{ color: #8F9BA6; line-height: 1.6; margin-bottom: 16px; }}
-                .code {{ font-size: 32px; letter-spacing: 8px; font-weight: 700; color: #C7D0D8; background-color: #070B10; padding: 16px; border-radius: 8px; text-align: center; }}
-            </style>
-        </head>
-        <body>
-            <div class="container">
-                <h1>Security code</h1>
-                <p>Use this one-time code to complete your {purpose_text} step.</p>
-                <div class="code">{code}</div>
-                <p>This code expires in 10 minutes.</p>
-            </div>
-        </body>
-        </html>
-        """
-        text_body = (
-            f"Your AWS Security Autopilot {purpose_text} code is: {code}\n\n"
-            "This code expires in 10 minutes."
+        html_body, text_body = self._build_email_documents(
+            title="Security code",
+            intro_lines=[
+                f"Use this one-time code to complete your {purpose_text} step.",
+                "This code expires in 10 minutes.",
+            ],
+            sections_html=[
+                render_html_section(
+                    "One-time code",
+                    render_html_code_block(code, label="Security verification"),
+                )
+            ],
+            section_blocks=["One-time code\n-------------\n" + code],
+            preheader=f"Your {purpose_text} code is ready.",
         )
 
         if self._log_only_local():
@@ -527,44 +530,33 @@ This reset link expires in 1 hour.
             True if sent (or logged in local), False on failure.
         """
         subject = f"Your baseline security report is ready — {app_name}"
-        html_body = f"""
-        <!DOCTYPE html>
-        <html>
-        <head>
-            <style>
-                body {{ font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background-color: #070B10; color: #C7D0D8; padding: 40px; }}
-                .container {{ max-width: 600px; margin: 0 auto; background-color: #101720; border-radius: 12px; padding: 32px; border: 1px solid #1F2A35; }}
-                h1 {{ color: #C7D0D8; font-size: 24px; margin-bottom: 16px; }}
-                p {{ color: #8F9BA6; line-height: 1.6; margin-bottom: 16px; }}
-                .button {{ display: inline-block; background-color: #5B87AD; color: #070B10; padding: 12px 24px; border-radius: 8px; text-decoration: none; font-weight: 600; margin: 16px 0; }}
-                .footer {{ margin-top: 32px; padding-top: 16px; border-top: 1px solid #1F2A35; font-size: 12px; color: #8F9BA6; }}
-            </style>
-        </head>
-        <body>
-            <div class="container">
-                <h1>Your baseline security report is ready</h1>
-                <p>Hi,</p>
-                <p>Your baseline security report for <strong>{tenant_name}</strong> is ready. You can download it using the link below (valid for 1 hour).</p>
-                <a href="{download_url}" class="button">Download report</a>
-                <p>Or copy and paste this link into your browser:</p>
-                <p style="word-break: break-all; font-size: 12px;">{download_url}</p>
-                <div class="footer">
-                    <p>This report was generated by {app_name}. If you didn't request this report, you can safely ignore this email.</p>
-                </div>
-            </div>
-        </body>
-        </html>
-        """
-        text_body = f"""
-Your baseline security report is ready.
-
-Your baseline security report for {tenant_name} is ready.
-
-Download your report (link valid for 1 hour):
-{download_url}
-
-This report was generated by {app_name}. If you didn't request this report, you can safely ignore this email.
-        """.strip()
+        html_body, text_body = self._build_email_documents(
+            title="Your baseline security report is ready",
+            intro_lines=[
+                f"Your baseline security report for {tenant_name} is ready.",
+                "This download link is valid for 1 hour.",
+            ],
+            sections_html=[
+                render_html_section(
+                    "Report details",
+                    render_html_fact_table([("Organization", tenant_name), ("Availability", "1 hour")]),
+                ),
+                render_html_section("Direct link", render_html_link_box(download_url)),
+            ],
+            section_blocks=[
+                render_text_fact_block("Report details", [("Organization", tenant_name), ("Availability", "1 hour")]),
+                render_text_fact_block("Direct link", [("URL", download_url)]),
+            ],
+            cta_label="Download report",
+            cta_url=download_url,
+            footer_html=render_html_notice(
+                f"This report was generated by {app_name}. If you didn't request this report, you can safely ignore this email."
+            ),
+            footer_lines=[
+                f"This report was generated by {app_name}. If you didn't request this report, you can safely ignore this email."
+            ],
+            preheader=f"Your {tenant_name} baseline security report is ready.",
+        )
 
         if self._log_only_local():
             logger.info(

@@ -1,8 +1,8 @@
 # Remediation Operator UX Implementation Plan
 
-> ⚠️ Status: Partially implemented — Phase A language/shared labels and Phase B guided-review layout landed on 2026-03-30. Phase C remains planned.
+> ✅ Status: Implemented — Phase A language/shared labels, Phase B guided-review layout, and Phase C prioritization plus blocker routing all landed on 2026-03-30.
 
-This plan packages the value from the now-closed remediation-determinism phases into clearer operator-facing product UX. The backend/runtime work for truthful remediation selection is already closed through the retained March 30, 2026 signoff packages. The remaining opportunity is to make those outcomes easier to understand, prioritize, and act on in the browser.
+This plan packages the value from the now-closed remediation-determinism phases into clearer operator-facing product UX. The backend/runtime work for truthful remediation selection is already closed through the retained March 30, 2026 signoff packages, and this frontend plan now makes those outcomes easier to understand, prioritize, and act on in the browser.
 
 ## Why this plan exists
 
@@ -254,7 +254,7 @@ Why second:
 
 Status:
 
-- Planned — not yet implemented
+- Implemented on 2026-03-30
 
 Ship third:
 

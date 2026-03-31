@@ -197,6 +197,13 @@ class Settings(BaseSettings):
         default=(60 * 24 * 7) + 60,  # 7 days + 1 hour
         description="JWT access token expiry in minutes",
     )
+    CONTROL_PLANE_PREVIOUS_TOKEN_GRACE_HOURS: int = Field(
+        default=72,
+        description=(
+            "Hours to continue accepting the immediately previous control-plane token after rotation. "
+            "Lets already-deployed forwarders survive routine token re-reveal/rotation until operators update them."
+        ),
+    )
     AUTH_LOGIN_RATE_LIMIT_ENABLED: bool = Field(
         default=True,
         description="Enable login failure rate limiting for POST /api/auth/login.",
@@ -463,6 +470,43 @@ class Settings(BaseSettings):
         description=(
             "Optional static AWS session token for the separate observer base context used by "
             "authoritative root-key disable/delete execution."
+        ),
+    )
+    ROOT_KEY_SAFE_REMEDIATION_OBSERVER_DIRECT_SESSION_ENABLED: bool = Field(
+        default=False,
+        description=(
+            "When true, authoritative root-key disable/delete may use the configured observer "
+            "credentials directly after STS caller-identity proves they are already scoped to "
+            "the target account."
+        ),
+    )
+    ROOT_KEY_SAFE_REMEDIATION_MUTATION_AWS_PROFILE: str = Field(
+        default="",
+        description=(
+            "Optional AWS profile name used as the explicit mutation context for operator-owned "
+            "authoritative root-key execution. When unset, executor-backed root-key transitions "
+            "fail closed instead of using ambient runtime credentials."
+        ),
+    )
+    ROOT_KEY_SAFE_REMEDIATION_MUTATION_AWS_ACCESS_KEY_ID: str = Field(
+        default="",
+        description=(
+            "Optional static AWS access key for the explicit mutation context used by "
+            "operator-owned authoritative root-key execution."
+        ),
+    )
+    ROOT_KEY_SAFE_REMEDIATION_MUTATION_AWS_SECRET_ACCESS_KEY: str = Field(
+        default="",
+        description=(
+            "Optional static AWS secret key for the explicit mutation context used by "
+            "operator-owned authoritative root-key execution."
+        ),
+    )
+    ROOT_KEY_SAFE_REMEDIATION_MUTATION_AWS_SESSION_TOKEN: str = Field(
+        default="",
+        description=(
+            "Optional static AWS session token for the explicit mutation context used by "
+            "operator-owned authoritative root-key execution."
         ),
     )
     ROOT_KEY_SAFE_REMEDIATION_CANARY_ENABLED: bool = Field(

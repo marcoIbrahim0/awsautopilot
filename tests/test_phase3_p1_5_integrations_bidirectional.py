@@ -28,7 +28,9 @@ from backend.services.integration_sync import (
     _build_sync_payload,
     process_inbound_event,
     plan_action_sync_tasks,
+    resolve_jira_setting_for_signature,
 )
+from backend.services.jira_admin import verify_jira_webhook_signature
 from backend.workers.jobs.compute_actions import execute_compute_actions_job
 from backend.workers.jobs.integration_sync import execute_integration_sync_job
 
@@ -92,7 +94,13 @@ def _action(
     )
 
 
-def _setting(*, tenant_id: uuid.UUID, provider: str = "jira") -> TenantIntegrationSetting:
+def _setting(
+    *,
+    tenant_id: uuid.UUID,
+    provider: str = "jira",
+    config_json: dict | None = None,
+    secret_json: dict | None = None,
+) -> TenantIntegrationSetting:
     return TenantIntegrationSetting(
         id=uuid.uuid4(),
         tenant_id=tenant_id,
@@ -102,8 +110,8 @@ def _setting(*, tenant_id: uuid.UUID, provider: str = "jira") -> TenantIntegrati
         inbound_enabled=True,
         auto_create=True,
         reopen_on_regression=True,
-        config_json={},
-        secret_json={"webhook_token": "secret-token", "api_token": "token"},
+        config_json=config_json or {},
+        secret_json=secret_json or {"webhook_token": "secret-token", "api_token": "token"},
     )
 
 
@@ -223,7 +231,7 @@ def test_plan_action_sync_tasks_create_update_and_reopen_operations() -> None:
         SYNC_OPERATION_UPDATE,
         SYNC_OPERATION_REOPEN,
     ]
-    assert created_tasks[0].payload_json["external_assignee_key"] == "owner-create"
+    assert created_tasks[0].payload_json["external_assignee_key"] is None
     assert created_tasks[1].payload_json["external_id"] == "10002"
     assert created_tasks[1].payload_json["external_key"] == "SEC-2"
     assert created_tasks[2].payload_json["external_status"] == "To Do"
@@ -311,6 +319,52 @@ def test_plan_action_sync_tasks_omits_non_user_owner_from_outbound_payload() -> 
     created_task = session.add.call_args.args[0]
     assert created_task.payload_json["external_assignee_key"] is None
     assert created_task.payload_json["external_assignee_label"] is None
+
+
+def test_build_sync_payload_omits_unverified_jira_user_assignee() -> None:
+    tenant_id = uuid.uuid4()
+    action = _action(
+        tenant_id=tenant_id,
+        action_id=uuid.uuid4(),
+        status=ACTION_STATUS_OPEN,
+        owner_key="internal-user-key",
+        owner_label="Internal User",
+    )
+
+    payload = _build_sync_payload(
+        action=action,
+        setting=_setting(tenant_id=tenant_id, provider="jira"),
+        link=None,
+        operation=SYNC_OPERATION_CREATE,
+    )
+
+    assert payload["external_assignee_key"] is None
+    assert payload["external_assignee_label"] is None
+
+
+def test_build_sync_payload_uses_verified_jira_account_mapping() -> None:
+    tenant_id = uuid.uuid4()
+    action = _action(
+        tenant_id=tenant_id,
+        action_id=uuid.uuid4(),
+        status=ACTION_STATUS_OPEN,
+        owner_key="owner@company.com",
+        owner_label="Owner Name",
+    )
+
+    payload = _build_sync_payload(
+        action=action,
+        setting=_setting(
+            tenant_id=tenant_id,
+            provider="jira",
+            config_json={"assignee_account_map": {"owner@company.com": "acct-42"}},
+        ),
+        link=None,
+        operation=SYNC_OPERATION_CREATE,
+    )
+
+    assert payload["external_assignee_key"] == "acct-42"
+    assert payload["external_assignee_label"] == "Owner Name"
 
 
 def test_build_sync_payload_includes_drift_version_metadata_for_reconciliation() -> None:
@@ -451,6 +505,48 @@ def test_process_inbound_event_replays_duplicate_receipt_after_integrity_error()
     assert result.action_status == "resolved"
     assert result.owner_key == "acct-7"
     session.rollback.assert_called_once()
+
+
+def test_resolve_jira_setting_for_signature_matches_signed_secret() -> None:
+    tenant_id = uuid.uuid4()
+    setting = _setting(
+        tenant_id=tenant_id,
+        provider="jira",
+        secret_json={"webhook_secret": "signed-secret"},
+    )
+    body = b'{"issue":{"id":"10001"}}'
+    signature = "sha256=0c5c3f768ee46217363b0a29d5b6dbbfa880c4f1ea9c31ae87fea5442f946afd"
+    session = MagicMock()
+    session.execute.return_value = _scalars_result([setting])
+
+    resolved = resolve_jira_setting_for_signature(
+        session,
+        body=body,
+        signature_header=signature,
+    )
+
+    assert verify_jira_webhook_signature(body=body, secret="signed-secret", signature_header=signature) is True
+    assert resolved == setting
+
+
+def test_resolve_jira_setting_for_signature_returns_none_for_invalid_signature() -> None:
+    tenant_id = uuid.uuid4()
+    setting = _setting(
+        tenant_id=tenant_id,
+        provider="jira",
+        secret_json={"webhook_secret": "signed-secret"},
+    )
+    body = b'{"issue":{"id":"10001"}}'
+    session = MagicMock()
+    session.execute.return_value = _scalars_result([setting])
+
+    resolved = resolve_jira_setting_for_signature(
+        session,
+        body=body,
+        signature_header="sha256=deadbeef",
+    )
+
+    assert resolved is None
 
 
 def test_execute_integration_sync_job_successfully_syncs_reopen_task() -> None:

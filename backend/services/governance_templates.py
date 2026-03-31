@@ -1,8 +1,16 @@
 """Template rendering for governance communication stages."""
 from __future__ import annotations
 
-from html import escape
 from typing import Any
+
+from backend.services.email_templates import (
+    build_email_html_document,
+    escape_html,
+    render_html_fact_table,
+    render_html_paragraphs,
+    render_html_rich_list,
+    render_html_section,
+)
 
 GOVERNANCE_STAGES = {
     "pre_change",
@@ -44,13 +52,10 @@ def render_governance_template(
     tenant = _normalize(tenant_name, "Tenant")
     target = _normalize(target_label, "Governance item")
     details = _normalize(detail, "No additional detail provided.")
-    safe_details = escape(details)
-    safe_target = escape(target)
-    safe_tenant = escape(tenant)
     cta_url = (action_url or "").strip()
     escalation = escalation_context if isinstance(escalation_context, dict) else None
 
-    subject = f"[{prefix}] {safe_tenant}: {safe_target}"
+    subject = f"[{prefix}] {escape_html(tenant)}: {escape_html(target)}"
     text_lines = [subject, "", details]
     if escalation:
         risk_tier = _normalize(str(escalation.get("risk_tier")), "unknown")
@@ -72,29 +77,48 @@ def render_governance_template(
     if cta_url:
         text_lines.extend(["", f"Open in app: {cta_url}"])
 
-    html_parts = [
-        f"<h2>{escape(prefix)}</h2>",
-        f"<p><strong>Tenant:</strong> {safe_tenant}</p>",
-        f"<p><strong>Target:</strong> {safe_target}</p>",
-        f"<p>{safe_details}</p>",
+    sections_html = [
+        render_html_section(
+            "Governance item details",
+            render_html_fact_table([("Tenant", tenant), ("Target", target)]),
+        )
     ]
     if escalation:
-        html_parts.append(
-            "<p><strong>Escalation context</strong><br>"
-            f"Risk tier: {escape(str(escalation.get('risk_tier') or 'unknown'))}<br>"
-            f"SLA state: {escape(str(escalation.get('sla_state') or 'unknown'))}<br>"
-            f"Owner: {escape(str(escalation.get('owner_label') or 'Unassigned'))}<br>"
-            f"Due at: {escape(str(escalation.get('due_at') or 'unknown'))}<br>"
-            f"Reason: {escape(str(escalation.get('escalation_reason') or 'No escalation reason provided.'))}</p>"
+        sections_html.append(
+            render_html_section(
+                "Escalation context",
+                render_html_rich_list(
+                    [
+                        f"Risk tier: {escape_html(escalation.get('risk_tier') or 'unknown')}",
+                        f"SLA state: {escape_html(escalation.get('sla_state') or 'unknown')}",
+                        f"Owner: {escape_html(escalation.get('owner_label') or 'Unassigned')}",
+                        f"Due at: {escape_html(escalation.get('due_at') or 'unknown')}",
+                        f"Reason: {escape_html(escalation.get('escalation_reason') or 'No escalation reason provided.')}",
+                    ]
+                ),
+            )
         )
     if cta_url:
-        safe_url = escape(cta_url)
-        html_parts.append(f'<p><a href="{safe_url}">Open in app</a></p>')
+        sections_html.append(
+            render_html_section(
+                "Direct link",
+                f'<a href="{escape_html(cta_url)}" style="color:#0d63c8;">{escape_html(cta_url)}</a>',
+            )
+        )
+
+    html_body = build_email_html_document(
+        title=f"{prefix}: {target}",
+        intro_html=render_html_paragraphs([details]),
+        sections_html=sections_html,
+        cta_label="Open in app" if cta_url else None,
+        cta_url=cta_url or None,
+        preheader=f"{prefix} notification for {target}.",
+    )
 
     return {
         "subject": subject,
         "text": "\n".join(text_lines),
-        "html": "\n".join(html_parts),
+        "html": html_body,
         "title": f"{prefix}: {target}",
         "message": details,
         "webhook": {

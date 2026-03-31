@@ -24,6 +24,9 @@ class Tenant(Base):
     control_plane_token_fingerprint: Mapped[str | None] = mapped_column(String(32), nullable=True)
     control_plane_token_created_at: Mapped[object | None] = mapped_column(DateTime(timezone=True), nullable=True)
     control_plane_token_revoked_at: Mapped[object | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    control_plane_previous_token: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    control_plane_previous_token_fingerprint: Mapped[str | None] = mapped_column(String(32), nullable=True)
+    control_plane_previous_token_expires_at: Mapped[object | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
     created_at: Mapped[object] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
     updated_at: Mapped[object] = mapped_column(

@@ -68,9 +68,17 @@ def _extract_event_fields(event: dict[str, Any]) -> tuple[str | None, str | None
 
 async def _get_tenant_for_token(db: AsyncSession, token: str) -> Tenant | None:
     token_hash = hash_control_plane_token(token)
+    now = datetime.now(timezone.utc)
     stmt = select(Tenant).where(
-        Tenant.control_plane_token == token_hash,
         Tenant.control_plane_token_revoked_at.is_(None),
+        sa.or_(
+            Tenant.control_plane_token == token_hash,
+            sa.and_(
+                Tenant.control_plane_previous_token == token_hash,
+                Tenant.control_plane_previous_token_expires_at.is_not(None),
+                Tenant.control_plane_previous_token_expires_at > now,
+            ),
+        ),
     )
     result = await db.execute(stmt)
     return result.scalar_one_or_none()

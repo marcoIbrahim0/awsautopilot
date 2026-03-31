@@ -9,6 +9,16 @@ from __future__ import annotations
 
 from typing import Any
 
+from backend.services.email_templates import (
+    build_email_html_document,
+    escape_html,
+    render_html_link_box,
+    render_html_paragraphs,
+    render_html_rich_list,
+    render_html_section,
+    render_html_stat_grid,
+)
+
 # Default app name for subject and footer
 DEFAULT_APP_NAME = "AWS Security Autopilot"
 
@@ -67,16 +77,16 @@ def _escalation_plain_line(view_in_app_url: str, item: dict[str, Any]) -> str:
 
 
 def _escalation_html_line(view_in_app_url: str, item: dict[str, Any]) -> str:
-    title = (item.get("title") or "Action").replace("<", "&lt;").replace(">", "&gt;")[:80]
-    risk_tier = (item.get("risk_tier") or "unknown").replace("<", "&lt;").replace(">", "&gt;")
-    sla_state = (item.get("sla_state") or "state_unknown").replace("<", "&lt;").replace(">", "&gt;")
-    owner = (item.get("owner_label") or "Unassigned").replace("<", "&lt;").replace(">", "&gt;")[:60]
-    due_at = (item.get("due_at") or "unknown").replace("<", "&lt;").replace(">", "&gt;")
+    title = escape_html((item.get("title") or "Action")[:80])
+    risk_tier = escape_html(item.get("risk_tier") or "unknown")
+    sla_state = escape_html(item.get("sla_state") or "state_unknown")
+    owner = escape_html((item.get("owner_label") or "Unassigned")[:60])
+    due_at = escape_html(item.get("due_at") or "unknown")
     action_id = item.get("action_id")
     if action_id:
         action_link = get_action_url(_base_from_view_url(view_in_app_url), action_id)
-        title = f'<a href="{action_link}" style="color:#5B87AD;">{title}</a>'
-    return f'<li style="margin-bottom:6px;color:#C7D0D8;">{title} — {risk_tier}/{sla_state} — owner {owner} — due {due_at}</li>'
+        title = f'<a href="{escape_html(action_link)}" style="color:#0d63c8;">{title}</a>'
+    return f"{title} — {risk_tier}/{sla_state} — owner {owner} — due {due_at}"
 
 
 def _escalation_slack_line(view_in_app_url: str, item: dict[str, Any]) -> str:
@@ -172,7 +182,7 @@ def build_email_body_html(
     view_in_app_url: str,
     app_name: str = DEFAULT_APP_NAME,
 ) -> str:
-    """HTML email body: same content as plain, with minimal inline styles for email clients."""
+    """HTML email body: same content as plain, rendered through the shared branded shell."""
     open_count = payload.get(KEY_OPEN_ACTION_COUNT, 0) or 0
     overdue_count = payload.get(KEY_OVERDUE_ACTION_COUNT, 0) or 0
     expiring_action_count = payload.get(KEY_EXPIRING_ACTION_COUNT, 0) or 0
@@ -184,7 +194,6 @@ def build_email_body_html(
     expiring_list = payload.get(KEY_EXPIRING_EXCEPTIONS) or []
 
     name = (tenant_name or "your organization").strip()
-
     summary_rows = [
         ("Open actions", open_count),
         ("Actions nearing SLA due time", expiring_action_count),
@@ -193,70 +202,55 @@ def build_email_body_html(
         ("New or updated findings (last 7 days)", new_findings),
         ("Exceptions expiring in the next 14 days", expiring_count),
     ]
-
-    rows_html = "".join(
-        f'<tr><td style="padding:6px 12px 6px 0;color:#8F9BA6;">{label}</td>'
-        f'<td style="padding:6px 0;color:#C7D0D8;font-weight:600;">{val}</td></tr>'
-        for label, val in summary_rows
-    )
-
-    top_actions_html = ""
+    sections_html = [render_html_section("Summary", render_html_stat_grid(summary_rows))]
     if top_actions:
         items = []
         for a in top_actions[:5]:
-            title = (a.get("title") or "Action").replace("<", "&lt;").replace(">", "&gt;")[:60]
+            title = escape_html((a.get("title") or "Action")[:60])
             priority = a.get("priority", 0)
             action_id = a.get("id")
             if action_id:
                 action_link = f"{_base_from_view_url(view_in_app_url)}/actions/{action_id}"
                 items.append(
-                    f'<li style="margin-bottom:6px;">'
-                    f'<a href="{action_link}" style="color:#5B87AD;">{title}</a> '
-                    f'<span style="color:#8F9BA6;">(priority {priority})</span></li>'
+                    f'<a href="{escape_html(action_link)}" style="color:#0d63c8;">{title}</a> '
+                    f'<span style="color:#6a7a8f;">(priority {escape_html(priority)})</span>'
                 )
             else:
-                items.append(f'<li style="margin-bottom:6px;color:#C7D0D8;">{title} (priority {priority})</li>')
-        top_actions_html = (
-            '<p style="color:#8F9BA6;margin:16px 0 8px;">Top actions by priority</p>'
-            f'<ul style="margin:0 0 16px;padding-left:20px;color:#C7D0D8;">{"".join(items)}</ul>'
+                items.append(f"{title} <span style=\"color:#6a7a8f;\">(priority {escape_html(priority)})</span>")
+        sections_html.append(
+            render_html_section("Top actions by priority", render_html_rich_list(items))
         )
-
-    expiring_html = ""
     if expiring_list:
         items = []
         for e in expiring_list[:10]:
-            label = (e.get("label") or "Exception").replace("<", "&lt;").replace(">", "&gt;").replace("\n", " ")[:80]
-            expiry = e.get("expires_at_iso") or e.get("expires_at", "")
-            items.append(f'<li style="margin-bottom:4px;color:#C7D0D8;">{label} — expires {expiry}</li>')
-        expiring_html = (
-            '<p style="color:#8F9BA6;margin:16px 0 8px;">Exceptions expiring soon</p>'
-            f'<ul style="margin:0 0 16px;padding-left:20px;">{"".join(items)}</ul>'
+            label = escape_html((e.get("label") or "Exception").replace("\n", " ")[:80])
+            expiry = escape_html(e.get("expires_at_iso") or e.get("expires_at", ""))
+            items.append(f"{label} — expires {expiry}")
+        sections_html.append(
+            render_html_section("Exceptions expiring soon", render_html_rich_list(items))
         )
-
-    escalations_html = ""
     if escalations:
-        items = [_escalation_html_line(view_in_app_url, item) for item in escalations[:5]]
-        escalations_html = (
-            '<p style="color:#8F9BA6;margin:16px 0 8px;">High-impact escalations</p>'
-            f'<ul style="margin:0 0 16px;padding-left:20px;">{"".join(items)}</ul>'
+        sections_html.append(
+            render_html_section(
+                "High-impact escalations",
+                render_html_rich_list([_escalation_html_line(view_in_app_url, item) for item in escalations[:5]]),
+            )
         )
-
-    return f"""<!DOCTYPE html>
-<html>
-<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
-<body style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:#0f1419;color:#C7D0D8;margin:0;padding:24px;">
-<div style="max-width:560px;margin:0 auto;background:#151b23;border-radius:12px;padding:32px;border:1px solid #1f2a35;">
-  <h1 style="color:#C7D0D8;font-size:20px;margin:0 0 20px;">Weekly digest for {name}</h1>
-  <p style="color:#8F9BA6;line-height:1.5;margin:0 0 20px;">Here’s your weekly security summary.</p>
-  <table style="border-collapse:collapse;margin:0 0 20px;">{rows_html}</table>
-  {top_actions_html}
-  {expiring_html}
-  {escalations_html}
-  <p style="margin:24px 0 16px;"><a href="{view_in_app_url}" style="display:inline-block;background:#5B87AD;color:#0f1419;padding:12px 24px;border-radius:8px;text-decoration:none;font-weight:600;">View in app</a></p>
-  <p style="font-size:12px;color:#8F9BA6;margin:24px 0 0;padding-top:16px;border-top:1px solid #1f2a35;">— {app_name}</p>
-</div>
-</body>
-</html>"""
+    sections_html.append(render_html_section("Direct link", render_html_link_box(view_in_app_url)))
+    return build_email_html_document(
+        title=f"Weekly digest for {name}",
+        intro_html=render_html_paragraphs(
+            [
+                f"Here’s your weekly security digest for {name}.",
+                "Review prioritized actions, exceptions that need attention, and high-impact escalations in the app.",
+            ]
+        ),
+        sections_html=sections_html,
+        cta_label="View in app",
+        cta_url=view_in_app_url,
+        footer_html=f'<p style="margin:0;color:#6a7a8f;line-height:1.6;">{escape_html(app_name)} · Weekly digest</p>',
+        preheader=f"{open_count} open actions, {overdue_count} overdue, {escalation_count} escalations.",
+    )
 
 
 def build_slack_blocks(

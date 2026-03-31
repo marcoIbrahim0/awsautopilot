@@ -29,13 +29,20 @@ from backend.models.enums import EntityType, RemediationRunMode
 from backend.models.remediation_run import RemediationRun
 from backend.models.tenant import Tenant
 from backend.models.user import User
+from backend.services.action_ownership import resolve_action_owner
 from backend.services.exception_service import get_exception_state_for_response, get_exception_states_for_entities
 from backend.services.action_run_confirmation import derive_action_run_status
+from backend.services.control_scope import ACTION_TYPE_DEFAULT, action_type_from_control
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/findings", tags=["findings"])
 _SG_TARGET_PATTERN = re.compile(r"\bsg-[0-9a-fA-F]{8,17}\b")
+_SOURCE_SERVICE_LABELS = {
+    "access_analyzer": "IAM Access Analyzer",
+    "inspector": "Amazon Inspector",
+    "security_hub": "AWS Security Hub",
+}
 
 def _normalize_shadow_status(status_raw: str | None) -> str:
     s = (status_raw or "").strip().upper()
@@ -56,6 +63,55 @@ def _is_executable_action_target(action_type: str | None, target_id: str | None,
         if candidate and _SG_TARGET_PATTERN.search(str(candidate)):
             return True
     return False
+
+
+def _service_label_for_finding(
+    action_type: str | None,
+    resource_type: str | None,
+    source: str | None,
+) -> str | None:
+    owner = resolve_action_owner([], action_type=action_type, resource_type=resource_type)
+    if owner.owner_type == "service" and owner.owner_key != "unassigned":
+        return owner.owner_label
+    return _SOURCE_SERVICE_LABELS.get(str(source or "").strip().lower())
+
+
+def _scope_owner_for_entity(resource_id: str | None, resource_type: str | None, account_id: str) -> str:
+    if (resource_id or "") == account_id or (resource_type or "") == "AwsAccount":
+        return "account"
+    return "resource"
+
+
+def _remediation_visibility_message(reason: str) -> str:
+    if reason == "historical_resolved":
+        return "This finding is already resolved, so there is no current remediation action to generate."
+    if reason == "managed_on_account_scope":
+        return "This finding family is remediated at account scope. Open the account-level row for the runnable fix."
+    if reason == "managed_on_resource_scope":
+        return "This finding family is remediated at resource scope. Open a resource-specific row for the runnable fix."
+    return "This finding does not currently expose a runnable remediation action."
+
+
+def _build_visibility_hint(reason: str, scope_owner: str | None = None) -> dict[str, str | None]:
+    return {
+        "remediation_visibility_reason": reason,
+        "remediation_scope_owner": scope_owner,
+        "remediation_scope_message": _remediation_visibility_message(reason),
+    }
+
+
+def _visibility_owner_for_candidates(
+    candidates: list[tuple[str | None, str | None]],
+    resource_id: str | None,
+    resource_type: str | None,
+    account_id: str,
+) -> str | None:
+    current_scope = _scope_owner_for_entity(resource_id, resource_type, account_id)
+    for candidate_resource_id, candidate_resource_type in candidates:
+        candidate_scope = _scope_owner_for_entity(candidate_resource_id, candidate_resource_type, account_id)
+        if candidate_scope != current_scope:
+            return candidate_scope
+    return None
 
 
 # ============================================
@@ -85,6 +141,8 @@ class FindingResponse(BaseModel):
     account_id: str
     region: str
     source: str = "security_hub"  # Step 2B.1: security_hub | access_analyzer
+    service: str | None = None
+    aws_service: str | None = None
     severity_label: str
     severity_normalized: int
     canonical_status: str
@@ -129,6 +187,9 @@ class FindingResponse(BaseModel):
     status_message: str | None = None
     status_severity: str | None = None
     followup_kind: str | None = None
+    remediation_visibility_reason: str | None = None
+    remediation_scope_owner: str | None = None
+    remediation_scope_message: str | None = None
 
 
 class FindingsListResponse(BaseModel):
@@ -185,6 +246,12 @@ def finding_to_response(
     """Convert a Finding model to a FindingResponse."""
     state = exception_state or {}
     hints = remediation_hints or {}
+    derived_action_type = hints.get("remediation_action_type") or action_type_from_control(finding.control_id)
+    service_label = _service_label_for_finding(
+        derived_action_type,
+        finding.resource_type,
+        getattr(finding, "source", "security_hub"),
+    )
 
     shadow: FindingShadowOverlayResponse | None = None
     if getattr(finding, "shadow_status_raw", None):
@@ -220,6 +287,8 @@ def finding_to_response(
         account_id=finding.account_id,
         region=finding.region,
         source=getattr(finding, "source", "security_hub"),
+        service=service_label,
+        aws_service=service_label,
         severity_label=finding.severity_label,
         severity_normalized=finding.severity_normalized,
         canonical_status=finding.status,
@@ -262,6 +331,9 @@ def finding_to_response(
         status_message=hints.get("status_message"),
         status_severity=hints.get("status_severity"),
         followup_kind=hints.get("followup_kind"),
+        remediation_visibility_reason=hints.get("remediation_visibility_reason"),
+        remediation_scope_owner=hints.get("remediation_scope_owner"),
+        remediation_scope_message=hints.get("remediation_scope_message"),
     )
 
 
@@ -370,37 +442,133 @@ async def get_remediation_hints_for_findings(
         }
         action_ids.add(action_uuid)
 
-    if not action_ids:
-        return hints_by_finding
+    if action_ids:
+        run_rows_result = await db.execute(
+            select(
+                RemediationRun.action_id,
+                RemediationRun.id,
+            )
+            .where(
+                RemediationRun.tenant_id == tenant_id,
+                RemediationRun.action_id.in_(list(action_ids)),
+                RemediationRun.mode == RemediationRunMode.pr_only,
+            )
+            .order_by(RemediationRun.action_id, RemediationRun.created_at.desc())
+        )
+        latest_run_by_action: dict[uuid.UUID, str] = {}
+        for action_id, run_id in run_rows_result.all():
+            if action_id not in latest_run_by_action:
+                latest_run_by_action[action_id] = str(run_id)
 
-    run_rows_result = await db.execute(
-        select(
-            RemediationRun.action_id,
-            RemediationRun.id,
-        )
-        .where(
-            RemediationRun.tenant_id == tenant_id,
-            RemediationRun.action_id.in_(list(action_ids)),
-            RemediationRun.mode == RemediationRunMode.pr_only,
-        )
-        .order_by(RemediationRun.action_id, RemediationRun.created_at.desc())
+        for finding_uuid, hints in hints_by_finding.items():
+            action_id = hints.get("remediation_action_id")
+            if not action_id:
+                continue
+            try:
+                action_uuid = uuid.UUID(action_id)
+            except ValueError:
+                continue
+            hints["latest_pr_bundle_run_id"] = latest_run_by_action.get(action_uuid)
+
+    fallback_hints = await _fallback_hints_for_findings_without_direct_action(
+        db,
+        tenant_id,
+        finding_ids,
+        resolved_ids=set(hints_by_finding.keys()),
     )
-    latest_run_by_action: dict[uuid.UUID, str] = {}
-    for action_id, run_id in run_rows_result.all():
-        if action_id not in latest_run_by_action:
-            latest_run_by_action[action_id] = str(run_id)
-
-    for finding_uuid, hints in hints_by_finding.items():
-        action_id = hints.get("remediation_action_id")
-        if not action_id:
-            continue
-        try:
-            action_uuid = uuid.UUID(action_id)
-        except ValueError:
-            continue
-        hints["latest_pr_bundle_run_id"] = latest_run_by_action.get(action_uuid)
-
+    hints_by_finding.update(fallback_hints)
     return hints_by_finding
+
+
+async def _fallback_hints_for_findings_without_direct_action(
+    db: AsyncSession,
+    tenant_id: uuid.UUID,
+    finding_ids: list[uuid.UUID],
+    resolved_ids: set[uuid.UUID],
+) -> dict[uuid.UUID, dict]:
+    unresolved_ids = [finding_id for finding_id in finding_ids if finding_id not in resolved_ids]
+    finding_rows = await _fetch_finding_rows_for_visibility(db, tenant_id, unresolved_ids)
+    action_rows = await _fetch_actions_for_visibility(db, tenant_id, finding_rows)
+    return _build_visibility_hints_from_rows(finding_rows, action_rows)
+
+
+async def _fetch_finding_rows_for_visibility(
+    db: AsyncSession,
+    tenant_id: uuid.UUID,
+    finding_ids: list[uuid.UUID],
+) -> list[tuple]:
+    if not finding_ids:
+        return []
+    result = await db.execute(
+        select(
+            Finding.id,
+            Finding.control_id,
+            Finding.account_id,
+            Finding.region,
+            Finding.resource_id,
+            Finding.resource_type,
+            Finding.status,
+            Finding.shadow_status_normalized,
+        ).where(Finding.tenant_id == tenant_id, Finding.id.in_(finding_ids))
+    )
+    return result.all()
+
+
+async def _fetch_actions_for_visibility(
+    db: AsyncSession,
+    tenant_id: uuid.UUID,
+    finding_rows: list[tuple],
+) -> list[tuple]:
+    scopes = {
+        (account_id, region or "", action_type_from_control(control_id))
+        for _, control_id, account_id, region, _, _, status_value, shadow_status in finding_rows
+        if _effective_status_from_values(status_value, shadow_status) != "RESOLVED"
+        if action_type_from_control(control_id) != ACTION_TYPE_DEFAULT
+    }
+    if not scopes:
+        return []
+    account_ids = {account_id for account_id, _, _ in scopes}
+    regions = {region for _, region, _ in scopes}
+    action_types = {action_type for _, _, action_type in scopes}
+    result = await db.execute(
+        select(Action.account_id, Action.region, Action.action_type, Action.resource_id, Action.resource_type).where(
+            Action.tenant_id == tenant_id,
+            Action.account_id.in_(account_ids),
+            Action.action_type.in_(action_types),
+            Action.region.in_(regions),
+        )
+    )
+    return result.all()
+
+
+def _build_visibility_hints_from_rows(finding_rows: list[tuple], action_rows: list[tuple]) -> dict[uuid.UUID, dict]:
+    actions_by_scope: dict[tuple[str, str, str], list[tuple[str | None, str | None]]] = {}
+    for account_id, region, action_type, resource_id, resource_type in action_rows:
+        key = (account_id, region or "", action_type)
+        actions_by_scope.setdefault(key, []).append((resource_id, resource_type))
+    hints: dict[uuid.UUID, dict] = {}
+    for finding_id, control_id, account_id, region, resource_id, resource_type, status_value, shadow_status in finding_rows:
+        effective_status = _effective_status_from_values(status_value, shadow_status)
+        if effective_status == "RESOLVED":
+            hints[finding_id] = _build_visibility_hint("historical_resolved")
+            continue
+        action_type = action_type_from_control(control_id)
+        if action_type == ACTION_TYPE_DEFAULT:
+            hints[finding_id] = _build_visibility_hint("no_current_remediation")
+            continue
+        scope_owner = _visibility_owner_for_candidates(
+            actions_by_scope.get((account_id, region or "", action_type), []),
+            resource_id,
+            resource_type,
+            account_id,
+        )
+        if scope_owner == "account":
+            hints[finding_id] = _build_visibility_hint("managed_on_account_scope", "account")
+        elif scope_owner == "resource":
+            hints[finding_id] = _build_visibility_hint("managed_on_resource_scope", "resource")
+        else:
+            hints[finding_id] = _build_visibility_hint("no_current_remediation")
+    return hints
 
 
 async def get_tenant_by_uuid(db: AsyncSession, tenant_uuid: uuid.UUID) -> Tenant:
@@ -977,6 +1145,7 @@ async def list_findings(
         Finding.resolved_at.desc().nullslast(),  # Most recently resolved first within resolved.
         Finding.severity_normalized.desc(),  # Most severe first for non-resolved findings.
         Finding.sh_updated_at.desc().nullslast(),  # Most recently updated.
+        Finding.id.asc(),  # Stable tie-breaker so offset pagination cannot reshuffle exact ties.
     )
     query = query.limit(limit).offset(offset)
 
