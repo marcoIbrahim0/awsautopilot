@@ -28,10 +28,13 @@ Implemented sync behaviors:
 - `backend/services/action_remediation_state_machine.py`
 - `backend/services/action_remediation_sync.py`
 - `backend/services/integration_adapters.py`
+- `backend/services/jira_admin.py`
 - `backend/workers/jobs/integration_sync.py`
 - `backend/workers/jobs/reconcile_action_remediation_sync.py`
 - `backend/workers/jobs/compute_actions.py`
 - `backend/routers/actions.py`
+- `frontend/src/app/settings/IntegrationsSettingsTab.tsx`
+- `frontend/src/components/ActionDetailModal.tsx`
 - `backend/routers/internal.py`
 - `backend/services/action_engine.py`
 - `backend/utils/sqs.py`
@@ -46,10 +49,14 @@ Routes mounted under `/api/integrations`:
 - `PATCH /api/integrations/settings/{provider}`
 - `POST /api/integrations/actions/{action_id}/sync`
 - `POST /api/integrations/webhooks/{provider}`
+- `POST /api/integrations/settings/jira/validate`
+- `POST /api/integrations/settings/jira/webhook/sync`
+- `POST /api/integrations/settings/jira/canary-sync`
 
 Webhook headers:
 
-- `X-Integration-Webhook-Token` is required.
+- Jira supports `X-Hub-Signature` for signed admin-webhook delivery.
+- `X-Integration-Webhook-Token` remains available as the migration fallback for Jira and as the shared-token contract for providers that do not use signed delivery.
 - `X-External-Event-Id` is optional and is used as the preferred inbound idempotency key.
 
 Supported setting fields on `PATCH /api/integrations/settings/{provider}`:
@@ -75,6 +82,8 @@ Optional provider config already supported:
 
 - Jira `issue_type`
 - Jira `transition_map`
+- Jira `assignee_account_map`
+- Jira `canary_action_id`
 - Slack `api_base_url`
 - per-provider `status_mapping`
 - per-provider `external_status_mapping`
@@ -171,9 +180,8 @@ Inbound sync safety:
 
 ## Current limitations
 
-- Provider-native signed webhook verification is not implemented; inbound auth currently relies on the shared `X-Integration-Webhook-Token` contract.
 - Slack inbound status sync expects webhook/event payloads that carry `metadata.event_payload.status` and assignee metadata; provider-specific interactive Slack action translation is not yet implemented.
-- External sync is additive to the action system-of-record and does not yet project provider status back into a dedicated frontend integration timeline.
+- Jira production readiness still requires one staged canary proof and one retained production canary proof on the dedicated Jira canary project/workflow.
 
 ## Related docs
 

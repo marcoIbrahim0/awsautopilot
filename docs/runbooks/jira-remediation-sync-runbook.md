@@ -2,6 +2,8 @@
 
 This runbook is the operator-facing guide for configuring Jira, proving provider drift handling, and debugging reconciliation for the Phase 3 `P1.5` and `P1.6` integration contracts.
 
+> ❓ Needs verification: Run the new staged canary and retained production proof against a dedicated Jira canary project/workflow using the signed admin-webhook path described below.
+
 Related docs:
 - [Integration-first remediation operations](/Users/marcomaher/AWS%20Security%20Autopilot/docs/features/integration-first-remediation-operations.md)
 - [Remediation system-of-record sync](/Users/marcomaher/AWS%20Security%20Autopilot/docs/features/remediation-system-of-record-sync.md)
@@ -28,7 +30,7 @@ The Jira integration requires these fields on `PATCH /api/integrations/settings/
 | `project_key` | `config.project_key` | yes | Jira project key, for example `KAN` |
 | `user_email` | `secret_config.user_email` | yes | Atlassian account email that owns the API token |
 | `api_token` | `secret_config.api_token` | yes | Atlassian API token, paired with the same email above |
-| `webhook_token` | `secret_config.webhook_token` | yes | Shared secret used by AWS Security Autopilot to authenticate inbound webhook calls |
+| `webhook_token` | `secret_config.webhook_token` | no | Legacy shared secret fallback for inbound webhook calls; keep only while migrating older tenants |
 
 Optional Jira fields already supported:
 
@@ -36,6 +38,16 @@ Optional Jira fields already supported:
 - `config.transition_map`
 - `config.status_mapping`
 - `config.external_status_mapping`
+- `config.assignee_account_map`
+- `config.canary_action_id`
+
+Server-managed Jira webhook state:
+
+- `config.health`
+- `config.webhook_id`
+- `config.webhook_name`
+- `config.webhook_url`
+- `secret_json.webhook_secret`
 
 ## How To Get The Jira Values
 
@@ -87,6 +99,8 @@ Example:
 openssl rand -hex 32
 ```
 
+This field is now a migration fallback only. New Jira validation should prefer the product-managed signed admin-webhook flow.
+
 ## Proven Live Tenant Configuration
 
 The March 24, 2026 production proof passed with this Jira configuration shape:
@@ -110,12 +124,15 @@ The March 24, 2026 production proof passed with this Jira configuration shape:
     "transition_map": {
       "in progress": "11",
       "done": "31"
-    }
+    },
+    "assignee_account_map": {
+      "<YOUR_PLATFORM_OWNER_KEY>": "<YOUR_JIRA_ACCOUNT_ID>"
+    },
+    "canary_action_id": "<YOUR_CANARY_ACTION_UUID>"
   },
   "secret_config": {
     "user_email": "<YOUR_JIRA_USER_EMAIL>",
-    "api_token": "<YOUR_JIRA_API_TOKEN>",
-    "webhook_token": "<YOUR_JIRA_WEBHOOK_TOKEN>"
+    "api_token": "<YOUR_JIRA_API_TOKEN>"
   }
 }
 ```
@@ -167,6 +184,71 @@ Verify with:
 ```bash
 curl -H "Authorization: Bearer <YOUR_JWT>" \
   https://api.ocypheris.com/api/integrations/settings
+```
+
+## Product-Managed Jira Admin Actions
+
+Use these admin-only product endpoints after saving the Jira settings:
+
+- `POST /api/integrations/settings/jira/validate`
+- `POST /api/integrations/settings/jira/webhook/sync`
+- `POST /api/integrations/settings/jira/canary-sync`
+
+Expected Jira settings health fields from `GET /api/integrations/settings`:
+
+- `health.status`
+- `health.credentials_valid`
+- `health.project_valid`
+- `health.issue_type_valid`
+- `health.transition_map_valid`
+- `health.webhook_registered`
+- `health.signed_webhook_enabled`
+- `health.webhook_mode`
+- `health.last_validated_at`
+- `health.last_inbound_at`
+- `health.last_outbound_at`
+- `health.last_provider_error`
+
+Suggested operator sequence:
+
+1. Save Jira credentials and config.
+2. `POST /api/integrations/settings/jira/validate`
+3. `POST /api/integrations/settings/jira/webhook/sync`
+4. Confirm `health.webhook_registered=true` and `health.signed_webhook_enabled=true`.
+5. Run `POST /api/integrations/settings/jira/canary-sync` using `config.canary_action_id` or an explicit request body.
+
+Example validation request:
+
+```bash
+curl -X POST https://api.ocypheris.com/api/integrations/settings/jira/validate \
+  -H "Authorization: Bearer <YOUR_JWT>"
+```
+
+Example webhook registration / repair:
+
+```bash
+curl -X POST https://api.ocypheris.com/api/integrations/settings/jira/webhook/sync \
+  -H "Authorization: Bearer <YOUR_JWT>" \
+  -H "Content-Type: application/json" \
+  -d '{}'
+```
+
+Rotate the Jira webhook secret only when you are ready to update the Jira admin webhook immediately:
+
+```bash
+curl -X POST https://api.ocypheris.com/api/integrations/settings/jira/webhook/sync \
+  -H "Authorization: Bearer <YOUR_JWT>" \
+  -H "Content-Type: application/json" \
+  -d '{"rotate_secret": true}'
+```
+
+Queue the dedicated canary action:
+
+```bash
+curl -X POST https://api.ocypheris.com/api/integrations/settings/jira/canary-sync \
+  -H "Authorization: Bearer <YOUR_JWT>" \
+  -H "Content-Type: application/json" \
+  -d '{"action_id":"<YOUR_CANARY_ACTION_UUID>"}'
 ```
 
 ## Discover Jira Transition IDs
@@ -240,8 +322,12 @@ The inbound Jira webhook route is:
 
 Headers:
 
-- `X-Integration-Webhook-Token`
+- `X-Hub-Signature`
 - `X-External-Event-Id`
+
+Legacy fallback header still accepted during migration:
+
+- `X-Integration-Webhook-Token`
 
 Minimum practical payload shape:
 
@@ -261,7 +347,7 @@ Minimum practical payload shape:
 }
 ```
 
-Example:
+Example legacy fallback replay:
 
 ```bash
 curl -X POST https://api.ocypheris.com/api/integrations/webhooks/jira \
@@ -283,6 +369,8 @@ curl -X POST https://api.ocypheris.com/api/integrations/webhooks/jira \
   }'
 ```
 
+For the signed admin-webhook path, Jira should send `X-Hub-Signature: sha256=<HMAC_HEX>` over the raw JSON request body using the product-managed webhook secret stored in `secret_json.webhook_secret`.
+
 ## What To Verify After The Webhook
 
 The webhook must not overwrite the platform's canonical remediation state.
@@ -294,6 +382,7 @@ Verify:
 - `action_remediation_sync_states.preferred_external_status` matches the tenant Jira mapping
 - latest `action_remediation_sync_events` row records `resolution_decision = preserve_internal_canonical`
 - `integration_event_receipts` shows the webhook receipt as processed
+- action detail now exposes a Jira `External Sync` panel with the link key/URL, external status, sync state, assignee mapping state, and recent sync-event timeline
 
 Useful DB checks:
 
@@ -355,6 +444,26 @@ For the proven March 24 production slice:
 - preferred Jira status was `In Progress`
 - reconciliation returned Jira `KAN-7` to `In Progress`
 - sync ledger returned to `in_sync`
+
+## Current UI Checks
+
+The Jira settings card should now show:
+
+- credentials validity
+- webhook registration state
+- signed-webhook mode
+- last validation timestamp
+- last inbound and outbound sync timestamps
+- last provider error
+
+The single-action detail modal should now show a Jira `External Sync` panel whenever a Jira link exists, including:
+
+- Jira issue key / URL
+- external Jira status
+- current sync state (`in_sync` or `drifted`)
+- preferred Jira status
+- assignee mapping state
+- recent sync-event timeline
 
 ## Known Failure Modes And Fixes
 
@@ -437,4 +546,3 @@ Most useful retained artifacts:
 - [Final reconciliation DB snapshot](/Users/marcomaher/AWS%20Security%20Autopilot/docs/test-results/live-runs/20260321T202330Z-phase3-p1-6-live/evidence/db/72-final-reconciliation-db.txt)
 - [Final Jira webhook payload evidence](/Users/marcomaher/AWS%20Security%20Autopilot/docs/test-results/live-runs/20260321T202330Z-phase3-p1-6-live/evidence/api/70-jira-webhook-drift-final.body.json)
 - [Final reconciliation request evidence](/Users/marcomaher/AWS%20Security%20Autopilot/docs/test-results/live-runs/20260321T202330Z-phase3-p1-6-live/evidence/api/71-reconciliation-request-final.body.json)
-

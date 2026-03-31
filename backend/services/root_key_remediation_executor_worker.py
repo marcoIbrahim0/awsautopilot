@@ -48,6 +48,7 @@ from backend.utils.sqs import (
 )
 
 _SELF_CUTOFF_GUARD_CODE = "self_cutoff_guard_not_guaranteed"
+_DISABLE_PRESERVED_CALLER_KEY_CODE = "mutation_key_preserved_requires_new_credential_context"
 _DELETE_GATING_VALIDATION_CODE = "delete_validation_not_passed"
 _DELETE_GATING_CLEAN_WINDOW_CODE = "delete_disable_window_not_clean"
 _DELETE_GATING_DISABLED_CODE = "delete_window_disabled"
@@ -55,6 +56,7 @@ _DELETE_GATING_DEPENDENCY_CODE = "delete_unknown_dependencies"
 _DELETE_GATING_ACTIVE_KEYS_CODE = "delete_active_keys_present"
 _DELETE_GATING_ROOT_MFA_CODE = "root_mfa_not_enrolled"
 _ROLLBACK_ALERT_TASK_TYPE = "rollback_alert"
+FINAL_ROOT_KEY_MANUAL_DELETE_TASK_TYPE = "final_root_key_manual_delete_required"
 _MASKED_EMPTY_KEY = "<EMPTY>"
 
 _CredentialSessionFactory = Callable[[str, str | None], Any]
@@ -135,6 +137,7 @@ class RootKeyRemediationExecutorWorker:
         *,
         mutation_session_factory: _CredentialSessionFactory = _default_session_factory,
         observer_session_factory: _CredentialSessionFactory | None = None,
+        observer_only_delete_finalize: bool = False,
         usage_discovery_factory: _UsageDiscoveryFactory = _default_usage_discovery_factory,
         closure_service_factory: _ClosureServiceFactory | None = None,
         now_fn: Callable[[], datetime] = _utc_now,
@@ -142,6 +145,7 @@ class RootKeyRemediationExecutorWorker:
     ) -> None:
         self._mutation_session_factory = mutation_session_factory
         self._observer_session_factory = observer_session_factory or mutation_session_factory
+        self._observer_only_delete_finalize = bool(observer_only_delete_finalize)
         self._usage_discovery_factory = usage_discovery_factory
         self._closure_service_factory = closure_service_factory or self._default_closure_service_factory
         self._now = now_fn
@@ -216,8 +220,10 @@ class RootKeyRemediationExecutorWorker:
             transition_id=transition_id,
             disable_summary=disable_summary,
             signals=signals,
+            operator_attention_reason=self._disable_progression_block_reason(disable_summary),
             actor_metadata=actor_metadata,
         )
+        progression_block_reason = self._disable_progression_block_reason(disable_summary)
         if signals.breakage_signals:
             reason = f"disable_breakage_signals:{','.join(signals.breakage_signals)}"
             try:
@@ -246,6 +252,23 @@ class RootKeyRemediationExecutorWorker:
                     "disable_summary": disable_summary,
                     "signals": self._signals_payload(signals),
                 },
+            )
+        if progression_block_reason is not None:
+            if progression_block_reason == _DISABLE_PRESERVED_CALLER_KEY_CODE:
+                await self._create_final_key_manual_delete_task(
+                    db=db,
+                    run=disable_result.run,
+                    idempotency_key=f"{transition_id}:final-key-task",
+                    disable_summary=disable_summary,
+                    actor_metadata=actor_metadata,
+                )
+            return await self._mark_needs_attention(
+                db=db,
+                run=disable_result.run,
+                state_machine=state_machine,
+                transition_id=f"{transition_id}:operator_attention",
+                reason=progression_block_reason,
+                actor_metadata=actor_metadata,
             )
         return disable_result
 
@@ -340,6 +363,18 @@ class RootKeyRemediationExecutorWorker:
                 transition_id=f"{transition_id}:mfa_gate",
                 reason=_DELETE_GATING_ROOT_MFA_CODE,
                 actor_metadata=actor_metadata,
+            )
+
+        if self._observer_only_delete_finalize:
+            return await self._finalize_manual_delete_handoff(
+                db=db,
+                run=run,
+                tenant_id=tenant_id,
+                run_id=run_id,
+                transition_id=transition_id,
+                state_machine=state_machine,
+                actor_metadata=actor_metadata,
+                observer_session=sessions.observer_session,
             )
 
         key_states = self._list_root_key_states(sessions.mutation_session, run.region)
@@ -747,6 +782,18 @@ class RootKeyRemediationExecutorWorker:
         return None
 
     async def _is_disable_window_clean(self, *, db: AsyncSession, run: Any) -> bool:
+        metadata = await self._latest_disable_window_metadata(db=db, run=run)
+        if not isinstance(metadata, dict):
+            return False
+        if metadata.get("window_clean") is True:
+            return True
+        return await self._manual_final_key_handoff_completed_without_breakage(
+            db=db,
+            run=run,
+            metadata=metadata,
+        )
+
+    async def _latest_disable_window_metadata(self, *, db: AsyncSession, run: Any) -> dict[str, Any] | None:
         result = await db.execute(
             select(RootKeyRemediationArtifact.metadata_json)
             .where(
@@ -758,9 +805,112 @@ class RootKeyRemediationExecutorWorker:
             .limit(1)
         )
         metadata = result.scalar_one_or_none()
-        if not isinstance(metadata, dict):
+        return metadata if isinstance(metadata, dict) else None
+
+    async def _manual_final_key_handoff_completed_without_breakage(
+        self,
+        *,
+        db: AsyncSession,
+        run: Any,
+        metadata: dict[str, Any],
+    ) -> bool:
+        if metadata.get("operator_attention_reason") != _DISABLE_PRESERVED_CALLER_KEY_CODE:
             return False
-        return bool(metadata.get("window_clean") is True)
+        if bool(metadata.get("partial_data")):
+            return False
+        if int(metadata.get("unknown_usage_count") or 0) > 0:
+            return False
+        breakage_signals = metadata.get("breakage_signals")
+        if isinstance(breakage_signals, list) and breakage_signals:
+            return False
+        if isinstance(breakage_signals, tuple) and breakage_signals:
+            return False
+        result = await db.execute(
+            select(RootKeyExternalTask.id)
+            .where(
+                RootKeyExternalTask.tenant_id == run.tenant_id,
+                RootKeyExternalTask.run_id == run.id,
+                RootKeyExternalTask.task_type == FINAL_ROOT_KEY_MANUAL_DELETE_TASK_TYPE,
+                RootKeyExternalTask.status == RootKeyExternalTaskStatus.completed,
+            )
+            .limit(1)
+        )
+        return result.scalar_one_or_none() is not None
+
+    async def _finalize_manual_delete_handoff(
+        self,
+        *,
+        db: AsyncSession,
+        run: Any,
+        tenant_id: uuid.UUID,
+        run_id: uuid.UUID,
+        transition_id: str,
+        state_machine: RootKeyRemediationStateMachineService,
+        actor_metadata: dict[str, Any] | None,
+        observer_session: Any,
+    ) -> RootKeyTransitionResult:
+        remaining_root_keys, health_failed = self._root_keys_present_signal(
+            session_boto=observer_session,
+            region=run.region,
+        )
+        if health_failed or remaining_root_keys is None:
+            return await self._mark_needs_attention(
+                db=db,
+                run=run,
+                state_machine=state_machine,
+                transition_id=f"{transition_id}:observer_finalize_unreadable",
+                reason="delete_manual_handoff_observer_unreadable",
+                actor_metadata=actor_metadata,
+            )
+        if remaining_root_keys > 0:
+            return await self._mark_needs_attention(
+                db=db,
+                run=run,
+                state_machine=state_machine,
+                transition_id=f"{transition_id}:observer_finalize_active_keys",
+                reason=f"{_DELETE_GATING_ACTIVE_KEYS_CODE}:{remaining_root_keys}",
+                actor_metadata=actor_metadata,
+            )
+        delete_summary = {
+            "deleted_count": 0,
+            "skipped_count": 0,
+            "deleted_keys": [],
+            "skipped_keys": [],
+            "manual_handoff_finalize": True,
+        }
+        await self._record_delete_evidence(
+            db=db,
+            run=run,
+            transition_id=transition_id,
+            delete_summary=delete_summary,
+            remaining_root_keys=0,
+            required_safe_permissions_unchanged=True,
+            actor_metadata=actor_metadata,
+        )
+        if self._closure_enabled():
+            closure = self._closure_service_factory()
+            closure_result = await closure.execute_closure_cycle(
+                db,
+                tenant_id=tenant_id,
+                run_id=run_id,
+                transition_id=f"{transition_id}:closure",
+                state_machine=state_machine,
+                actor_metadata=actor_metadata,
+            )
+            return closure_result.transition_result
+        return await state_machine.finalize_delete(
+            db,
+            tenant_id=tenant_id,
+            run_id=run_id,
+            transition_id=transition_id,
+            actor_metadata=actor_metadata,
+            evidence_metadata={
+                "operation": "delete",
+                "deleted_key_count": 0,
+                "skipped_key_count": 0,
+                "manual_handoff_finalize": True,
+            },
+        )
 
     async def _has_unknown_active_dependencies(self, *, db: AsyncSession, run: Any) -> bool:
         result = await db.execute(
@@ -1022,8 +1172,18 @@ class RootKeyRemediationExecutorWorker:
         transition_id: str,
         disable_summary: dict[str, Any],
         signals: _DisableSignals,
+        operator_attention_reason: str | None,
         actor_metadata: dict[str, Any] | None,
     ) -> None:
+        metadata_json = {
+            "disabled_summary": disable_summary,
+            **self._signals_payload(signals),
+            "required_safe_permissions_unchanged": bool(signals.window_clean),
+            "window_started_at": self._now().isoformat(),
+        }
+        if operator_attention_reason is not None:
+            metadata_json["window_clean"] = False
+            metadata_json["operator_attention_reason"] = operator_attention_reason
         await create_root_key_remediation_artifact_idempotent(
             db,
             run_id=run.id,
@@ -1039,12 +1199,7 @@ class RootKeyRemediationExecutorWorker:
             mode=run.mode,
             correlation_id=run.correlation_id,
             artifact_type="disable_window_evidence",
-            metadata_json={
-                "disabled_summary": disable_summary,
-                **self._signals_payload(signals),
-                "required_safe_permissions_unchanged": bool(signals.window_clean),
-                "window_started_at": self._now().isoformat(),
-            },
+            metadata_json=metadata_json,
             idempotency_key=f"{transition_id}:disable_window_evidence",
             actor_metadata=actor_metadata,
         )
@@ -1207,6 +1362,39 @@ class RootKeyRemediationExecutorWorker:
             actor_metadata=actor_metadata,
         )
 
+    async def _create_final_key_manual_delete_task(
+        self,
+        *,
+        db: AsyncSession,
+        run: Any,
+        idempotency_key: str,
+        disable_summary: dict[str, Any],
+        actor_metadata: dict[str, Any] | None,
+    ) -> None:
+        await create_root_key_external_task_idempotent(
+            db,
+            run_id=run.id,
+            tenant_id=run.tenant_id,
+            account_id=run.account_id,
+            region=run.region,
+            control_id=run.control_id,
+            action_id=run.action_id,
+            finding_id=run.finding_id,
+            state=run.state,
+            status=RootKeyExternalTaskStatus.open,
+            strategy_id=run.strategy_id,
+            mode=run.mode,
+            correlation_id=run.correlation_id,
+            task_type=FINAL_ROOT_KEY_MANUAL_DELETE_TASK_TYPE,
+            task_payload={
+                "preserved_access_key_id": disable_summary.get("caller_key_preserved"),
+                "instructions": "Delete the preserved final root access key using an alternate authenticated path, then resume delete verification.",
+                "raised_at": self._now().isoformat(),
+            },
+            idempotency_key=idempotency_key,
+            actor_metadata=actor_metadata,
+        )
+
     def _signals_payload(self, signals: _DisableSignals) -> dict[str, Any]:
         return {
             "window_clean": signals.window_clean,
@@ -1217,3 +1405,11 @@ class RootKeyRemediationExecutorWorker:
             "breakage_signals": list(signals.breakage_signals),
             "retries_used": signals.retries_used,
         }
+
+    def _disable_progression_block_reason(
+        self,
+        disable_summary: dict[str, Any],
+    ) -> str | None:
+        if disable_summary.get("caller_key_preserved"):
+            return _DISABLE_PRESERVED_CALLER_KEY_CODE
+        return None

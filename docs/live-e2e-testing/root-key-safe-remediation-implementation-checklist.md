@@ -1,6 +1,8 @@
 # Root-Key Safe Remediation Implementation Checklist (Serial)
 
-> ⚠️ Status: In progress — Slice 2, Slice 3 (API contracts), Slice 3.5 (discovery/classification persistence path), Slice 4 closure orchestration with runtime wiring, Slice 5 guardrails (executor-worker safety path), and Slice 6 rollout/ops controls are implemented behind feature flags.
+> ⚠️ Status: Implemented behind feature flags, with retained live proof on 2026-03-30 that the dedicated IAM.4 route can close truthfully on current `master` through explicit manual final-key handoff plus observer-only finalization.
+>
+> Current live-proof note (2026-03-30): the March 30 progression is now complete. Current `master` fail-closes preserved-caller-key disable attempts into `needs_attention`, requires explicit mutation credentials, supports explicit observer contracts, and can finish the final `delete` step after a completed `final_root_key_manual_delete_required` task by verifying `AccountAccessKeysPresent=0` from observer credentials instead of trying to mutate with the dead root credential again. The remaining follow-up is manual cleanup of the temporary canary-account trust/policy broadening used for the bounded local observer proof.
 >
 > Source spec: `docs/live-e2e-testing/root-key-safe-remediation-spec.md`
 >
@@ -115,9 +117,11 @@ Done when:
 
 - [x] Harden root-delete executor path to avoid self-invalidating credential context (self-cutoff guard + ordered mutation handling).
 - [x] Add fail-closed reason mapping for guard/deletion gate failures (`delete_validation_not_passed`, `delete_disable_window_not_clean`, `delete_window_disabled`, `delete_unknown_dependencies`, `self_cutoff_guard_not_guaranteed`).
+- [x] Fail closed when disable must preserve the active caller root key, so that branch cannot be recorded as a clean disable window.
 - [ ] Ensure error mapping lands in `blocked_operator_error` with clear operator next action.
 - [x] Add executor-worker regression tests:
   - self-cutoff guard regression
+  - preserved caller-key operator-attention regression
   - disable clean-window success
   - rollback on breakage signal
   - delete gate fail-closed paths
@@ -133,6 +137,16 @@ Done when:
 - [x] Add config flags for executor-worker path:
   - `ROOT_KEY_SAFE_REMEDIATION_EXECUTOR_ENABLED`
   - `ROOT_KEY_SAFE_REMEDIATION_MONITOR_LOOKBACK_MINUTES`
+- [x] Add explicit mutation/observer credential settings for authoritative runtime wiring:
+  - `ROOT_KEY_SAFE_REMEDIATION_MUTATION_AWS_PROFILE`
+  - `ROOT_KEY_SAFE_REMEDIATION_MUTATION_AWS_ACCESS_KEY_ID`
+  - `ROOT_KEY_SAFE_REMEDIATION_MUTATION_AWS_SECRET_ACCESS_KEY`
+  - `ROOT_KEY_SAFE_REMEDIATION_MUTATION_AWS_SESSION_TOKEN`
+  - `ROOT_KEY_SAFE_REMEDIATION_OBSERVER_AWS_PROFILE`
+  - `ROOT_KEY_SAFE_REMEDIATION_OBSERVER_AWS_ACCESS_KEY_ID`
+  - `ROOT_KEY_SAFE_REMEDIATION_OBSERVER_AWS_SECRET_ACCESS_KEY`
+  - `ROOT_KEY_SAFE_REMEDIATION_OBSERVER_AWS_SESSION_TOKEN`
+  - `ROOT_KEY_SAFE_REMEDIATION_OBSERVER_DIRECT_SESSION_ENABLED`
 - [x] Add rollout flags:
   - `ROOT_KEY_SAFE_REMEDIATION_CANARY_ENABLED`
   - `ROOT_KEY_SAFE_REMEDIATION_CANARY_PERCENT`
@@ -160,8 +174,11 @@ Done when:
   - `tests/test_root_key_remediation_plan_e2e.py`
   - fixture: `tests/fixtures/root_key_safe_remediation_plan_scenarios.json`
   - expected matrix artifact: `tests/fixtures/root_key_safe_remediation_plan_expected_matrix.json`
-- [ ] Re-run Wave 7 Test 25 and Test 28 with evidence capture.
-- [ ] Update tracker rows:
+- [x] Re-run Wave 7 Test 25 and Test 28 with evidence capture.
+- [x] Re-run Wave 7 Test 25 and Test 28 through the dedicated route after:
+  - one observer contract is proven on the live target account
+  - a safe final-key handoff model exists for the last active root key
+- [x] Update tracker rows:
   - `docs/live-e2e-testing/00-BASE-ISSUE-TRACKER.md` Section 3 #15, Section 4 #22, Section 6 #8
 
 Done when:
@@ -170,11 +187,11 @@ Done when:
 
 ## Slice 8: Documentation and Handover
 
-- [ ] Update runbook docs if endpoint or operator flow changes:
+- [x] Update runbook docs if endpoint or operator flow changes:
   - `docs/prod-readiness/root-credentials-required-iam-root-access-key-absent.md`
-  - `docs/remediation-safety-model.md`
-- [ ] Update `docs/live-e2e-testing/README.md` and `docs/README.md` links if structure changes.
-- [ ] Update `.cursor/notes/task_log.md` and `.cursor/notes/task_index.md`.
+  - `docs/remediation-safety-model.md` (reviewed; no root-key-specific content change required in this slice)
+- [x] Update `docs/live-e2e-testing/README.md` and `docs/README.md` links if structure changes.
+- [x] Update `.cursor/notes/task_log.md` and `.cursor/notes/task_index.md`.
 
 Done when:
 

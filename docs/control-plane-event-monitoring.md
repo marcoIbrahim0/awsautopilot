@@ -17,6 +17,15 @@ Validation endpoint (tenant-facing):
 - `GET /api/aws/accounts/{account_id}/control-plane-readiness`
   - Returns last seen event time / intake time per configured region.
 
+Token-rotation operational rule:
+- Any time `POST /api/auth/control-plane-token/rotate` is used for a tenant, every deployed `SecurityAutopilotControlPlaneForwarder` stack for that tenant must be updated immediately with the new `ControlPlaneToken` parameter.
+- The production backend now keeps accepting the immediately previous tenant token for a bounded grace window (`CONTROL_PLANE_PREVIOUS_TOKEN_GRACE_HOURS`, default `72`) after rotation, so a just-rotated stack does not fail closed instantly if the operator updates the stack shortly after the rotate.
+- That grace applies only to the single immediately previous token. Older forwarder tokens still fail authorization and still require a real stack update.
+- If the stack is not refreshed after rotation, EventBridge delivery can fail authorization while the SaaS readiness endpoint itself remains healthy, and `control_plane_event_ingest_status.last_intake_time` will eventually go stale even though no code path changed.
+- The March 30, 2026 `POI-010` production investigation on account `696505809372` narrowed the stale-readiness symptom to this exact failure mode: manual tenant-scoped synthetic intake and direct public `/api/control-plane/events` intake both restored freshness immediately, so the remaining fault domain was the deployed forwarder path rather than the readiness calculation.
+- The March 30, 2026 live mitigation deploy then proved the grace-window behavior on production by rotating the tenant token again and immediately reusing the previous token on `POST /api/control-plane/events`, which still returned `{"enqueued":1,"dropped":0,"drop_reasons":{}}`.
+- The March 30, 2026 live closure for `POI-010` completed after the existing `SecurityAutopilotControlPlaneForwarder` stack in account `696505809372` / `eu-north-1` was updated with the current token; real `AuthorizeSecurityGroupIngress` and `RevokeSecurityGroupIngress` events then refreshed readiness through the normal EventBridge path at `2026-03-30T22:04:53.224831Z` and `2026-03-30T22:05:44.882249Z` intake time respectively.
+
 Automated verification script (console-free):
 - `scripts/verify_control_plane_forwarder.sh`
 - Verifies:

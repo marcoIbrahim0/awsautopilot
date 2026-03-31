@@ -10,7 +10,7 @@ import uuid
 from typing import Any
 
 import boto3
-from sqlalchemy import or_, select
+from sqlalchemy import func, or_, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
@@ -25,6 +25,13 @@ from backend.services.integration_adapters import (
     PROVIDER_SERVICENOW,
     PROVIDER_SLACK,
     SUPPORTED_INTEGRATION_PROVIDERS,
+)
+from backend.services.jira_admin import (
+    JiraHealthSnapshot,
+    build_jira_settings_health,
+    jira_verified_assignee_account_id,
+    normalize_jira_config,
+    verify_jira_webhook_signature,
 )
 from backend.services.action_remediation_state_machine import (
     EXTERNAL_STATUS_MAPPING_TABLE,
@@ -65,6 +72,7 @@ class IntegrationSettingsView:
     config: dict[str, Any]
     secret_configured: bool
     webhook_configured: bool
+    health: JiraHealthSnapshot | None = None
 
 
 @dataclass(frozen=True)
@@ -149,6 +157,7 @@ def list_integration_settings(session: Session, tenant_id: uuid.UUID) -> list[In
     views: list[IntegrationSettingsView] = []
     for row in _list_settings(session, tenant_id):
         secret = _safe_dict(row.secret_json)
+        health = _settings_health(session, row)
         views.append(
             IntegrationSettingsView(
                 provider=row.provider,
@@ -159,7 +168,10 @@ def list_integration_settings(session: Session, tenant_id: uuid.UUID) -> list[In
                 reopen_on_regression=bool(row.reopen_on_regression),
                 config=_safe_dict(row.config_json),
                 secret_configured=bool(secret),
-                webhook_configured=bool(_non_empty_text(secret.get("webhook_token"))),
+                webhook_configured=bool(
+                    _non_empty_text(secret.get("webhook_token")) or _non_empty_text(secret.get("webhook_secret"))
+                ),
+                health=health,
             )
         )
     return sorted(views, key=lambda item: item.provider)
@@ -185,7 +197,7 @@ def upsert_integration_setting(
         session.add(setting)
     _apply_setting_flags(setting, enabled, outbound_enabled, inbound_enabled, auto_create, reopen_on_regression)
     if config is not None:
-        setting.config_json = _safe_dict(config)
+        setting.config_json = _normalized_config(provider=provider, config=_safe_dict(config))
     if clear_secret_config:
         setting.secret_json = None
         setting.webhook_token_hash = None
@@ -216,6 +228,12 @@ def _apply_setting_flags(
         setting.auto_create = auto_create
     if reopen_on_regression is not None:
         setting.reopen_on_regression = reopen_on_regression
+
+
+def _normalized_config(*, provider: str, config: dict[str, Any]) -> dict[str, Any]:
+    if provider == PROVIDER_JIRA:
+        return normalize_jira_config(config)
+    return config
 
 
 def _get_setting(session: Session, *, tenant_id: uuid.UUID, provider: str) -> TenantIntegrationSetting | None:
@@ -402,20 +420,38 @@ def _build_sync_payload(
     operation: str,
 ) -> dict[str, Any]:
     external_status = _status_map(setting).get(action.status, action.status)
+    assignee_key = _external_assignee_key(setting=setting, action=action, link=link)
     payload = {
         "action_id": str(action.id),
         "action_status": action.status,
         "title": action.title,
         "description": action.description or action.title,
         "external_status": external_status,
-        "external_assignee_key": _owner_key(action),
-        "external_assignee_label": _owner_label(action),
+        "external_assignee_key": assignee_key,
+        "external_assignee_label": _owner_label(action) if assignee_key else None,
         "operation": operation,
     }
     if link is not None:
         payload.update(_link_payload(link))
         payload.update(_drift_signature_payload(link=link, desired_external_status=external_status))
     return payload
+
+
+def _external_assignee_key(
+    *,
+    setting: TenantIntegrationSetting,
+    action: Action,
+    link: ActionExternalLink | None,
+) -> str | None:
+    owner_key = _owner_key(action)
+    if setting.provider != PROVIDER_JIRA:
+        return owner_key
+    return jira_verified_assignee_account_id(
+        setting,
+        owner_type=getattr(action, "owner_type", None),
+        owner_key=owner_key,
+        existing_assignee_key=getattr(link, "external_assignee_key", None),
+    )
 
 
 def _owner_key(action: Action) -> str | None:
@@ -573,6 +609,28 @@ def resolve_setting_for_webhook(
     return result.scalar_one_or_none()
 
 
+def resolve_jira_setting_for_signature(
+    session: Session,
+    *,
+    body: bytes,
+    signature_header: str | None,
+) -> TenantIntegrationSetting | None:
+    if not signature_header:
+        return None
+    result = session.execute(
+        select(TenantIntegrationSetting).where(
+            TenantIntegrationSetting.provider == PROVIDER_JIRA,
+            TenantIntegrationSetting.enabled.is_(True),
+            TenantIntegrationSetting.inbound_enabled.is_(True),
+        )
+    )
+    for setting in result.scalars().all():
+        secret = _non_empty_text(_safe_dict(setting.secret_json).get("webhook_secret"))
+        if secret and verify_jira_webhook_signature(body=body, secret=secret, signature_header=signature_header):
+            return setting
+    return None
+
+
 def process_inbound_event(
     session: Session,
     *,
@@ -580,18 +638,19 @@ def process_inbound_event(
     webhook_token: str,
     event: dict[str, Any],
     event_id: str | None = None,
+    setting: TenantIntegrationSetting | None = None,
 ) -> InboundEventResult:
-    setting = resolve_setting_for_webhook(session, provider=provider, webhook_token=webhook_token)
-    if setting is None:
+    resolved_setting = setting or resolve_setting_for_webhook(session, provider=provider, webhook_token=webhook_token)
+    if resolved_setting is None:
         raise ValueError("Webhook token did not match an enabled integration.")
     normalized = _normalize_inbound_event(provider=provider, event=event, event_id=event_id)
-    receipt = _receipt_by_key(session, tenant_id=setting.tenant_id, provider=provider, receipt_key=normalized["receipt_key"])
+    receipt = _receipt_by_key(session, tenant_id=resolved_setting.tenant_id, provider=provider, receipt_key=normalized["receipt_key"])
     if receipt is not None:
         return _replayed_result(provider=provider, receipt=receipt)
     try:
         receipt = _create_receipt(
             session,
-            tenant_id=setting.tenant_id,
+            tenant_id=resolved_setting.tenant_id,
             provider=provider,
             normalized=normalized,
         )
@@ -599,14 +658,14 @@ def process_inbound_event(
         session.rollback()
         replayed = _receipt_by_key(
             session,
-            tenant_id=setting.tenant_id,
+            tenant_id=resolved_setting.tenant_id,
             provider=provider,
             receipt_key=normalized["receipt_key"],
         )
         if replayed is not None:
             return _replayed_result(provider=provider, receipt=replayed)
         raise
-    link = _find_link_for_inbound(session, tenant_id=setting.tenant_id, provider=provider, external_id=normalized["external_id"])
+    link = _find_link_for_inbound(session, tenant_id=resolved_setting.tenant_id, provider=provider, external_id=normalized["external_id"])
     if link is None:
         _finalize_receipt(
             receipt,
@@ -625,13 +684,13 @@ def process_inbound_event(
             result={"reason": "stale_event"},
         )
         return InboundEventResult(provider=provider, replayed=False, applied=False, action_id=link.action_id, action_status=None, owner_key=None, receipt_status="ignored")
-    action = _require_action(session, tenant_id=setting.tenant_id, action_id=link.action_id)
+    action = _require_action(session, tenant_id=resolved_setting.tenant_id, action_id=link.action_id)
     sync_result = None
     if normalized["external_status"] is not None:
         sync_result = _record_inbound_status(
             session,
             action=action,
-            setting=setting,
+            setting=resolved_setting,
             provider=provider,
             normalized=normalized,
             action_status=None,
@@ -660,6 +719,52 @@ def process_inbound_event(
         owner_key=owner_key,
         receipt_status="processed",
     )
+
+
+def _settings_health(session: Session, setting: TenantIntegrationSetting) -> JiraHealthSnapshot | None:
+    if setting.provider != PROVIDER_JIRA:
+        return None
+    last_inbound_at, last_outbound_at = _link_activity_timestamps(session, setting)
+    last_error, last_error_at = _latest_provider_error(session, setting)
+    return build_jira_settings_health(
+        setting,
+        last_inbound_at=last_inbound_at,
+        last_outbound_at=last_outbound_at,
+        last_provider_error=last_error,
+        last_provider_error_at=last_error_at,
+    )
+
+
+def _link_activity_timestamps(session: Session, setting: TenantIntegrationSetting) -> tuple[str | None, str | None]:
+    result = session.execute(
+        select(func.max(ActionExternalLink.last_inbound_at), func.max(ActionExternalLink.last_outbound_at)).where(
+            ActionExternalLink.tenant_id == setting.tenant_id,
+            ActionExternalLink.provider == setting.provider,
+        )
+    )
+    inbound_at, outbound_at = result.one()
+    return _isoformat(inbound_at), _isoformat(outbound_at)
+
+
+def _latest_provider_error(session: Session, setting: TenantIntegrationSetting) -> tuple[str | None, str | None]:
+    result = session.execute(
+        select(IntegrationSyncTask)
+        .where(
+            IntegrationSyncTask.tenant_id == setting.tenant_id,
+            IntegrationSyncTask.provider == setting.provider,
+            IntegrationSyncTask.status == SYNC_STATUS_FAILED,
+        )
+        .order_by(IntegrationSyncTask.completed_at.desc(), IntegrationSyncTask.updated_at.desc())
+        .limit(1)
+    )
+    task = result.scalar_one_or_none()
+    if task is None:
+        return None, None
+    return _non_empty_text(task.last_error), _isoformat(task.completed_at or task.updated_at)
+
+
+def _isoformat(value: object) -> str | None:
+    return value.isoformat() if value is not None and hasattr(value, "isoformat") else None
 
 
 def _normalize_inbound_event(

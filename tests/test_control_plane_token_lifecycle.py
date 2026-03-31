@@ -195,6 +195,9 @@ def test_rotate_control_plane_token_returns_one_time_value_and_audits(client: Te
         control_plane_token_fingerprint="cptok-ol...1111",
         control_plane_token_created_at=datetime.now(timezone.utc),
         control_plane_token_revoked_at=None,
+        control_plane_previous_token=None,
+        control_plane_previous_token_fingerprint=None,
+        control_plane_previous_token_expires_at=None,
     )
     current_user = SimpleNamespace(id=uuid.uuid4(), tenant_id=tenant.id, role="admin")
 
@@ -221,6 +224,12 @@ def test_rotate_control_plane_token_returns_one_time_value_and_audits(client: Te
     assert tenant.control_plane_token == hash_control_plane_token(revealed_token)
     assert tenant.control_plane_token_fingerprint == payload["control_plane_token_fingerprint"]
     assert tenant.control_plane_token_revoked_at is None
+    assert tenant.control_plane_previous_token == "a" * 64
+    assert tenant.control_plane_previous_token_fingerprint == "cptok-ol...1111"
+    assert tenant.control_plane_previous_token_expires_at is not None
+    grace_window = timedelta(hours=auth_router.settings.CONTROL_PLANE_PREVIOUS_TOKEN_GRACE_HOURS)
+    expires_at_delta = tenant.control_plane_previous_token_expires_at - tenant.control_plane_token_created_at
+    assert grace_window - timedelta(seconds=5) <= expires_at_delta <= grace_window + timedelta(seconds=5)
     assert any(
         isinstance(call.args[0], AuditLog) and call.args[0].event_type == "control_plane_token_rotated"
         for call in session.add.call_args_list
@@ -234,6 +243,9 @@ def test_revoke_control_plane_token_deactivates_and_audits(client: TestClient) -
         control_plane_token_fingerprint="cptok-ab...9999",
         control_plane_token_created_at=datetime.now(timezone.utc),
         control_plane_token_revoked_at=None,
+        control_plane_previous_token="c" * 64,
+        control_plane_previous_token_fingerprint="cptok-cd...8888",
+        control_plane_previous_token_expires_at=datetime.now(timezone.utc) + timedelta(hours=1),
     )
     current_user = SimpleNamespace(id=uuid.uuid4(), tenant_id=tenant.id, role="admin")
 
@@ -257,6 +269,9 @@ def test_revoke_control_plane_token_deactivates_and_audits(client: TestClient) -
     payload = response.json()
     assert payload["control_plane_token_active"] is False
     assert tenant.control_plane_token_revoked_at is not None
+    assert tenant.control_plane_previous_token is None
+    assert tenant.control_plane_previous_token_fingerprint is None
+    assert tenant.control_plane_previous_token_expires_at is None
     assert any(
         isinstance(call.args[0], AuditLog) and call.args[0].event_type == "control_plane_token_revoked"
         for call in session.add.call_args_list

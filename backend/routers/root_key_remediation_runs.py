@@ -35,11 +35,13 @@ from backend.services.root_key_rollout_controls import (
     evaluate_root_key_canary,
     sanitize_operator_override_reason,
 )
+from backend.services.aws import assume_role
 from backend.services.root_key_remediation_state_machine import (
     RootKeyRemediationStateMachineService,
     RootKeyStateMachineError,
 )
 from backend.services.root_key_remediation_executor_worker import (
+    FINAL_ROOT_KEY_MANUAL_DELETE_TASK_TYPE,
     RootKeyRemediationExecutorWorker,
 )
 from backend.services.root_key_remediation_ops_metrics import (
@@ -76,6 +78,20 @@ class _RootKeyObserverRoleContext:
 
 
 class _RootKeyObserverContextError(RuntimeError):
+    def __init__(
+        self,
+        *,
+        code: str,
+        message: str,
+        details: dict[str, Any] | None = None,
+    ) -> None:
+        super().__init__(message)
+        self.code = code
+        self.message = message
+        self.details = details
+
+
+class _RootKeyMutationContextError(RuntimeError):
     def __init__(
         self,
         *,
@@ -337,6 +353,21 @@ def _observer_context_error_response(
     )
 
 
+def _mutation_context_error_response(
+    *,
+    correlation_id: str,
+    exc: _RootKeyMutationContextError,
+) -> JSONResponse:
+    return _error_response(
+        correlation_id=correlation_id,
+        status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+        code=exc.code,
+        message=exc.message,
+        retryable=True,
+        details=exc.details,
+    )
+
+
 def _root_key_observer_region(region: str | None) -> str:
     configured_region = _normalized_text(getattr(settings, "AWS_REGION", ""), default="eu-north-1")
     return _normalized_text(region) or configured_region or "eu-north-1"
@@ -345,6 +376,80 @@ def _root_key_observer_region(region: str | None) -> str:
 def _root_key_observer_session_name() -> str:
     base_name = _normalized_text(getattr(settings, "ROLE_SESSION_NAME", ""), default="security-autopilot-session")
     return f"{base_name}-root-key-observer"[:64]
+
+
+def _direct_root_key_observer_session_enabled() -> bool:
+    return bool(getattr(settings, "ROOT_KEY_SAFE_REMEDIATION_OBSERVER_DIRECT_SESSION_ENABLED", False))
+
+
+def _build_root_key_mutation_session(region: str | None) -> Any:
+    resolved_region = _root_key_observer_region(region)
+    profile = _normalized_text(getattr(settings, "ROOT_KEY_SAFE_REMEDIATION_MUTATION_AWS_PROFILE", ""))
+    access_key_id = _normalized_text(getattr(settings, "ROOT_KEY_SAFE_REMEDIATION_MUTATION_AWS_ACCESS_KEY_ID", ""))
+    secret_access_key = _normalized_text(
+        getattr(settings, "ROOT_KEY_SAFE_REMEDIATION_MUTATION_AWS_SECRET_ACCESS_KEY", "")
+    )
+    session_token = _normalized_text(getattr(settings, "ROOT_KEY_SAFE_REMEDIATION_MUTATION_AWS_SESSION_TOKEN", ""))
+
+    if profile and (access_key_id or secret_access_key or session_token):
+        raise _RootKeyMutationContextError(
+            code="mutation_context_invalid",
+            message=(
+                "Root-key remediation mutation context is invalid. Configure either "
+                "ROOT_KEY_SAFE_REMEDIATION_MUTATION_AWS_PROFILE or the static mutation credentials, not both."
+            ),
+            details={"reason": "mutation_profile_and_static_credentials_conflict"},
+        )
+    if profile:
+        try:
+            return boto3.Session(profile_name=profile, region_name=resolved_region)
+        except Exception as exc:
+            raise _RootKeyMutationContextError(
+                code="mutation_context_unavailable",
+                message=(
+                    "Root-key remediation mutation context could not load the configured mutation AWS profile. "
+                    "Executor-backed root-key transitions remain fail-closed until the mutation context is fixed."
+                ),
+                details={
+                    "reason": f"mutation_profile_unavailable:{type(exc).__name__}",
+                    "profile": profile,
+                },
+            ) from exc
+    if access_key_id or secret_access_key or session_token:
+        if not access_key_id or not secret_access_key:
+            raise _RootKeyMutationContextError(
+                code="mutation_context_invalid",
+                message=(
+                    "Root-key remediation mutation context is incomplete. Static mutation credentials require both "
+                    "ROOT_KEY_SAFE_REMEDIATION_MUTATION_AWS_ACCESS_KEY_ID and "
+                    "ROOT_KEY_SAFE_REMEDIATION_MUTATION_AWS_SECRET_ACCESS_KEY."
+                ),
+                details={"reason": "mutation_static_credentials_incomplete"},
+            )
+        try:
+            return boto3.Session(
+                aws_access_key_id=access_key_id,
+                aws_secret_access_key=secret_access_key,
+                aws_session_token=session_token or None,
+                region_name=resolved_region,
+            )
+        except Exception as exc:
+            raise _RootKeyMutationContextError(
+                code="mutation_context_unavailable",
+                message=(
+                    "Root-key remediation mutation context could not load the configured static mutation credentials. "
+                    "Executor-backed root-key transitions remain fail-closed until the mutation context is fixed."
+                ),
+                details={"reason": f"mutation_static_session_unavailable:{type(exc).__name__}"},
+            ) from exc
+    raise _RootKeyMutationContextError(
+        code="mutation_context_unavailable",
+        message=(
+            "Root-key remediation mutation context is unavailable. Configure a dedicated mutation AWS profile or "
+            "static mutation credentials for /api/root-key-remediation-runs."
+        ),
+        details={"reason": "mutation_base_credentials_unconfigured"},
+    )
 
 
 def _build_root_key_observer_base_session(region: str | None) -> Any:
@@ -418,13 +523,13 @@ def _build_root_key_observer_base_session(region: str | None) -> Any:
 
 
 def _assume_root_key_observer_role_session(context: _RootKeyObserverRoleContext) -> Any:
-    resolved_region = _root_key_observer_region(context.region)
-    base_session = _build_root_key_observer_base_session(context.region)
+    base_session = _optional_root_key_observer_base_session(context.region)
     try:
-        response = base_session.client("sts", region_name=resolved_region).assume_role(
-            RoleArn=context.role_read_arn,
-            RoleSessionName=_root_key_observer_session_name(),
-            ExternalId=context.external_id,
+        return assume_role(
+            role_arn=context.role_read_arn,
+            external_id=context.external_id,
+            session_name=_root_key_observer_session_name(),
+            base_session=base_session,
         )
     except Exception as exc:
         raise _RootKeyObserverContextError(
@@ -439,35 +544,74 @@ def _assume_root_key_observer_role_session(context: _RootKeyObserverRoleContext)
             },
         ) from exc
 
-    credentials = response.get("Credentials") if isinstance(response, dict) else None
-    if not isinstance(credentials, dict):
-        raise _RootKeyObserverContextError(
-            code="observer_context_unavailable",
-            message="Root-key remediation observer context returned no usable credentials.",
-            details={
-                "reason": "observer_role_credentials_missing",
-                "account_id": context.account_id,
-            },
-        )
 
-    access_key_id = _normalized_text(credentials.get("AccessKeyId"))
-    secret_access_key = _normalized_text(credentials.get("SecretAccessKey"))
-    session_token = _normalized_text(credentials.get("SessionToken"))
-    if not access_key_id or not secret_access_key:
+def _observer_context_explicitly_configured() -> bool:
+    configured_values = (
+        getattr(settings, "ROOT_KEY_SAFE_REMEDIATION_OBSERVER_AWS_PROFILE", ""),
+        getattr(settings, "ROOT_KEY_SAFE_REMEDIATION_OBSERVER_AWS_ACCESS_KEY_ID", ""),
+        getattr(settings, "ROOT_KEY_SAFE_REMEDIATION_OBSERVER_AWS_SECRET_ACCESS_KEY", ""),
+        getattr(settings, "ROOT_KEY_SAFE_REMEDIATION_OBSERVER_AWS_SESSION_TOKEN", ""),
+    )
+    return any(_normalized_text(value) for value in configured_values)
+
+
+def _optional_root_key_observer_base_session(region: str | None) -> Any | None:
+    if not _observer_context_explicitly_configured():
+        return None
+    return _build_root_key_observer_base_session(region)
+
+
+def _root_key_session_account_id(session_boto: Any, region: str | None) -> str:
+    client = session_boto.client("sts", region_name=_root_key_observer_region(region))
+    identity = client.get_caller_identity()
+    account_id = _normalized_text(identity.get("Account"))
+    if not account_id:
+        raise RuntimeError("session caller identity did not include an account id")
+    return account_id
+
+
+def _build_direct_root_key_observer_session(context: _RootKeyObserverRoleContext) -> Any:
+    if not _observer_context_explicitly_configured():
         raise _RootKeyObserverContextError(
             code="observer_context_unavailable",
-            message="Root-key remediation observer context returned incomplete credentials.",
+            message=(
+                "Root-key remediation direct observer mode requires explicit observer credentials. "
+                "Authoritative disable/delete execution remains fail-closed until the observer context is fixed."
+            ),
+            details={"reason": "observer_direct_credentials_unconfigured", "account_id": context.account_id},
+        )
+    session = _build_root_key_observer_base_session(context.region)
+    try:
+        resolved_account_id = _root_key_session_account_id(session, context.region)
+    except Exception as exc:
+        raise _RootKeyObserverContextError(
+            code="observer_context_unavailable",
+            message=(
+                "Root-key remediation direct observer mode could not verify the configured observer account. "
+                "Authoritative disable/delete execution remains fail-closed until the observer context is fixed."
+            ),
+            details={"reason": f"observer_direct_identity_unavailable:{type(exc).__name__}", "account_id": context.account_id},
+        ) from exc
+    if resolved_account_id != context.account_id:
+        raise _RootKeyObserverContextError(
+            code="observer_context_unavailable",
+            message=(
+                "Root-key remediation direct observer mode is authenticated to the wrong AWS account. "
+                "Authoritative disable/delete execution remains fail-closed until the observer context is fixed."
+            ),
             details={
-                "reason": "observer_role_credentials_incomplete",
+                "reason": "observer_direct_account_mismatch",
                 "account_id": context.account_id,
+                "resolved_account_id": resolved_account_id,
             },
         )
-    return boto3.Session(
-        aws_access_key_id=access_key_id,
-        aws_secret_access_key=secret_access_key,
-        aws_session_token=session_token or None,
-        region_name=resolved_region,
-    )
+    return session
+
+
+def _build_root_key_observer_session(context: _RootKeyObserverRoleContext) -> Any:
+    if _direct_root_key_observer_session_enabled():
+        return _build_direct_root_key_observer_session(context)
+    return _assume_root_key_observer_role_session(context)
 
 
 async def _load_root_key_observer_role_context(
@@ -541,6 +685,7 @@ async def _build_executor_worker_with_observer_context(
     tenant_id: uuid.UUID,
     run_id: uuid.UUID,
     correlation_id: str,
+    allow_observer_only_delete_finalize: bool = False,
 ) -> tuple[RootKeyRemediationExecutorWorker | None, JSONResponse | None]:
     observer_context, observer_err = await _load_root_key_observer_role_context(
         db,
@@ -551,13 +696,60 @@ async def _build_executor_worker_with_observer_context(
     if observer_err is not None:
         return None, observer_err
     assert observer_context is not None
+    run = await _load_tenant_run_with_children(db, tenant_id=tenant_id, run_id=run_id)
+    if run is None:
+        return None, _error_response(
+            correlation_id=correlation_id,
+            status_code=status.HTTP_404_NOT_FOUND,
+            code="run_not_found",
+            message="Root-key remediation run not found in tenant scope.",
+        )
+    use_observer_only_finalize = bool(
+        allow_observer_only_delete_finalize and _has_completed_final_key_manual_delete_task(run)
+    )
     try:
-        observer_session = _assume_root_key_observer_role_session(observer_context)
+        mutation_session = None if use_observer_only_finalize else _build_root_key_mutation_session(observer_context.region)
+    except _RootKeyMutationContextError as exc:
+        if not use_observer_only_finalize:
+            return None, _mutation_context_error_response(correlation_id=correlation_id, exc=exc)
+        mutation_session = None
+    try:
+        observer_session = _build_root_key_observer_session(observer_context)
     except _RootKeyObserverContextError as exc:
         return None, _observer_context_error_response(correlation_id=correlation_id, exc=exc)
+    effective_mutation_session = mutation_session or observer_session
     return (
         RootKeyRemediationExecutorWorker(
+            mutation_session_factory=lambda *_: effective_mutation_session,
             observer_session_factory=lambda *_: observer_session,
+            observer_only_delete_finalize=use_observer_only_finalize,
+        ),
+        None,
+    )
+
+
+async def _build_executor_worker_with_mutation_context(
+    db: AsyncSession,
+    *,
+    tenant_id: uuid.UUID,
+    run_id: uuid.UUID,
+    correlation_id: str,
+) -> tuple[RootKeyRemediationExecutorWorker | None, JSONResponse | None]:
+    run = await _load_tenant_run_with_children(db, tenant_id=tenant_id, run_id=run_id)
+    if run is None:
+        return None, _error_response(
+            correlation_id=correlation_id,
+            status_code=status.HTTP_404_NOT_FOUND,
+            code="run_not_found",
+            message="Root-key remediation run not found in tenant scope.",
+        )
+    try:
+        mutation_session = _build_root_key_mutation_session(run.region)
+    except _RootKeyMutationContextError as exc:
+        return None, _mutation_context_error_response(correlation_id=correlation_id, exc=exc)
+    return (
+        RootKeyRemediationExecutorWorker(
+            mutation_session_factory=lambda *_: mutation_session,
         ),
         None,
     )
@@ -909,6 +1101,17 @@ def _paused_resume_target(event: RootKeyRemediationEvent | None) -> RootKeyRemed
 
 def _is_run_paused(event: RootKeyRemediationEvent | None) -> bool:
     return bool(event is not None and event.event_type == "pause_run")
+
+
+def _has_completed_final_key_manual_delete_task(run: RootKeyRemediationRun | None) -> bool:
+    if run is None:
+        return False
+    for task in getattr(run, "external_tasks", []) or []:
+        if getattr(task, "task_type", None) != FINAL_ROOT_KEY_MANUAL_DELETE_TASK_TYPE:
+            continue
+        if getattr(task, "status", None) == RootKeyExternalTaskStatus.completed:
+            return True
+    return False
 
 
 def _rate_snapshot(metric: Any) -> RootKeyRateMetricSnapshot:
@@ -1710,7 +1913,16 @@ async def rollback_root_key_remediation_run(
     assert idempotency_key is not None
     override_reason = _operator_override_reason(operator_override_reason_header)
     reason = (body.reason or "").strip() or "operator_requested_rollback"
-    executor_worker = RootKeyRemediationExecutorWorker() if _use_executor_worker() else None
+    executor_worker = None
+    if _use_executor_worker():
+        executor_worker, executor_err = await _build_executor_worker_with_mutation_context(
+            db,
+            tenant_id=tenant_id,
+            run_id=run_uuid,
+            correlation_id=correlation_id,
+        )
+        if executor_err is not None:
+            return executor_err
     payload, err = await _run_transition_operation(
         db=db,
         correlation_id=correlation_id,
@@ -1807,6 +2019,7 @@ async def delete_root_key_remediation_run(
             tenant_id=tenant_id,
             run_id=run_uuid,
             correlation_id=correlation_id,
+            allow_observer_only_delete_finalize=True,
         )
         if executor_err is not None:
             raise _RootKeyTransitionResponseError(executor_err)
@@ -1951,20 +2164,31 @@ async def resume_root_key_remediation_run(
     assert run_uuid is not None
     assert idempotency_key is not None
     pause_event = await _latest_pause_control_event(db, tenant_id=tenant_id, run_id=run_uuid)
-    if not _is_run_paused(pause_event):
+    latest_run = await _load_tenant_run_with_children(db, tenant_id=tenant_id, run_id=run_uuid)
+    if _is_run_paused(pause_event):
+        resume_state = _paused_resume_target(pause_event)
+        if resume_state is None:
+            return _error_response(
+                correlation_id=correlation_id,
+                status_code=status.HTTP_409_CONFLICT,
+                code="pause_context_missing",
+                message="Pause context is incomplete; resume target cannot be determined.",
+            )
+    elif latest_run is not None and latest_run.state == RootKeyRemediationState.needs_attention:
+        if not _has_completed_final_key_manual_delete_task(latest_run):
+            return _error_response(
+                correlation_id=correlation_id,
+                status_code=status.HTTP_409_CONFLICT,
+                code="manual_handoff_incomplete",
+                message="Final root-key handoff task must be completed before this run can resume.",
+            )
+        resume_state = RootKeyRemediationState.disable_window
+    else:
         return _error_response(
             correlation_id=correlation_id,
             status_code=status.HTTP_409_CONFLICT,
             code="run_not_paused",
             message="Root-key remediation run is not paused.",
-        )
-    resume_state = _paused_resume_target(pause_event)
-    if resume_state is None:
-        return _error_response(
-            correlation_id=correlation_id,
-            status_code=status.HTTP_409_CONFLICT,
-            code="pause_context_missing",
-            message="Pause context is incomplete; resume target cannot be determined.",
         )
     override_reason = _operator_override_reason(operator_override_reason_header)
     payload, err = await _run_transition_operation(

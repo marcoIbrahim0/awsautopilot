@@ -9,6 +9,8 @@ Related docs:
 - [Handoff-free closure](/Users/marcomaher/AWS%20Security%20Autopilot/docs/features/handoff-free-closure.md)
 - [Jira remediation sync runbook](/Users/marcomaher/AWS%20Security%20Autopilot/docs/runbooks/jira-remediation-sync-runbook.md)
 
+> ❓ Needs verification: complete the new staged canary and retained production canary run using Jira signed admin webhooks plus the action-detail `External Sync` panel as the operator evidence surface.
+
 ## Canonical state model
 
 Authoritative internal remediation states:
@@ -169,6 +171,8 @@ The worker loads `drifted` sync-state rows, calls manual outbound planning throu
 - Internal action updates from [`backend/routers/actions.py`](/Users/marcomaher/AWS%20Security%20Autopilot/backend/routers/actions.py) and [`backend/services/action_engine.py`](/Users/marcomaher/AWS%20Security%20Autopilot/backend/services/action_engine.py) now go through the canonical state service instead of assigning `Action.status` directly.
 - Inbound provider events processed by [`process_inbound_event()`](/Users/marcomaher/AWS%20Security%20Autopilot/backend/services/integration_sync.py) update external-link metadata and sync-state audit rows, but keep the internal canonical action status unchanged.
 - Successful outbound provider sync completion records `reconciliation_applied` and moves the provider snapshot back to `in_sync`.
+- Jira inbound delivery can now be authenticated with `X-Hub-Signature` using the product-managed webhook secret, with the older shared webhook token retained only as a migration fallback.
+- The action-detail API now exposes per-provider sync summary plus recent sync events, and the frontend renders the Jira evidence in the action-detail `External Sync` panel.
 - For a practical Jira-specific configuration, drift test, and reconciliation checklist, use [Jira remediation sync runbook](/Users/marcomaher/AWS%20Security%20Autopilot/docs/runbooks/jira-remediation-sync-runbook.md).
 
 Environment-specific example:

@@ -62,6 +62,79 @@
 - Commit and publish this CI-repair branch, then merge it into `master` before rebasing `codex/migrate-legacy-backend-clusters-20260331-redacted`.
 - After the CI-repair PR lands, rerun the full required-check set on the backend recovery PR and proceed with the archive/old-folder normalization steps from the approved plan.
 
+## Migrate approved legacy backend clusters into clean master (2026-03-31)
+
+**Task:** Move the approved backend changes out of the dirty legacy workspace and into the clean `master` line without bringing along unrelated local-only output or regressing newer `master` remediation behavior.
+
+**Files modified:**
+- `/Users/marcomaher/AWS Security Autopilot/alembic/versions/0054_control_plane_previous_token_grace.py`
+- `/Users/marcomaher/AWS Security Autopilot/backend/config.py`
+- `/Users/marcomaher/AWS Security Autopilot/backend/models/tenant.py`
+- `/Users/marcomaher/AWS Security Autopilot/backend/routers/actions.py`
+- `/Users/marcomaher/AWS Security Autopilot/backend/routers/auth.py`
+- `/Users/marcomaher/AWS Security Autopilot/backend/routers/control_plane.py`
+- `/Users/marcomaher/AWS Security Autopilot/backend/routers/findings.py`
+- `/Users/marcomaher/AWS Security Autopilot/backend/routers/integrations.py`
+- `/Users/marcomaher/AWS Security Autopilot/backend/routers/root_key_remediation_runs.py`
+- `/Users/marcomaher/AWS Security Autopilot/backend/services/action_remediation_sync.py`
+- `/Users/marcomaher/AWS Security Autopilot/backend/services/aws.py`
+- `/Users/marcomaher/AWS Security Autopilot/backend/services/digest_content.py`
+- `/Users/marcomaher/AWS Security Autopilot/backend/services/email.py`
+- `/Users/marcomaher/AWS Security Autopilot/backend/services/email_templates.py`
+- `/Users/marcomaher/AWS Security Autopilot/backend/services/governance_templates.py`
+- `/Users/marcomaher/AWS Security Autopilot/backend/services/integration_adapters.py`
+- `/Users/marcomaher/AWS Security Autopilot/backend/services/integration_sync.py`
+- `/Users/marcomaher/AWS Security Autopilot/backend/services/jira_admin.py`
+- `/Users/marcomaher/AWS Security Autopilot/backend/services/root_key_remediation_executor_worker.py`
+- `/Users/marcomaher/AWS Security Autopilot/tests/test_control_plane_public_intake.py`
+- `/Users/marcomaher/AWS Security Autopilot/tests/test_control_plane_token_lifecycle.py`
+- `/Users/marcomaher/AWS Security Autopilot/tests/test_findings_remediation_hints.py`
+- `/Users/marcomaher/AWS Security Autopilot/tests/test_findings_status_filters.py`
+- `/Users/marcomaher/AWS Security Autopilot/tests/test_jira_admin.py`
+- `/Users/marcomaher/AWS Security Autopilot/tests/test_jira_integration_webhooks_api.py`
+- `/Users/marcomaher/AWS Security Autopilot/tests/test_phase3_p1_5_integrations_bidirectional.py`
+- `/Users/marcomaher/AWS Security Autopilot/tests/test_remediation_runs_api.py`
+- `/Users/marcomaher/AWS Security Autopilot/tests/test_root_key_remediation_executor_worker.py`
+- `/Users/marcomaher/AWS Security Autopilot/tests/test_root_key_remediation_runs_api.py`
+- `/Users/marcomaher/AWS Security Autopilot/docs/README.md`
+- `/Users/marcomaher/AWS Security Autopilot/docs/control-plane-event-monitoring.md`
+- `/Users/marcomaher/AWS Security Autopilot/docs/deployment/README.md`
+- `/Users/marcomaher/AWS Security Autopilot/docs/deployment/infrastructure-serverless.md`
+- `/Users/marcomaher/AWS Security Autopilot/docs/features/integration-first-remediation-operations.md`
+- `/Users/marcomaher/AWS Security Autopilot/docs/features/remediation-operator-ux-implementation-plan.md`
+- `/Users/marcomaher/AWS Security Autopilot/docs/features/remediation-system-of-record-sync.md`
+- `/Users/marcomaher/AWS Security Autopilot/docs/live-e2e-testing/00-BASE-ISSUE-TRACKER.md`
+- `/Users/marcomaher/AWS Security Autopilot/docs/live-e2e-testing/README.md`
+- `/Users/marcomaher/AWS Security Autopilot/docs/live-e2e-testing/live-saas-e2e-tracker-runbook.md`
+- `/Users/marcomaher/AWS Security Autopilot/docs/live-e2e-testing/root-key-safe-remediation-implementation-checklist.md`
+- `/Users/marcomaher/AWS Security Autopilot/docs/live-e2e-testing/root-key-safe-remediation-spec.md`
+- `/Users/marcomaher/AWS Security Autopilot/docs/prod-readiness/root-credentials-required-iam-root-access-key-absent.md`
+- `/Users/marcomaher/AWS Security Autopilot/docs/runbooks/jira-remediation-sync-runbook.md`
+- `/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md`
+- `/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md`
+
+**What was done:**
+- Transplanted the approved legacy clusters from the dirty historical workspace into the clean `master` branch worktree only:
+  - control-plane previous-token grace migration plus auth/control-plane config changes
+  - Jira admin validation, signed-webhook sync, and integration health surface updates
+  - findings remediation visibility and service-label additions
+  - root-key observer-session and executor-worker hardening
+  - digest/email/governance template updates that were part of the approved scope
+- Brought over the matching focused tests and operator/docs updates for those same clusters.
+- Left unrelated local-only artifacts behind in the legacy workspace, including the giant live-run evidence folders, Playwright output, temp invite files, and Python cache files.
+- Preserved current `master` remediation-run behavior while reconciling one latent test mismatch:
+  - updated `tests/test_remediation_runs_api.py` so the CloudTrail profile-aware duplicate-signature test now supplies `bucket_creation_acknowledged=true`, matching the current create-run validation contract instead of the older pre-ack expectation.
+
+**Validation:**
+- `PYTHONPATH=. /Users/marcomaher/AWS Security Autopilot/venv/bin/pytest tests/test_control_plane_public_intake.py tests/test_control_plane_token_lifecycle.py tests/test_phase3_p1_5_integrations_bidirectional.py tests/test_jira_admin.py tests/test_jira_integration_webhooks_api.py tests/test_findings_status_filters.py tests/test_findings_remediation_hints.py tests/test_remediation_runs_api.py tests/test_root_key_remediation_executor_worker.py tests/test_root_key_remediation_runs_api.py`
+  - `215 passed`
+- `PYTHONPATH=. /Users/marcomaher/AWS Security Autopilot/venv/bin/pytest tests/test_digest_content.py tests/test_digest_email.py tests/test_email_templates.py tests/test_governance_templates.py tests/test_governance_api.py tests/test_governance_settings_api.py tests/test_exception_governance.py tests/test_internal_weekly_digest.py tests/test_digest_settings_api.py tests/test_slack_digest.py tests/test_slack_settings_api.py tests/test_weekly_digest_job_slack_validation.py tests/test_notifications_api.py tests/test_serverless_email_delivery_config.py`
+  - `87 passed`
+
+**Open questions / TODOs:**
+- The clean branch still needs to be pushed and merged into `master` so these approved backend clusters stop living only in the clean local checkout.
+- If GitHub push protection blocks the `.cursor` note changes again because of historical key-like strings already present in the task log, redact those legacy strings rather than dropping the code/doc migration.
+
 ## Finalize detached frontend recovery as the durable source of truth (2026-03-31)
 
 **Task:** Turn the March 31 detached frontend recovery into a durable source of truth by adding a frontend deploy guardrail, documenting the operator contract, and pinning the parent repo to the final recovered frontend commit from a clean root baseline.
@@ -22629,7 +22702,7 @@
 - Verified quota update became active in `eu-north-1`:
   - `ConcurrentExecutions=1000`
   - `UnreservedConcurrentExecutions=1000`
-- Previous quota request (`[redacted-legacy-request-id]`) now shows `CASE_CLOSED`.
+  - Previous quota request (`<REDACTED_SERVICE_QUOTAS_REQUEST_ID>`) now shows `CASE_CLOSED`.
 - Executed serverless deploy command with worker enabled and reserved concurrency `1`:
   - Script: `/Users/marcomaher/AWS Security Autopilot/scripts/deploy_saas_serverless.sh`
   - Region: `eu-north-1`
@@ -22679,7 +22752,7 @@
   - AWS default quota value: `1000`
 - Submitted Service Quotas request via CLI:
   - Command used: `aws service-quotas request-service-quota-increase --service-code lambda --quota-code L-B99A9384 --desired-value 1001 --region eu-north-1`
-- Request ID: `[redacted-legacy-request-id]`
+  - Request ID: `<REDACTED_SERVICE_QUOTAS_REQUEST_ID>`
   - Status at submission/check: `PENDING`
 - Retrieved change history and confirmed the same request appears with `PENDING` status.
 

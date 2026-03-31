@@ -11,12 +11,6 @@ AWS Security Autopilot can be deployed in two ways:
 
 Both options use the same codebase and support the same features.
 
-## Canonical Repo Contract
-
-- Root `master` is the only authoritative branch for deployable code.
-- `frontend/` is tracked directly inside the root repo; do not restore a separate frontend repo, gitlink, or submodule flow.
-- Production frontend deploys must be run from `frontend/` inside the root repo checkout on `master`.
-
 ## Deployment Prerequisites
 
 Before starting, ensure you have:
@@ -87,6 +81,11 @@ The recommended deployment order is:
 - **Lambda**: $0.20 per 1M requests + $0.0000166667/GB-second
 - **API Gateway**: $1.00 per 1M requests + $0.09/GB data transfer
 - **Estimated monthly cost** (dev): ~$10-30 (low traffic)
+
+Current lean always-on production guidance for this repo:
+- prefer Lambda + API Gateway + Cloudflare for low traffic,
+- keep PostgreSQL external instead of provisioning RDS in the SaaS account,
+- rely on finite log retention, auto-expiring build-source zips, and bounded ECR image retention to keep idle AWS cost low.
 
 ### Common Costs (Both Options)
 

@@ -120,12 +120,19 @@ def _local_target_account_session(target_account_id: str | None) -> boto3.Sessio
     return None
 
 
+def _sts_client_for_assume_role(base_session: boto3.Session | None) -> STSClient:
+    if base_session is not None:
+        return base_session.client("sts", region_name=settings.AWS_REGION)
+    return boto3.client("sts", region_name=settings.AWS_REGION)
+
+
 def assume_role(
     role_arn: str,
     external_id: str,
     session_name: str | None = None,
     source_identity: str | None = None,
     tags: list[dict[str, str]] | None = None,
+    base_session: boto3.Session | None = None,
 ) -> boto3.Session:
     """
     Assumes an IAM role using STS and returns a boto3 session.
@@ -136,6 +143,7 @@ def assume_role(
         session_name: Identifier for this assume-role session. Defaults to settings.ROLE_SESSION_NAME.
         source_identity: Optional STS SourceIdentity used for CloudTrail attribution.
         tags: Optional STS session tags for audit attribution.
+        base_session: Optional session used as the caller context for STS AssumeRole.
 
     Returns:
         boto3.Session with temporary credentials from the assumed role.
@@ -159,11 +167,10 @@ def assume_role(
 
     session_name = session_name or settings.ROLE_SESSION_NAME
 
-    # Create STS client using default credentials (from env, IAM role, etc.)
-    sts_client: STSClient = boto3.client("sts", region_name=settings.AWS_REGION)
+    sts_client = _sts_client_for_assume_role(base_session)
     caller_account_id = _caller_account_id(sts_client)
     target_account_id = _account_id_from_role_arn(role_arn)
-    if settings.ALLOW_LOCAL_TARGET_ACCOUNT_AMBIENT_SESSION:
+    if base_session is None and settings.ALLOW_LOCAL_TARGET_ACCOUNT_AMBIENT_SESSION:
         local_profile_session = _local_target_account_session(target_account_id)
         if local_profile_session is not None:
             return local_profile_session

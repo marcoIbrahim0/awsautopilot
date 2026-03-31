@@ -4,7 +4,14 @@
 >
 > This spec defines the production contract for root-key safe remediation orchestration for `IAM.4` (`iam_root_access_key_absent`) with strict multi-tenant isolation, retry safety, and fail-closed behavior.
 >
-> ⚠️ Status: In progress — persistence, state-machine service, root-key usage discovery/dependency classification, tenant-scoped orchestration API endpoints, guarded executor-worker logic for disable/rollback/delete, closure-cycle orchestration service with runtime delete-path wiring, rollout/ops controls (canary gating, kill switch, pause/resume, override logging, tenant metrics), and a feature-flagged frontend lifecycle UI are implemented.
+> ⚠️ Status: Implemented behind feature flags and live-proven on 2026-03-30 against account `696505809372` through the retained dedicated-route package [20260330T175400Z-poi007-final-handoff](/Users/marcomaher/AWS%20Security%20Autopilot/docs/test-results/live-runs/20260330T175400Z-poi007-final-handoff/notes/final-summary.md).
+>
+> Current live-proof note (2026-03-30): March 30 retained evidence now proves the full safe progression on current `master`:
+> 1. the authoritative route fail-closes when observer bootstrap is unavailable
+> 2. the executor fail-closes when observer and mutation collapse onto the same root key
+> 3. the dedicated route can then close truthfully through an explicit external task `final_root_key_manual_delete_required`, manual deletion of the preserved last root key, `resume`, and observer-only finalization of the last `delete` step after the old mutation credential is intentionally dead
+>
+> Residual operational caveat: the bounded local live proof temporarily broadened target-account IAM trust/policy so local `AutoPilotAdmin` could assume the registered `SecurityAutopilotReadRole`, and those target-account changes could not be reverted after the final root-key delete because no surviving write role remained. That cleanup is a canary-account follow-up, not a remaining product-design blocker.
 >
 > Implemented so far: additive persistence schema + ORM + repository/service access layer + transition-guarded state-machine service + tenant-scoped `create_run` action/finding ownership checks + CloudTrail usage discovery with managed/unknown dependency classification + root-key orchestration API contract at `/api/root-key-remediation-runs` + guarded executor-worker path for disable/rollback/delete transitions + closure-cycle orchestration service (`ingest`/`compute`/`reconcile` + polling) wired into the runtime delete path + deterministic integration/e2e matrix coverage + rollout/ops controls (`canary percent`, `kill switch`, `pause/resume`, `operator override reason` events, `ops metrics`) + feature-flagged frontend route `/root-key-remediation-runs/{id}` for lifecycle/timeline/dependency/task flows.
 
@@ -283,10 +290,13 @@ State transition contracts:
   - when `ROOT_KEY_SAFE_REMEDIATION_EXECUTOR_ENABLED=false`, endpoint fails closed with `503 executor_unavailable`,
   - when `ROOT_KEY_SAFE_REMEDIATION_EXECUTOR_ENABLED=true`, delete execution is routed through `RootKeyRemediationExecutorWorker`.
 - When executor-worker path is enabled, `disable`/`rollback`/`delete` are executed through `RootKeyRemediationExecutorWorker` with:
+  - explicit mutation session construction from dedicated mutation credentials (`ROOT_KEY_SAFE_REMEDIATION_MUTATION_*`),
+  - fail-closed `503 mutation_context_unavailable` behavior when mutation credentials are unset, conflicting, or incomplete,
   - self-cutoff prevention guard requiring a safe observer context,
-  - authoritative `disable` and `delete` preflight that eagerly builds a separate observer session from explicit observer base credentials plus the tenant `role_read_arn`,
-  - fail-closed `503 observer_context_unavailable` behavior when that observer context cannot be built or cannot assume the tenant read role,
+  - authoritative `disable` and `delete` preflight that eagerly builds a separate observer session either by assuming the tenant `role_read_arn` from the configured observer base context or, when `ROOT_KEY_SAFE_REMEDIATION_OBSERVER_DIRECT_SESSION_ENABLED=true`, by proving the configured observer credentials already belong to the target account,
+  - fail-closed `503 observer_context_unavailable` behavior when that observer context cannot be built, cannot assume the tenant read role, or cannot prove direct target-account scope,
   - disable monitor-window evidence (`health + usage`) capture,
+  - fail-closed operator-attention handoff when the active caller root key must be preserved for safety, so the run does not claim a clean disable window that cannot truthfully progress to closure,
   - automatic rollback + rollback alert task creation on breakage signals,
   - fail-closed delete gating (`validation passed`, `disable window clean`, `delete flag enabled`, `no unknown active dependencies`).
 - Invalid transitions and lock/idempotency conflicts return fail-closed `409`.
@@ -362,10 +372,15 @@ All defaults preserve current behavior:
 | `ROOT_KEY_SAFE_REMEDIATION_STRICT_TRANSITIONS` | `false` | Enforces transition guardrail checks in runtime path. |
 | `ROOT_KEY_SAFE_REMEDIATION_DISCOVERY_ENABLED` | `false` | Enables root-key usage discovery and dependency classification path. |
 | `ROOT_KEY_SAFE_REMEDIATION_EXECUTOR_ENABLED` | `false` | Enables guarded executor-worker behavior for disable/rollback/delete. |
+| `ROOT_KEY_SAFE_REMEDIATION_MUTATION_AWS_PROFILE` | `""` | Optional AWS profile used as the explicit mutation base context for authoritative disable/rollback/delete execution. |
+| `ROOT_KEY_SAFE_REMEDIATION_MUTATION_AWS_ACCESS_KEY_ID` | `""` | Optional static AWS access key used as the explicit mutation base context for authoritative disable/rollback/delete execution. |
+| `ROOT_KEY_SAFE_REMEDIATION_MUTATION_AWS_SECRET_ACCESS_KEY` | `""` | Optional static AWS secret key used as the explicit mutation base context for authoritative disable/rollback/delete execution. |
+| `ROOT_KEY_SAFE_REMEDIATION_MUTATION_AWS_SESSION_TOKEN` | `""` | Optional static AWS session token used with the explicit mutation base context for authoritative disable/rollback/delete execution. |
 | `ROOT_KEY_SAFE_REMEDIATION_OBSERVER_AWS_PROFILE` | `""` | Optional AWS profile used as the separate observer base context for authoritative disable/delete execution. |
 | `ROOT_KEY_SAFE_REMEDIATION_OBSERVER_AWS_ACCESS_KEY_ID` | `""` | Optional static AWS access key used as the separate observer base context for authoritative disable/delete execution. |
 | `ROOT_KEY_SAFE_REMEDIATION_OBSERVER_AWS_SECRET_ACCESS_KEY` | `""` | Optional static AWS secret key used as the separate observer base context for authoritative disable/delete execution. |
 | `ROOT_KEY_SAFE_REMEDIATION_OBSERVER_AWS_SESSION_TOKEN` | `""` | Optional static AWS session token used with the separate observer base context for authoritative disable/delete execution. |
+| `ROOT_KEY_SAFE_REMEDIATION_OBSERVER_DIRECT_SESSION_ENABLED` | `false` | Allows the authoritative route to use the configured observer credentials directly only after `sts:GetCallerIdentity` proves they already belong to the target account. |
 | `ROOT_KEY_SAFE_REMEDIATION_CANARY_ENABLED` | `false` | Enables deterministic percent-based canary rollout on create-run. |
 | `ROOT_KEY_SAFE_REMEDIATION_CANARY_PERCENT` | `100` | Canary selection percent when canary gating is enabled. |
 | `ROOT_KEY_SAFE_REMEDIATION_CANARY_TENANT_ALLOWLIST` | `""` | Comma-separated tenant UUID bypass list for canary gating. |

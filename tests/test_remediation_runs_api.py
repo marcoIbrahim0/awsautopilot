@@ -706,6 +706,7 @@ def test_create_run_different_profile_id_not_treated_as_identical_duplicate(clie
                             "mode": "pr_only",
                             "strategy_id": "cloudtrail_enable_guided",
                             "profile_id": "cloudtrail_enable_guided",
+                            "bucket_creation_acknowledged": True,
                             "risk_acknowledged": True,
                         },
                     )
@@ -3386,6 +3387,62 @@ def test_trigger_reeval_falls_back_to_global_reconcile_when_action_scope_not_der
     first_payload = json.loads(mock_sqs.send_message.call_args_list[0].kwargs["MessageBody"])
     assert first_payload["sweep_mode"] == "global"
     assert "resource_ids" not in first_payload
+
+
+def test_trigger_reeval_targets_s3_bucket_reconcile_for_s3_public_access_actions(client: TestClient) -> None:
+    """POI-006: S3.2 re-evaluation should target the remediated bucket instead of a global sweep."""
+    tenant = _mock_tenant()
+    user = _mock_user(tenant.id)
+    action = _mock_action(action_type="s3_bucket_block_public_access")
+    action.tenant_id = tenant.id
+    action.region = "eu-north-1"
+    action.resource_id = "arn:aws:s3:::arch1-bucket-evidence-b1-696505809372-eu-north-1"
+    action.target_id = action.resource_id
+    account = _mock_account(role_write_arn="arn:aws:iam::123456789012:role/WriteRole")
+    account.regions = ["eu-north-1"]
+
+    async def mock_get_db() -> AsyncGenerator[MagicMock, None]:
+        yield _mock_async_session(tenant, action, account)
+
+    async def mock_get_optional_user() -> MagicMock:
+        return user
+
+    from backend.auth import get_optional_user
+
+    app.dependency_overrides[get_db] = mock_get_db
+    app.dependency_overrides[get_optional_user] = mock_get_optional_user
+    mock_sqs = MagicMock()
+    mock_sqs.send_message.return_value = {"MessageId": "reeval-msg-s3-1"}
+    with patch("backend.routers.actions.boto3.client", return_value=mock_sqs):
+        with patch("backend.routers.actions.settings") as mock_settings:
+            mock_settings.has_inventory_reconcile_queue = True
+            mock_settings.SQS_INVENTORY_RECONCILE_QUEUE_URL = "https://sqs.us-east-1.amazonaws.com/123/reconcile"
+            mock_settings.control_plane_inventory_services_list = ["ec2", "s3"]
+            mock_settings.CONTROL_PLANE_INVENTORY_MAX_RESOURCES_PER_SHARD = 500
+            mock_settings.AWS_REGION = "us-east-1"
+            try:
+                r = client.post(
+                    f"/api/actions/{action.id}/trigger-reeval",
+                    json={"strategy_id": "s3_bucket_block_public_access_standard"},
+                )
+            finally:
+                app.dependency_overrides.pop(get_db, None)
+                app.dependency_overrides.pop(get_optional_user, None)
+
+    assert r.status_code == 202
+    body = r.json()
+    assert body["action_id"] == str(action.id)
+    assert body["strategy_id"] == "s3_bucket_block_public_access_standard"
+    assert body["supports_immediate_reeval"] is True
+    assert body["enqueued_jobs"] == 1
+    assert mock_sqs.send_message.call_count == 1
+    first_payload = json.loads(mock_sqs.send_message.call_args_list[0].kwargs["MessageBody"])
+    assert first_payload["job_type"] == "reconcile_inventory_shard"
+    assert first_payload["account_id"] == action.account_id
+    assert first_payload["region"] == action.region
+    assert first_payload["service"] == "s3"
+    assert first_payload["sweep_mode"] == "targeted"
+    assert first_payload["resource_ids"] == [action.resource_id]
 
 
 def test_trigger_reeval_rejects_unsupported_strategy(client: TestClient) -> None:

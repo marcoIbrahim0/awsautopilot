@@ -23,6 +23,12 @@ Current API Lambda runtime posture:
 - `/ready` queue-lag fields are backed by CloudWatch `GetMetricStatistics`, so the API execution role now includes that read permission.
 - The serverless API runtime no longer performs FastAPI bootstrap or the DB revision guard during Lambda module import. Both are memoized on first invoke in [`backend/lambda_handler.py`](/Users/marcomaher/AWS%20Security%20Autopilot/backend/lambda_handler.py), which removes the March 20, 2026 init-time timeout burst class while preserving the schema/runtime guard.
 
+Lean always-on cost controls currently baked into the repo:
+- Build source zips in the serverless source bucket auto-expire after `7` days.
+- The build stack ECR repositories retain only the latest `5` images and expire older images automatically.
+- Lambda log groups use `14`-day retention; keep the CodeBuild log group on finite retention as well when operating the live stack.
+- The low-cost production posture assumes external PostgreSQL and does not require ECS, RDS, ALB, NAT, or WAF for the current low-traffic phase.
+
 ## Prerequisites
 
 - ✅ [Prerequisites](prerequisites.md) completed

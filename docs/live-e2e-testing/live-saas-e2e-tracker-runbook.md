@@ -60,6 +60,61 @@ bash scripts/init_live_e2e_run.sh
 
 4. In `docs/live-e2e-testing/00-BASE-ISSUE-TRACKER.md`, set `Last updated` to current run timestamp.
 
+## Wave 7 Adversarial Fixture Preparation
+
+Use this section before Tests `23` to `28`. The retained March 30, 2026 package was blocked because these AWS fixtures were not actually seeded.
+
+> ⚠️ This is a validation/setup workflow, not a product-bug diagnosis. Do not mark Wave 7 ready unless the AWS state was really provisioned in the target test account.
+
+> ⚠️ Run these scripts only in an isolated test account. Several checked-in scripts still contain `<YOUR_...>` placeholders and need operator-local value substitution before execution.
+
+> ✅ March 30, 2026 closure proof now exists in [20260330T161251Z-poi016-wave7-rerun](/Users/marcomaher/AWS%20Security%20Autopilot/docs/test-results/live-runs/20260330T161251Z-poi016-wave7-rerun/notes/final-summary.md). Reuse that package as the current template for fixture seeding, target-action verification, and the remaining non-setup blockers.
+
+### Canonical source docs
+
+- [Architecture design registry](/Users/marcomaher/AWS%20Security%20Autopilot/docs/prod-readiness/07-architecture-design.md)
+- [A-series adversarial resources](/Users/marcomaher/AWS%20Security%20Autopilot/docs/prod-readiness/07-task4-a-series-resources.md)
+- [B-series adversarial resources](/Users/marcomaher/AWS%20Security%20Autopilot/docs/prod-readiness/07-task5-b-series-resources.md)
+- [POI-016 backlog packet](/Users/marcomaher/AWS%20Security%20Autopilot/docs/live-e2e-testing/production-open-issues-agent-backlog.md#poi-016)
+
+### Real script path in repo
+
+1. Seed Architecture 1:
+   - [08-task2-deploy-arch1.sh](/Users/marcomaher/AWS%20Security%20Autopilot/docs/prod-readiness/08-task2-deploy-arch1.sh)
+   - Requires exported `ACCOUNT_ID`, `AWS_REGION`, `ARCH1_RDS_MASTER_USERNAME`, and `ARCH1_RDS_MASTER_PASSWORD`.
+   - Prompts for an explicit interactive `CONFIRM`.
+2. Seed Architecture 2:
+   - [08-task3-deploy-arch2.sh](/Users/marcomaher/AWS%20Security%20Autopilot/docs/prod-readiness/08-task3-deploy-arch2.sh)
+   - Requires exported `ACCOUNT_ID`, `AWS_REGION`, `ARCH2_RDS_MASTER_USERNAME`, `ARCH2_RDS_MASTER_PASSWORD`, and `ENABLE_ARCH2_DEPLOY=true`.
+3. Reintroduce the adversarial states:
+   - [08-task4-reset-arch1.sh](/Users/marcomaher/AWS%20Security%20Autopilot/docs/prod-readiness/08-task4-reset-arch1.sh)
+   - [08-task5-reset-arch2.sh](/Users/marcomaher/AWS%20Security%20Autopilot/docs/prod-readiness/08-task5-reset-arch2.sh)
+4. Execute the Wave 7 reruns through the normal tracker workflow in this document.
+5. Tear the fixtures down after reruns:
+   - [08-task6-teardown-arch1-groupA.sh](/Users/marcomaher/AWS%20Security%20Autopilot/docs/prod-readiness/08-task6-teardown-arch1-groupA.sh)
+   - [08-task6-teardown-arch1-groupB.sh](/Users/marcomaher/AWS%20Security%20Autopilot/docs/prod-readiness/08-task6-teardown-arch1-groupB.sh)
+   - [08-task6-teardown-arch1-full.sh](/Users/marcomaher/AWS%20Security%20Autopilot/docs/prod-readiness/08-task6-teardown-arch1-full.sh)
+   - [08-task7-teardown-arch2-groupA.sh](/Users/marcomaher/AWS%20Security%20Autopilot/docs/prod-readiness/08-task7-teardown-arch2-groupA.sh)
+   - [08-task7-teardown-arch2-groupB.sh](/Users/marcomaher/AWS%20Security%20Autopilot/docs/prod-readiness/08-task7-teardown-arch2-groupB.sh)
+   - [08-task7-teardown-arch2-full.sh](/Users/marcomaher/AWS%20Security%20Autopilot/docs/prod-readiness/08-task7-teardown-arch2-full.sh)
+
+### Wave 7 test-to-fixture mapping
+
+| Test | Focus | Fixture(s) to confirm before rerun | Notes |
+|---|---|---|---|
+| 23 | Adversarial S3 blast radius | `arch1_bucket_website_a1` plus `arch1_bucket_evidence_b1` | A1 stays website/public; B1 stays non-website with complex policy preserved. |
+| 24 | Adversarial SG dependency chain | `arch1_sg_dependency_a2` plus `arch1_sg_reference_a2` | Keep the EC2/RDS/reference-chain dependencies intact. |
+| 25 | Adversarial IAM multi-principal | `arch2_shared_compute_role_a3` | Retained Wave 7 IAM flow later hit root-gated apply. Treat root-safe execution as separate operator prep. |
+| 26 | Complex S3 policy preservation | `arch1_bucket_evidence_b1` | Dedicated helper exists at [run_wave7_test26_closure.sh](/Users/marcomaher/AWS%20Security%20Autopilot/scripts/live_e2e/run_wave7_test26_closure.sh). |
+| 27 | Mixed SG rule preservation | `arch1_sg_app_b2` | Legitimate rules must remain alongside the intentional public SSH rule before rerun. |
+| 28 | IAM inline + managed policy preservation | `arch2_mixed_policy_role_b3` | Root-safe execution path is still operator-owned. |
+
+### Operator-owned prerequisites
+
+- Architecture 1 reset and teardown scripts still use literal placeholder values by default. Update them in a local working copy or export equivalent values where supported before execution.
+- Tests `25` and `28` are not fully runnable from repo automation alone. Use the [root-credentials-required IAM root access-key runbook](/Users/marcomaher/AWS%20Security%20Autopilot/docs/prod-readiness/root-credentials-required-iam-root-access-key-absent.md) for approvals, root identity checks, and manual apply evidence.
+- `POI-016` is no longer open after the March 30 rerun package above. The remaining blockers are the per-test product/runtime issues preserved in that package, especially `IAM.4`.
+
 ## Standard Loop (Apply to Every Test)
 
 1. Open the specific per-test file in the current run folder.

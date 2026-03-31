@@ -1,5 +1,10 @@
 # Root-Credentials-Required Runbook (`iam_root_access_key_absent`)
 
+> ⚠️ Status: historical PR-bundle operator runbook for the pre-authoritative IAM.4 path.
+> Current local `master` routes IAM.4 execution to [`/api/root-key-remediation-runs`](/Users/marcomaher/AWS%20Security%20Autopilot/backend/routers/root_key_remediation_runs.py), and that route now fail-closes preserved-caller-key attempts into `needs_attention` instead of claiming a clean disable window.
+> As of March 30, 2026, the dedicated route is live-proven on current `master` against account `696505809372` through the retained package [20260330T175400Z-poi007-final-handoff](/Users/marcomaher/AWS%20Security%20Autopilot/docs/test-results/live-runs/20260330T175400Z-poi007-final-handoff/notes/final-summary.md): `disable` creates an explicit manual final-key task, the preserved last root key is deleted manually, and the resumed final `delete` step completes under observer-only verification after the old root credential dies.
+> This PR-bundle runbook remains historical audit context only. Do not use it as the active IAM.4 closure procedure on current head.
+
 This runbook is the mandatory operational path for `iam_root_access_key_absent` when strategy is:
 - `iam_root_key_disable`
 - `iam_root_key_delete`

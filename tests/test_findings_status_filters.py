@@ -168,3 +168,96 @@ async def test_list_findings_grouped_suppressed_filter_checks_active_exceptions(
     assert "from exceptions" in compiled
     assert "suppressed" in compiled
     assert "expires_at" in compiled
+
+
+@pytest.mark.asyncio
+async def test_list_findings_uses_stable_id_tiebreaker_for_offset_pagination():
+    tenant_id = uuid.uuid4()
+    current = datetime(2026, 3, 30, 3, 28, 40, tzinfo=timezone.utc)
+    dataset: list[SimpleNamespace] = []
+    for index in range(8):
+        finding = _make_finding(status="NEW")
+        finding.id = uuid.UUID(f"00000000-0000-0000-0000-{index + 1:012x}")
+        finding.finding_id = f"finding-{index + 1}"
+        finding.sh_updated_at = current
+        finding.created_at = current
+        finding.updated_at = current
+        dataset.append(finding)
+
+    count_result = MagicMock()
+    count_result.scalar.return_value = len(dataset)
+    executed_statements: list[object] = []
+
+    async def execute_side_effect(statement: object, *args, **kwargs):
+        del args, kwargs
+        executed_statements.append(statement)
+        if len(executed_statements) % 2 == 1:
+            return count_result
+
+        compiled = _compile_sql(statement)
+        assert "findings.id asc" in compiled
+
+        limit = int(statement._limit_clause.value)
+        offset = int(statement._offset_clause.value)
+        rows_result = MagicMock()
+        rows_result.scalars.return_value.all.return_value = sorted(dataset, key=lambda item: str(item.id))[offset:offset + limit]
+        return rows_result
+
+    db = AsyncMock()
+    db.execute.side_effect = execute_side_effect
+
+    with patch("backend.routers.findings.resolve_tenant_id", return_value=tenant_id), patch(
+        "backend.routers.findings.get_tenant_by_uuid",
+        AsyncMock(return_value=SimpleNamespace(id=tenant_id)),
+    ), patch(
+        "backend.routers.findings.get_remediation_hints_for_findings",
+        AsyncMock(return_value={}),
+    ), patch(
+        "backend.routers.findings.get_exception_states_for_entities",
+        AsyncMock(return_value={}),
+    ):
+        first_page = await findings.list_findings(
+            db=db,
+            current_user=None,
+            tenant_id=str(tenant_id),
+            account_id=None,
+            region=None,
+            control_id=None,
+            resource_type=None,
+            resource_id=None,
+            severity=None,
+            status_filter="NEW,NOTIFIED",
+            source=None,
+            first_observed_since=None,
+            last_observed_since=None,
+            updated_since=None,
+            limit=5,
+            offset=0,
+        )
+        second_page = await findings.list_findings(
+            db=db,
+            current_user=None,
+            tenant_id=str(tenant_id),
+            account_id=None,
+            region=None,
+            control_id=None,
+            resource_type=None,
+            resource_id=None,
+            severity=None,
+            status_filter="NEW,NOTIFIED",
+            source=None,
+            first_observed_since=None,
+            last_observed_since=None,
+            updated_since=None,
+            limit=5,
+            offset=5,
+        )
+
+    first_ids = [item.id for item in first_page.items]
+    second_ids = [item.id for item in second_page.items]
+
+    assert first_page.total == len(dataset)
+    assert second_page.total == len(dataset)
+    assert len(set(first_ids).intersection(second_ids)) == 0
+    assert first_ids == [str(item.id) for item in sorted(dataset, key=lambda item: str(item.id))[:5]]
+    assert second_ids == [str(item.id) for item in sorted(dataset, key=lambda item: str(item.id))[5:10]]

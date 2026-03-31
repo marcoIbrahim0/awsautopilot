@@ -16,6 +16,9 @@ from backend.models.enums import (
     RootKeyRemediationRunStatus,
     RootKeyRemediationState,
 )
+from backend.services.root_key_remediation_executor_worker import (
+    FINAL_ROOT_KEY_MANUAL_DELETE_TASK_TYPE,
+)
 from backend.services.root_key_remediation_state_machine import (
     RootKeyErrorClassification,
     RootKeyErrorDisposition,
@@ -171,6 +174,13 @@ def _enable_root_key_settings() -> MagicMock:
     settings.ROOT_KEY_SAFE_REMEDIATION_OBSERVER_AWS_ACCESS_KEY_ID = ""
     settings.ROOT_KEY_SAFE_REMEDIATION_OBSERVER_AWS_SECRET_ACCESS_KEY = ""
     settings.ROOT_KEY_SAFE_REMEDIATION_OBSERVER_AWS_SESSION_TOKEN = ""
+    settings.ROOT_KEY_SAFE_REMEDIATION_OBSERVER_DIRECT_SESSION_ENABLED = False
+    settings.ROOT_KEY_SAFE_REMEDIATION_MUTATION_AWS_PROFILE = ""
+    settings.ROOT_KEY_SAFE_REMEDIATION_MUTATION_AWS_ACCESS_KEY_ID = ""
+    settings.ROOT_KEY_SAFE_REMEDIATION_MUTATION_AWS_SECRET_ACCESS_KEY = ""
+    settings.ROOT_KEY_SAFE_REMEDIATION_MUTATION_AWS_SESSION_TOKEN = ""
+    settings.ALLOW_LOCAL_TARGET_ACCOUNT_AMBIENT_SESSION = False
+    settings.LOCAL_TARGET_ACCOUNT_AWS_PROFILE = ""
     settings.AWS_REGION = "eu-north-1"
     settings.ROLE_SESSION_NAME = "security-autopilot-session"
     return settings
@@ -845,6 +855,7 @@ def test_disable_uses_executor_worker_when_enabled(client: TestClient) -> None:
     app.dependency_overrides[get_db] = mock_get_db
     app.dependency_overrides[get_optional_user] = mock_get_optional_user
     settings_obj = _enable_root_key_executor_settings()
+    settings_obj.ROOT_KEY_SAFE_REMEDIATION_MUTATION_AWS_PROFILE = "mutation-profile"
     settings_obj.ROOT_KEY_SAFE_REMEDIATION_OBSERVER_AWS_PROFILE = "observer-profile"
     account = SimpleNamespace(
         tenant_id=tenant_id,
@@ -853,16 +864,8 @@ def test_disable_uses_executor_worker_when_enabled(client: TestClient) -> None:
         external_id="ext-observer",
     )
     session.execute = AsyncMock(return_value=_scalar_result(account))
+    mutation_session = MagicMock()
     base_session = MagicMock()
-    base_sts = MagicMock()
-    base_sts.assume_role.return_value = {
-        "Credentials": {
-            "AccessKeyId": "ASIATEMP00000001",
-            "SecretAccessKey": "secret",
-            "SessionToken": "token",
-        }
-    }
-    base_session.client.return_value = base_sts
     observer_session = MagicMock()
     with patch("backend.routers.root_key_remediation_runs.settings", settings_obj):
         with patch(
@@ -875,27 +878,38 @@ def test_disable_uses_executor_worker_when_enabled(client: TestClient) -> None:
             ):
                 with patch(
                     "backend.routers.root_key_remediation_runs.boto3.Session",
-                    side_effect=[base_session, observer_session],
+                    side_effect=[mutation_session, base_session],
                 ):
                     with patch(
-                        "backend.routers.root_key_remediation_runs.RootKeyRemediationExecutorWorker",
-                        return_value=worker,
-                    ) as worker_ctor:
+                        "backend.routers.root_key_remediation_runs.assume_role",
+                        return_value=observer_session,
+                    ) as assume_role_mock:
                         with patch(
-                            "backend.routers.root_key_remediation_runs.RootKeyRemediationStateMachineService",
-                            return_value=service,
-                        ):
-                            response = client.post(
-                                f"/api/root-key-remediation-runs/{run.id}/disable",
-                                headers={"Idempotency-Key": "rk-disable-worker"},
-                            )
+                            "backend.routers.root_key_remediation_runs.RootKeyRemediationExecutorWorker",
+                            return_value=worker,
+                        ) as worker_ctor:
+                            with patch(
+                                "backend.routers.root_key_remediation_runs.RootKeyRemediationStateMachineService",
+                                return_value=service,
+                            ):
+                                response = client.post(
+                                    f"/api/root-key-remediation-runs/{run.id}/disable",
+                                    headers={"Idempotency-Key": "rk-disable-worker"},
+                                )
 
     assert response.status_code == 200
     assert worker.execute_disable.await_count == 1
     assert service.start_disable_window.await_count == 0
+    mutation_factory = worker_ctor.call_args.kwargs["mutation_session_factory"]
+    assert mutation_factory(run.account_id, run.region) is mutation_session
     observer_factory = worker_ctor.call_args.kwargs["observer_session_factory"]
     assert observer_factory(run.account_id, run.region) is observer_session
-    base_sts.assume_role.assert_called_once()
+    assert assume_role_mock.call_args.kwargs == {
+        "role_arn": account.role_read_arn,
+        "external_id": account.external_id,
+        "session_name": "security-autopilot-session-root-key-observer",
+        "base_session": base_session,
+    }
 
 
 def test_disable_auto_advances_validation_from_migration_before_executor(client: TestClient) -> None:
@@ -952,6 +966,7 @@ def test_disable_auto_advances_validation_from_migration_before_executor(client:
     app.dependency_overrides[get_db] = mock_get_db
     app.dependency_overrides[get_optional_user] = mock_get_optional_user
     settings_obj = _enable_root_key_executor_settings()
+    settings_obj.ROOT_KEY_SAFE_REMEDIATION_MUTATION_AWS_PROFILE = "mutation-profile"
     settings_obj.ROOT_KEY_SAFE_REMEDIATION_OBSERVER_AWS_PROFILE = "observer-profile"
     account = SimpleNamespace(
         tenant_id=tenant_id,
@@ -960,16 +975,8 @@ def test_disable_auto_advances_validation_from_migration_before_executor(client:
         external_id="ext-observer",
     )
     session.execute = AsyncMock(return_value=_scalar_result(account))
+    mutation_session = MagicMock()
     base_session = MagicMock()
-    base_sts = MagicMock()
-    base_sts.assume_role.return_value = {
-        "Credentials": {
-            "AccessKeyId": "ASIATEMP00000001",
-            "SecretAccessKey": "secret",
-            "SessionToken": "token",
-        }
-    }
-    base_session.client.return_value = base_sts
     observer_session = MagicMock()
     with patch("backend.routers.root_key_remediation_runs.settings", settings_obj):
         with patch(
@@ -982,20 +989,24 @@ def test_disable_auto_advances_validation_from_migration_before_executor(client:
             ):
                 with patch(
                     "backend.routers.root_key_remediation_runs.boto3.Session",
-                    side_effect=[base_session, observer_session],
+                    side_effect=[mutation_session, base_session],
                 ):
                     with patch(
-                        "backend.routers.root_key_remediation_runs.RootKeyRemediationExecutorWorker",
-                        return_value=worker,
+                        "backend.routers.root_key_remediation_runs.assume_role",
+                        return_value=observer_session,
                     ):
                         with patch(
-                            "backend.routers.root_key_remediation_runs.RootKeyRemediationStateMachineService",
-                            return_value=service,
+                            "backend.routers.root_key_remediation_runs.RootKeyRemediationExecutorWorker",
+                            return_value=worker,
                         ):
-                            response = client.post(
-                                f"/api/root-key-remediation-runs/{run.id}/disable",
-                                headers={"Idempotency-Key": "rk-disable-worker-migration"},
-                            )
+                            with patch(
+                                "backend.routers.root_key_remediation_runs.RootKeyRemediationStateMachineService",
+                                return_value=service,
+                            ):
+                                response = client.post(
+                                    f"/api/root-key-remediation-runs/{run.id}/disable",
+                                    headers={"Idempotency-Key": "rk-disable-worker-migration"},
+                                )
 
     assert response.status_code == 200
     assert service.advance_to_validation.await_count == 1
@@ -1039,21 +1050,267 @@ def test_disable_fails_closed_when_observer_context_is_unavailable(client: TestC
 
     app.dependency_overrides[get_db] = mock_get_db
     app.dependency_overrides[get_optional_user] = mock_get_optional_user
-    with patch("backend.routers.root_key_remediation_runs.settings", _enable_root_key_executor_settings()):
+    settings_obj = _enable_root_key_executor_settings()
+    settings_obj.ROOT_KEY_SAFE_REMEDIATION_MUTATION_AWS_PROFILE = "mutation-profile"
+    with patch("backend.routers.root_key_remediation_runs.settings", settings_obj):
         with patch(
             "backend.routers.root_key_remediation_runs._load_tenant_run_with_children",
             new=AsyncMock(return_value=run),
         ):
             with patch(
-                "backend.routers.root_key_remediation_runs.RootKeyRemediationExecutorWorker",
-            ) as worker_ctor:
-                response = client.post(
-                    f"/api/root-key-remediation-runs/{run.id}/disable",
-                    headers={"Idempotency-Key": "rk-disable-no-observer"},
-                )
+                "backend.routers.root_key_remediation_runs.boto3.Session",
+                return_value=MagicMock(),
+            ):
+                with patch(
+                    "backend.routers.root_key_remediation_runs.assume_role",
+                    side_effect=RuntimeError("observer unavailable"),
+                ):
+                    with patch(
+                        "backend.routers.root_key_remediation_runs.RootKeyRemediationExecutorWorker",
+                    ) as worker_ctor:
+                        response = client.post(
+                            f"/api/root-key-remediation-runs/{run.id}/disable",
+                            headers={"Idempotency-Key": "rk-disable-no-observer"},
+                        )
 
     assert response.status_code == 503
     assert response.json()["error"]["code"] == "observer_context_unavailable"
+    worker_ctor.assert_not_called()
+
+
+def test_disable_uses_direct_observer_session_when_enabled_and_target_scoped(client: TestClient) -> None:
+    tenant_id = uuid.uuid4()
+    user = _mock_user(tenant_id)
+    run = _mock_run(
+        state=RootKeyRemediationState.disable_window,
+        status=RootKeyRemediationRunStatus.running,
+    )
+    session = MagicMock()
+    session.commit = AsyncMock()
+    session.rollback = AsyncMock()
+    session.execute = AsyncMock(
+        return_value=_scalar_result(
+            SimpleNamespace(
+                tenant_id=tenant_id,
+                account_id=run.account_id,
+                role_read_arn=f"arn:aws:iam::{run.account_id}:role/ReadRole",
+                external_id="ext-observer",
+            )
+        )
+    )
+    transition_result = SimpleNamespace(
+        run=run,
+        state_changed=True,
+        event_created=True,
+        evidence_created=True,
+        attempts=1,
+    )
+    worker = MagicMock()
+    worker.execute_disable = AsyncMock(return_value=transition_result)
+    service = MagicMock()
+    service.start_disable_window = AsyncMock(return_value=transition_result)
+
+    async def mock_get_db():
+        yield session
+
+    async def mock_get_optional_user():
+        return user
+
+    app.dependency_overrides[get_db] = mock_get_db
+    app.dependency_overrides[get_optional_user] = mock_get_optional_user
+    settings_obj = _enable_root_key_executor_settings()
+    settings_obj.ROOT_KEY_SAFE_REMEDIATION_MUTATION_AWS_PROFILE = "mutation-profile"
+    settings_obj.ROOT_KEY_SAFE_REMEDIATION_OBSERVER_AWS_PROFILE = "observer-profile"
+    settings_obj.ROOT_KEY_SAFE_REMEDIATION_OBSERVER_DIRECT_SESSION_ENABLED = True
+    mutation_session = MagicMock()
+    observer_session = MagicMock()
+    observer_sts = MagicMock()
+    observer_sts.get_caller_identity.return_value = {"Account": run.account_id}
+    observer_session.client.return_value = observer_sts
+    with patch("backend.routers.root_key_remediation_runs.settings", settings_obj):
+        with patch(
+            "backend.routers.root_key_remediation_runs._latest_pause_control_event",
+            new=AsyncMock(return_value=None),
+        ):
+            with patch(
+                "backend.routers.root_key_remediation_runs._load_tenant_run_with_children",
+                new=AsyncMock(return_value=run),
+            ):
+                with patch(
+                    "backend.routers.root_key_remediation_runs.boto3.Session",
+                    side_effect=[mutation_session, observer_session],
+                ):
+                    with patch(
+                        "backend.routers.root_key_remediation_runs.assume_role",
+                    ) as assume_role_mock:
+                        with patch(
+                            "backend.routers.root_key_remediation_runs.RootKeyRemediationExecutorWorker",
+                            return_value=worker,
+                        ) as worker_ctor:
+                            with patch(
+                                "backend.routers.root_key_remediation_runs.RootKeyRemediationStateMachineService",
+                                return_value=service,
+                            ):
+                                response = client.post(
+                                    f"/api/root-key-remediation-runs/{run.id}/disable",
+                                    headers={"Idempotency-Key": "rk-disable-direct-observer"},
+                                )
+
+    assert response.status_code == 200
+    assert worker.execute_disable.await_count == 1
+    observer_factory = worker_ctor.call_args.kwargs["observer_session_factory"]
+    assert observer_factory(run.account_id, run.region) is observer_session
+    assume_role_mock.assert_not_called()
+
+
+def test_disable_can_delegate_observer_bootstrap_to_shared_local_target_helper(client: TestClient) -> None:
+    tenant_id = uuid.uuid4()
+    user = _mock_user(tenant_id)
+    run = _mock_run(
+        state=RootKeyRemediationState.disable_window,
+        status=RootKeyRemediationRunStatus.running,
+    )
+    session = MagicMock()
+    session.commit = AsyncMock()
+    session.rollback = AsyncMock()
+    session.execute = AsyncMock(
+        return_value=_scalar_result(
+            SimpleNamespace(
+                tenant_id=tenant_id,
+                account_id=run.account_id,
+                role_read_arn=f"arn:aws:iam::{run.account_id}:role/ReadRole",
+                external_id="ext-observer",
+            )
+        )
+    )
+    transition_result = SimpleNamespace(
+        run=run,
+        state_changed=True,
+        event_created=True,
+        evidence_created=True,
+        attempts=1,
+    )
+    worker = MagicMock()
+    worker.execute_disable = AsyncMock(return_value=transition_result)
+    service = MagicMock()
+    service.start_disable_window = AsyncMock(return_value=transition_result)
+
+    async def mock_get_db():
+        yield session
+
+    async def mock_get_optional_user():
+        return user
+
+    app.dependency_overrides[get_db] = mock_get_db
+    app.dependency_overrides[get_optional_user] = mock_get_optional_user
+    settings_obj = _enable_root_key_executor_settings()
+    settings_obj.ROOT_KEY_SAFE_REMEDIATION_MUTATION_AWS_PROFILE = "mutation-profile"
+    settings_obj.ALLOW_LOCAL_TARGET_ACCOUNT_AMBIENT_SESSION = True
+    settings_obj.LOCAL_TARGET_ACCOUNT_AWS_PROFILE = "test28-root"
+    mutation_session = MagicMock()
+    observer_session = MagicMock()
+    with patch("backend.routers.root_key_remediation_runs.settings", settings_obj):
+        with patch(
+            "backend.routers.root_key_remediation_runs._latest_pause_control_event",
+            new=AsyncMock(return_value=None),
+        ):
+            with patch(
+                "backend.routers.root_key_remediation_runs._load_tenant_run_with_children",
+                new=AsyncMock(return_value=run),
+            ):
+                with patch(
+                    "backend.routers.root_key_remediation_runs.boto3.Session",
+                    return_value=mutation_session,
+                ):
+                    with patch(
+                        "backend.routers.root_key_remediation_runs.assume_role",
+                        return_value=observer_session,
+                    ) as assume_role_mock:
+                        with patch(
+                            "backend.routers.root_key_remediation_runs.RootKeyRemediationExecutorWorker",
+                            return_value=worker,
+                        ) as worker_ctor:
+                            with patch(
+                                "backend.routers.root_key_remediation_runs.RootKeyRemediationStateMachineService",
+                                return_value=service,
+                            ):
+                                response = client.post(
+                                    f"/api/root-key-remediation-runs/{run.id}/disable",
+                                    headers={"Idempotency-Key": "rk-disable-local-target-observer"},
+                                )
+
+    assert response.status_code == 200
+    assert worker.execute_disable.await_count == 1
+    observer_factory = worker_ctor.call_args.kwargs["observer_session_factory"]
+    assert observer_factory(run.account_id, run.region) is observer_session
+    assert assume_role_mock.call_args.kwargs == {
+        "role_arn": f"arn:aws:iam::{run.account_id}:role/ReadRole",
+        "external_id": "ext-observer",
+        "session_name": "security-autopilot-session-root-key-observer",
+        "base_session": None,
+    }
+
+
+def test_disable_fails_closed_when_direct_observer_session_targets_wrong_account(client: TestClient) -> None:
+    tenant_id = uuid.uuid4()
+    user = _mock_user(tenant_id)
+    run = _mock_run(
+        state=RootKeyRemediationState.disable_window,
+        status=RootKeyRemediationRunStatus.running,
+    )
+    session = MagicMock()
+    session.commit = AsyncMock()
+    session.rollback = AsyncMock()
+    session.execute = AsyncMock(
+        return_value=_scalar_result(
+            SimpleNamespace(
+                tenant_id=tenant_id,
+                account_id=run.account_id,
+                role_read_arn=f"arn:aws:iam::{run.account_id}:role/ReadRole",
+                external_id="ext-observer",
+            )
+        )
+    )
+
+    async def mock_get_db():
+        yield session
+
+    async def mock_get_optional_user():
+        return user
+
+    app.dependency_overrides[get_db] = mock_get_db
+    app.dependency_overrides[get_optional_user] = mock_get_optional_user
+    settings_obj = _enable_root_key_executor_settings()
+    settings_obj.ROOT_KEY_SAFE_REMEDIATION_MUTATION_AWS_PROFILE = "mutation-profile"
+    settings_obj.ROOT_KEY_SAFE_REMEDIATION_OBSERVER_AWS_PROFILE = "observer-profile"
+    settings_obj.ROOT_KEY_SAFE_REMEDIATION_OBSERVER_DIRECT_SESSION_ENABLED = True
+    mutation_session = MagicMock()
+    observer_session = MagicMock()
+    observer_sts = MagicMock()
+    observer_sts.get_caller_identity.return_value = {"Account": "111122223333"}
+    observer_session.client.return_value = observer_sts
+    with patch("backend.routers.root_key_remediation_runs.settings", settings_obj):
+        with patch(
+            "backend.routers.root_key_remediation_runs._load_tenant_run_with_children",
+            new=AsyncMock(return_value=run),
+        ):
+            with patch(
+                "backend.routers.root_key_remediation_runs.boto3.Session",
+                side_effect=[mutation_session, observer_session],
+            ):
+                with patch(
+                    "backend.routers.root_key_remediation_runs.RootKeyRemediationExecutorWorker",
+                ) as worker_ctor:
+                    response = client.post(
+                        f"/api/root-key-remediation-runs/{run.id}/disable",
+                        headers={"Idempotency-Key": "rk-disable-direct-observer-mismatch"},
+                    )
+
+    assert response.status_code == 503
+    payload = response.json()
+    assert payload["error"]["code"] == "observer_context_unavailable"
+    assert payload["error"]["details"]["reason"] == "observer_direct_account_mismatch"
+    assert payload["error"]["details"]["resolved_account_id"] == "111122223333"
     worker_ctor.assert_not_called()
 
 
@@ -1085,6 +1342,7 @@ def test_disable_fails_closed_when_observer_profile_cannot_load(client: TestClie
         return user
 
     settings_obj = _enable_root_key_executor_settings()
+    settings_obj.ROOT_KEY_SAFE_REMEDIATION_MUTATION_AWS_PROFILE = "mutation-profile"
     settings_obj.ROOT_KEY_SAFE_REMEDIATION_OBSERVER_AWS_PROFILE = "missing-profile"
     app.dependency_overrides[get_db] = mock_get_db
     app.dependency_overrides[get_optional_user] = mock_get_optional_user
@@ -1095,7 +1353,7 @@ def test_disable_fails_closed_when_observer_profile_cannot_load(client: TestClie
         ):
             with patch(
                 "backend.routers.root_key_remediation_runs.boto3.Session",
-                side_effect=RuntimeError("profile not found"),
+                side_effect=[MagicMock(), RuntimeError("profile not found")],
             ):
                 with patch(
                     "backend.routers.root_key_remediation_runs.RootKeyRemediationExecutorWorker",
@@ -1110,6 +1368,179 @@ def test_disable_fails_closed_when_observer_profile_cannot_load(client: TestClie
     assert payload["error"]["code"] == "observer_context_unavailable"
     assert payload["error"]["details"]["reason"] == "observer_profile_unavailable:RuntimeError"
     worker_ctor.assert_not_called()
+
+
+def test_disable_fails_closed_when_mutation_context_is_unavailable(client: TestClient) -> None:
+    tenant_id = uuid.uuid4()
+    user = _mock_user(tenant_id)
+    run = _mock_run(
+        state=RootKeyRemediationState.disable_window,
+        status=RootKeyRemediationRunStatus.running,
+    )
+    session = MagicMock()
+    session.commit = AsyncMock()
+    session.rollback = AsyncMock()
+    session.execute = AsyncMock(
+        return_value=_scalar_result(
+            SimpleNamespace(
+                tenant_id=tenant_id,
+                account_id=run.account_id,
+                role_read_arn=f"arn:aws:iam::{run.account_id}:role/ReadRole",
+                external_id="ext-observer",
+            )
+        )
+    )
+
+    async def mock_get_db():
+        yield session
+
+    async def mock_get_optional_user():
+        return user
+
+    settings_obj = _enable_root_key_executor_settings()
+    settings_obj.ROOT_KEY_SAFE_REMEDIATION_OBSERVER_AWS_PROFILE = "observer-profile"
+    app.dependency_overrides[get_db] = mock_get_db
+    app.dependency_overrides[get_optional_user] = mock_get_optional_user
+    with patch("backend.routers.root_key_remediation_runs.settings", settings_obj):
+        with patch(
+            "backend.routers.root_key_remediation_runs._load_tenant_run_with_children",
+            new=AsyncMock(return_value=run),
+        ):
+            with patch(
+                "backend.routers.root_key_remediation_runs.RootKeyRemediationExecutorWorker",
+            ) as worker_ctor:
+                response = client.post(
+                    f"/api/root-key-remediation-runs/{run.id}/disable",
+                    headers={"Idempotency-Key": "rk-disable-no-mutation"},
+                )
+
+    assert response.status_code == 503
+    payload = response.json()
+    assert payload["error"]["code"] == "mutation_context_unavailable"
+    assert payload["error"]["details"]["reason"] == "mutation_base_credentials_unconfigured"
+    worker_ctor.assert_not_called()
+
+
+def test_rollback_fails_closed_when_mutation_context_is_unavailable(client: TestClient) -> None:
+    tenant_id = uuid.uuid4()
+    user = _mock_user(tenant_id)
+    run = _mock_run(
+        state=RootKeyRemediationState.disable_window,
+        status=RootKeyRemediationRunStatus.running,
+        tenant_id=tenant_id,
+    )
+    session = MagicMock()
+    session.commit = AsyncMock()
+    session.rollback = AsyncMock()
+    session.execute = AsyncMock(return_value=_scalar_result(run))
+
+    async def mock_get_db():
+        yield session
+
+    async def mock_get_optional_user():
+        return user
+
+    app.dependency_overrides[get_db] = mock_get_db
+    app.dependency_overrides[get_optional_user] = mock_get_optional_user
+    with patch("backend.routers.root_key_remediation_runs.settings", _enable_root_key_executor_settings()):
+        with patch(
+            "backend.routers.root_key_remediation_runs._load_tenant_run_with_children",
+            new=AsyncMock(return_value=run),
+        ):
+            with patch(
+                "backend.routers.root_key_remediation_runs.RootKeyRemediationExecutorWorker",
+            ) as worker_ctor:
+                response = client.post(
+                    f"/api/root-key-remediation-runs/{run.id}/rollback",
+                    json={"reason": "operator_requested_rollback"},
+                    headers={"Idempotency-Key": "rk-rollback-no-mutation"},
+                )
+
+    assert response.status_code == 503
+    payload = response.json()
+    assert payload["error"]["code"] == "mutation_context_unavailable"
+    assert payload["error"]["details"]["reason"] == "mutation_base_credentials_unconfigured"
+    worker_ctor.assert_not_called()
+
+
+def test_delete_uses_observer_only_finalize_after_completed_final_key_task(client: TestClient) -> None:
+    tenant_id = uuid.uuid4()
+    user = _mock_user(tenant_id)
+    run = _mock_run(
+        state=RootKeyRemediationState.disable_window,
+        status=RootKeyRemediationRunStatus.running,
+        tenant_id=tenant_id,
+    )
+    completed_task = _mock_task(run.id, status=RootKeyExternalTaskStatus.completed)
+    completed_task.task_type = FINAL_ROOT_KEY_MANUAL_DELETE_TASK_TYPE
+    run.external_tasks = [completed_task]
+    session = MagicMock()
+    session.commit = AsyncMock()
+    session.rollback = AsyncMock()
+    session.execute = AsyncMock(
+        return_value=_scalar_result(
+            SimpleNamespace(
+                tenant_id=tenant_id,
+                account_id=run.account_id,
+                role_read_arn=f"arn:aws:iam::{run.account_id}:role/ReadRole",
+                external_id="ext-observer",
+            )
+        )
+    )
+    transition_result = SimpleNamespace(
+        run=run,
+        state_changed=True,
+        event_created=True,
+        evidence_created=True,
+        attempts=1,
+    )
+    worker = MagicMock()
+    worker.execute_delete = AsyncMock(return_value=transition_result)
+    service = MagicMock()
+
+    async def mock_get_db():
+        yield session
+
+    async def mock_get_optional_user():
+        return user
+
+    observer_session = MagicMock()
+    app.dependency_overrides[get_db] = mock_get_db
+    app.dependency_overrides[get_optional_user] = mock_get_optional_user
+    settings_obj = _enable_root_key_executor_settings()
+    settings_obj.ROOT_KEY_SAFE_REMEDIATION_OBSERVER_AWS_PROFILE = "observer-profile"
+    with patch("backend.routers.root_key_remediation_runs.settings", settings_obj):
+        with patch(
+            "backend.routers.root_key_remediation_runs._load_tenant_run_with_children",
+            new=AsyncMock(return_value=run),
+        ):
+            with patch(
+                "backend.routers.root_key_remediation_runs.boto3.Session",
+                return_value=observer_session,
+            ):
+                with patch(
+                    "backend.routers.root_key_remediation_runs.assume_role",
+                    return_value=observer_session,
+                ):
+                    with patch(
+                        "backend.routers.root_key_remediation_runs.RootKeyRemediationExecutorWorker",
+                        return_value=worker,
+                    ) as worker_ctor:
+                        with patch(
+                            "backend.routers.root_key_remediation_runs.RootKeyRemediationStateMachineService",
+                            return_value=service,
+                        ):
+                            response = client.post(
+                                f"/api/root-key-remediation-runs/{run.id}/delete",
+                                headers={"Idempotency-Key": "rk-delete-observer-only-finalize"},
+                            )
+
+    assert response.status_code == 200
+    mutation_factory = worker_ctor.call_args.kwargs["mutation_session_factory"]
+    observer_factory = worker_ctor.call_args.kwargs["observer_session_factory"]
+    assert worker_ctor.call_args.kwargs["observer_only_delete_finalize"] is True
+    assert mutation_factory(run.account_id, run.region) is observer_session
+    assert observer_factory(run.account_id, run.region) is observer_session
 
 
 def test_disable_auto_advances_validation_from_migration_without_executor(client: TestClient) -> None:
@@ -1467,7 +1898,7 @@ def test_pause_resume_correctness_blocks_transition_until_resumed(client: TestCl
             ):
                 with patch(
                     "backend.routers.root_key_remediation_runs._load_tenant_run_with_children",
-                    new=AsyncMock(side_effect=[active_run, paused_run, resumed_run]),
+                    new=AsyncMock(side_effect=[active_run, paused_run, paused_run, resumed_run]),
                 ):
                     pause = client.post(
                         f"/api/root-key-remediation-runs/{active_run.id}/pause",
@@ -1489,6 +1920,109 @@ def test_pause_resume_correctness_blocks_transition_until_resumed(client: TestCl
     assert blocked.json()["error"]["code"] == "run_paused"
     assert resume.status_code == 200
     assert resume.json()["run"]["state"] == "validation"
+
+
+def test_resume_needs_attention_after_completed_final_key_task_returns_to_disable_window(client: TestClient) -> None:
+    tenant_id = uuid.uuid4()
+    user = _mock_user(tenant_id)
+    run = _mock_run(
+        state=RootKeyRemediationState.needs_attention,
+        status=RootKeyRemediationRunStatus.waiting_for_user,
+        tenant_id=tenant_id,
+    )
+    completed_task = _mock_task(run.id, status=RootKeyExternalTaskStatus.completed)
+    completed_task.task_type = FINAL_ROOT_KEY_MANUAL_DELETE_TASK_TYPE
+    run.external_tasks = [completed_task]
+    resumed_run = _mock_run(
+        state=RootKeyRemediationState.disable_window,
+        status=RootKeyRemediationRunStatus.running,
+        tenant_id=tenant_id,
+    )
+    resumed_run.id = run.id
+    resumed_run.action_id = run.action_id
+    resumed_run.finding_id = run.finding_id
+    session = MagicMock()
+    session.commit = AsyncMock()
+    session.rollback = AsyncMock()
+    service = MagicMock()
+    service.resume_run = AsyncMock(
+        return_value=SimpleNamespace(
+            run=resumed_run,
+            state_changed=True,
+            event_created=True,
+            evidence_created=True,
+            attempts=1,
+        )
+    )
+
+    async def mock_get_db():
+        yield session
+
+    async def mock_get_optional_user():
+        return user
+
+    app.dependency_overrides[get_db] = mock_get_db
+    app.dependency_overrides[get_optional_user] = mock_get_optional_user
+    with patch("backend.routers.root_key_remediation_runs.settings", _enable_root_key_settings()):
+        with patch(
+            "backend.routers.root_key_remediation_runs.RootKeyRemediationStateMachineService",
+            return_value=service,
+        ):
+            with patch(
+                "backend.routers.root_key_remediation_runs._latest_pause_control_event",
+                new=AsyncMock(return_value=None),
+            ):
+                with patch(
+                    "backend.routers.root_key_remediation_runs._load_tenant_run_with_children",
+                    new=AsyncMock(side_effect=[run, resumed_run]),
+                ):
+                    response = client.post(
+                        f"/api/root-key-remediation-runs/{run.id}/resume",
+                        headers={"Idempotency-Key": "rk-resume-final-key-handoff"},
+                    )
+
+    assert response.status_code == 200
+    assert response.json()["run"]["state"] == "disable_window"
+    assert service.resume_run.await_args.kwargs["resume_state"] == RootKeyRemediationState.disable_window
+
+
+def test_resume_needs_attention_without_completed_final_key_task_returns_409(client: TestClient) -> None:
+    tenant_id = uuid.uuid4()
+    user = _mock_user(tenant_id)
+    run = _mock_run(
+        state=RootKeyRemediationState.needs_attention,
+        status=RootKeyRemediationRunStatus.waiting_for_user,
+        tenant_id=tenant_id,
+    )
+    open_task = _mock_task(run.id, status=RootKeyExternalTaskStatus.open)
+    open_task.task_type = FINAL_ROOT_KEY_MANUAL_DELETE_TASK_TYPE
+    run.external_tasks = [open_task]
+    session = MagicMock()
+
+    async def mock_get_db():
+        yield session
+
+    async def mock_get_optional_user():
+        return user
+
+    app.dependency_overrides[get_db] = mock_get_db
+    app.dependency_overrides[get_optional_user] = mock_get_optional_user
+    with patch("backend.routers.root_key_remediation_runs.settings", _enable_root_key_settings()):
+        with patch(
+            "backend.routers.root_key_remediation_runs._latest_pause_control_event",
+            new=AsyncMock(return_value=None),
+        ):
+            with patch(
+                "backend.routers.root_key_remediation_runs._load_tenant_run_with_children",
+                new=AsyncMock(return_value=run),
+            ):
+                response = client.post(
+                    f"/api/root-key-remediation-runs/{run.id}/resume",
+                    headers={"Idempotency-Key": "rk-resume-final-key-handoff-incomplete"},
+                )
+
+    assert response.status_code == 409
+    assert response.json()["error"]["code"] == "manual_handoff_incomplete"
 
 
 def test_get_root_key_ops_metrics_happy_path(client: TestClient) -> None:

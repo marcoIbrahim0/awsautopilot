@@ -70,9 +70,9 @@ AWS Security Autopilot operationalizes AWS-native security services by turning f
 - [Serverless lifecycle cost-control runbook](/Users/marcomaher/AWS%20Security%20Autopilot/docs/runbooks/serverless-lifecycle-cost-control.md)
 - [Live E2E testing docs](/Users/marcomaher/AWS%20Security%20Autopilot/docs/live-e2e-testing/README.md)
 - [Post-test logical-solutions backlog](/Users/marcomaher/AWS%20Security%20Autopilot/docs/live-e2e-testing/post-test-logical-solutions-backlog.md)
-- [Root-key safe remediation technical spec (planned)](/Users/marcomaher/AWS%20Security%20Autopilot/docs/live-e2e-testing/root-key-safe-remediation-spec.md)
-- [Root-key safe remediation acceptance matrix (planned)](/Users/marcomaher/AWS%20Security%20Autopilot/docs/live-e2e-testing/root-key-safe-remediation-acceptance-matrix.md)
-- [Root-key safe remediation implementation checklist (planned)](/Users/marcomaher/AWS%20Security%20Autopilot/docs/live-e2e-testing/root-key-safe-remediation-implementation-checklist.md)
+- [Root-key safe remediation technical spec (implemented behind flags; live proof retained on March 30, 2026)](/Users/marcomaher/AWS%20Security%20Autopilot/docs/live-e2e-testing/root-key-safe-remediation-spec.md)
+- [Root-key safe remediation acceptance matrix](/Users/marcomaher/AWS%20Security%20Autopilot/docs/live-e2e-testing/root-key-safe-remediation-acceptance-matrix.md)
+- [Root-key safe remediation implementation checklist (live-proof status tracked)](/Users/marcomaher/AWS%20Security%20Autopilot/docs/live-e2e-testing/root-key-safe-remediation-implementation-checklist.md)
 - [Control-plane event monitoring](/Users/marcomaher/AWS%20Security%20Autopilot/docs/control-plane-event-monitoring.md)
 - [Item 16 high-confidence live status rollout policy](/Users/marcomaher/AWS%20Security%20Autopilot/docs/prod-readiness/16-high-confidence-live-status-rollout.md)
 
@@ -126,8 +126,6 @@ AWS Security Autopilot operationalizes AWS-native security services by turning f
 ## Notes on Source of Truth
 
 - Repo-level agent workflow and binding startup instructions live in [AGENTS.md](/Users/marcomaher/AWS%20Security%20Autopilot/AGENTS.md).
-- Root `master` is the only authoritative git branch for this project.
-- `frontend/` is ordinary monorepo content under the root repo. There is no supported separate frontend repo, gitlink, or submodule deploy path.
 
 For live endpoint and payload behavior, treat source code as authoritative:
 

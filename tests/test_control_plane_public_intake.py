@@ -6,9 +6,12 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 from fastapi.testclient import TestClient
+from sqlalchemy.dialects import postgresql
 
+from backend.auth import hash_control_plane_token
 from backend.database import get_db
 from backend.main import app
+from backend.routers.control_plane import _get_tenant_for_token
 
 
 def _valid_event(event_name: str = "AuthorizeSecurityGroupIngress") -> dict:
@@ -89,6 +92,29 @@ def test_public_intake_200_enqueues_and_updates_status(client: TestClient) -> No
     assert body["enqueued"] == 1
     assert body["dropped"] == 0
     assert mock_sqs.send_message.call_count == 1
+
+
+@pytest.mark.asyncio
+async def test_get_tenant_for_token_accepts_previous_token_within_grace_window() -> None:
+    tenant = MagicMock()
+    result = MagicMock()
+    result.scalar_one_or_none.return_value = tenant
+    session = MagicMock()
+    session.execute = AsyncMock(return_value=result)
+
+    token = "cptok-previous"
+    resolved = await _get_tenant_for_token(session, token)
+
+    assert resolved is tenant
+    stmt = session.execute.await_args.args[0]
+    compiled = stmt.compile(dialect=postgresql.dialect())
+    sql = str(compiled)
+    params = compiled.params
+
+    assert "control_plane_previous_token" in sql
+    assert "control_plane_previous_token_expires_at" in sql
+    assert hash_control_plane_token(token) in params.values()
+    assert "control_plane_token_revoked_at IS NULL" in sql
 
 
 def test_public_intake_drops_unsupported_event(client: TestClient) -> None:
