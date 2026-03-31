@@ -17,8 +17,8 @@
 - Generic IAM.4 action: `ab24939a-ffe5-41ba-b92f-8d46ed80b1f7`
 - Observer base context remained configured as profile `default`.
 - The target account was prepared with two long-lived root keys before the fresh rerun:
-  - caller key `AKIA2EKX3HHON3VGIFNM` `Active`
-  - disposable key `AKIA2EKX3HHOEGULJZ4Y` `Active`
+  - caller key `<REDACTED_AWS_ACCESS_KEY_ID>` `Active`
+  - disposable key `<REDACTED_AWS_ACCESS_KEY_ID>` `Active`
 - The retained observer role `CodexP2SecurityHubImportRole` can assume into the target account, but it cannot call `iam:GetAccountSummary`; the preserved caller root session can.
 
 ## Steps Executed
@@ -40,8 +40,8 @@
 7. Called `POST /api/root-key-remediation-runs/aecccbd7-6c3a-4619-94ce-b1a5b9732b98/disable` and verified:
    - response `200`
    - run advanced to `disable_window/running`
-   - disposable key `AKIA2EKX3HHOEGULJZ4Y` became `Inactive`
-   - caller key `AKIA2EKX3HHON3VGIFNM` stayed `Active`
+   - disposable key became `Inactive`
+   - caller key stayed `Active`
 8. Queried artifact metadata from the isolated DB and confirmed the disable evidence recorded:
    - `window_clean = true`
    - `breakage_signals = []`

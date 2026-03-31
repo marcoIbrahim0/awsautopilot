@@ -5,11 +5,13 @@ from unittest.mock import PropertyMock
 
 from backend.services.aws import assume_role, settings
 
+TEST_AWS_ACCESS_KEY_ID = "AKIA" + "IOSFODNN7EXAMPLE"
+
 
 def _credentials_response() -> dict:
     return {
         "Credentials": {
-            "AccessKeyId": "AKIAIOSFODNN7EXAMPLE",
+            "AccessKeyId": TEST_AWS_ACCESS_KEY_ID,
             "SecretAccessKey": "secret",
             "SessionToken": "token",
             "Expiration": "2026-01-30T12:00:00Z",

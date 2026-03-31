@@ -1,5 +1,126 @@
 # Task Log
 
+## Preserve current local master state on master (2026-03-31)
+
+**Task:** Preserve the current local `master` working tree on `master` without cleaning, deleting, or reverting any files.
+
+**Files modified:**
+- `/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md`
+- `/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md`
+
+**What was done:**
+- Verified the repo is already on branch `master`.
+- Confirmed the working tree contains a large set of local tracked modifications and untracked files.
+- Proceeding with a non-destructive snapshot approach: stage the current tree as-is and commit it directly on `master` rather than cleaning, resetting, or removing anything.
+
+**Validation / outcome:**
+- Pending commit/push execution.
+
+**Open questions / TODOs:**
+- After the snapshot commit is created, push `master` if the remote accepts it.
+
+## Fix misleading EC2 SG no-remediation copy on findings surfaces (2026-03-31)
+
+**Task:** Stop account-scoped `EC2.13` / `EC2.18` / `EC2.19` placeholder rows from showing the misleading generic “No remediation action is currently available…” copy when runnable SG-scoped sibling actions already exist.
+
+**Files modified:**
+- `/Users/marcomaher/AWS Security Autopilot/frontend/src/lib/remediationState.ts`
+- `/Users/marcomaher/AWS Security Autopilot/frontend/src/lib/remediationState.test.ts`
+- `/Users/marcomaher/AWS Security Autopilot/frontend/src/app/findings/FindingCard.test.tsx`
+- `/Users/marcomaher/AWS Security Autopilot/frontend/src/app/findings/FindingGroupCard.test.tsx`
+- `/Users/marcomaher/AWS Security Autopilot/frontend/src/app/findings/[id]/page.test.tsx`
+- `/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md`
+- `/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md`
+
+**What was done:**
+- Verified against the fallback Neon database that the current `696505809372` `eu-north-1` account-scoped `EC2.13` / `EC2.18` / `EC2.19` rows are not true “no remediation exists” cases:
+  - primary Neon host still returned a quota error
+  - fallback Neon host contained the latest account-scoped rows plus runnable sibling `sg_restrict_public_ports` SG actions in the same account/region
+- Verified the current backend hint-selection path already returns `managed_on_resource_scope` for those latest fallback-backed rows when evaluated through `get_remediation_hints_for_findings(...)`.
+- Kept the fix frontend-only:
+  - replaced the generic no-action fallback sentence in `frontend/src/lib/remediationState.ts` with neutral copy that no longer implies dependency/safety blocking by default
+  - kept backend-provided `remediation_visibility_reason` / `remediation_scope_message` as the source of truth
+  - added focused findings-surface tests for resource-scope guidance on:
+    - finding cards
+    - grouped finding cards
+    - finding detail page
+- Fixed one pre-existing detail-page test harness issue in `frontend/src/app/findings/[id]/page.test.tsx` so the mocked `params` path passes the finding id correctly during the focused run.
+
+**Validation / outcome:**
+- Backend diagnosis against live fallback DB:
+  - confirmed latest account-scoped `EC2.13` / `EC2.18` / `EC2.19` rows have sibling SG actions and should be treated as resource-managed, not hard-blocked
+  - confirmed `get_remediation_hints_for_findings(...)` returns `managed_on_resource_scope` for those exact latest rows
+- Frontend targeted validation:
+  - `cd frontend && npm install`
+  - `cd frontend && npm run test:ui -- --run src/lib/remediationState.test.ts src/app/findings/FindingCard.test.tsx src/app/findings/FindingGroupCard.test.tsx 'src/app/findings/[id]/page.test.tsx'`
+  - result: `37 passed`
+- Live localhost browser validation against fallback-backed data:
+  - started a local API on `127.0.0.1:8000` in `ENV=local` against the fallback Neon database so `tenant_id` mode remained available
+  - started a local frontend on `127.0.0.1:3000` with `NEXT_PUBLIC_API_URL=http://127.0.0.1:8000`
+  - verified the current `EC2.19` account-scoped finding `006998b6-85c8-4f53-9cc2-592df583500c` renders the scoped resource-row guidance on both:
+    - the detail page `/findings/006998b6-85c8-4f53-9cc2-592df583500c`
+    - the flat findings card after filtering to `control_id=EC2.19`
+  - confirmed the old generic “dependency or safety checks blocked generation” sentence no longer appears for that row in the validated localhost UI flow
+- Deploy attempt:
+  - `cd frontend && npm run deploy`
+  - blocked by the existing OpenNext production guardrail because the root repo working tree is not clean; no production deploy was performed from this dirty checkout
+
+**Open questions / TODOs:**
+- The deployed frontend still needs the normal rollout path from a clean `master` checkout before production users stop seeing the older fallback sentence.
+- If the live deployed API still omits `managed_on_resource_scope` for these rows after the frontend deploy, debug the deployed backend/runtime path separately; the current repo backend logic itself already returns the correct hint against fallback DB.
+
+## Add runtime DB failover resync after primary quota blocks (2026-03-31)
+
+**Task:** Make the runtime fail over to the configured fallback database when the primary hits a quota-style connection failure, keep fallback authoritative while writes may diverge, and automatically resynchronize fallback back into primary once the primary is writable again.
+
+**Files modified:**
+- `/Users/marcomaher/AWS Security Autopilot/backend/config.py`
+- `/Users/marcomaher/AWS Security Autopilot/backend/services/database_failover.py`
+- `/Users/marcomaher/AWS Security Autopilot/backend/database.py`
+- `/Users/marcomaher/AWS Security Autopilot/backend/workers/database.py`
+- `/Users/marcomaher/AWS Security Autopilot/tests/test_database_failover.py`
+- `/Users/marcomaher/AWS Security Autopilot/scripts/resolve_database_url.py`
+- `/Users/marcomaher/AWS Security Autopilot/scripts/sync_failover_database.py`
+- `/Users/marcomaher/AWS Security Autopilot/docs/local-dev/environment.md`
+- `/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md`
+- `/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md`
+
+**What was done:**
+- Reworked `backend/services/database_failover.py` so failover is no longer just a startup-time probe decision:
+  - runtime quota/connectivity failures now suspend primary and mark fallback-to-primary resync as pending
+  - candidate selection keeps fallback authoritative while resync is pending, even after the primary cooldown elapses
+  - a background monitor thread now probes for primary recovery and runs the fallback-to-primary resync automatically once primary is writable again
+  - automatic resync uses a Postgres advisory lock on the target primary so concurrent API/worker processes that follow the same contract do not all overwrite primary at once
+- Added explicit config knobs in `backend/config.py` for automatic resync enablement and poll interval:
+  - `DATABASE_FAILOVER_SYNC_ENABLED`
+  - `DATABASE_FAILOVER_SYNC_POLL_SECONDS`
+- Kept the API and worker DB layers refreshable so new sessions can move between primary and fallback as failover state changes instead of staying pinned to the first-resolved URL.
+- Unified the operator tooling with the runtime failover contract:
+  - `scripts/sync_failover_database.py` now uses the same internal sync implementation as the app
+  - `scripts/resolve_database_url.py --json` now reports `primary_sync_pending` so operators can see when fallback is intentionally staying authoritative pending resync
+- Updated `docs/local-dev/environment.md` so the documented contract now matches the implemented behavior:
+  - quota failover keeps fallback authoritative
+  - automatic fallback-to-primary resync is best-effort
+  - the manual sync command remains available as an override
+- Extended the focused failover tests to cover the new sync-pending invariant and the “do not switch back to primary until resync completes” behavior.
+
+**Validation / outcome:**
+- `python3 -m py_compile backend/services/database_failover.py backend/database.py backend/workers/database.py scripts/resolve_database_url.py scripts/sync_failover_database.py tests/test_database_failover.py`
+  - passed
+- Focused smoke validation:
+  - simulated a primary quota error, confirmed failover selected fallback, confirmed `primary_sync_pending=True`, then simulated primary recovery and confirmed `_run_pending_primary_resync_once()` cleared sync-pending and restored primary preference
+  - result: passed
+- `python3 scripts/sync_failover_database.py --dry-run`
+  - passed and printed the expected `pg_dump | psql` pipeline using the configured primary/fallback URLs in the current shell
+- `python3 -m pytest tests/test_database_failover.py -q`
+  - could not run in this checkout because `pytest` is not installed for the available `python3`
+- `python3 scripts/resolve_database_url.py --json`
+  - failed in this current shell because the checked-out env currently resolves to placeholder `<YOUR_DATABASE_URL...>` values rather than parseable live URLs
+
+**Open questions / TODOs:**
+- Automatic resync is best-effort and process-local. It does not provide storage-layer continuous replication; it only preserves the contract that the app keeps fallback authoritative until it can replay fallback into primary after primary recovers.
+- If production needs cross-container or cross-restart durable sync intent, the next step should be a shared state/lease mechanism rather than relying only on in-process state plus the target-DB advisory lock.
+
 ## Repair current `master` required-check baseline before backend recovery merge (2026-03-31)
 
 **Task:** Fix the pre-existing required-check failures on top of current clean `master` so the approved backend recovery branch can be rebased and merged without weakening the required status-check policy.
@@ -1002,7 +1123,7 @@
 
 **Validation:**
 - Production auth:
-  - `POST /api/auth/login` for `marco.ibrahim@ocypheris.com` with password `Maher730` returned a valid bearer and `GET /api/auth/me` confirmed tenant `Marco`
+  - `POST /api/auth/login` for `marco.ibrahim@ocypheris.com` with password `<REDACTED_PASSWORD>` returned a valid bearer and `GET /api/auth/me` confirmed tenant `Marco`
 - `WI-13`:
   - retained preview: `/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260328T201359Z-phase1-production-candidate-rerun/evidence/api/wi13-preview-zero-policy.json`
   - retained create response: `/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260328T201359Z-phase1-production-candidate-rerun/evidence/api/wi13-zero-policy-create-response.json`
@@ -2939,8 +3060,8 @@
 - Attempted the live canary rollout against the documented production frontend/API and captured the reproducible blockers:
   - decrypted the current Chrome `api.ocypheris.com` cookie bearer and confirmed `GET /api/auth/me` now returns `401 {"detail":"User not found"}`
   - used an isolated Playwright CLI browser session on `https://ocypheris.com/login`
-  - `maromaher54@gmail.com / Maher730` now returns `Verify your email before signing in`
-  - `marco.ibrahim@ocypheris.com / Maher730@` returns `Login failed`
+  - `maromaher54@gmail.com / <REDACTED_PASSWORD>` now returns `Verify your email before signing in`
+  - `marco.ibrahim@ocypheris.com / <REDACTED_PASSWORD>` returns `Login failed`
   - a read-only production DB lookup to mint the same-operator bearer fallback was blocked by Neon quota exhaustion
   - the retained March 23, 2026 `Valens` bearer from `docs/test-results/live-runs/20260323T190500Z-ssm7-cloudtrail1-live-e2e/evidence/api/login.json` now returns `401 {"detail":"User not found"}`
 - Created a retained blocked-run package under `docs/test-results/live-runs/20260326T025813Z-phase5-support-bucket-cluster-canary-blocked/` and updated the active docs so Phase 5 now reflects the real state:
@@ -2960,9 +3081,9 @@
   - result: `16 passed in 0.20s`
 - `GET https://api.ocypheris.com/api/auth/me` via decrypted retained Chrome cookie bearer on March 26, 2026
   - result: `401 {"detail":"User not found"}`
-- Playwright login on `https://ocypheris.com/login` with `maromaher54@gmail.com / Maher730`
+- Playwright login on `https://ocypheris.com/login` with `maromaher54@gmail.com / <REDACTED_PASSWORD>`
   - result: live UI rendered `Verify your email before signing in`
-- Playwright login on `https://ocypheris.com/login` with `marco.ibrahim@ocypheris.com / Maher730@`
+- Playwright login on `https://ocypheris.com/login` with `marco.ibrahim@ocypheris.com / <REDACTED_PASSWORD>`
   - result: live UI rendered `Login failed`
 - `GET https://api.ocypheris.com/api/auth/me` via retained March 23, 2026 `Valens` bearer from `docs/test-results/live-runs/20260323T190500Z-ssm7-cloudtrail1-live-e2e/evidence/api/login.json`
   - result: `401 {"detail":"User not found"}`
@@ -3589,7 +3710,7 @@
 - `cd frontend && npm run typecheck`
   - result: pass
 - Live production verification:
-  - `POST https://api.ocypheris.com/api/auth/login` with `marco.ibrahim@ocypheris.com / Maher730@`
+  - `POST https://api.ocypheris.com/api/auth/login` with `marco.ibrahim@ocypheris.com / <REDACTED_PASSWORD>`
   - `GET /api/findings/grouped?control_id=EC2.182` returned separate scoped rows for `eu-north-1` and `us-east-1`
   - `GET /api/findings?account_id=696505809372&region=eu-north-1&control_id=EC2.182&resource_type=AwsEc2SnapshotBlockPublicAccess&limit=100` returned exactly `1` item
   - Playwright browser flow on `https://ocypheris.com/findings` showed the same two grouped cards and an expanded `eu-north-1` card with a single matching finding
@@ -7754,8 +7875,8 @@
 **What was done:**
 - Reused the retained March 18 isolated runtime under `/Users/marcomaher/AWS Security Autopilot/docs/test-results/live-runs/20260318T030658Z-rem-profile-wave6-live-closure-rerun/` instead of creating a new package.
 - Reactivated the older disposable root key so the target account had two active long-lived root keys:
-  - caller key `AKIA2EKX3HHON3VGIFNM`
-  - disposable key `AKIA2EKX3HHOEGULJZ4Y`
+  - caller key `<REDACTED_AWS_ACCESS_KEY_ID>`
+  - disposable key `<REDACTED_AWS_ACCESS_KEY_ID>`
 - Recreated the five temporary SaaS-account queues, restarted the retained Postgres data directory and both APIs plus worker, and reauthenticated against the retained isolated database.
 - Replayed the earlier retained IAM.4 run and found a real rollback bug:
   - disable preserved the caller key and inactivated the disposable key
@@ -7773,7 +7894,7 @@
 - Executed the fresh authoritative live proof on run `aecccbd7-6c3a-4619-94ce-b1a5b9732b98`:
   - create succeeded
   - disable returned `200` and moved the run to `disable_window/running`
-  - AWS state immediately after disable showed disposable key `AKIA2EKX3HHOEGULJZ4Y` `Inactive` and caller key `AKIA2EKX3HHON3VGIFNM` still `Active`
+  - AWS state immediately after disable showed the disposable key `Inactive` and the caller key still `Active`
   - artifact metadata recorded `window_clean = true`, `breakage_signals = []`, `root_keys_present = 1`, and `caller_key_preserved = "AKIA...IFNM"`
   - explicit rollback returned `200`, moved the run to `rolled_back`, and reactivated the disposable key
 - Revalidated the generic IAM.4 surfaces after the live proof:
@@ -21610,7 +21731,7 @@
 - Source/setup handling:
   - Requested source file `docs/test-results/test-01-api-map.md` is missing in repository state.
   - Used source-of-truth fallback from live code paths: `frontend/src/lib/api.ts`, `frontend/src/app/settings/page.tsx`, `frontend/src/contexts/AuthContext.tsx`, `backend/routers/auth.py`, `backend/routers/users.py`.
-  - Minted fresh admin token via `POST /api/auth/login` with `maromaher54@gmail.com / Maher730`.
+  - Minted fresh admin token via `POST /api/auth/login` with `maromaher54@gmail.com / <REDACTED_PASSWORD>`.
 - API-map findings:
   - Frontend password function calls `PUT /api/auth/password` with `{ old_password, new_password }`.
   - Frontend profile update function calls `PATCH /api/users/me` with `{ name?, phone_number? }`.
@@ -21619,7 +21740,7 @@
   - Step 1 `GET /api/users/me` -> `405 Method Not Allowed`.
   - Step 2 `PUT /api/auth/password` (wrong current password payload) -> `404 Not Found`.
   - Step 3 `PUT /api/auth/password` (correct current password payload) -> `404 Not Found` (**MISSING**).
-  - Step 4 login with `Maher730New!` -> `401 Invalid email or password` (`token_present=false`).
+  - Step 4 login with `<REDACTED_PASSWORD>` -> `401 Invalid email or password` (`token_present=false`).
   - Step 5 revert skipped (no token from Step 4).
   - Step 6 `POST /api/auth/forgot-password` -> `404 Not Found` (**MISSING**).
 - Additional live diagnostics:
@@ -28734,7 +28855,7 @@ Repository now has a full canonical worker implementation at /Users/marcomaher/A
 **Task:** Re-run EC2.7 no-UI flow to surface new shadow overlay zero-row warning in worker logs, then capture warning lines verbatim.
 
 **Run command executed:**
-- `SAAS_EMAIL='maromaher54@gmail.com' SAAS_PASSWORD='Maher730' PYTHONPATH=. ./venv/bin/python scripts/run_no_ui_pr_bundle_agent.py --api-base https://api.valensjewelry.com --account-id 029037611564 --region eu-north-1 --control-preference EC2.7 --output-dir artifacts/no-ui-agent/ec2_7_bug1_validation_4 --reconcile-after-apply --client-retries 8 --client-retry-backoff-sec 1.5`
+- `SAAS_EMAIL='maromaher54@gmail.com' SAAS_PASSWORD='<REDACTED_PASSWORD>' PYTHONPATH=. ./venv/bin/python scripts/run_no_ui_pr_bundle_agent.py --api-base https://api.valensjewelry.com --account-id 029037611564 --region eu-north-1 --control-preference EC2.7 --output-dir artifacts/no-ui-agent/ec2_7_bug1_validation_4 --reconcile-after-apply --client-retries 8 --client-retry-backoff-sec 1.5`
 
 **Run result:**
 - `final_report.status=failed`
@@ -28832,7 +28953,7 @@ Repository now has a full canonical worker implementation at /Users/marcomaher/A
 - `PYTHONPATH=. ./venv/bin/pytest tests/test_no_ui_pr_bundle_agent_smoke.py -v` -> `6 passed`.
 
 **EC2.182 run command (executed):**
-- `SAAS_EMAIL='maromaher54@gmail.com' SAAS_PASSWORD='Maher730' PYTHONPATH=. ./venv/bin/python scripts/run_no_ui_pr_bundle_agent.py --api-base https://api.valensjewelry.com --account-id 029037611564 --region eu-north-1 --control-preference EC2.182 --output-dir artifacts/no-ui-agent/ec2_182_bug1_validation --reconcile-after-apply --client-retries 8 --client-retry-backoff-sec 1.5`
+- `SAAS_EMAIL='maromaher54@gmail.com' SAAS_PASSWORD='<REDACTED_PASSWORD>' PYTHONPATH=. ./venv/bin/python scripts/run_no_ui_pr_bundle_agent.py --api-base https://api.valensjewelry.com --account-id 029037611564 --region eu-north-1 --control-preference EC2.182 --output-dir artifacts/no-ui-agent/ec2_182_bug1_validation --reconcile-after-apply --client-retries 8 --client-retry-backoff-sec 1.5`
 
 **EC2.182 results:**
 - `final_report.status=failed`
@@ -28926,7 +29047,7 @@ Repository now has a full canonical worker implementation at /Users/marcomaher/A
 **Task:** Verify user-visible finding state in SaaS API for Bug 1 closeout before moving to Bug 2, then update debug reference with closure evidence.
 
 **Verification command run:**
-- `SAAS_EMAIL='maromaher54@gmail.com' SAAS_PASSWORD='Maher730' PYTHONPATH=. ./venv/bin/python - <<'PY' ... client.get_finding(...) ... PY`
+- `SAAS_EMAIL='maromaher54@gmail.com' SAAS_PASSWORD='<REDACTED_PASSWORD>' PYTHONPATH=. ./venv/bin/python - <<'PY' ... client.get_finding(...) ... PY`
 - Findings checked:
   - `08b8e40b-abb2-44b2-bbb9-cc0a644a0533` (`EC2.7`, `AwsAccount`)
   - `4a5c3213-9e5e-4186-8451-77f0fdd16a12` (`EC2.182`, `AwsEc2SnapshotBlockPublicAccess`)
@@ -29035,8 +29156,8 @@ Repository now has a full canonical worker implementation at /Users/marcomaher/A
 
 **Step 1 (local Alembic target) output:**
 - `grep "DATABASE_URL" backend/.env | head -3`
-  - `DATABASE_URL="postgresql+asyncpg://autopilotadmin:AutopilotDb2026Fix@security-autopilot-db-main.cl0y8u4ms0zu.eu-north-1.rds.amazonaws.com/security_autopilot"`
-  - `DATABASE_URL_SYNC="postgresql://autopilotadmin:AutopilotDb2026Fix@security-autopilot-db-main.cl0y8u4ms0zu.eu-north-1.rds.amazonaws.com/security_autopilot"`
+  - `DATABASE_URL="postgresql+asyncpg://autopilotadmin:<REDACTED_DB_PASSWORD>@security-autopilot-db-main.cl0y8u4ms0zu.eu-north-1.rds.amazonaws.com/security_autopilot"`
+  - `DATABASE_URL_SYNC="postgresql://autopilotadmin:<REDACTED_DB_PASSWORD>@security-autopilot-db-main.cl0y8u4ms0zu.eu-north-1.rds.amazonaws.com/security_autopilot"`
 - `PYTHONPATH=. ./venv/bin/alembic upgrade head`
   - `Running upgrade 0031_control_plane_token_hash -> 0032_findings_resolved_at`
 
@@ -29046,8 +29167,8 @@ Repository now has a full canonical worker implementation at /Users/marcomaher/A
   - Worker `DATABASE_URL` -> Neon (`ep-square-queen...neon.tech`)
 - Applied fix:
   - Updated both function env maps preserving existing vars, setting only:
-    - `DATABASE_URL=postgresql+asyncpg://autopilotadmin:AutopilotDb2026Fix@security-autopilot-db-main.cl0y8u4ms0zu.eu-north-1.rds.amazonaws.com/security_autopilot`
-    - `DATABASE_URL_SYNC=postgresql://autopilotadmin:AutopilotDb2026Fix@security-autopilot-db-main.cl0y8u4ms0zu.eu-north-1.rds.amazonaws.com/security_autopilot`
+    - `DATABASE_URL=postgresql+asyncpg://autopilotadmin:<REDACTED_DB_PASSWORD>@security-autopilot-db-main.cl0y8u4ms0zu.eu-north-1.rds.amazonaws.com/security_autopilot`
+    - `DATABASE_URL_SYNC=postgresql://autopilotadmin:<REDACTED_DB_PASSWORD>@security-autopilot-db-main.cl0y8u4ms0zu.eu-north-1.rds.amazonaws.com/security_autopilot`
 - After fix verification:
   - API `DATABASE_URL` -> RDS URL above
   - Worker `DATABASE_URL` -> RDS URL above
@@ -29148,7 +29269,7 @@ Repository now has a full canonical worker implementation at /Users/marcomaher/A
 
 **Live SaaS verification run:**
 - Command executed:
-  - `SAAS_EMAIL='maromaher54@gmail.com' SAAS_PASSWORD='Maher730' PYTHONPATH=. ./venv/bin/python - <<'PY' ... client.list_findings('029037611564', 'eu-north-1', limit=20, offset=0) ... PY`
+  - `SAAS_EMAIL='maromaher54@gmail.com' SAAS_PASSWORD='<REDACTED_PASSWORD>' PYTHONPATH=. ./venv/bin/python - <<'PY' ... client.list_findings('029037611564', 'eu-north-1', limit=20, offset=0) ... PY`
 - First-20 output confirmed required findings in top positions:
   - `#1` `4a5c3213-9e5e-4186-8451-77f0fdd16a12` (`EC2.182`) `status=RESOLVED`, non-null `resolved_at`, `display_badge=resolved`
   - `#2` `8cff7c16-c70a-4c2e-8433-b84d9a58ab5d` (`EC2.182`) `status=RESOLVED`, non-null `resolved_at`, `display_badge=resolved`
@@ -29309,7 +29430,7 @@ Repository now has a full canonical worker implementation at /Users/marcomaher/A
 
 **Live validation (`Config.1`) run:**
 - Command executed:
-  - `SAAS_EMAIL='maromaher54@gmail.com' SAAS_PASSWORD='Maher730' PYTHONPATH=. ./venv/bin/python scripts/run_no_ui_pr_bundle_agent.py --api-base https://api.valensjewelry.com --account-id 029037611564 --region eu-north-1 --control-preference Config.1 --output-dir artifacts/no-ui-agent/config1_bug2_validation --reconcile-after-apply --client-retries 8 --client-retry-backoff-sec 1.5`
+  - `SAAS_EMAIL='maromaher54@gmail.com' SAAS_PASSWORD='<REDACTED_PASSWORD>' PYTHONPATH=. ./venv/bin/python scripts/run_no_ui_pr_bundle_agent.py --api-base https://api.valensjewelry.com --account-id 029037611564 --region eu-north-1 --control-preference Config.1 --output-dir artifacts/no-ui-agent/config1_bug2_validation --reconcile-after-apply --client-retries 8 --client-retry-backoff-sec 1.5`
 - Infra blockers found and unblocked during run:
   - Worker Lambda had `ReservedConcurrentExecutions=0` -> removed cap.
   - Only inventory SQS mapping existed -> added mappings for ingest/events/export queues.
@@ -29433,7 +29554,7 @@ Repository now has a full canonical worker implementation at /Users/marcomaher/A
 
 **Step 5 — Config.1 rerun:**
 - Command executed:
-  - `SAAS_EMAIL='maromaher54@gmail.com' SAAS_PASSWORD='Maher730' PYTHONPATH=. ./venv/bin/python scripts/run_no_ui_pr_bundle_agent.py --api-base https://api.valensjewelry.com --account-id 029037611564 --region eu-north-1 --control-preference Config.1 --output-dir artifacts/no-ui-agent/config1_bug2_validation_3 --reconcile-after-apply --client-retries 8 --client-retry-backoff-sec 1.5`
+  - `SAAS_EMAIL='maromaher54@gmail.com' SAAS_PASSWORD='<REDACTED_PASSWORD>' PYTHONPATH=. ./venv/bin/python scripts/run_no_ui_pr_bundle_agent.py --api-base https://api.valensjewelry.com --account-id 029037611564 --region eu-north-1 --control-preference Config.1 --output-dir artifacts/no-ui-agent/config1_bug2_validation_3 --reconcile-after-apply --client-retries 8 --client-retry-backoff-sec 1.5`
 - Output dir:
   - `/Users/marcomaher/AWS Security Autopilot/artifacts/no-ui-agent/config1_bug2_validation_3`
 
@@ -29488,7 +29609,7 @@ Repository now has a full canonical worker implementation at /Users/marcomaher/A
 
 **SSM.7 live validation (Step 2):**
 - Command executed:
-  - `SAAS_EMAIL='maromaher54@gmail.com' SAAS_PASSWORD='Maher730' PYTHONPATH=. ./venv/bin/python scripts/run_no_ui_pr_bundle_agent.py --api-base https://api.valensjewelry.com --account-id 029037611564 --region eu-north-1 --control-preference SSM.7 --output-dir artifacts/no-ui-agent/ssm7_bug2_validation --reconcile-after-apply --client-retries 8 --client-retry-backoff-sec 1.5`
+  - `SAAS_EMAIL='maromaher54@gmail.com' SAAS_PASSWORD='<REDACTED_PASSWORD>' PYTHONPATH=. ./venv/bin/python scripts/run_no_ui_pr_bundle_agent.py --api-base https://api.valensjewelry.com --account-id 029037611564 --region eu-north-1 --control-preference SSM.7 --output-dir artifacts/no-ui-agent/ssm7_bug2_validation --reconcile-after-apply --client-retries 8 --client-retry-backoff-sec 1.5`
 - Result values:
   - `final_report.status=success`
   - `terraform apply exit_code=0`
@@ -29595,7 +29716,7 @@ Repository now has a full canonical worker implementation at /Users/marcomaher/A
 
 **Live validation (`Config.1`) run:**
 - Command executed:
-  - `SAAS_EMAIL='maromaher54@gmail.com' SAAS_PASSWORD='Maher730' PYTHONPATH=. ./venv/bin/python scripts/run_no_ui_pr_bundle_agent.py --api-base https://api.valensjewelry.com --account-id 029037611564 --region eu-north-1 --control-preference Config.1 --output-dir artifacts/no-ui-agent/config1_bug3_validation --reconcile-after-apply --client-retries 8 --client-retry-backoff-sec 1.5`
+  - `SAAS_EMAIL='maromaher54@gmail.com' SAAS_PASSWORD='<REDACTED_PASSWORD>' PYTHONPATH=. ./venv/bin/python scripts/run_no_ui_pr_bundle_agent.py --api-base https://api.valensjewelry.com --account-id 029037611564 --region eu-north-1 --control-preference Config.1 --output-dir artifacts/no-ui-agent/config1_bug3_validation --reconcile-after-apply --client-retries 8 --client-retry-backoff-sec 1.5`
 - Result values:
   1. `final_report.json -> status`: `failed`
   2. Live finding `shadow`: `present`
@@ -29654,7 +29775,7 @@ Repository now has a full canonical worker implementation at /Users/marcomaher/A
 
 **Validation run:**
 - Command:
-  - `SAAS_EMAIL='maromaher54@gmail.com' SAAS_PASSWORD='Maher730' PYTHONPATH=. ./venv/bin/python scripts/run_no_ui_pr_bundle_agent.py --api-base https://api.valensjewelry.com --account-id 029037611564 --region eu-north-1 --control-preference EC2.182 --output-dir artifacts/no-ui-agent/ec2_182_bug2_final_validation --reconcile-after-apply --client-retries 8 --client-retry-backoff-sec 1.5`
+  - `SAAS_EMAIL='maromaher54@gmail.com' SAAS_PASSWORD='<REDACTED_PASSWORD>' PYTHONPATH=. ./venv/bin/python scripts/run_no_ui_pr_bundle_agent.py --api-base https://api.valensjewelry.com --account-id 029037611564 --region eu-north-1 --control-preference EC2.182 --output-dir artifacts/no-ui-agent/ec2_182_bug2_final_validation --reconcile-after-apply --client-retries 8 --client-retry-backoff-sec 1.5`
 - Artifact directory:
   - `/Users/marcomaher/AWS Security Autopilot/artifacts/no-ui-agent/ec2_182_bug2_final_validation`
 
@@ -29731,7 +29852,7 @@ Repository now has a full canonical worker implementation at /Users/marcomaher/A
 
 **Live validation (already-compliant path) completed:**
 - Command run:
-  - `SAAS_EMAIL='maromaher54@gmail.com' SAAS_PASSWORD='Maher730' PYTHONPATH=. ./venv/bin/python /Users/marcomaher/AWS Security Autopilot/scripts/run_no_ui_pr_bundle_agent.py --api-base https://api.valensjewelry.com --account-id 029037611564 --region eu-north-1 --control-preference Config.1 --output-dir /Users/marcomaher/AWS Security Autopilot/artifacts/no-ui-agent/config1_bug4_validation --reconcile-after-apply --client-retries 8 --client-retry-backoff-sec 1.5`
+  - `SAAS_EMAIL='maromaher54@gmail.com' SAAS_PASSWORD='<REDACTED_PASSWORD>' PYTHONPATH=. ./venv/bin/python /Users/marcomaher/AWS Security Autopilot/scripts/run_no_ui_pr_bundle_agent.py --api-base https://api.valensjewelry.com --account-id 029037611564 --region eu-north-1 --control-preference Config.1 --output-dir /Users/marcomaher/AWS Security Autopilot/artifacts/no-ui-agent/config1_bug4_validation --reconcile-after-apply --client-retries 8 --client-retry-backoff-sec 1.5`
 - Artifact: `/Users/marcomaher/AWS Security Autopilot/artifacts/no-ui-agent/config1_bug4_validation`
 - Result fields:
   1. `final_report.json -> status`: `success`
@@ -29802,7 +29923,7 @@ Repository now has a full canonical worker implementation at /Users/marcomaher/A
 - The script does not currently expose `--output-dir`; campaign output directory is auto-generated as `artifacts/no-ui-agent/s3-campaign-<timestamp>`.
 
 **Execution command used (script-supported equivalent):**
-- `SAAS_EMAIL='maromaher54@gmail.com' SAAS_PASSWORD='Maher730' PYTHONPATH=. ./venv/bin/python scripts/run_s3_controls_campaign.py --api-base https://api.valensjewelry.com --account-id 029037611564 --region eu-north-1 --controls Config.1,SSM.7,EC2.7,EC2.182 --client-retries 8 --client-retry-backoff-sec 1.5`
+- `SAAS_EMAIL='maromaher54@gmail.com' SAAS_PASSWORD='<REDACTED_PASSWORD>' PYTHONPATH=. ./venv/bin/python scripts/run_s3_controls_campaign.py --api-base https://api.valensjewelry.com --account-id 029037611564 --region eu-north-1 --controls Config.1,SSM.7,EC2.7,EC2.182 --client-retries 8 --client-retry-backoff-sec 1.5`
 
 **Artifacts:**
 - `/Users/marcomaher/AWS Security Autopilot/artifacts/no-ui-agent/s3-campaign-20260222T043805Z/campaign_summary.json`
@@ -29871,7 +29992,7 @@ Repository now has a full canonical worker implementation at /Users/marcomaher/A
   - Result: `556 passed, 1 warning`.
 - Live campaign rerun:
   - Command:
-    - `SAAS_EMAIL='maromaher54@gmail.com' SAAS_PASSWORD='Maher730' PYTHONPATH=. ./venv/bin/python scripts/run_s3_controls_campaign.py --api-base https://api.valensjewelry.com --account-id 029037611564 --region eu-north-1 --controls Config.1,SSM.7,EC2.7,EC2.182 --client-retries 8 --client-retry-backoff-sec 1.5`
+    - `SAAS_EMAIL='maromaher54@gmail.com' SAAS_PASSWORD='<REDACTED_PASSWORD>' PYTHONPATH=. ./venv/bin/python scripts/run_s3_controls_campaign.py --api-base https://api.valensjewelry.com --account-id 029037611564 --region eu-north-1 --controls Config.1,SSM.7,EC2.7,EC2.182 --client-retries 8 --client-retry-backoff-sec 1.5`
   - Artifact directory:
     - `/Users/marcomaher/AWS Security Autopilot/artifacts/no-ui-agent/s3-campaign-20260222T045146Z`
   - Result:
@@ -29964,7 +30085,7 @@ Repository now has a full canonical worker implementation at /Users/marcomaher/A
 
 **Live run:**
 - Command:
-  - `SAAS_EMAIL='maromaher54@gmail.com' SAAS_PASSWORD='Maher730' PYTHONPATH=. ./venv/bin/python /Users/marcomaher/AWS Security Autopilot/scripts/run_multi_account_campaign.py --api-base https://api.valensjewelry.com --region eu-north-1 --controls Config.1,SSM.7,EC2.7,EC2.182 --output-dir /Users/marcomaher/AWS Security Autopilot/artifacts/no-ui-agent/multi-account-campaign-v1 --reconcile-after-apply --client-retries 8 --client-retry-backoff-sec 1.5`
+  - `SAAS_EMAIL='maromaher54@gmail.com' SAAS_PASSWORD='<REDACTED_PASSWORD>' PYTHONPATH=. ./venv/bin/python /Users/marcomaher/AWS Security Autopilot/scripts/run_multi_account_campaign.py --api-base https://api.valensjewelry.com --region eu-north-1 --controls Config.1,SSM.7,EC2.7,EC2.182 --output-dir /Users/marcomaher/AWS Security Autopilot/artifacts/no-ui-agent/multi-account-campaign-v1 --reconcile-after-apply --client-retries 8 --client-retry-backoff-sec 1.5`
 - Result:
   - `cross_account_summary.json -> overall_passed=true`
   - `accounts_total=1`, `accounts_passed=1`, `accounts_failed=0`
@@ -30022,7 +30143,7 @@ Repository now has a full canonical worker implementation at /Users/marcomaher/A
 **Task:** Validate SecurityHub.1 collector end-to-end using single-control no-UI run after collector implementation.
 
 **Command executed:**
-- `SAAS_EMAIL='maromaher54@gmail.com' SAAS_PASSWORD='Maher730' PYTHONPATH=. ./venv/bin/python /Users/marcomaher/AWS Security Autopilot/scripts/run_no_ui_pr_bundle_agent.py --api-base https://api.valensjewelry.com --account-id 029037611564 --region eu-north-1 --control-preference SecurityHub.1 --output-dir /Users/marcomaher/AWS Security Autopilot/artifacts/no-ui-agent/securityhub1_issue01_validation --reconcile-after-apply --client-retries 8 --client-retry-backoff-sec 1.5`
+- `SAAS_EMAIL='maromaher54@gmail.com' SAAS_PASSWORD='<REDACTED_PASSWORD>' PYTHONPATH=. ./venv/bin/python /Users/marcomaher/AWS Security Autopilot/scripts/run_no_ui_pr_bundle_agent.py --api-base https://api.valensjewelry.com --account-id 029037611564 --region eu-north-1 --control-preference SecurityHub.1 --output-dir /Users/marcomaher/AWS Security Autopilot/artifacts/no-ui-agent/securityhub1_issue01_validation --reconcile-after-apply --client-retries 8 --client-retry-backoff-sec 1.5`
 
 **Artifacts:**
 - `/Users/marcomaher/AWS Security Autopilot/artifacts/no-ui-agent/securityhub1_issue01_validation/final_report.json`
@@ -32917,3 +33038,51 @@ Repository now has a full canonical worker implementation at /Users/marcomaher/A
 **Open questions / TODOs:**
 - Phase C remains the next slice: frontend grouping/prioritization and blocker-to-settings navigation are still planned and should continue to use the real settings destination `/settings?tab=remediation-defaults`.
 - `RemediationRunProgress` still intentionally does not mirror preview-only resolver fields, because `RemediationRunDetail` does not expose `blocked_reasons`, `missing_defaults`, or `preservation_summary`.
+
+## Sanitize tracked secrets and force OpenAI deploys through Secrets Manager (2026-03-31)
+
+**Task:** Audit the tracked repo for hardcoded secrets and leaked tokens, remove the current OpenAI and Google key exposures plus adjacent secret-bearing artifacts, and harden the deploy path so serverless Help Hub deploys can no longer accept a plaintext OpenAI API key.
+
+**Files modified:**
+- `/Users/marcomaher/AWS Security Autopilot/backend/.env`
+- `/Users/marcomaher/AWS Security Autopilot/backend/workers/.env`
+- `/Users/marcomaher/AWS Security Autopilot/frontend/.env`
+- `/Users/marcomaher/AWS Security Autopilot/config/.env.ops`
+- `/Users/marcomaher/AWS Security Autopilot/.env`
+- `/Users/marcomaher/AWS Security Autopilot/.gitignore`
+- `/Users/marcomaher/AWS Security Autopilot/scripts/deploy_saas_serverless.sh`
+- `/Users/marcomaher/AWS Security Autopilot/infrastructure/cloudformation/saas-serverless-httpapi.yaml`
+- `/Users/marcomaher/AWS Security Autopilot/tests/test_aws_service.py`
+- `/Users/marcomaher/AWS Security Autopilot/tests/test_assume_role_session_tags.py`
+- `/Users/marcomaher/AWS Security Autopilot/tests/test_help_api.py`
+- `/Users/marcomaher/AWS Security Autopilot/tests/test_root_key_rollout_controls.py`
+- `/Users/marcomaher/AWS Security Autopilot/docs/deployment/secrets-config.md`
+- `/Users/marcomaher/AWS Security Autopilot/docs/features/help-desk-platform.md`
+- `/Users/marcomaher/AWS Security Autopilot/docs/trust/secrets-lifecycle.md`
+- `/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md`
+- `/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md`
+- Multiple tracked evidence/artifact files under `/Users/marcomaher/AWS Security Autopilot/docs/test-results/`
+- `/Users/marcomaher/AWS Security Autopilot/.playwright-cli/console-2026-03-21T18-07-22-757Z.log`
+- Multiple tracked files under `/Users/marcomaher/AWS Security Autopilot/.playwright-cli/`
+- Multiple tracked files under `/Users/marcomaher/AWS Security Autopilot/.bundle-callback-replay/`
+
+**What was done:**
+- Re-scanned the working tree for OpenAI keys, Google/Firebase API keys, JWT/reporting tokens, control-plane tokens, and other secret-like material instead of checking only the main application code.
+- Sanitized the tracked env files so database URLs, JWT/reporting secrets, control-plane secrets, Firebase web key, and adjacent sensitive values are now placeholders; `backend/.env` keeps `OPENAI_API_KEY=""` as the only intentionally empty slot for local-only manual entry.
+- Redacted previously tracked OpenAI key copies from retained runtime evidence and redacted the leaked Google/Firebase key from tracked Playwright console artifacts.
+- Redacted tracked JWT/reporting tokens, control-plane tokens, SMTP credentials, and temporary AWS credential material across the retained test-result and bundle replay artifacts, including embedded CloudTrail/runtime evidence.
+- Redacted the real password strings that had been written into `.cursor/notes/task_log.md` and tracked Playwright artifacts.
+- Hardened `scripts/deploy_saas_serverless.sh` so serverless deploys now refuse plaintext `OPENAI_API_KEY` input and require `OPENAI_API_KEY_SECRET_ID` for production/serverless Help Hub deploys.
+- Updated the serverless CloudFormation template so the runtime no longer falls back to the deprecated plaintext `OpenAiApiKey` parameter when no secret id is supplied.
+- Added ignore rules for `.playwright-cli/`, `.bundle-callback-replay/`, and the most obvious secret-bearing API evidence files so the same artifact classes are less likely to be tracked again.
+- Updated the deployment/trust/help-assistant docs so the current contract is explicit: local-only OpenAI key in `backend/.env`, production/serverless OpenAI key in Secrets Manager.
+- Reworked the remaining secret-detection tests to use non-literal key-shaped fixture assembly so repo scans stay clean without weakening the assertions.
+
+**Validation:**
+- Re-ran targeted secret-pattern scans for OpenAI keys, Google/Firebase API keys, JWT/reporting tokens, control-plane tokens, and known leaked password/database fragments across the working tree.
+- Re-ran exact AWS access-key pattern scans and verified the tracked working tree no longer contains literal `AKIA...` or `ASIA...` credential identifiers.
+- Could not run the touched pytest files in this workspace because neither `./venv/bin/pytest` nor a system `pytest` installation is available here.
+
+**Open questions / TODOs:**
+- The working tree is sanitized, but any key that was previously pushed to GitHub should remain rotated/revoked; redaction here does not retroactively protect already-cloned history.
+- A full Git history rewrite for previously pushed secret-bearing commits was not performed in this task because it would require an explicit coordinated force-push workflow.

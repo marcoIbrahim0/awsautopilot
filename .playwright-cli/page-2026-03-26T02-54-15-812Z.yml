@@ -27,7 +27,7 @@
             - generic [ref=e38]:
               - textbox "Password" [ref=e39]:
                 - /placeholder: ••••••••
-                - text: Maher730@
+                - text: <REDACTED_PASSWORD>
               - button "Show password" [ref=e41]:
                 - img [ref=e42]
           - generic [ref=e45]:

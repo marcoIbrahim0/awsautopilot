@@ -162,12 +162,12 @@ Runtime configuration:
 
 - `OPENAI_HELP_ENABLED=true`
 - `OPENAI_API_KEY_SECRET_ID=security-autopilot-dev/OPENAI_API_KEY`
-- `OPENAI_API_KEY=<YOUR_VALUE_HERE>` for local-only runtime setup
+- `OPENAI_API_KEY=<YOUR_VALUE_HERE>` in `backend/.env` for local-only runtime setup
 - `OPENAI_HELP_MODEL=gpt-4.1-mini`
 - `OPENAI_HELP_REASONING_EFFORT=low`
 - `OPENAI_HELP_TIMEOUT_SECONDS=30`
 
-The production serverless runtime resolves `OPENAI_API_KEY` from the Secrets Manager secret referenced by `OPENAI_API_KEY_SECRET_ID`; local development may still set `OPENAI_API_KEY` directly in `backend/.env`.
+The production serverless runtime resolves `OPENAI_API_KEY` only from the Secrets Manager secret referenced by `OPENAI_API_KEY_SECRET_ID`; local development may still set `OPENAI_API_KEY` directly in `backend/.env`.
 
 Live IAM enablement on AWS accounts:
 

@@ -131,10 +131,10 @@
           - textbox [ref=e164]: WrongPassword123!
         - generic [ref=e165]:
           - generic [ref=e166]: New Password
-          - textbox [ref=e168]: Maher730@
+          - textbox [ref=e168]: <REDACTED_PASSWORD>
         - generic [ref=e169]:
           - generic [ref=e170]: Confirm New Password
-          - textbox [ref=e172]: Maher730@
+          - textbox [ref=e172]: <REDACTED_PASSWORD>
       - generic [ref=e173]:
         - button "Cancel" [ref=e174]:
           - generic [ref=e175]: Cancel

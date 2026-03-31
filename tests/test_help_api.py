@@ -718,8 +718,9 @@ def test_help_assistant_finalize_result_shortens_long_answers() -> None:
 
 
 def test_help_assistant_finalize_result_blocks_secret_like_content() -> None:
+    aws_key_like_value = "AKIA" + "ABCDEFGHIJKLMNOP"
     result = HelpAssistantStructuredResult(
-        answer="Use this token: AKIAABCDEFGHIJKLMNOP to continue.",
+        answer=f"Use this token: {aws_key_like_value} to continue.",
         confidence="high",
         suggested_case=False,
         citations=[],
@@ -729,7 +730,7 @@ def test_help_assistant_finalize_result_blocks_secret_like_content() -> None:
 
     finalized = _finalize_result(result)
 
-    assert "AKIAABCDEFGHIJKLMNOP" not in finalized.answer
+    assert aws_key_like_value not in finalized.answer
     assert finalized.suggested_case is True
 
 

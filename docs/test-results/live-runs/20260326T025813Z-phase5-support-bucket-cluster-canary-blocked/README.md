@@ -20,8 +20,8 @@ The local cluster gate was green:
 
 The live canary was blocked by reproducible auth/access failures:
 - decrypted Chrome `api.ocypheris.com` cookie bearer returned `401 {"detail":"User not found"}`
-- production login for `maromaher54@gmail.com / Maher730` returned `Verify your email before signing in`
-- production login for `marco.ibrahim@ocypheris.com / Maher730@` returned `Login failed`
+- production login for `maromaher54@gmail.com / <REDACTED_PASSWORD>` returned `Verify your email before signing in`
+- production login for `marco.ibrahim@ocypheris.com / <REDACTED_PASSWORD>` returned `Login failed`
 - read-only production DB lookup for same-operator bearer minting was blocked by Neon quota exhaustion
 - retained March 23, 2026 `Valens` bearer from [SSM.7 and CloudTrail.1 live E2E](/Users/marcomaher/AWS%20Security%20Autopilot/docs/test-results/live-runs/20260323T190500Z-ssm7-cloudtrail1-live-e2e/notes/final-summary.md) now returns `401 {"detail":"User not found"}`
 

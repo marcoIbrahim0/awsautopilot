@@ -27,8 +27,8 @@
 - Decrypted retained Chrome cookie bearer for `api.ocypheris.com`:
   - `GET /api/auth/me` -> `401 {"detail":"User not found"}`
 - Browser login on `https://ocypheris.com/login`:
-  - `maromaher54@gmail.com / Maher730` -> `Verify your email before signing in`
-  - `marco.ibrahim@ocypheris.com / Maher730@` -> `Login failed`
+  - `maromaher54@gmail.com / <REDACTED_PASSWORD>` -> `Verify your email before signing in`
+  - `marco.ibrahim@ocypheris.com / <REDACTED_PASSWORD>` -> `Login failed`
 - Read-only production DB lookup for same-operator bearer minting:
   - blocked by Neon error `Your project has exceeded the data transfer quota. Upgrade your plan to increase limits.`
 - Retained March 23, 2026 live `Valens` bearer from [login.json](/Users/marcomaher/AWS%20Security%20Autopilot/docs/test-results/live-runs/20260323T190500Z-ssm7-cloudtrail1-live-e2e/evidence/api/login.json):

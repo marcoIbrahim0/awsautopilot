@@ -111,11 +111,13 @@ Customer-run grouped bundle reporting requires `BUNDLE_REPORTING_TOKEN_SECRET`. 
 | `EMAIL_SMTP_USER` | SMTP username injected into Lambda from `EMAIL_SMTP_CREDENTIALS_SECRET_ID` | `<YOUR_VALUE_HERE>` | Lambda runtime env (resolved by CloudFormation dynamic reference) |
 | `EMAIL_SMTP_PASSWORD` | SMTP password injected into Lambda from `EMAIL_SMTP_CREDENTIALS_SECRET_ID` | `<YOUR_VALUE_HERE>` | Lambda runtime env (resolved by CloudFormation dynamic reference) |
 | `OPENAI_API_KEY_SECRET_ID` | Secrets Manager secret id/ARN whose `SecretString` is the Help Hub OpenAI API key | `security-autopilot-dev/OPENAI_API_KEY` | CloudFormation parameter via `config/.env.ops` |
-| `OPENAI_API_KEY` | OpenAI API key for local-only Help Hub runtime setup | `<YOUR_VALUE_HERE>` | `backend/.env` locally, or Lambda runtime env resolved from `OPENAI_API_KEY_SECRET_ID` in production |
+| `OPENAI_API_KEY` | OpenAI API key for local-only Help Hub runtime setup | `<YOUR_VALUE_HERE>` | `backend/.env` locally only |
 | `OPENAI_HELP_ENABLED` | Enable the OpenAI-backed Help Hub assistant | `true` | CloudFormation parameter via `config/.env.ops` |
 | `OPENAI_HELP_MODEL` | OpenAI model id used by Help Hub | `gpt-4.1-mini` | CloudFormation parameter via `config/.env.ops` |
 | `OPENAI_HELP_REASONING_EFFORT` | GPT-5-family reasoning effort setting | `low` | CloudFormation parameter via `config/.env.ops` |
 | `OPENAI_HELP_TIMEOUT_SECONDS` | OpenAI request timeout for Help Hub | `30` | CloudFormation parameter via `config/.env.ops` |
+
+The serverless deploy path now refuses a plaintext `OPENAI_API_KEY`. Production deploys must use `OPENAI_API_KEY_SECRET_ID`; keep the real local-only key in [`backend/.env`](/Users/marcomaher/AWS%20Security%20Autopilot/backend/.env).
 
 > ❓ Needs verification: As of `2026-03-21`, signup verification email delivery no longer uses backend SMTP and is now Firebase-managed from the frontend. The SMTP variables above remain required for other transactional email paths in [`backend/services/email.py`](/Users/marcomaher/AWS%20Security%20Autopilot/backend/services/email.py), but not for the signup verification flow.
 

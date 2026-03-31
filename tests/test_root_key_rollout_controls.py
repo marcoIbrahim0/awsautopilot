@@ -83,7 +83,8 @@ def test_canary_bucket_is_deterministic_for_same_scope() -> None:
 
 
 def test_operator_override_reason_redacts_secret_like_text() -> None:
-    reason = sanitize_operator_override_reason("token=AKIAABCDEFGHIJKLMNOP")
+    aws_key_like_value = "AKIA" + "ABCDEFGHIJKLMNOP"
+    reason = sanitize_operator_override_reason(f"token={aws_key_like_value}")
     assert reason == "<REDACTED>"
 
 

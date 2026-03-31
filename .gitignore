@@ -16,6 +16,8 @@ out/
 build/
 dist/
 .env*.local
+.playwright-cli/
+.bundle-callback-replay/
 .vercel
 .turbo
 
@@ -39,3 +41,6 @@ docs/test-results/**/evidence/playwright/**/Cache/
 docs/test-results/**/evidence/playwright/**/GPUCache/
 docs/test-results/**/evidence/playwright/**/Code Cache/
 docs/test-results/**/evidence/playwright/**/Service Worker/
+docs/test-results/**/evidence/api/access-token.txt
+docs/test-results/**/evidence/api/*.cookies
+docs/test-results/**/.bundle-callback-replay/

@@ -1,7 +1,7 @@
 {
   "group_run_id": "e8da3d0b-21f5-4099-9fad-acc797918638",
   "remediation_run_id": "3ac8641b-a98e-4634-98ae-ca6f807631ba",
-  "reporting_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0ZW5hbnRfaWQiOiI5Zjc2MTZkOC1hZjA0LTQzY2EtOTljZC03MTM2MjUzNTdiNzAiLCJncm91cF9ydW5faWQiOiJlOGRhM2QwYi0yMWY1LTQwOTktOWZhZC1hY2M3OTc5MTg2MzgiLCJncm91cF9pZCI6IjEwMDEzYzY2LWQwM2QtNDhlMi05ZDg1LWQwNmY0ZjkwZTI3NyIsImFsbG93ZWRfYWN0aW9uX2lkcyI6WyJkOGRhMzY5OC0yMzBmLTQ0ZTMtOWMxMS1jYzllNDA5OWI3ZjYiXSwianRpIjoiMTZjZTVmN2EtOTFjZS00YzZmLTlkYWUtZWZlNzMyMTE2NDY2IiwiaWF0IjoxNzczNTIyMDUwLCJleHAiOjE3NzM2MDg0NTB9.OYD4vIBnsZ9xJzuz1bLgFFKRUm31ftMq24N80X18LtQ",
+  "reporting_token": "<REDACTED_TOKEN>",
   "reporting_callback_url": "https://g1frb5hhfg.execute-api.eu-north-1.amazonaws.com/api/internal/group-runs/report",
   "status": "queued"
 }

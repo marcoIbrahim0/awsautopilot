@@ -2,6 +2,6 @@
   "user_id": "896bbef7-0afe-4a5a-b849-3ff1c4cdcd6e",
   "tenant_id": "c3351a02-0bc2-4449-beed-d59d7ac937d0",
   "email": "maromaher54+backup-local@example.com",
-  "access_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI4OTZiYmVmNy0wYWZlLTRhNWEtYjg0OS0zZmYxYzRjZGNkNmUiLCJ0ZW5hbnRfaWQiOiJjMzM1MWEwMi0wYmMyLTQ0NDktYmVlZC1kNTlkN2FjOTM3ZDAiLCJ0b2tlbl92ZXJzaW9uIjowLCJwZXJzaXN0ZW50X3Nlc3Npb24iOnRydWUsImV4cCI6MTc3NTAwODcwNX0.EiRUvDVDzDtM0ofEnfxwH1mFyUae_UCrQK8D6jOzr6k",
+  "access_token": "<REDACTED_TOKEN>",
   "csrf_token": "uxBgCLvDEIkFjJdedHvZrxklVbQ9fnrYabXwlwASmbU"
 }

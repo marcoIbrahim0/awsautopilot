@@ -340,10 +340,9 @@ describe('FindingGroupCard group actions', () => {
       <FindingGroupCard
         group={{
           ...baseGroup,
+          control_id: 'EC2.19',
           remediation_visibility_reason: 'managed_on_resource_scope',
           remediation_scope_owner: 'resource',
-          remediation_scope_message:
-            'This finding family is remediated on affected resource rows. Open the resource-level row for the runnable fix.',
         }}
         effectiveTenantId="tenant-local"
       />

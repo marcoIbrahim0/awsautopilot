@@ -4,6 +4,19 @@ This index maps notable tasks to discoverable entries in `.cursor/notes/task_log
 
 ## 2026-03
 
+- [Preserve current local master state on master (2026-03-31)](task_log.md#preserve-current-local-master-state-on-master-2026-03-31)
+  - Verified the repo is already on `master` and the local working tree is substantially dirty.
+  - Taking the non-destructive path: stage the current tree as-is and commit it directly on `master` without cleanup, reset, or file removal.
+- [Fix misleading EC2 SG no-remediation copy on findings surfaces (2026-03-31)](task_log.md#fix-misleading-ec2-sg-no-remediation-copy-on-findings-surfaces-2026-03-31)
+  - Verified against the fallback Neon database that the newest account-scoped `EC2.13` / `EC2.18` / `EC2.19` rows in account `696505809372` already have runnable sibling SG actions, and the current backend hint path correctly resolves them as `managed_on_resource_scope`.
+  - Kept the fix frontend-only: replaced the misleading generic fallback text with neutral copy and added focused findings-card, grouped-card, and detail-page coverage for resource-scope guidance.
+  - Proved the fix in a real localhost browser flow against fallback-backed live data for finding `006998b6-85c8-4f53-9cc2-592df583500c` on both the finding detail page and the flat findings card, then confirmed the supported `npm run deploy` path is currently blocked by the repo's clean-working-tree guardrail.
+- [Add runtime DB failover resync after primary quota blocks (2026-03-31)](task_log.md#add-runtime-db-failover-resync-after-primary-quota-blocks-2026-03-31)
+  - Reworked database failover so quota/connectivity-triggered fallback is no longer just a startup probe decision: runtime failures now keep fallback authoritative, mark primary as needing resync, and automatically attempt fallback-to-primary replay after primary recovers.
+  - Added advisory-lock-guarded sync tooling, refreshable API/worker DB bindings, new failover sync config knobs, and focused tests/docs for the new “do not swing back to primary before resync completes” contract.
+- [Sanitize tracked secrets and force OpenAI deploys through Secrets Manager (2026-03-31)](task_log.md#sanitize-tracked-secrets-and-force-openai-deploys-through-secrets-manager-2026-03-31)
+  - Redacted the tracked OpenAI key, Google/Firebase API key, JWT/reporting tokens, control-plane tokens, and real password strings from the repo working tree and retained evidence artifacts.
+  - Sanitized the tracked env files into placeholder templates, left `backend/.env` with an empty `OPENAI_API_KEY` slot for local-only manual entry, and hardened the serverless deploy path so plaintext OpenAI keys are rejected in favor of `OPENAI_API_KEY_SECRET_ID`.
 - [Repair current `master` required-check baseline before backend recovery merge (2026-03-31)](task_log.md#repair-current-master-required-check-baseline-before-backend-recovery-merge-2026-03-31)
   - Fixed the pre-existing local failures behind Backend CI, Worker CI, Frontend CI, Frontend Accessibility, and Dependency Governance without changing the protected backend auth contract or the worker STS tagging contract.
   - Reworked the accessibility harness to scan the production build reliably, then fixed the real onboarding and findings a11y defects it surfaced so the clean `master` baseline is green before rebasing the backend recovery PR.
@@ -173,7 +186,7 @@ This index maps notable tasks to discoverable entries in `.cursor/notes/task_log
 - [Repair the Phase 5 support-bucket cluster gate and attempt the live canary rollout (2026-03-26)](task_log.md#repair-the-phase-5-support-bucket-cluster-gate-and-attempt-the-live-canary-rollout-2026-03-26)
   - Repaired the red Phase 5 cluster gate in `tests/test_remediation_runs_api.py`, revalidated the full cluster suite plus the focused `Config.1`, `S3.9`, and `CloudTrail.1` slices, and updated the no-UI PR-bundle agent so guided-input support-bucket families can run through remediation-preview with bearer-token auth.
   - The live canary did not start: production operator access is currently broken from this workspace, so the retained March 26, 2026 blocker package documents the stale Chrome cookie bearer, failed browser logins, blocked DB-based same-operator fallback, and invalidated March 23, 2026 retained bearer.
-- [Fix `CloudTrail.1` create-if-missing approval path so risk evaluation honors safe bucket creation (2026-03-26)](task_log.md#fix-cloudtrail1-create-if-missing-approval-path-so-risk-evaluation-honors-safe-bucket-creation-2026-03-26)
+- [Fix `CloudTrail.1` create-if-missing approval path so risk evaluation honors safe bucket creation (2026-03-26)](task_log.md#fix-cloudtrail1-create-if-missing-approval-path-so-ri<REDACTED_OPENAI_API_KEY>)
   - Fixed the `CloudTrail.1` create-if-missing path so safe managed bucket creation no longer trips the generic adjacency/dependency failure before the explicit bucket-creation acknowledgement guard.
   - Added focused CloudTrail risk coverage and revalidated the `CloudTrail.1` runtime/resolver/bundle regression slice, including the approved create-if-missing branch without manually injected helper-creation flags.
 - [Keep `Config.1` account-local create-new executable through the adjacency gate (2026-03-26)](task_log.md#keep-config1-account-local-create-new-executable-through-the-adjacency-gate-2026-03-26)
@@ -188,7 +201,7 @@ This index maps notable tasks to discoverable entries in `.cursor/notes/task_log
 - [Fix findings-page suppressed filter to honor active exceptions (2026-03-24)](task_log.md#fix-findings-page-suppressed-filter-to-honor-active-exceptions-2026-03-24)
   - Updated findings effective-status resolution so active finding exceptions now surface as `SUPPRESSED` in the API response as well as on the UI.
   - Fixed both flat and grouped findings status filtering so `status=SUPPRESSED` includes actively suppressed findings instead of only raw workflow-suppressed rows.
-- [Refine floating Ask AI icon toward the Ocypheris obelisk mark (2026-03-24)](task_log.md#refine-floating-ask-ai-icon-toward-the-ocypheris-obelisk-mark-2026-03-24)
+- [Refine floating Ask AI icon toward the Ocypheris obelisk mark (2026-03-24)](task_log.md#refine-floating-a<REDACTED_OPENAI_API_KEY>)
   - Replaced the floating chatbot’s face-like icon with a smaller geometric obelisk-inspired mark based on the existing Ocypheris brand icon.
   - Reduced the icon weight across the launcher, chat header, and empty state so the widget keeps the stronger redesign without feeling mascot-like.
 - [Fix recompute pipeline stall on local live tenant/account before deploy (2026-03-24)](task_log.md#fix-recompute-pipeline-stall-on-local-live-tenantaccount-before-deploy-2026-03-24)
@@ -197,7 +210,7 @@ This index maps notable tasks to discoverable entries in `.cursor/notes/task_log
 - [Deploy current backend + frontend workspace updates after findings-page fixes (2026-03-24)](task_log.md#deploy-current-backend--frontend-workspace-updates-after-findings-page-fixes-2026-03-24)
   - Deployed the full current root and nested `frontend/` dirty worktrees with backend image tag `20260324T171736Z` and frontend Cloudflare version `63122072-7d13-4905-a945-4281e065519a`.
   - Live verification returned `HTTP/2 200` for both `https://api.ocypheris.com/health` and `https://ocypheris.com`, but the deployed backend workspace still had `15` failing remediation-runs tests at deploy time.
-- [Refresh floating Ask AI launcher and composer identity (2026-03-24)](task_log.md#refresh-floating-ask-ai-launcher-and-composer-identity-2026-03-24)
+- [Refresh floating Ask AI launcher and composer identity (2026-03-24)](task_log.md#refresh-floating-a<REDACTED_OPENAI_API_KEY>)
   - Reworked the floating `Ask AI` widget so the launcher, empty state, and open header all use a stronger branded assistant glyph instead of a generic chat icon.
   - Upgraded the composer CTA into a larger labeled `Send now` action so the chatbot feels more intentional and visually distinct.
 - [Fix findings-page suppressed badges, grouped-card action rail, and multi-level group-by rendering (2026-03-24)](task_log.md#fix-findings-page-suppressed-badges-grouped-card-action-rail-and-multi-level-group-by-rendering-2026-03-24)
@@ -320,7 +333,7 @@ This index maps notable tasks to discoverable entries in `.cursor/notes/task_log
   - Updated the system prompt to gracefully handle greetings and vague questions without over-sharing context or failing closed, and deployed the backend updates.
 - [Fix chatbot UI transparency and perform final production rollout (2026-03-22)](task_log.md#fix-chatbot-ui-transparency-and-perform-final-production-rollout-2026-03-22)
   - Resolved the transparency issue in the newly implemented floating chatbot and performed a full-stack production rollout to publish the fix.
-- [Implement and deploy globally floating "Ask AI" chatbot with session persistence (2026-03-22)](task_log.md#implement-and-deploy-globally-floating-ask-ai-chatbot-with-session-persistence-2026-03-22)
+- [Implement and deploy globally floating "Ask AI" chatbot with session persistence (2026-03-22)](task_log.md#implement-and-deploy-globally-floating-a<REDACTED_OPENAI_API_KEY>)
   - Shipped a globally floating multi-turn chat interface with localStorage-based session persistence and performed a full-stack production rollout.
 - [Deploy hybrid Help Hub live-IAM rollout to production (2026-03-22)](task_log.md#deploy-hybrid-help-hub-live-iam-rollout-to-production-2026-03-22)
   - Deployed the hybrid Help Hub assistant runtime, applied `0047_help_assistant_live_iam_lookup`, and published the updated frontend.
@@ -478,7 +491,7 @@ This index maps notable tasks to discoverable entries in `.cursor/notes/task_log
 - [Repo AGENTS.md creation and workflow canon sync (2026-03-19)](task_log.md#repo-agentsmd-creation-and-workflow-canon-sync-2026-03-19)
   - Added a root `AGENTS.md` that points agents to `.cursor` as binding startup context and records the repo’s canonical local, deploy, and advanced grouped-bundle workflows.
   - Synced the active docs to the multi-head Alembic reality (`alembic upgrade heads`) and the preferred local `./venv/bin` command style, while intentionally leaving the protected production doc and one historical issue-tracker entry untouched.
-- [Wave 6 Task 8 retained closure gate completion on the March 18 package (2026-03-19)](task_log.md#wave-6-task-8-retained-closure-gate-completion-on-the-march-18-package-2026-03-19)
+- [Wave 6 Task 8 retained closure gate completion on the March 18 package (2026-03-19)](task_log.md#wave-6-ta<REDACTED_OPENAI_API_KEY>)
   - Promoted `docs/test-results/live-runs/20260318T030658Z-rem-profile-wave6-live-closure-rerun/` to the authoritative Wave 6 closure gate by adding the explicit nine-family matrix and `Wave 6 complete = YES` language required by desktop `Task 8`.
   - Synced the retained summary, live-testing index, remediation-profile docs, desktop plan, and task history so current docs no longer describe Wave 6 as merely “ready for the final strict gate.”
 - [Wave 6 W6-LIVE-11 grouped runner callback finalization proof closure (2026-03-18)](task_log.md#wave-6-w6-live-11-grouped-runner-callback-finalization-proof-closure-2026-03-18)
@@ -493,19 +506,19 @@ This index maps notable tasks to discoverable entries in `.cursor/notes/task_log
 - [Wave 6 W6-LIVE-06 S3.11 grouped live proof closure and runner mirror hardening (2026-03-18)](task_log.md#wave-6-w6-live-06-s311-grouped-live-proof-closure-and-runner-mirror-hardening-2026-03-18)
   - Closed `W6-LIVE-06` with the authoritative clean grouped rerun: one executable lifecycle action, four manual-guidance-only actions, a `finished` callback-managed group run, and final restoration back to `NoSuchLifecycleConfiguration` plus `NoSuchBucketPolicy`.
   - Hardened the grouped Terraform runner against the live rerun defects by separating provider mirror from plugin cache and making provider detection symlink-aware with `find -L`.
-- [Wave 6 Task 4 W6-LIVE-06 runner cache alignment and evidence correction (2026-03-18)](task_log.md#wave-6-task-4-w6-live-06-runner-cache-alignment-and-evidence-correction-2026-03-18)
+- [Wave 6 Task 4 W6-LIVE-06 runner cache alignment and evidence correction (2026-03-18)](task_log.md#wave-6-ta<REDACTED_OPENAI_API_KEY>)
   - Fixed the grouped Terraform runner's stale AWS provider warm-up logic so cache bootstrap now follows the same `>= 4.0` provider constraint the generated bundles use, then reuses the warm cache as a local mirror.
   - Corrected the retained March 15 `W6-LIVE-06` notes: the saved apply log shows executable lifecycle mutations progressed past init, but the package still lacks trustworthy post-apply and rollback evidence, so Task 4 remains open for a fresh live rerun.
 - [Wave 6 W6-LIVE-05 grouped evidence-persistence fix and live proof closure (2026-03-18)](task_log.md#wave-6-w6-live-05-grouped-evidence-persistence-fix-and-live-proof-closure-2026-03-18)
   - The first post-fix grouped rerun still failed closed because grouped action resolutions did not persist S3 preservation evidence into worker-visible `strategy_inputs`, leaving all seven deterministic S3.5 actions non-runnable.
   - Patched grouped S3 persistence, reran the retained live proof end to end, verified truthful apply plus exact rollback on all seven executable buckets, persisted a `finished` group run, cleaned up the retained runtime, and closed `W6-LIVE-05` as `PASS`.
-- [Wave 6 Task 3.1 S3.5 bundle evidence-gating and rollback-restoration implementation (2026-03-18)](task_log.md#wave-6-task-31-s35-bundle-evidence-gating-and-rollback-restoration-implementation-2026-03-18)
+- [Wave 6 Task 3.1 S3.5 bundle evidence-gating and rollback-restoration implementation (2026-03-18)](task_log.md#wave-6-ta<REDACTED_OPENAI_API_KEY>)
   - Implemented the S3.5 code fix: bundle generation now fails closed on missing preservation evidence, preserved-policy Terraform bundles ship exact S3 capture/restore helpers plus rollback metadata, and generic rollback guidance no longer advertises `delete-bucket-policy`.
   - Added focused S3 bundle and remediation-options regressions; the targeted validation slice passed, but `W6-LIVE-05` still needs the live rerun before Task 3 can close.
-- [Wave 6 Task 3.1 S3.5 fix plan re-review confirms implementation-ready scope (2026-03-18)](task_log.md#wave-6-task-31-s35-fix-plan-re-review-confirms-implementation-ready-scope-2026-03-18)
+- [Wave 6 Task 3.1 S3.5 fix plan re-review confirms implementation-ready scope (2026-03-18)](task_log.md#wave-6-ta<REDACTED_OPENAI_API_KEY>)
   - Re-checked the updated desktop Task 3.1 and confirmed it now includes rollback metadata wiring, generic rollback-guidance updates, and the missing automated-test scope.
   - Final review verdict: Task 3.1 is ready to implement; Task 3 still stays open until code, tests, and live rerun all pass.
-- [Wave 6 Task 3.1 S3.5 fix plan review for bundle evidence gating and rollback restoration (2026-03-18)](task_log.md#wave-6-task-31-s35-fix-plan-review-for-bundle-evidence-gating-and-rollback-restoration-2026-03-18)
+- [Wave 6 Task 3.1 S3.5 fix plan review for bundle evidence gating and rollback restoration (2026-03-18)](task_log.md#wave-6-ta<REDACTED_OPENAI_API_KEY>)
   - Validated the new Task 3.1 root-cause claims against current S3.5 code paths and confirmed the apply fail-open plus destroy-delete behaviors are real.
   - Identified missing implementation scope: S3 bundle rollback metadata wiring, generic rollback-guidance contract updates, and regression coverage for the exact missing-evidence branch.
 - [Wave 6 W6-LIVE-05 S3.5 live executable proof exposes destructive bundle apply and non-exact rollback (2026-03-18)](task_log.md#wave-6-w6-live-05-s35-live-executable-proof-exposes-destructive-bundle-apply-and-non-exact-rollback-2026-03-18)
@@ -529,10 +542,10 @@ This index maps notable tasks to discoverable entries in `.cursor/notes/task_log
 - [Wave 6 W6-LIVE-01 EC2.53 live execution proves grouped apply and exposes rollback gap (2026-03-18)](task_log.md#wave-6-w6-live-01-ec253-live-execution-proves-grouped-apply-and-exposes-rollback-gap-2026-03-18)
   - Executed the focused live rerun under `docs/test-results/live-runs/20260318T024357Z-rem-profile-wave6-live-closure/`, proved the grouped customer-run bundle now stays executable, applies truthfully, and reports a `finished` group run with one executable action plus one manual action.
   - Found a new high-severity rollback defect: `terraform destroy` removes the restricted EC2.53 ingress rules but does not restore the original public `22/3389` rules on `sg-06f6252fa8a95b61d`, so manual AWS CLI cleanup was required and `W6-LIVE-01` remains open until exact rollback is implemented.
-- [Wave 6 Task 1 EC2.53 code investigation confirms no further patch needed (2026-03-18)](task_log.md#wave-6-task-1-ec253-code-investigation-confirms-no-further-patch-needed-2026-03-18)
+- [Wave 6 Task 1 EC2.53 code investigation confirms no further patch needed (2026-03-18)](task_log.md#wave-6-ta<REDACTED_OPENAI_API_KEY>)
   - Verified the grouped EC2.53 path from `collect_runtime_risk_signals(...)` through `resolve_create_profile_selection(...)` and confirmed `close_and_revoke` still lands in `deterministic_bundle` with resolver-tier preservation enabled for `sg_restrict_public_ports_guided`.
   - Concluded that `W6-LIVE-01` now needs only the live apply/rollback proof and downgrade/manual capture during the rerun package; no more code changes are required unless the live evidence disproves the contract.
-- [Wave 6 closure Task 0 automated test baseline on clean e9a362b3 (2026-03-18)](task_log.md#wave-6-closure-task-0-automated-test-baseline-on-clean-e9a362b3-2026-03-18)
+- [Wave 6 closure Task 0 automated test baseline on clean e9a362b3 (2026-03-18)](task_log.md#wave-6-closure-ta<REDACTED_OPENAI_API_KEY>)
   - Ran the implementation-plan step 0 pytest baseline in a temporary clean worktree at `e9a362b3` because the main workspace was dirty; the required four-file suite passed `44/44`.
   - Confirmed `tests/test_remediation_runs_api.py` still reports `11` failures on clean `e9a362b3` and recorded the current failing test names for follow-up without blocking Wave 6 step 0.
 - [IAM.4 authoritative observer-context fix on master (2026-03-16)](task_log.md#iam4-authoritative-observer-context-fix-on-master-2026-03-16)
@@ -562,7 +575,7 @@ This index maps notable tasks to discoverable entries in `.cursor/notes/task_log
 - [Remediation-profile Wave 6 live AWS validation gate on master (2026-03-15)](task_log.md#remediation-profile-wave-6-live-aws-validation-gate-on-master-2026-03-15)
   - Executed the full Wave 6 live-AWS validation gate on isolated local `master`, captured the complete evidence package under `docs/test-results/live-runs/20260315T175132Z-rem-profile-wave6-live-aws-e2e/`, and cleaned the isolated runtime plus temporary SaaS-account queues afterward.
   - Final gate decision was `stop for fixes`: no migrated family met both required proofs, IAM.4 authoritative root-key execution was disabled, EC2.53/S3.11/S3.15 had no fresh live scenarios, Config.1 lacked manual apply/rollback credentials, and S3.9 grouped create returned a blocking `500`.
-- [Remediation-profile Wave 6 control-family migration documentation and task-history integration on master (2026-03-15)](task_log.md#remediation-profile-wave-6-control-family-migration-documentation-and-task-history-integration-on-master-2026-03-15)
+- [Remediation-profile Wave 6 control-family migration documentation and task-history integration on master (2026-03-15)](task_log.md#remediation-profile-wave-6-control-family-migration-documentation-and-ta<REDACTED_OPENAI_API_KEY>)
   - Added the dedicated Wave 6 summary doc for the landed control-family migration order, preserved compatibility strategy IDs, internal family branches, downgrade rules, tenant-default inputs, runtime/preservation gates, canonical artifact authority, and mixed-tier grouped bundle outcomes.
   - Updated remediation-profile navigation and task history while preserving the post-Wave-6 boundary that live family-level validation is still required before shipped-product claims are updated.
 - [Remediation-profile Wave 6 CloudTrail.1 and Config.1 family migration on master (2026-03-15)](task_log.md#remediation-profile-wave-6-cloudtrail1-and-config1-family-migration-on-master-2026-03-15)
@@ -603,7 +616,7 @@ This index maps notable tasks to discoverable entries in `.cursor/notes/task_log
 - [Remediation-profile Wave 5 live AWS validation on master (2026-03-15)](task_log.md#remediation-profile-wave-5-live-aws-validation-on-master-2026-03-15)
   - Ran the Wave 5 live-AWS validation from local `master` against an isolated local runtime plus the real AWS account `696505809372`, captured a dedicated run package under `docs/test-results/live-runs/20260315T001855Z-rem-profile-wave5-live-aws-e2e/`, and recorded pass/fail/blocked outcomes for `RPW5-LIVE-01` through `RPW5-LIVE-08`.
   - Proved the Wave 5 mixed-tier layout semantics, zero-executable `no_executable_bundle` contract, and additive `non_executable_results[]` callback persistence, but found no real mixed-tier executable grouped family, no connected WriteRole for the isolated test account, and a callback replay-token acceptance bug.
-- [Remediation-profile Wave 5 mixed-tier grouped-bundle documentation and task-history integration on master (2026-03-15)](task_log.md#remediation-profile-wave-5-mixed-tier-grouped-bundle-documentation-and-task-history-integration-on-master-2026-03-15)
+- [Remediation-profile Wave 5 mixed-tier grouped-bundle documentation and task-history integration on master (2026-03-15)](task_log.md#remediation-profile-wave-5-mixed-tier-grouped-bundle-documentation-and-ta<REDACTED_OPENAI_API_KEY>)
   - Added the missing Wave 5 summary doc for the landed mixed-tier grouped layout, manifest semantics, executable-root runner behavior, executor detection order, additive `non_executable_results[]` reporting, and overall success/failure rules.
   - Linked the new doc from the remediation-profile README and recorded the remaining separate boundaries for control-family migration, root-key authority, and live AWS validation before shipped-doc claims.
 - [Remediation-profile Wave 5 grouped reporting and mixed-tier result semantics on master (2026-03-15)](task_log.md#remediation-profile-wave-5-grouped-reporting-and-mixed-tier-result-semantics-on-master-2026-03-15)
@@ -1055,7 +1068,7 @@ This index maps notable tasks to discoverable entries in `.cursor/notes/task_log
   - Added a shared action SLA policy with deterministic `due_at` / `expiring_at` / `state` computation and high-impact escalation eligibility.
   - Extended `/api/actions` owner queues with the new `expiring` bucket plus additive `owner_queue_counters` and per-action `sla` metadata.
   - Extended weekly digest and governance Slack/webhook payloads with actionable escalation context and verified the full `pytest -q` suite passes.
-- [P0.5 ownership-based risk queues implementation (2026-03-09)](task_log.md#p05-ownership-based-risk-queues-implementation-2026-03-09)
+- [P0.5 ownership-based risk queues implementation (2026-03-09)](task_log.md#p05-ownership-based-ri<REDACTED_OPENAI_API_KEY>)
   - Persisted deterministic action owner fields (`owner_type`, `owner_key`, `owner_label`) with explicit `unassigned` defaults.
   - Added owner-scoped `/api/actions` queues for `open`, `overdue`, `expiring_exceptions`, and `blocked_fixes` using the approved score-based overdue windows and exception-only blocker semantics.
   - Added focused P0.5 regression tests and verified the full `pytest -q` suite passes.
@@ -1067,7 +1080,7 @@ This index maps notable tasks to discoverable entries in `.cursor/notes/task_log
   - Added additive `score_factors` payloads to `/api/actions` list/detail responses with factor name, weight, contribution, evidence source, signals, and explanation.
   - Kept total-factor contributions aligned with the persisted action `score`, including legacy fallback handling for older partial payloads.
   - Added focused P0.2 regression tests and verified the full `pytest -q` suite passes.
-- [P0.1 context-driven risk prioritization scoring implementation (2026-03-09)](task_log.md#p01-context-driven-risk-prioritization-scoring-implementation-2026-03-09)
+- [P0.1 context-driven risk prioritization scoring implementation (2026-03-09)](task_log.md#p01-context-driven-ri<REDACTED_OPENAI_API_KEY>)
   - Replaced severity-only action priority with deterministic weighted scoring across severity, exposure, privilege, data sensitivity, exploit signals, and compensating controls.
   - Persisted `score` plus normalized component payloads on actions and exposed them in `/api/actions`.
   - Added score determinism/ranking coverage and verified the full `pytest -q` suite passes.
@@ -1128,7 +1141,7 @@ This index maps notable tasks to discoverable entries in `.cursor/notes/task_log
   - Added explicit Security Graph feature wording to the Phase 3 roadmap addition.
   - Captured graph scope as relationship modeling plus graph-backed action context.
   - Preserved existing priority structure while making the capability explicit.
-- [Clarification: risk-reduction vs guarantee for Phase 3 safety/prioritization features (2026-03-05)](task_log.md#clarification-risk-reduction-vs-guarantee-for-phase-3-safetyprioritization-features-2026-03-05)
+- [Clarification: risk-reduction vs guarantee for Phase 3 safety/prioritization features (2026-03-05)](task_log.md#clarification-ri<REDACTED_OPENAI_API_KEY>)
   - Clarified that new Phase 3 features reduce risk but do not provide absolute guarantees.
   - Documented required guardrails that turn prioritization quality into safer execution outcomes.
   - Anchored response to existing project safety and auditability constraints.
@@ -1160,7 +1173,7 @@ This index maps notable tasks to discoverable entries in `.cursor/notes/task_log
   - Identified transferable Wiz-style product selling points for AWS Security Autopilot.
   - Prioritized ideas by leverage and implementation complexity.
   - Anchored recommendations to source-backed Wiz positioning and current project architecture.
-- [Context-driven risk prioritization difficulty assessment (2026-03-05)](task_log.md#context-driven-risk-prioritization-difficulty-assessment-2026-03-05)
+- [Context-driven risk prioritization difficulty assessment (2026-03-05)](task_log.md#context-driven-ri<REDACTED_OPENAI_API_KEY>)
   - Assessed delivery difficulty for context-driven risk prioritization on top of current action engine.
   - Provided phased effort guidance: MVP weighted scoring vs advanced graph/attack-path model.
   - Captured implementation dependencies and calibration risks.
@@ -1200,7 +1213,7 @@ This index maps notable tasks to discoverable entries in `.cursor/notes/task_log
   - Switched six dynamic app routes from `runtime='edge'` to `runtime='nodejs'` to satisfy OpenNext server-bundle constraints.
   - Rebuilt and deployed from CLI using `npx opennextjs-cloudflare build` and `npx opennextjs-cloudflare deploy -c wrangler.jsonc`.
   - Verified live worker serves successfully at `https://frontend.maromaher54.workers.dev` (`HTTP 200`, version `76263247-45a3-45c8-a605-42f7c5f9eda8`).
-- [Phase 2 Interactive Remediation Task 18 exception as first-class choice (2026-03-04)](task_log.md#phase-2-interactive-remediation-task-18-exception-as-first-class-choice-2026-03-04)
+- [Phase 2 Interactive Remediation Task 18 exception as first-class choice (2026-03-04)](task_log.md#phase-2-interactive-remediation-ta<REDACTED_OPENAI_API_KEY>)
   - Added explicit exception input schema (`exception_duration_days`, `exception_reason`) across exception-only strategies and normalized backend exception-flow mapping from `strategy_inputs`.
   - Updated remediation modal strategy UX with a dedicated `I need an exception` option, inline duration picker (7/14/30/90), and inline reason capture.
   - Wired exception selections into the existing `CreateExceptionModal` flow with prefilled reason and computed expiry date; targeted backend/frontend validations passed (`96 passed`, `15 passed`, frontend typecheck pass).
@@ -1208,7 +1221,7 @@ This index maps notable tasks to discoverable entries in `.cursor/notes/task_log
   - Added `export const runtime = 'edge'` to all Cloudflare-flagged dynamic app routes (`actions/[id]`, admin tenant pages, findings detail, remediation run pages).
   - Validated local `frontend` production build passes after route changes (`npm run build`).
   - Committed/pushed targeted fix to `marcoIbrahim0/ocypheris-frontend` on `main` (`2bea607`) for Pages redeploy.
-- [Phase 2 Interactive Remediation Task 17 post-apply change summary card (2026-03-04)](task_log.md#phase-2-interactive-remediation-task-17-post-apply-change-summary-card-2026-03-04)
+- [Phase 2 Interactive Remediation Task 17 post-apply change summary card (2026-03-04)](task_log.md#phase-2-interactive-remediation-ta<REDACTED_OPENAI_API_KEY>)
   - Added execution-worker `change_summary` artifact persistence on successful apply with schema keys `applied_at`, `applied_by`, `changes[]`, and `run_id`.
   - Added ActionDetailDrawer artifact parsing and `Latest successful apply` summary card rendering with run deep-link.
   - Added targeted backend/frontend coverage for artifact generation and drawer rendering; validations passed (`4 passed` worker tests, `1 passed` frontend UI test, frontend typecheck pass).
@@ -1216,27 +1229,27 @@ This index maps notable tasks to discoverable entries in `.cursor/notes/task_log
   - Published the standalone frontend repository to GitHub at `https://github.com/marcoIbrahim0/ocypheris-frontend`.
   - Created/pushed `main` from local `frontend` repo after committing current snapshot (`7332791`).
   - Verified `node_modules`, `.next`, and `out` were not tracked/pushed due frontend `.gitignore`.
-- [Phase 2 Interactive Remediation Task 16 "I don't know" escape hatches (2026-03-04)](task_log.md#phase-2-interactive-remediation-task-16-i-dont-know-escape-hatches-2026-03-04)
+- [Phase 2 Interactive Remediation Task 16 "I don't know" escape hatches (2026-03-04)](task_log.md#phase-2-interactive-remediation-ta<REDACTED_OPENAI_API_KEY>)
   - Added schema-level safe-default metadata (`safe_default_value`, `safe_default_label`) for Task 16 controls: S3.15, EC2.53, Config.1, S3.9, and CloudTrail.1.
   - Added inline `Not sure? Use safe default` actions in `RemediationModal` with token-aware autofill support (`{{account_id}}`, `{{detected_public_ipv4_cidr}}`).
   - Added focused frontend tests asserting escape-hatch autofill behavior across all requested control fields; targeted validation passed (`15 passed` + frontend typecheck).
-- [Phase 2 Interactive Remediation Task 15 blast radius indicator (2026-03-04)](task_log.md#phase-2-interactive-remediation-task-15-blast-radius-indicator-2026-03-04)
+- [Phase 2 Interactive Remediation Task 15 blast radius indicator (2026-03-04)](task_log.md#phase-2-interactive-remediation-ta<REDACTED_OPENAI_API_KEY>)
   - Added remediation-option strategy metadata for `blast_radius` with enum-safe values and per-control mapping coverage across all 16 controls.
   - Added API serialization of `blast_radius` in `GET /api/actions/{id}/remediation-options`.
   - Added modal-header colored blast-radius badge with tooltip and targeted backend/frontend validation pass.
-- [Phase 2 Interactive Remediation Task 14 estimated resolution + trigger re-eval (2026-03-04)](task_log.md#phase-2-interactive-remediation-task-14-estimated-resolution--trigger-re-eval-2026-03-04)
+- [Phase 2 Interactive Remediation Task 14 estimated resolution + trigger re-eval (2026-03-04)](task_log.md#phase-2-interactive-remediation-ta<REDACTED_OPENAI_API_KEY>)
   - Added remediation-option strategy metadata for `estimated_resolution_time` and `supports_immediate_reeval` with per-control estimates.
   - Added `POST /api/actions/{id}/trigger-reeval` to enqueue immediate action-scoped reconciliation jobs when strategy support allows it.
   - Added modal estimate text and direct-fix checkbox to trigger re-evaluation after apply, with targeted backend/frontend validations passing.
-- [Phase 2 Interactive Remediation Task 13 rollback recipe shown upfront (2026-03-04)](task_log.md#phase-2-interactive-remediation-task-13-rollback-recipe-shown-upfront-2026-03-04)
+- [Phase 2 Interactive Remediation Task 13 rollback recipe shown upfront (2026-03-04)](task_log.md#phase-2-interactive-remediation-ta<REDACTED_OPENAI_API_KEY>)
   - Added rollback command contract support to remediation-options API and frontend option typing (`rollback_command`).
   - Populated rollback command coverage for all 16 in-scope controls via strategy/action mapping in remediation strategy service.
   - Added modal UX: collapsed `How to undo this` section with copy affordance and targeted API/frontend validations passing.
-- [Phase 2 Interactive Remediation Task 12 smart defaults from AWS context (2026-03-04)](task_log.md#phase-2-interactive-remediation-task-12-smart-defaults-from-aws-context-2026-03-04)
+- [Phase 2 Interactive Remediation Task 12 smart defaults from AWS context (2026-03-04)](task_log.md#phase-2-interactive-remediation-ta<REDACTED_OPENAI_API_KEY>)
   - Added runtime context probes in remediation runtime checks, including `context.kms_key_options` from `kms:ListAliases`.
   - Added Config/CloudTrail account-context default inputs and exposed strategy `context` via remediation-options API payload.
   - Added frontend smart-prefill behavior (ipify-based EC2.53 CIDR + context default hydration) with targeted backend/frontend validations passing.
-- [Phase 2 Interactive Remediation Task 11 before/after state simulator (2026-03-04)](task_log.md#phase-2-interactive-remediation-task-11-beforeafter-state-simulator-2026-03-04)
+- [Phase 2 Interactive Remediation Task 11 before/after state simulator (2026-03-04)](task_log.md#phase-2-interactive-remediation-ta<REDACTED_OPENAI_API_KEY>)
   - Extended remediation-preview API payloads with `before_state`, `after_state`, and `diff_lines` while preserving existing response behavior.
   - Added EC2.53/S3.5/Config.1 runtime state capture and predicted-state simulation in backend services.
   - Updated `RemediationModal` to fetch preview in `pr_only` mode and render a two-column Before/After diff card; targeted validations passed (`7 passed`, frontend typecheck pass).
@@ -1244,39 +1257,39 @@ This index maps notable tasks to discoverable entries in `.cursor/notes/task_log
   - Replaced active `valensjewelry.com` defaults/examples with `ocypheris.com` across env files, deploy scripts, CloudFormation/Terraform defaults, and automation script configs.
   - Updated operational docs and runbooks to `dev.ocypheris.com` / `api.ocypheris.com` while preserving historical evidence artifacts.
   - Updated no-UI campaign/client smoke tests for the new API base; targeted validation passed (`14 passed`).
-- [Phase 2 Interactive Remediation Task 10 impact summary in preview (2026-03-04)](task_log.md#phase-2-interactive-remediation-task-10-impact-summary-in-preview-2026-03-04)
+- [Phase 2 Interactive Remediation Task 10 impact summary in preview (2026-03-04)](task_log.md#phase-2-interactive-remediation-ta<REDACTED_OPENAI_API_KEY>)
   - Added `get_impact_summary(strategy_id, strategy_inputs)` in `backend/services/remediation_strategy.py` to compose deduplicated impact text from strategy-level, field-level, and selected-option metadata.
   - Wired `GET /api/actions/{id}/remediation-preview` to return optional `impact_summary` while preserving existing `compliant`/`message`/`will_apply` behavior.
   - Added remediation-preview tests for `pr_only` selected-choice summaries and `direct_fix` strategy summaries; targeted preview validation passed (`5 passed`).
-- [Phase 2 Interactive Remediation Task 9 remediation modal rendering upgrades (2026-03-04)](task_log.md#phase-2-interactive-remediation-task-9-remediation-modal-rendering-upgrades-2026-03-04)
+- [Phase 2 Interactive Remediation Task 9 remediation modal rendering upgrades (2026-03-04)](task_log.md#phase-2-interactive-remediation-ta<REDACTED_OPENAI_API_KEY>)
   - Upgraded `frontend/src/components/RemediationModal.tsx` to render `select`, `boolean` switch, `cidr`, and `number` fields with metadata-driven behavior.
   - Added `visible_when` conditional rendering, grouped field sections (`group`), help tooltip icons (`help_text`), and per-group impact preview boxes using `impact_text`.
   - Added focused UI tests in `frontend/src/components/RemediationModal.test.tsx` covering validation, visibility, grouping, and typed strategy input submission; required frontend validations passed.
-- [Phase 2 Interactive Remediation Task 8 frontend API type extension (2026-03-04)](task_log.md#phase-2-interactive-remediation-task-8-frontend-api-type-extension-2026-03-04)
+- [Phase 2 Interactive Remediation Task 8 frontend API type extension (2026-03-04)](task_log.md#phase-2-interactive-remediation-ta<REDACTED_OPENAI_API_KEY>)
   - Extended `frontend/src/lib/api.ts` `StrategyInputSchemaField` `type` union with `select`, `boolean`, `cidr`, and `number` while preserving existing `string` and `string_array`.
   - Added optional schema metadata typing for guided-input UX: `placeholder`, `help_text`, `default_value`, `options`, `visible_when`, `impact_text`, `group`, `min`, and `max`.
   - Added `StrategyInputOption`/`StrategyInputVisibleWhen` interfaces and validated with `cd frontend && npx tsc --noEmit`.
-- [Phase 2 Interactive Remediation Task 7 simple controls impact text (2026-03-04)](task_log.md#phase-2-interactive-remediation-task-7-simple-controls-impact-text-2026-03-04)
+- [Phase 2 Interactive Remediation Task 7 simple controls impact text (2026-03-04)](task_log.md#phase-2-interactive-remediation-ta<REDACTED_OPENAI_API_KEY>)
   - Added non-empty strategy-level `impact_text` coverage for SecurityHub.1, GuardDuty.1, SSM.7, EC2.182, and EC2.7 in remediation strategy metadata.
   - Exposed `impact_text` in remediation-options API strategy payloads and preserved legacy run-create compatibility for optional Security Hub/GuardDuty strategy catalogs.
   - Added focused remediation-options API tests in `tests/test_remediation_runs_api.py`; targeted validation passed (`8 passed`).
-- [Phase 2 Interactive Remediation Task 6 S3 controls guided schemas (2026-03-04)](task_log.md#phase-2-interactive-remediation-task-6-s3-controls-guided-schemas-2026-03-04)
+- [Phase 2 Interactive Remediation Task 6 S3 controls guided schemas (2026-03-04)](task_log.md#phase-2-interactive-remediation-ta<REDACTED_OPENAI_API_KEY>)
   - Completed guided strategy schema coverage for S3.5/S3.9/S3.11/S3.15 and added impact-text coverage for S3.1/S3.2/S3.4.
   - Wired S3 PR-bundle generation to consume relevant inputs: S3.11 `abort_days`, S3.15 `kms_key_mode` + `kms_key_arn`, and S3.5 `preserve_existing_policy`.
   - Added focused S3 strategy/wiring test coverage in `tests/test_step7_components.py`; targeted validation passed.
-- [Phase 2 Interactive Remediation Task 5 CloudTrail.1 guided choice schema (2026-03-04)](task_log.md#phase-2-interactive-remediation-task-5-cloudtrail1-guided-choice-schema-2026-03-04)
+- [Phase 2 Interactive Remediation Task 5 CloudTrail.1 guided choice schema (2026-03-04)](task_log.md#phase-2-interactive-remediation-ta<REDACTED_OPENAI_API_KEY>)
   - Added guided CloudTrail.1 schema fields on `cloudtrail_enable_guided`: `trail_name` (default `security-autopilot-trail`), `create_bucket_policy` (boolean default `true`), and `multi_region` (boolean default `true`).
   - Wired CloudTrail Terraform/CloudFormation generation to resolve guided inputs via `_resolve_cloudtrail_defaults()` and apply them to trail name, multi-region toggle, and bucket-policy creation behavior.
   - Added focused CloudTrail schema/wiring coverage in `tests/test_step7_components.py`; targeted validation passed (`9 passed`).
-- [Phase 2 Interactive Remediation Task 4 Config.1 guided choice schema (2026-03-04)](task_log.md#phase-2-interactive-remediation-task-4-config1-guided-choice-schema-2026-03-04)
+- [Phase 2 Interactive Remediation Task 4 Config.1 guided choice schema (2026-03-04)](task_log.md#phase-2-interactive-remediation-ta<REDACTED_OPENAI_API_KEY>)
   - Added guided Config.1 schema fields on `config_enable_centralized_delivery`: `recording_scope`, `delivery_bucket_mode`, conditional `existing_bucket_name`, `encrypt_with_kms`, and conditional `kms_key_arn`.
   - Wired Config Terraform/CloudFormation generation to resolve guided inputs with legacy-compatible fallbacks via `_resolve_aws_config_defaults()`.
   - Added focused Config schema/wiring coverage in `tests/test_step7_components.py`; targeted validation passed (`11 passed`).
-- [Phase 2 Interactive Remediation Task 3 IAM.4 guided choice schema (2026-03-04)](task_log.md#phase-2-interactive-remediation-task-3-iam4-guided-choice-schema-2026-03-04)
+- [Phase 2 Interactive Remediation Task 3 IAM.4 guided choice schema (2026-03-04)](task_log.md#phase-2-interactive-remediation-ta<REDACTED_OPENAI_API_KEY>)
   - Added IAM.4 `action_mode` select schema (`disable_key` / `delete_key`) with option-level `impact_text` on existing root-key strategies.
   - Preserved worker compatibility by keeping existing strategy IDs (`iam_root_key_disable`, `iam_root_key_delete`) and adding validation that `action_mode` cannot conflict with selected strategy.
   - Added IAM strategy-schema assertions and mapping-validation tests in `tests/test_remediation_runs_api.py`; targeted validation passed (`17 passed`).
-- [Phase 2 Interactive Remediation Task 2 EC2.53 guided choice schema (2026-03-04)](task_log.md#phase-2-interactive-remediation-task-2-ec253-guided-choice-schema-2026-03-04)
+- [Phase 2 Interactive Remediation Task 2 EC2.53 guided choice schema (2026-03-04)](task_log.md#phase-2-interactive-remediation-ta<REDACTED_OPENAI_API_KEY>)
   - Added `sg_restrict_public_ports` guided strategy schema with `access_mode` select choices, conditional CIDR fields, and option-level `impact_text`.
   - Wired EC2.53 `strategy_inputs` into SG bundle generation so Terraform/CloudFormation defaults reflect provided CIDRs.
   - Enforced `remove_existing_public_rules=true` only when `access_mode=close_and_revoke`, with focused SG test coverage and passing targeted validation (`13 passed`).
@@ -1296,7 +1309,7 @@ This index maps notable tasks to discoverable entries in `.cursor/notes/task_log
   - Verified active AWS account/principal via CLI (`029037611564`, `AutoPilotAdmin`) and identified the `eu-north-1` ECS cluster/service pair.
   - Executed emergency shutdown path: set service desired count to `0`, deleted service (`--force`), deleted cluster.
   - Verified final regional state: no ECS clusters and no EKS clusters in `eu-north-1`.
-- [Phase 2 Interactive Remediation Task 1 input schema type expansion (2026-03-04)](task_log.md#phase-2-interactive-remediation-task-1-input-schema-type-expansion-2026-03-04)
+- [Phase 2 Interactive Remediation Task 1 input schema type expansion (2026-03-04)](task_log.md#phase-2-interactive-remediation-ta<REDACTED_OPENAI_API_KEY>)
   - Extended `StrategyInputSchemaField` typing with new field types (`select`, `boolean`, `cidr`, `number`) and metadata (`placeholder`, `help_text`, `default_value`, `options`, `visible_when`, `impact_text`, `group`, `min`, `max`).
   - Expanded `validate_strategy_inputs()` with strict select/boolean/cidr/number validation, enum/options enforcement, and number bounds checks while preserving existing string/string-array normalization.
   - Added focused test coverage in `tests/test_remediation_runs_api.py`; targeted validation passed (`8 passed`).
@@ -1304,11 +1317,11 @@ This index maps notable tasks to discoverable entries in `.cursor/notes/task_log
   - Verified root route guest default is already `/landing` (not `/login`) in `frontend/src/app/page.tsx`.
   - Implemented explicit persisted dark/light theme preference (`security-autopilot-theme`) and removed hardcoded `<html className="dark">` override.
   - Added persisted sidebar expanded/contracted preference via `localStorage` key `security-autopilot-sidebar-pinned`.
-- [Phase 2 Task 11 retroactive verification script for S3.1 CF no-op runs (2026-03-04)](task_log.md#phase-2-task-11-retroactive-verification-script-for-s31-cf-no-op-runs-2026-03-04)
+- [Phase 2 Task 11 retroactive verification script for S3.1 CF no-op runs (2026-03-04)](task_log.md#phase-2-ta<REDACTED_OPENAI_API_KEY>)
   - Added `scripts/check_s3_cf_noop_runs.py` to identify legacy S3.1 CloudFormation `completed` runs and mark them `verification_required` with banner flags.
   - Implemented schema-tolerant safeguards (join/fallback paths, enum compatibility check, idempotent zero-match behavior) and PM-ready JSON summary logging.
   - Added required unit tests for both match and no-match paths in `tests/test_check_s3_cf_noop_runs.py` (`2 passed`).
-- [Phase 2 Task 10 post-fix access guidance in bundle READMEs (2026-03-04)](task_log.md#phase-2-task-10-post-fix-access-guidance-in-bundle-readmes-2026-03-04)
+- [Phase 2 Task 10 post-fix access guidance in bundle READMEs (2026-03-04)](task_log.md#phase-2-ta<REDACTED_OPENAI_API_KEY>)
   - Added post-fix guidance blocks to Terraform README output for `EC2.53`, `S3.2`, `S3.5`, and `SSM.7` with required sections: `what changes`, `how to access now`, `verify`, `rollback`.
   - Updated CloudFormation instruction steps for the same controls to include concrete operator commands (`aws ssm start-session`, CloudFront access note, HTTPS-only verification, SSM private-share workflow).
   - Added Step 7 unit assertions requiring guidance strings per control in README/instruction outputs.
@@ -1320,19 +1333,19 @@ This index maps notable tasks to discoverable entries in `.cursor/notes/task_log
   - Executed live `D1`–`D5` with evidence under `docs/audit-remediation/evidence/phase2-live-test-d-20260304T013004Z/`.
   - Results: `D1 PASS`, `D2 PASS`, `D3 PASS`, `D4 PASS`, `D5 PASS`.
   - Captured Config recorder/channel CLI verification, S3 lifecycle verification, S3 logging verification, and post-run cleanup artifacts.
-- [Phase 2 Task 7 Config.1 preflight recorder + delivery inspection (2026-03-04)](task_log.md#phase-2-task-7-config1-preflight-recorder--delivery-inspection-2026-03-04)
+- [Phase 2 Task 7 Config.1 preflight recorder + delivery inspection (2026-03-04)](task_log.md#phase-2-ta<REDACTED_OPENAI_API_KEY>)
   - Added Config.1 Terraform preflight safeguards: recorder-scope overwrite opt-in (`overwrite_recording_group=false` default), recorder-name reuse, delivery-channel bucket mismatch warning, and merge-safe local bucket-policy write path.
   - Added Config.1 README guardrail section describing recorder/delivery preflight behavior.
   - Updated read-role/validation permission surfaces for Config recorder and delivery describe operations (`DescribeConfigurationRecorders`, `DescribeDeliveryChannels`) with focused tests.
-- [Phase 2 Task 6b S3.5 merge and fail-closed generation (2026-03-04)](task_log.md#phase-2-task-6b-s35-merge-and-fail-closed-generation-2026-03-04)
+- [Phase 2 Task 6b S3.5 merge and fail-closed generation (2026-03-04)](task_log.md#phase-2-ta<REDACTED_OPENAI_API_KEY>)
   - Reworked S3.5 generation to use shared policy-preservation resolver path and enforce fail-closed `bucket_policy_preservation_evidence_missing` when statement count is non-zero but policy JSON is absent.
   - Switched S3.5 Terraform to merge via `aws_iam_policy_document` and emit `terraform.auto.tfvars.json` with preserved policy JSON when available.
   - Switched S3.5 CloudFormation to merge policy via Lambda-backed `Custom::S3SslPolicyMerge` and added Step 7 coverage for merge, zero-policy, and fail-closed paths.
-- [Phase 2 Task 9 S3.9 self-referencing log bucket default fix (2026-03-04)](task_log.md#phase-2-task-9-s39-self-referencing-log-bucket-default-fix-2026-03-04)
+- [Phase 2 Task 9 S3.9 self-referencing log bucket default fix (2026-03-04)](task_log.md#phase-2-ta<REDACTED_OPENAI_API_KEY>)
   - Updated S3.9 Terraform/CloudFormation generation so unresolved `log_bucket_name` defaults to `REPLACE_LOG_BUCKET_NAME` (not source bucket) and fails closed.
   - Added `REPLACE_LOG_BUCKET_NAME` to blocked placeholder enforcement and explicit step guidance to never use source bucket as log destination.
   - Added tests proving unresolved-log-bucket failure and valid separate-log-bucket override success.
-- [Phase 2 Task 8 S3.11 CF lifecycle fix (2026-03-04)](task_log.md#phase-2-task-8-s311-cf-lifecycle-fix-2026-03-04)
+- [Phase 2 Task 8 S3.11 CF lifecycle fix (2026-03-04)](task_log.md#phase-2-ta<REDACTED_OPENAI_API_KEY>)
   - Replaced S3.11 CloudFormation `AWS::S3::Bucket` lifecycle resource with a Lambda custom resource that calls `PutLifecycleConfiguration`.
   - Enforced create/update apply behavior and explicit delete no-op semantics.
   - Added Step 7 assertions for no `AWS::S3::Bucket`, Lambda/custom-resource presence, API call path, and delete no-op behavior.
@@ -1344,15 +1357,15 @@ This index maps notable tasks to discoverable entries in `.cursor/notes/task_log
   - Executed Live Test C (`C1`–`C5`) with evidence under `docs/audit-remediation/evidence/phase2-live-test-c-20260303T224523Z/`.
   - Results: `C1 FAIL`, `C2 FAIL`, `C3 FAIL`, `C4 PASS`, `C5 FAIL`.
   - Captured before/after bucket policy JSON snippets (`policy-snippets.md`) and regression-risk notes (`summary.md`).
-- [Phase 2 Task 5 CloudTrail.1 required bucket policy in TF+CF (2026-03-03)](task_log.md#phase-2-task-5-cloudtrail1-required-bucket-policy-in-tfcf-2026-03-03)
+- [Phase 2 Task 5 CloudTrail.1 required bucket policy in TF+CF (2026-03-03)](task_log.md#phase-2-ta<REDACTED_OPENAI_API_KEY>)
   - Added required CloudTrail bucket-policy statements for `cloudtrail.amazonaws.com`: `s3:GetBucketAcl` and `s3:PutObject` on `AWSLogs/<account>/CloudTrail/*` with `bucket-owner-full-control`.
   - Added `create_bucket_policy` wiring (default `true`) and strategy opt-out support.
   - Added Step 7 assertions that policy statements/resources exist by default and are removed when opt-out is selected.
-- [Phase 2 Task 6a S3.5 runtime policy capture (2026-03-03)](task_log.md#phase-2-task-6a-s35-runtime-policy-capture-2026-03-03)
+- [Phase 2 Task 6a S3.5 runtime policy capture (2026-03-03)](task_log.md#phase-2-ta<REDACTED_OPENAI_API_KEY>)
   - Implemented S3.5 runtime policy evidence capture in `collect_runtime_risk_signals()` for `existing_bucket_policy_json` and `existing_bucket_policy_statement_count`.
   - Added explicit branch handling for `NoSuchBucketPolicy` (`count=0`) and `AccessDenied` (access path marked unavailable, non-crashing probe path).
   - Added focused unit coverage in `tests/test_remediation_runtime_checks.py` for success, missing-policy, and access-denied branches.
-- [Phase 2 Task 4 EC2.53 CF revoke parity via Lambda custom resource (2026-03-03)](task_log.md#phase-2-task-4-ec253-cf-revoke-parity-via-lambda-custom-resource-2026-03-03)
+- [Phase 2 Task 4 EC2.53 CF revoke parity via Lambda custom resource (2026-03-03)](task_log.md#phase-2-ta<REDACTED_OPENAI_API_KEY>)
   - Implemented CloudFormation parity for EC2.53 with Lambda custom resource revoke flow (`ec2:RevokeSecurityGroupIngress`) for `0.0.0.0/0` and `::/0` on ports `22/3389`.
   - Added `DependsOn: RevokePublicAdminIngress` to all restricted ingress resources so revoke executes before adds.
   - Added/updated Step 7 assertions for Lambda/custom-resource presence, revoke logic, ordering dependency, and delete no-op behavior.
@@ -1365,7 +1378,7 @@ This index maps notable tasks to discoverable entries in `.cursor/notes/task_log
   - Executed Live Test A (`A1`–`A5`) in test account `029037611564` (`eu-north-1`) with full artifact capture under `docs/audit-remediation/evidence/phase2-live-test-a-20260303T175347Z/`.
   - Results: `A1 FAIL` (S3.1 CF deploy rollback), `A2 PASS`, `A3 PASS`, `A4 PASS`, `A5 PASS`.
   - Blocker isolated from Lambda logs: role denied `s3:PutAccountPublicAccessBlock` during S3.1 custom-resource create path.
-- [Phase 2 Task 3 IAM.4 MFA gate for root-key delete path (2026-03-03)](task_log.md#phase-2-task-3-iam4-mfa-gate-for-root-key-delete-path-2026-03-03)
+- [Phase 2 Task 3 IAM.4 MFA gate for root-key delete path (2026-03-03)](task_log.md#phase-2-ta<REDACTED_OPENAI_API_KEY>)
   - Added runtime `AccountMFAEnabled` probe for `iam_root_key_delete` and converted MFA-disabled state into a hard dependency-check failure.
   - Added worker delete-path hard stop to `needs_attention` with reason `root_mfa_not_enrolled`.
   - Updated RemediationModal strategy surface to show explicit safety-gate blocked messaging and disabled execution when MFA gate fails.
@@ -1373,11 +1386,11 @@ This index maps notable tasks to discoverable entries in `.cursor/notes/task_log
   - Ran targeted post-implementation test scope for S3 and SG/CloudFormation coverage (`44 passed, 31 deselected`).
   - Re-ran lint on touched implementation/test files (`pr_bundle.py`, `test_step7_components.py`) with clean result.
   - Confirmed assertion-level proof for S3.1 non-no-op behavior, EC2.53 revoke opt-in gating, and EC2.53 CF additive/manual-revoke fail-closed contract.
-- [Phase 2 Task 2 EC2.53 revoke opt-in and CF fail-closed checklist (2026-03-03)](task_log.md#phase-2-task-2-ec253-revoke-opt-in-and-cf-fail-closed-checklist-2026-03-03)
+- [Phase 2 Task 2 EC2.53 revoke opt-in and CF fail-closed checklist (2026-03-03)](task_log.md#phase-2-ta<REDACTED_OPENAI_API_KEY>)
   - Added Terraform opt-in guard `remove_existing_public_rules` (default `false`) so SG public-rule revoke preflight executes only when explicitly enabled.
   - Added CloudFormation fail-closed guidance that the template is additive only and does not revoke existing `0.0.0.0/0` or `::/0` admin rules.
   - Added mandatory manual-revoke checklist language plus unit assertions for IMPORTANT step coverage and no revoke API calls in CF template.
-- [Phase 2 Task 1: S3.1 CloudFormation custom resource remediation (2026-03-03)](task_log.md#phase-2-task-1-s31-cloudformation-custom-resource-remediation-2026-03-03)
+- [Phase 2 Task 1: S3.1 CloudFormation custom resource remediation (2026-03-03)](task_log.md#phase-2-ta<REDACTED_OPENAI_API_KEY>)
   - Replaced S3.1 CloudFormation `WaitConditionHandle` no-op path with a Lambda custom resource that performs real `s3control:PutPublicAccessBlock` remediation.
   - Enforced all four account-level public access block flags in the generated Lambda code and added delete-path no-op success handling.
   - Updated Step 7 component tests to assert no placeholder resource, required Lambda/Custom resource presence, API call pattern, and delete success semantics.
@@ -2147,7 +2160,7 @@ This index maps notable tasks to discoverable entries in `.cursor/notes/task_log
   - Added `docs/prod-readiness/08-task4-reset-arch1.sh` with standalone AWS CLI reset blocks that restore A1/A2 and requested B1/B2 misconfiguration states.
   - Reused variable names from `08-task2-deploy-arch1.sh`, including region/account and resource-lookup variables for SG IDs and bucket names.
   - Updated docs indexes to cross-link the new reset script under `/docs/prod-readiness/`.
-- [High-risk architecture-source remediation + medium/low risk backlog updates (2026-02-25)](task_log.md#high-risk-architecture-source-remediation--mediumlow-risk-backlog-updates-2026-02-25)
+- [High-risk architecture-source remediation + medium/low risk backlog updates (2026-02-25)](task_log.md#high-ri<REDACTED_OPENAI_API_KEY>)
   - Added `docs/prod-readiness/07-architecture-design.md` as canonical architecture resource-design source for script prep.
   - Replaced placeholder inventory output with full extraction in `docs/prod-readiness/08-task1-resource-inventory.md`.
   - Added medium/low residual risk actions (#14, #15) to `docs/prod-readiness/important-to-do.md`.
@@ -2163,7 +2176,7 @@ This index maps notable tasks to discoverable entries in `.cursor/notes/task_log
   - Added two new `important-to-do` actions for A-series follow-up risk control.
   - Captured explicit severities: Low (wording interpretation drift) and Medium (task-scope/process boundary drift).
   - Added concrete execution steps and references to source task documents.
-- [Discovery contract bootstrap and Task 1 validation rerun (2026-02-25)](task_log.md#discovery-contract-bootstrap-and-task-1-validation-rerun-2026-02-25)
+- [Discovery contract bootstrap and Task 1 validation rerun (2026-02-25)](task_log.md#discovery-contract-bootstrap-and-ta<REDACTED_OPENAI_API_KEY>)
   - Created `docs/prod-readiness/01-discovery.md` to define authoritative discovery scope, normalization, runtime-boundary rules, and validation gates.
   - Re-ran the Task 1 input-validation workflow with both required source files available.
   - Added cross-links in docs indexes so discovery and validation inputs are discoverable.
@@ -2222,7 +2235,7 @@ This index maps notable tasks to discoverable entries in `.cursor/notes/task_log
 - [Remove pr_only placeholder output for remaining action types (2026-02-25)](task_log.md#remove-pr_only-placeholder-output-for-remaining-action-types-2026-02-25)
   - Replaced README-only fallback behavior in PR bundle generation with executable IaC or explicit structured errors.
   - Added per-action-type artifact-generation tests and worker structured-error persistence coverage.
-- [PM follow-up: prompts for risk #1 and #2 + docs important-to-do for #3/#4 (2026-02-25)](task_log.md#pm-follow-up-prompts-for-risk-1-and-2--docs-important-to-do-for-34-2026-02-25)
+- [PM follow-up: prompts for risk #1 and #2 + docs important-to-do for #3/#4 (2026-02-25)](task_log.md#pm-follow-up-prompts-for-ri<REDACTED_OPENAI_API_KEY>)
   - Added `docs/prod-readiness/important-to-do.md` with severity-tagged follow-up actions for risks #3 and #4.
   - Linked the checklist from docs indexes for discoverability.
 - [Root-key safe remediation release audit (P0-P12) (2026-03-02)](task_log.md#root-key-safe-remediation-release-audit-p0-p12-2026-03-02)
