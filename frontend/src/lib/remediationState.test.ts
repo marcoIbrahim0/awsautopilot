@@ -85,7 +85,7 @@ describe('remediationState', () => {
     expect(getNoRemediationActionPresentation()).toEqual({
       label: 'No remediation action yet',
       description:
-        'No remediation action is currently available for this item, usually because dependency or safety checks blocked generation.',
+        'No runnable remediation action is linked to this row right now. If this finding family is managed on related rows, open those rows for the fix.',
       variant: 'default',
     });
   });

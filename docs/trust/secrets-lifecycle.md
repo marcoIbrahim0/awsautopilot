@@ -17,7 +17,7 @@ This page summarizes the current secret surfaces that matter for buyer trust rev
 
 - Bundle reporting tokens must use `BUNDLE_REPORTING_TOKEN_SECRET`; there is no `JWT_SECRET` fallback.
 - The deploy path can resolve `JWT_SECRET`, `BUNDLE_REPORTING_TOKEN_SECRET`, and `CONTROL_PLANE_EVENTS_SECRET` from Secrets Manager when they are absent from `config/.env.ops`.
-- The serverless Help Hub deploy path resolves `OPENAI_API_KEY` from `OPENAI_API_KEY_SECRET_ID` instead of storing the plaintext key in `config/.env.ops`.
+- The serverless Help Hub deploy path resolves `OPENAI_API_KEY` from `OPENAI_API_KEY_SECRET_ID` and now refuses plaintext `OPENAI_API_KEY` deploy inputs.
 - Tenant control-plane tokens are never returned again after creation or rotation; the UI/API only expose fingerprint and active/revoked state after that point.
 
 ## Supporting Docs

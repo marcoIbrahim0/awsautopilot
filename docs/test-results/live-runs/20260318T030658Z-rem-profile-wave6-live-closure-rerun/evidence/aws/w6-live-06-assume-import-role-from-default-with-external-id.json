@@ -1,8 +1,8 @@
 {
     "Credentials": {
-        "AccessKeyId": "ASIA2EKX3HHONITXISAM",
-        "SecretAccessKey": "Q5WuW7M0v1NEo0jWdGc09UzQJw3GqCv7qlGbOzem",
-        "SessionToken": "IQoJb3JpZ2luX2VjEEIaCmV1LW5vcnRoLTEiSDBGAiEAy8jdnCFexk3rI8mVZ2NKb7d8cinIT4FENnO+dDkk0JYCIQDWyTBmTKK+a5cLbcm8PY6ev6/3NxOgvgju4ypwOAf2CSqdAggLEAAaDDY5NjUwNTgwOTM3MiIMvltYTc8UZQFg7uU5KvoBcGSmCybZy0Us4/d7SMxptZ+KAFesAZTY9U/WTc1+cyQvT8FWZqH7B6RffsEYU9qPF99FQgOxDnuFDeyHFKy9Lij835lVe3BXWwn6gMmp+NL145X40cS8Gl2G0fehfkMWFyfqCMEgjeOQORkEGDx365SHWhdZcjTVOekuNfqQAg1Ydh27De3NlLLd5wBZQXxH0NPTtf5irfcGjf5Lo9ROxEXUFFpynWzQjaduJVlxu71Nh7wSxmru4wqsCqWTesaNPRsxbQSgtzCE0l0OY+Bgd6dNp1SPDPhjDKZ5DffZ2eFLkzuJFTMs2zANBu5vrhTkabAp8+NjqB3hujD+1uvNBjqcAZPCJt7xc8X5iPfa0VGyJGJCfjboP7IKIbS97tpIym6xDEx/3k7s2VaVMS5JWpmvlRh2h5YA6DKW6NYxOJLqARGX5UYZdI+F4RyaESbQHjNdSuLRad0TtCwNWKHwygUKqLLE87KVaKV6RfSoNvskeodygtx0ok4/ZndIJ20K+CKfAV7NuuWwRS3qmh0uJXspFdj2/L7vTSD6fGyM6Q==",
+        "AccessKeyId": "<REDACTED_AWS_ACCESS_KEY_ID>",
+        "SecretAccessKey": "<REDACTED_AWS_SECRET_ACCESS_KEY>",
+        "SessionToken": "<REDACTED_AWS_SESSION_TOKEN>",
         "Expiration": "2026-03-18T19:14:22+00:00"
     },
     "AssumedRoleUser": {

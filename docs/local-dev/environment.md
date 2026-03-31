@@ -35,19 +35,59 @@ DATABASE_URL="postgresql+asyncpg://user:password@host:5432/dbname"
 # Sync PostgreSQL URL for Alembic migrations (psycopg2 driver)
 # If unset, derived from DATABASE_URL by replacing +asyncpg with +psycopg2
 DATABASE_URL_SYNC="postgresql://user:password@host:5432/dbname"
+
+# Optional fallback database used when the primary database is unreachable
+# or the provider rejects traffic with a quota-style connection error.
+DATABASE_URL_FALLBACK="postgresql+asyncpg://user:password@fallback-host:5432/dbname"
+DATABASE_URL_SYNC_FALLBACK="postgresql://user:password@fallback-host:5432/dbname"
+
+# Cooldown before retrying the primary after a failover-eligible error.
+DATABASE_FAILOVER_PRIMARY_RETRY_SECONDS="300"
+
+# Keep fallback authoritative until the runtime can resync fallback back into
+# primary after the primary recovers from quota/connectivity failure.
+DATABASE_FAILOVER_SYNC_ENABLED="true"
+DATABASE_FAILOVER_SYNC_POLL_SECONDS="60"
 ```
 
 **Example (Neon):**
 ```bash
 DATABASE_URL="postgresql+asyncpg://neondb_owner:password@ep-square-queen-agyb78gw-pooler.c-2.eu-central-1.aws.neon.tech/neondb?sslmode=require"
 DATABASE_URL_SYNC="postgresql://neondb_owner:password@ep-square-queen-agyb78gw-pooler.c-2.eu-central-1.aws.neon.tech/neondb?sslmode=require"
+DATABASE_URL_FALLBACK="postgresql+asyncpg://neondb_owner:password@ep-curly-butterfly-al0pzr9w-pooler.c-3.eu-central-1.aws.neon.tech/neondb?sslmode=require"
+DATABASE_URL_SYNC_FALLBACK="postgresql://neondb_owner:password@ep-curly-butterfly-al0pzr9w-pooler.c-3.eu-central-1.aws.neon.tech/neondb?sslmode=require"
 ```
 
 **Example (Local Postgres):**
 ```bash
 DATABASE_URL="postgresql+asyncpg://postgres:postgres@localhost:5432/security_autopilot"
 DATABASE_URL_SYNC="postgresql://postgres:postgres@localhost:5432/security_autopilot"
+DATABASE_URL_FALLBACK="postgresql+asyncpg://postgres:postgres@localhost:5433/security_autopilot_fallback"
+DATABASE_URL_SYNC_FALLBACK="postgresql://postgres:postgres@localhost:5433/security_autopilot_fallback"
 ```
+
+#### Failover-aware operator commands
+
+Use the helper below instead of hardwiring `DATABASE_URL_SYNC` when you want the same primary-or-fallback choice the app uses:
+
+```bash
+# print the active sync URL chosen by the repo failover logic
+python scripts/resolve_database_url.py --sync
+
+# open psql against the same active URL
+psql "$(python scripts/resolve_database_url.py --sync)"
+```
+
+When the runtime switches to fallback because the primary host is blocked by a Neon quota error, the runtime now keeps fallback authoritative and automatically waits for primary to become writable again before resynchronizing fallback back into primary. The manual override remains:
+
+```bash
+python scripts/sync_failover_database.py \
+  --source fallback \
+  --target primary \
+  --allow-destructive-sync
+```
+
+The runtime-driven automatic resync is best-effort and only runs when the service has both database URLs and `pg_dump` / `psql` available. Use the manual command above if operators need to force the resync immediately after primary recovers.
 
 #### Application
 

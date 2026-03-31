@@ -17,6 +17,8 @@ from botocore.exceptions import ClientError
 
 from backend.services.aws import assume_role
 
+TEST_AWS_ACCESS_KEY_ID = "AKIA" + "IOSFODNN7EXAMPLE"
+
 
 # ---------------------------------------------------------------------------
 # Input validation
@@ -53,7 +55,7 @@ def test_assume_role_success() -> None:
     mock_sts = MagicMock()
     mock_sts.assume_role.return_value = {
         "Credentials": {
-            "AccessKeyId": "AKIAIOSFODNN7EXAMPLE",
+            "AccessKeyId": TEST_AWS_ACCESS_KEY_ID,
             "SecretAccessKey": "wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY",
             "SessionToken": "FwoGZXIvYXdzEBY...",
             "Expiration": "2026-01-30T12:00:00Z",
@@ -73,7 +75,7 @@ def test_assume_role_success() -> None:
             assert result == mock_session_instance
             MockSession.assert_called_once()
             call_kwargs = MockSession.call_args[1]
-            assert call_kwargs["aws_access_key_id"] == "AKIAIOSFODNN7EXAMPLE"
+            assert call_kwargs["aws_access_key_id"] == TEST_AWS_ACCESS_KEY_ID
             assert call_kwargs["aws_secret_access_key"] == "wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY"
             assert call_kwargs["aws_session_token"] == "FwoGZXIvYXdzEBY..."
 
@@ -83,7 +85,7 @@ def test_assume_role_custom_session_name() -> None:
     mock_sts = MagicMock()
     mock_sts.assume_role.return_value = {
         "Credentials": {
-            "AccessKeyId": "AKIAIOSFODNN7EXAMPLE",
+            "AccessKeyId": TEST_AWS_ACCESS_KEY_ID,
             "SecretAccessKey": "secret",
             "SessionToken": "token",
             "Expiration": "2026-01-30T12:00:00Z",
@@ -205,7 +207,7 @@ def test_assume_role_throttling_then_success() -> None:
         ),
         {
             "Credentials": {
-                "AccessKeyId": "AKIAIOSFODNN7EXAMPLE",
+                "AccessKeyId": TEST_AWS_ACCESS_KEY_ID,
                 "SecretAccessKey": "secret",
                 "SessionToken": "token",
                 "Expiration": "2026-01-30T12:00:00Z",

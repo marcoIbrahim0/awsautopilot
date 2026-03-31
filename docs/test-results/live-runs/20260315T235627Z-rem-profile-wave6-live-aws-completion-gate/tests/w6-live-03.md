@@ -10,7 +10,7 @@
 ## Preconditions
 
 - Generic IAM.4 action: `6d495cf7-358b-45a6-9dd0-d047adc50445`
-- Root access key present before the test: `AKIA2EKX3HHOEGULJZ4Y` (`Active`)
+- Root access key present before the test: `<REDACTED_AWS_ACCESS_KEY_ID>` (`Active`)
 - Root MFA enabled before the test: `AccountMFAEnabled = 1`
 
 ## Steps Executed

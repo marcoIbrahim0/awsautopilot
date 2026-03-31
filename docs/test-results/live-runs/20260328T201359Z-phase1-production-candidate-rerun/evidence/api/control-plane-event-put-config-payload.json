@@ -19,7 +19,7 @@
             "principalId": "696505809372",
             "arn": "arn:aws:iam::696505809372:root",
             "accountId": "696505809372",
-            "accessKeyId": "AKIA2EKX3HHON3VGIFNM"
+            "accessKeyId": "<REDACTED_AWS_ACCESS_KEY_ID>"
           },
           "eventTime": "2026-03-28T20:19:44Z",
           "eventSource": "config.amazonaws.com",

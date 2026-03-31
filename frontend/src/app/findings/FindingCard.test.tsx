@@ -72,17 +72,18 @@ describe('FindingCard risk acknowledgement rendering', () => {
       <FindingCard
         finding={{
           ...baseFinding,
+          control_id: 'EC2.19',
+          resource_type: 'AwsAccount',
+          resource_id: 'AWS::::Account:123456789012',
           remediation_visibility_reason: 'managed_on_resource_scope',
           remediation_scope_owner: 'resource',
-          remediation_scope_message:
-            'This finding family is remediated at resource scope. Open a resource-specific row for the runnable fix.',
         }}
       />
     );
 
     expect(
       screen.getByText(
-        'This finding family is remediated at resource scope. Open a resource-specific row for the runnable fix.'
+        'This finding family is remediated on affected resource rows. Open the resource-level row for the runnable fix.'
       )
     ).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Fix this finding' })).toBeDisabled();

@@ -1,7 +1,7 @@
 {
     "AccessKeyMetadata": [
         {
-            "AccessKeyId": "AKIA2EKX3HHON3VGIFNM",
+            "AccessKeyId": "<REDACTED_AWS_ACCESS_KEY_ID>",
             "Status": "Active",
             "CreateDate": "2026-03-18T14:15:26+00:00"
         }

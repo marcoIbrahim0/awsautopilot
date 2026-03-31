@@ -124,7 +124,6 @@ EMAIL_SMTP_STARTTLS_VALUE="${EMAIL_SMTP_STARTTLS:-$(read_env_file_value EMAIL_SM
 EMAIL_SMTP_STARTTLS_VALUE="${EMAIL_SMTP_STARTTLS_VALUE:-true}"
 EMAIL_SMTP_CREDENTIALS_SECRET_ID_VALUE="${EMAIL_SMTP_CREDENTIALS_SECRET_ID:-$(read_env_file_value EMAIL_SMTP_CREDENTIALS_SECRET_ID || true)}"
 OPENAI_HELP_ENABLED_VALUE="${OPENAI_HELP_ENABLED:-$(read_env_file_value OPENAI_HELP_ENABLED || true)}"
-OPENAI_API_KEY_VALUE="${OPENAI_API_KEY:-$(read_env_file_value OPENAI_API_KEY || true)}"
 OPENAI_API_KEY_SECRET_ID_VALUE="${OPENAI_API_KEY_SECRET_ID:-$(read_env_file_value OPENAI_API_KEY_SECRET_ID || true)}"
 OPENAI_HELP_MODEL_VALUE="${OPENAI_HELP_MODEL:-$(read_env_file_value OPENAI_HELP_MODEL || true)}"
 OPENAI_HELP_REASONING_EFFORT_VALUE="${OPENAI_HELP_REASONING_EFFORT:-$(read_env_file_value OPENAI_HELP_REASONING_EFFORT || true)}"
@@ -459,9 +458,6 @@ fi
 if [[ -n "$OPENAI_HELP_ENABLED_VALUE" ]]; then
   params+=("OpenAiHelpEnabled=${OPENAI_HELP_ENABLED_VALUE}")
 fi
-if [[ -n "$OPENAI_API_KEY_VALUE" ]]; then
-  params+=("OpenAiApiKey=${OPENAI_API_KEY_VALUE}")
-fi
 if [[ -n "$OPENAI_API_KEY_SECRET_ID_VALUE" ]]; then
   params+=("OpenAiApiKeySecretId=${OPENAI_API_KEY_SECRET_ID_VALUE}")
 fi
@@ -473,6 +469,11 @@ if [[ -n "$OPENAI_HELP_REASONING_EFFORT_VALUE" ]]; then
 fi
 if [[ -n "$OPENAI_HELP_TIMEOUT_SECONDS_VALUE" ]]; then
   params+=("OpenAiHelpTimeoutSeconds=${OPENAI_HELP_TIMEOUT_SECONDS_VALUE}")
+fi
+
+if [[ -n "${OPENAI_API_KEY:-}" ]]; then
+  echo "Refusing plaintext OPENAI_API_KEY for serverless deploy. Store the key in Secrets Manager and set OPENAI_API_KEY_SECRET_ID instead." >&2
+  exit 1
 fi
 
 # Always pass the custom-domain parameters so a prior domain can be cleared.

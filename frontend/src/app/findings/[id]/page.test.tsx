@@ -6,7 +6,7 @@ import FindingDetailPage from './page';
 import { getFinding } from '@/lib/api';
 
 function createParams(id: string): Promise<{ id: string }> {
-  return Promise.resolve({ id });
+  return { id } as Promise<{ id: string }>;
 }
 
 vi.mock('react', async () => {
@@ -174,5 +174,40 @@ describe('Finding detail remediation state', () => {
 
     expect(await screen.findAllByText('S3.13')).toHaveLength(2);
     expect(screen.getByText('Remediation family: S3.11')).toBeInTheDocument();
+  });
+
+  it('shows resource-scope guidance for account-scoped EC2 alias rows with no direct action', async () => {
+    mockedGetFinding.mockResolvedValue({
+      ...baseFinding,
+      control_id: 'EC2.19',
+      control_family: {
+        source_control_ids: ['EC2.19'],
+        canonical_control_id: 'EC2.53',
+        related_control_ids: ['EC2.53', 'EC2.13', 'EC2.18', 'EC2.19'],
+        is_mapped: true,
+      },
+      resource_type: 'AwsAccount',
+      resource_id: 'AWS::::Account:123456789012',
+      remediation_action_id: null,
+      remediation_action_type: null,
+      remediation_action_status: null,
+      remediation_action_account_id: null,
+      remediation_action_region: null,
+      remediation_action_group_id: null,
+      remediation_action_group_status_bucket: null,
+      remediation_action_group_latest_run_status: null,
+      remediation_visibility_reason: 'managed_on_resource_scope',
+      remediation_scope_owner: 'resource',
+      remediation_scope_message: null,
+    });
+
+    render(<FindingDetailPage params={createParams('f-1')} />);
+
+    expect(await screen.findByText('Managed on resource rows')).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        'This finding family is remediated on affected resource rows. Open the resource-level row for the runnable fix.'
+      )
+    ).toBeInTheDocument();
   });
 });

@@ -5,7 +5,7 @@ cf-ray: 9df59e134ecec08f-MRS
 cf-cache-status: DYNAMIC
 nel: {"report_to":"cf-nel","success_fraction":0.0,"max_age":604800}
 server: cloudflare
-set-cookie: access_token=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI3YzQzZTBiMy02ZTk4LTQzYWYtODI2Zi1mNGVlYWE1YWY2NzQiLCJ0ZW5hbnRfaWQiOiI5Zjc2MTZkOC1hZjA0LTQzY2EtOTljZC03MTM2MjUzNTdiNzAiLCJ0b2tlbl92ZXJzaW9uIjowLCJwZXJzaXN0ZW50X3Nlc3Npb24iOmZhbHNlLCJleHAiOjE3NzQ2Mjc1NTh9.NtdQ9gSVGVtRuzIrYaeFKUgAVe46KRFFOE7QlRm61SA; HttpOnly; Path=/; SameSite=lax; Secure
+set-cookie: access_token=<REDACTED_TOKEN>; HttpOnly; Path=/; SameSite=lax; Secure
 set-cookie: csrf_token=CaFT--PbgiULwZ7Z9FCRbbrR9bQuaFzE0PfmR4UzMsY; Domain=.ocypheris.com; Path=/; SameSite=lax; Secure
 apigw-requestid: ahxMkjuEAi0EPCg=
 report-to: {"group":"cf-nel","max_age":604800,"endpoints":[{"url":"https://a.nel.cloudflare.com/report/v4?s=ABiHtHS8rwrllg0PpCMTjg9PRpbVsbFaOLA5Dw8lGj4AOuzh2BLwcMPahRSTq1O0cdwxAG09iGe6fT6ubcoGSrJI9RiD4QYxGEI%2Fz5meXZMH"}]}

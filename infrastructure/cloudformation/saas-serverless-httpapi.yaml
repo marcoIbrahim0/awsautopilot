@@ -91,7 +91,7 @@ Parameters:
     Type: String
     Default: ""
     NoEcho: true
-    Description: OpenAI API key used by the Help Hub assistant.
+    Description: Deprecated plaintext OpenAI API key parameter. Use OpenAiApiKeySecretId instead.
 
   OpenAiApiKeySecretId:
     Type: String
@@ -582,7 +582,7 @@ Resources:
           OPENAI_API_KEY: !If
             - HasOpenAiApiKeySecretId
             - !Sub "{{resolve:secretsmanager:${OpenAiApiKeySecretId}:SecretString}}"
-            - !Ref OpenAiApiKey
+            - ""
           OPENAI_HELP_MODEL: !Ref OpenAiHelpModel
           OPENAI_HELP_REASONING_EFFORT: !Ref OpenAiHelpReasoningEffort
           OPENAI_HELP_TIMEOUT_SECONDS: !Ref OpenAiHelpTimeoutSeconds
@@ -733,7 +733,7 @@ Resources:
           OPENAI_API_KEY: !If
             - HasOpenAiApiKeySecretId
             - !Sub "{{resolve:secretsmanager:${OpenAiApiKeySecretId}:SecretString}}"
-            - !Ref OpenAiApiKey
+            - ""
           OPENAI_HELP_MODEL: !Ref OpenAiHelpModel
           OPENAI_HELP_REASONING_EFFORT: !Ref OpenAiHelpReasoningEffort
           OPENAI_HELP_TIMEOUT_SECONDS: !Ref OpenAiHelpTimeoutSeconds

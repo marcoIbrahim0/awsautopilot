@@ -1,2 +1,2 @@
 [    1898ms] [ERROR] Failed to load resource: the server responded with a status of 401 () @ https://api.ocypheris.com/api/auth/me:0
-[  121560ms] [ERROR] Failed to load resource: the server responded with a status of 400 () @ https://identitytoolkit.googleapis.com/v1/accounts:sendOobCode?key=AIzaSyCya23f7eUcVGip3uvTxOt3BRu748R4Ays:0
+[  121560ms] [ERROR] Failed to load resource: the server responded with a status of 400 () @ https://identitytoolkit.googleapis.com/v1/accounts:sendOobCode?key=<REDACTED_GOOGLE_API_KEY>:0

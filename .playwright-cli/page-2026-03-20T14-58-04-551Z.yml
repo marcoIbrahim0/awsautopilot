@@ -26,7 +26,7 @@
             - generic [ref=e36]: Password
             - textbox "Password" [ref=e37]:
               - /placeholder: ••••••••
-              - text: Maher730@
+              - text: <REDACTED_PASSWORD>
           - generic [ref=e38]:
             - generic [ref=e39]:
               - checkbox "Remember me" [ref=e40]

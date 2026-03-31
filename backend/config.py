@@ -45,6 +45,27 @@ class Settings(BaseSettings):
         default=None,
         description="Optional sync fallback Postgres URL. If unset, derived from DATABASE_URL_FALLBACK.",
     )
+    DATABASE_FAILOVER_PRIMARY_RETRY_SECONDS: int = Field(
+        default=300,
+        description=(
+            "Seconds to keep the primary database suspended after a failover-eligible runtime error "
+            "such as a Neon quota block before probing it again."
+        ),
+    )
+    DATABASE_FAILOVER_SYNC_ENABLED: bool = Field(
+        default=True,
+        description=(
+            "When true, a quota-triggered or connectivity-triggered failover keeps fallback authoritative "
+            "until the service resynchronizes fallback back into primary after primary recovers."
+        ),
+    )
+    DATABASE_FAILOVER_SYNC_POLL_SECONDS: int = Field(
+        default=60,
+        description=(
+            "Seconds between background checks for whether the recovered primary database is ready to be "
+            "resynchronized from fallback."
+        ),
+    )
     DB_REVISION_GUARD_ENABLED: bool = Field(
         default=True,
         description=(
