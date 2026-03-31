@@ -4,6 +4,10 @@ This index maps notable tasks to discoverable entries in `.cursor/notes/task_log
 
 ## 2026-03
 
+- [Fix grouped findings remediation visibility for account-scoped EC2 SG aliases (2026-03-31)](task_log.md#fix-grouped-findings-remediation-visibility-for-account-scoped-ec2-sg-aliases-2026-03-31)
+  - Closed the remaining grouped/status-filtered `EC2.13` / `EC2.18` / `EC2.19` gap by extending the grouped findings backend contract to carry `remediation_visibility_reason`, `remediation_scope_owner`, and `remediation_scope_message` in the same account-scope SG alias cases that flat findings already handled.
+  - Kept the patch backend-small: grouped rows now reuse `get_remediation_hints_for_findings(...)` for member `finding_ids`, preserving existing action selection while lifting visibility-only hints back onto the grouped card when no direct action exists.
+  - Added a focused grouped regression for the account-scoped `EC2.19` SG alias case, syntax-validated the touched files, and manually verified both grouped and flat hint paths with direct async assertions because this checkout does not currently have the repo’s expected async `pytest` environment.
 - [Preserve current local master state on master (2026-03-31)](task_log.md#preserve-current-local-master-state-on-master-2026-03-31)
   - Verified the repo is already on `master` and the local working tree is substantially dirty.
   - Took the non-destructive path: staged the current tree as-is and committed it directly on local `master` as snapshot `a22302070`, without cleanup, reset, or file removal.

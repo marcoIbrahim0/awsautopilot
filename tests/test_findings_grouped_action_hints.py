@@ -306,3 +306,97 @@ async def test_list_findings_grouped_splits_multi_region_control_rows_and_keeps_
     assert response.items[1].pending_confirmation is True
     assert response.items[1].pending_confirmation_severity == "info"
     assert response.items[1].status_severity == "info"
+
+
+@pytest.mark.asyncio
+async def test_list_findings_grouped_surfaces_managed_on_resource_scope_without_direct_group_action():
+    tenant_id = uuid.uuid4()
+    finding_id = uuid.uuid4()
+
+    count_result = MagicMock()
+    count_result.scalar.return_value = 1
+
+    grouped_row = SimpleNamespace(
+        control_id="EC2.19",
+        resource_type="AwsAccount",
+        account_id="696505809372",
+        region="eu-north-1",
+        rule_title="Security groups should not allow unrestricted access to ports with high risk",
+        finding_count=1,
+        finding_ids=[finding_id],
+        account_ids=["696505809372"],
+        regions=["eu-north-1"],
+        cnt_critical=0,
+        cnt_high=0,
+        cnt_medium=0,
+        cnt_low=0,
+        cnt_informational=1,
+    )
+    grouped_rows_result = MagicMock()
+    grouped_rows_result.all.return_value = [grouped_row]
+
+    grouped_action_rows_result = MagicMock()
+    grouped_action_rows_result.all.return_value = []
+
+    direct_action_rows_result = MagicMock()
+    direct_action_rows_result.all.return_value = []
+
+    finding_rows_result = MagicMock()
+    finding_rows_result.all.return_value = [
+        (
+            finding_id,
+            "EC2.19",
+            "696505809372",
+            "eu-north-1",
+            "AWS::::Account:696505809372",
+            "AwsAccount",
+            "NEW",
+            None,
+        ),
+    ]
+
+    visibility_action_rows_result = MagicMock()
+    visibility_action_rows_result.all.return_value = [
+        (
+            "696505809372",
+            "eu-north-1",
+            "sg_restrict_public_ports",
+            "arn:aws:ec2:eu-north-1:696505809372:security-group/sg-02279e5f534057980",
+            "AwsEc2SecurityGroup",
+        ),
+    ]
+
+    db = AsyncMock()
+    db.execute.side_effect = [
+        count_result,
+        grouped_rows_result,
+        grouped_action_rows_result,
+        direct_action_rows_result,
+        finding_rows_result,
+        visibility_action_rows_result,
+    ]
+
+    with patch("backend.routers.findings.resolve_tenant_id", return_value=tenant_id), patch(
+        "backend.routers.findings.get_tenant_by_uuid",
+        AsyncMock(return_value=SimpleNamespace(id=tenant_id)),
+    ):
+        response = await findings.list_findings_grouped(
+            db=db,
+            current_user=None,
+            tenant_id=str(tenant_id),
+            account_id="696505809372",
+            region="eu-north-1",
+            control_id="EC2.19",
+            resource_id=None,
+            severity=None,
+            source=None,
+            status_filter="NEW",
+            limit=20,
+            offset=0,
+        )
+
+    assert response.total == 1
+    assert response.items[0].remediation_action_id is None
+    assert response.items[0].remediation_visibility_reason == "managed_on_resource_scope"
+    assert response.items[0].remediation_scope_owner == "resource"
+    assert response.items[0].remediation_scope_message is not None
