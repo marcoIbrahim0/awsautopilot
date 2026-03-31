@@ -6,6 +6,10 @@ import { vi } from 'vitest';
 import FindingsPage from './page';
 import { getAccounts, getFindingGroups, getFindings, getScopeMeta, type FindingGroup } from '@/lib/api';
 
+let mockedSearchParams = new URLSearchParams(
+  'resource_id=arn%3Aaws%3Aconfig%3Aus-east-1%3A696505809372%3Aconfig-rule%2Focypheris-p2-config-fresh-kev'
+);
+
 vi.mock('motion/react', () => ({
   motion: {
     div: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
@@ -14,10 +18,7 @@ vi.mock('motion/react', () => ({
 }));
 
 vi.mock('next/navigation', () => ({
-  useSearchParams: () =>
-    new URLSearchParams(
-      'resource_id=arn%3Aaws%3Aconfig%3Aus-east-1%3A696505809372%3Aconfig-rule%2Focypheris-p2-config-fresh-kev'
-    ),
+  useSearchParams: () => mockedSearchParams,
 }));
 
 vi.mock('@/components/layout', () => ({
@@ -218,6 +219,9 @@ const noFixGroup: FindingGroup = {
 describe('FindingsPageContent grouped refresh behavior', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mockedSearchParams = new URLSearchParams(
+      'resource_id=arn%3Aaws%3Aconfig%3Aus-east-1%3A696505809372%3Aconfig-rule%2Focypheris-p2-config-fresh-kev'
+    );
     mockedGetFindings.mockResolvedValue({
       items: [
         {
@@ -325,6 +329,26 @@ describe('FindingsPageContent grouped refresh behavior', () => {
 
     await waitFor(() => {
       expect(mockedGetFindingGroups.mock.calls.length).toBeGreaterThan(initialCalls);
+    });
+  });
+
+  it('honors an explicit flat-view handoff query while preserving filters', async () => {
+    mockedSearchParams = new URLSearchParams(
+      'view=flat&account_id=696505809372&region=us-east-1&status=NEW&control_id=EC2.19'
+    );
+
+    render(<FindingsPage />);
+
+    await waitFor(() => {
+      expect(mockedGetFindings).toHaveBeenCalledWith(
+        expect.objectContaining({
+          account_id: '696505809372',
+          region: 'us-east-1',
+          status: 'NEW',
+          control_id: 'EC2.19',
+        }),
+        'tenant-local'
+      );
     });
   });
 

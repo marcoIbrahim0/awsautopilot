@@ -1,11 +1,13 @@
 'use client';
 
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { Badge, getSeverityBadgeVariant } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import { PendingConfirmationNote } from '@/components/ui/PendingConfirmationNote';
 import { RemediationStateBadge } from '@/components/ui/RemediationStateBadge';
 import { Finding } from '@/lib/api';
+import { buildFindingsResourceScopeHandoffHref } from '@/lib/findingsHandoff';
 import {
   getNoRemediationActionPresentationForReason,
   getRemediationStatePresentation,
@@ -24,6 +26,7 @@ interface FindingCardProps {
 }
 
 export function FindingCard({ finding, isHighlighted = false, onActionSelect }: FindingCardProps) {
+  const router = useRouter();
   const effectiveStatus = (finding.effective_status || finding.status || '').toUpperCase();
   const groupStatusBucket = (finding.remediation_action_group_status_bucket || '').trim();
   const isMetadataOnly = groupStatusBucket === 'run_finished_metadata_only';
@@ -82,6 +85,16 @@ export function FindingCard({ finding, isHighlighted = false, onActionSelect }: 
   const fixUnavailableReason = remediationState?.description || 'No remediation workflow is available for this finding yet.';
   const groupUnavailableReason =
     remediationState?.description || 'This finding is not yet included in a PR bundle group.';
+  const isManagedOnResourceRows = finding.remediation_visibility_reason === 'managed_on_resource_scope';
+  const handoffHref = isManagedOnResourceRows
+    ? buildFindingsResourceScopeHandoffHref({
+        accountId: finding.account_id,
+        region: finding.region,
+        controlId: finding.control_id,
+        status: effectiveStatus || finding.status,
+        source: finding.source,
+      })
+    : null;
   const hasNonOpenRemediationAction =
     Boolean(finding.remediation_action_status) && finding.remediation_action_status !== 'open';
   const controlLabel = getFindingControlLabel(finding.control_family, finding.control_id);
@@ -250,6 +263,15 @@ export function FindingCard({ finding, isHighlighted = false, onActionSelect }: 
             }}>
               {finding.remediation_action_type === 'pr_only' ? 'Generate PR Bundle' : 'Fix this finding'}
             </Button>
+          ) : handoffHref ? (
+            <Button
+              size="sm"
+              variant="primary"
+              className="nm-neu-sm"
+              onClick={() => router.push(handoffHref)}
+            >
+              Open actionable rows
+            </Button>
           ) : (
             <span title={fixUnavailableReason}>
               <Button size="sm" variant="primary" disabled>
@@ -272,6 +294,12 @@ export function FindingCard({ finding, isHighlighted = false, onActionSelect }: 
             <Link href={groupHref}>
               <Button size="sm" variant="secondary">
                 View PR bundle group
+              </Button>
+            </Link>
+          ) : handoffHref ? (
+            <Link href={`/findings/${finding.id}`}>
+              <Button size="sm" variant="secondary">
+                View details
               </Button>
             </Link>
           ) : fixHref ? null : (

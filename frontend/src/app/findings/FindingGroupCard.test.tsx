@@ -190,6 +190,46 @@ describe('FindingGroupCard group actions', () => {
     expect(screen.queryByText('This message should stay hidden for metadata-only outcomes.')).not.toBeInTheDocument();
   });
 
+  it('shows a resource-scope handoff CTA instead of a disabled bundle button', async () => {
+    const user = userEvent.setup();
+
+    render(
+      <FindingGroupCard
+        group={{
+          ...baseGroup,
+          control_id: 'EC2.19',
+          resource_type: 'AwsAccount',
+          remediation_visibility_reason: 'managed_on_resource_scope',
+          remediation_scope_owner: 'resource',
+        }}
+        effectiveTenantId="tenant-local"
+        groupActionFilters={{
+          account_id: '123456789012',
+          region: 'us-east-1',
+          status: 'NEW',
+          control_id: 'EC2.19',
+          severity: 'INFORMATIONAL',
+          source: 'security_hub',
+        }}
+      />
+    );
+
+    const badge = screen.getByText('Fix on resource rows').closest('span');
+    expect(badge).toHaveAttribute(
+      'title',
+      'This is a summary row. The runnable remediation lives on the affected resource rows for this control. Open those resource rows to generate the fix.'
+    );
+    expect(screen.getByRole('button', { name: 'Open actionable rows' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Show resource rows' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Generate PR Bundle' })).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: 'Open actionable rows' }));
+
+    expect(push).toHaveBeenCalledWith(
+      '/findings?view=flat&account_id=123456789012&region=us-east-1&control_id=EC2.19&status=NEW&severity=INFORMATIONAL&source=security_hub'
+    );
+  });
+
   it('shows explicit confirmed remediation state on grouped cards', () => {
     render(
       <FindingGroupCard
@@ -348,11 +388,10 @@ describe('FindingGroupCard group actions', () => {
       />
     );
 
-    expect(screen.getByText('Managed on resource rows')).toBeInTheDocument();
-    expect(
-      screen.getByText(
-        'This finding family is remediated on affected resource rows. Open the resource-level row for the runnable fix.'
-      )
-    ).toBeInTheDocument();
+    const badge = screen.getByText('Fix on resource rows').closest('span');
+    expect(badge).toHaveAttribute(
+      'title',
+      'This is a summary row. The runnable remediation lives on the affected resource rows for this control. Open those resource rows to generate the fix.'
+    );
   });
 });
