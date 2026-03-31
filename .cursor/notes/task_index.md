@@ -6,7 +6,8 @@ This index maps notable tasks to discoverable entries in `.cursor/notes/task_log
 
 - [Preserve current local master state on master (2026-03-31)](task_log.md#preserve-current-local-master-state-on-master-2026-03-31)
   - Verified the repo is already on `master` and the local working tree is substantially dirty.
-  - Taking the non-destructive path: stage the current tree as-is and commit it directly on `master` without cleanup, reset, or file removal.
+  - Took the non-destructive path: staged the current tree as-is and committed it directly on local `master` as snapshot `a22302070`, without cleanup, reset, or file removal.
+  - Direct `git push origin master` then failed because GitHub protects `master` behind PR flow and required status checks.
 - [Fix misleading EC2 SG no-remediation copy on findings surfaces (2026-03-31)](task_log.md#fix-misleading-ec2-sg-no-remediation-copy-on-findings-surfaces-2026-03-31)
   - Verified against the fallback Neon database that the newest account-scoped `EC2.13` / `EC2.18` / `EC2.19` rows in account `696505809372` already have runnable sibling SG actions, and the current backend hint path correctly resolves them as `managed_on_resource_scope`.
   - Kept the fix frontend-only: replaced the misleading generic fallback text with neutral copy and added focused findings-card, grouped-card, and detail-page coverage for resource-scope guidance.
