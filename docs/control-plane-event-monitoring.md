@@ -29,20 +29,27 @@ Token-rotation operational rule:
 Automated verification script (console-free):
 - `scripts/verify_control_plane_forwarder.sh`
 - Verifies:
-  - Phase 1 wiring (`Rule ENABLED`, `API Destination ACTIVE`, endpoint path, `Connection AuthorizationType=API_KEY`, DLQ depth)
+  - Phase 1 wiring (`Rule ENABLED`, `API Destination ACTIVE`, endpoint path, `Connection AuthorizationType=API_KEY`, `ConnectionState=AUTHORIZED`, DLQ depth)
+  - Phase 1 token-drift guardrail (`/api/auth/me control_plane_token_fingerprint` must match the EventBridge connection secret currently stored in Secrets Manager)
   - Phase 2 synthetic management event injection (`security.autopilot.synthetic` source with allowlisted `eventName`)
   - Phase 3 tenant readiness poll (`overall_ready` + region `is_recent`)
   - Phase 4 CloudWatch/DLQ diagnosis on timeout
 - Example:
 
 ```bash
-./scripts/verify_control_plane_forwarder.sh \
+AWS_PROFILE=<CUSTOMER_ACCOUNT_PROFILE> ./scripts/verify_control_plane_forwarder.sh \
   --stack-name SecurityAutopilotControlPlaneForwarder \
-  --account-id 029037611564 \
+  --account-id 696505809372 \
   --region eu-north-1 \
   --saas-api-url https://api.ocypheris.com \
   --saas-token <YOUR_SAAS_BEARER_TOKEN_HERE>
 ```
+
+April 2, 2026 UTC production root cause (`account 696505809372`):
+- Real allowlisted control-plane events were still matching and invoking on the customer EventBridge rule, while `FailedInvocations` also stayed non-zero during the stale-readiness window.
+- Synthetic SaaS-side intake still turned readiness green immediately, so the SaaS readiness calculation itself was not the failing component.
+- The customer EventBridge connection secret had drifted away from the tenant's current `control_plane_token_fingerprint`, so the forwarder path was failing before SaaS intake could upsert `control_plane_event_ingest_status`.
+- Updating both regional `SecurityAutopilotControlPlaneForwarder` stacks with the current token restored real delivery, refreshed readiness on real `PutAccountPublicAccessBlock` events, and also brought the missing DLQ/alarm resources into the deployed stacks.
 
 ## Canonical Event Allowlist (Parity Contract)
 - Source of truth: `backend/services/control_plane_event_allowlist.py`

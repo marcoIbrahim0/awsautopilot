@@ -9,7 +9,7 @@ from sqlalchemy import case, func, select
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, noload
 
 from backend.models.action import Action
 from backend.models.action_group import ActionGroup
@@ -121,7 +121,15 @@ def _groups_by_key(session: Session, group_keys: Iterable[str]) -> dict[str, Act
     keys = [key for key in group_keys if key]
     if not keys:
         return {}
-    result = session.execute(select(ActionGroup).where(ActionGroup.group_key.in_(keys)))
+    result = session.execute(
+        select(ActionGroup)
+        .options(
+            noload(ActionGroup.memberships),
+            noload(ActionGroup.runs),
+            noload(ActionGroup.action_states),
+        )
+        .where(ActionGroup.group_key.in_(keys))
+    )
     return {row.group_key: row for row in result.scalars().all()}
 
 
@@ -132,7 +140,14 @@ def _memberships_by_action_id(
     ids = list(action_ids)
     if not ids:
         return {}
-    result = session.execute(select(ActionGroupMembership).where(ActionGroupMembership.action_id.in_(ids)))
+    result = session.execute(
+        select(ActionGroupMembership)
+        .options(
+            noload(ActionGroupMembership.group),
+            noload(ActionGroupMembership.action),
+        )
+        .where(ActionGroupMembership.action_id.in_(ids))
+    )
     return {row.action_id: row for row in result.scalars().all()}
 
 

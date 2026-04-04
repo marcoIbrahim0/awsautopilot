@@ -18,7 +18,7 @@ Scope audited:
 >
 > ✅ Status update (2026-03-02): Item `17` core implementation now includes explicit medium/low branch handling in `inventory_reconcile` and `control_plane_events` for normal/access-denied/partial-data/API-error outcomes with stable `status_reason` and branch-tagged `evidence_ref`.
 
-Identity-shape observations are based on `artifacts/no-ui-agent/*/findings_pre_raw.json` (especially `artifacts/no-ui-agent/20260220T022820Z/findings_pre_raw.json`).
+Identity-shape observations are based on no-UI agent raw finding payloads, with the checked-in fixture copy now living at `tests/fixtures/no_ui_agent/20260220T022820Z_findings_pre_raw.json`.
 
 ## Summary Table
 | Control | Collector Function | Correctness | False Positive Risk | False Negative Risk | Error Handling | Identity Shape | Overall Risk |

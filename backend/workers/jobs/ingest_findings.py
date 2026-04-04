@@ -20,6 +20,7 @@ from sqlalchemy.orm import Session
 
 from backend.models import AwsAccount, Finding
 from backend.models.action_finding import ActionFinding
+from backend.services.account_trust import canonical_tenant_external_id
 from backend.services.canonicalization import (
     build_resource_key,
     canonicalize_control_id,
@@ -392,7 +393,7 @@ def execute_ingest_job(job: dict) -> None:
             raise ValueError(f"aws_account not found for tenant_id={tenant_id} account_id={account_id}")
 
         role_arn = acc.role_read_arn
-        external_id = acc.external_id
+        external_id = canonical_tenant_external_id(session, tenant_id) or ""
 
         # 2. Assume role and fetch findings (outside DB transaction logic, but within session scope)
         logger.info("Assuming role for account_id=%s region=%s", account_id, region)

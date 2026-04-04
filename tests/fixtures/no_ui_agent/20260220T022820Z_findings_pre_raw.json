@@ -1,0 +1,37 @@
+[
+  {
+    "control_id": "EC2.7",
+    "resource_id": "AWS::::Account:696505809372",
+    "resource_type": "AwsAccount",
+    "account_id": "696505809372",
+    "region": "eu-north-1"
+  },
+  {
+    "control_id": "EC2.182",
+    "resource_id": "AWS::::Account:696505809372",
+    "resource_type": "AwsAccount",
+    "account_id": "696505809372",
+    "region": "eu-north-1"
+  },
+  {
+    "control_id": "EC2.182",
+    "resource_id": "arn:aws:ec2:eu-north-1:696505809372:snapshotblockpublicaccess/696505809372",
+    "resource_type": "AwsEc2SnapshotBlockPublicAccess",
+    "account_id": "696505809372",
+    "region": "eu-north-1"
+  },
+  {
+    "control_id": "Config.1",
+    "resource_id": "AWS::::Account:696505809372",
+    "resource_type": "AwsAccount",
+    "account_id": "696505809372",
+    "region": "eu-north-1"
+  },
+  {
+    "control_id": "SSM.7",
+    "resource_id": "AWS::::Account:696505809372",
+    "resource_type": "AwsAccount",
+    "account_id": "696505809372",
+    "region": "eu-north-1"
+  }
+]

@@ -22,17 +22,23 @@ S3_2_STANDARD_MANUAL_PROFILE_ID = "s3_bucket_block_public_access_manual_preserva
 S3_2_STANDARD_POLICY_SCRUB_PROFILE_ID = "s3_bucket_block_public_access_review_public_policy_scrub"
 S3_2_OAC_STRATEGY_ID = "s3_migrate_cloudfront_oac_private"
 S3_2_OAC_MANUAL_PROFILE_ID = "s3_migrate_cloudfront_oac_private_manual_preservation"
+S3_2_OAC_CREATE_PROFILE_ID = "s3_migrate_cloudfront_oac_private_create_missing_bucket"
 S3_2_WEBSITE_STRATEGY_ID = "s3_migrate_website_cloudfront_private"
 S3_2_WEBSITE_REVIEW_PROFILE_ID = "s3_migrate_website_cloudfront_private_review_required"
 
 S3_9_STRATEGY_ID = "s3_enable_access_logging_guided"
 S3_9_REVIEW_PROFILE_ID = "s3_enable_access_logging_review_destination_safety"
+S3_9_CREATE_PROFILE_ID = "s3_enable_access_logging_create_missing_bucket"
 
 S3_5_STRICT_STRATEGY_ID = "s3_enforce_ssl_strict_deny"
 S3_5_EXEMPTION_STRATEGY_ID = "s3_enforce_ssl_with_principal_exemptions"
+S3_5_STRICT_CREATE_PROFILE_ID = "s3_enforce_ssl_strict_deny_create_missing_bucket"
+S3_5_EXEMPTION_CREATE_PROFILE_ID = "s3_enforce_ssl_with_principal_exemptions_create_missing_bucket"
 S3_11_STRATEGY_ID = "s3_enable_abort_incomplete_uploads"
+S3_11_CREATE_PROFILE_ID = "s3_enable_abort_incomplete_uploads_create_missing_bucket"
 S3_15_STRATEGY_ID = "s3_enable_sse_kms_guided"
 S3_15_CUSTOMER_MANAGED_PROFILE_ID = "s3_enable_sse_kms_customer_managed"
+S3_15_CREATE_PROFILE_ID = "s3_enable_sse_kms_guided_create_missing_bucket"
 
 _S3_BUCKET_ARN_PATTERN = re.compile(r"arn:aws:s3:::(?P<bucket>[A-Za-z0-9.\-_]{3,63})")
 _S3_BUCKET_NAME_PATTERN = re.compile(
@@ -91,13 +97,28 @@ def resolve_s3_2_selection(
     runtime_signals: Mapping[str, Any] | None,
 ) -> FamilySelectionOutcome:
     explicit_profile = _clean_text(requested_profile_id)
-    blocked_reasons = _s3_2_blocked_reasons(
+    initial_blocked_reasons = _s3_2_blocked_reasons(
         strategy_id=strategy_id,
         explicit_inputs=explicit_inputs,
         runtime_signals=runtime_signals,
+        requested_profile_id=explicit_profile,
     )
     fallback_profile_id = _s3_2_fallback_profile_id(strategy_id)
-    profile_id = explicit_profile or _automatic_s3_2_profile_id(strategy_id, blocked_reasons)
+    profile_id = explicit_profile or _automatic_s3_2_profile_id(
+        strategy_id,
+        initial_blocked_reasons,
+        runtime_signals,
+    )
+    blocked_reasons = (
+        initial_blocked_reasons
+        if explicit_profile is not None or profile_id == strategy_id
+        else _s3_2_blocked_reasons(
+            strategy_id=strategy_id,
+            explicit_inputs=explicit_inputs,
+            runtime_signals=runtime_signals,
+            requested_profile_id=profile_id,
+        )
+    )
     rejected_profiles = _automatic_rejected_profile(
         explicit_profile=explicit_profile,
         fallback_profile_id=fallback_profile_id,
@@ -139,12 +160,25 @@ def resolve_s3_9_selection(
     action: Any | None,
 ) -> FamilySelectionOutcome:
     explicit_profile = _clean_text(requested_profile_id)
-    blocked_reasons = _s3_9_blocked_reasons(
+    initial_blocked_reasons = _s3_9_blocked_reasons(
+        strategy_id=strategy_id,
+        requested_profile_id=explicit_profile,
         resolved_inputs=resolved_inputs,
         runtime_signals=runtime_signals,
         action=action,
     )
-    profile_id = explicit_profile or _automatic_s3_9_profile_id(blocked_reasons)
+    profile_id = explicit_profile or _automatic_s3_9_profile_id(initial_blocked_reasons, runtime_signals)
+    blocked_reasons = (
+        initial_blocked_reasons
+        if explicit_profile is not None or profile_id == strategy_id
+        else _s3_9_blocked_reasons(
+            strategy_id=strategy_id,
+            requested_profile_id=profile_id,
+            resolved_inputs=resolved_inputs,
+            runtime_signals=runtime_signals,
+            action=action,
+        )
+    )
     return {
         "profile_id": profile_id,
         "support_tier": _s3_9_support_tier(profile_id=profile_id, blocked_reasons=blocked_reasons),
@@ -174,18 +208,24 @@ def resolve_s3_5_selection(
     explicit_inputs: Mapping[str, Any] | None,
     runtime_signals: Mapping[str, Any] | None,
 ) -> FamilySelectionOutcome:
-    profile_id = _clean_text(requested_profile_id) or strategy_id
+    explicit_profile = _clean_text(requested_profile_id)
+    profile_id = explicit_profile or _automatic_s3_5_profile_id(strategy_id=strategy_id, runtime_signals=runtime_signals)
     preserve_existing_policy = _coerce_bool(
         _mapping_value(explicit_inputs, "preserve_existing_policy"),
         default=True,
     )
     blocked_reasons = _s3_5_blocked_reasons(
+        strategy_id=strategy_id,
+        profile_id=profile_id,
+        explicit_inputs=explicit_inputs,
         preserve_existing_policy=preserve_existing_policy,
         runtime_signals=runtime_signals,
     )
     return {
         "profile_id": profile_id,
         "support_tier": _s3_5_support_tier(
+            strategy_id=strategy_id,
+            profile_id=profile_id,
             preserve_existing_policy=preserve_existing_policy,
             blocked_reasons=blocked_reasons,
         ),
@@ -193,12 +233,15 @@ def resolve_s3_5_selection(
         "rejected_profiles": [],
         "preservation_summary": _s3_5_preservation_summary(
             strategy_id=strategy_id,
+            profile_id=profile_id,
+            explicit_inputs=explicit_inputs,
             preserve_existing_policy=preserve_existing_policy,
             runtime_signals=runtime_signals,
             blocked_reasons=blocked_reasons,
         ),
         "decision_rationale": _s3_5_rationale(
             strategy_id=strategy_id,
+            profile_id=profile_id,
             preserve_existing_policy=preserve_existing_policy,
             runtime_signals=runtime_signals,
             blocked_reasons=blocked_reasons,
@@ -213,25 +256,37 @@ def resolve_s3_11_selection(
     explicit_inputs: Mapping[str, Any] | None,
     runtime_signals: Mapping[str, Any] | None,
 ) -> FamilySelectionOutcome:
-    profile_id = _clean_text(requested_profile_id) or strategy_id
+    explicit_profile = _clean_text(requested_profile_id)
+    profile_id = explicit_profile or _automatic_s3_11_profile_id(strategy_id=strategy_id, runtime_signals=runtime_signals)
     abort_days = _abort_days(explicit_inputs)
     blocked_reasons = _s3_11_blocked_reasons(
+        strategy_id=strategy_id,
+        profile_id=profile_id,
+        explicit_inputs=explicit_inputs,
         abort_days=abort_days,
         runtime_signals=runtime_signals,
     )
     return {
         "profile_id": profile_id,
-        "support_tier": _s3_11_support_tier(blocked_reasons=blocked_reasons, runtime_signals=runtime_signals),
+        "support_tier": _s3_11_support_tier(
+            strategy_id=strategy_id,
+            profile_id=profile_id,
+            blocked_reasons=blocked_reasons,
+            runtime_signals=runtime_signals,
+        ),
         "blocked_reasons": blocked_reasons,
         "rejected_profiles": [],
         "preservation_summary": _s3_11_preservation_summary(
             strategy_id=strategy_id,
+            profile_id=profile_id,
+            explicit_inputs=explicit_inputs,
             abort_days=abort_days,
             runtime_signals=runtime_signals,
             blocked_reasons=blocked_reasons,
         ),
         "decision_rationale": _s3_11_rationale(
             strategy_id=strategy_id,
+            profile_id=profile_id,
             abort_days=abort_days,
             runtime_signals=runtime_signals,
             blocked_reasons=blocked_reasons,
@@ -249,16 +304,23 @@ def resolve_s3_15_selection(
 ) -> FamilySelectionOutcome:
     explicit_profile = _clean_text(requested_profile_id)
     key_mode = resolve_s3_kms_key_mode(resolved_inputs)
+    profile_id = explicit_profile or _automatic_s3_15_profile_id(
+        strategy_id=strategy_id,
+        key_mode=key_mode,
+        runtime_signals=runtime_signals,
+    )
     blocked_reasons = _s3_15_blocked_reasons(
+        strategy_id=strategy_id,
+        requested_profile_id=profile_id,
         key_mode=key_mode,
         resolved_inputs=resolved_inputs,
         runtime_signals=runtime_signals,
         action=action,
     )
-    profile_id = explicit_profile or _automatic_s3_15_profile_id(strategy_id=strategy_id, key_mode=key_mode)
     return {
         "profile_id": profile_id,
         "support_tier": _s3_15_support_tier(
+            strategy_id=strategy_id,
             profile_id=profile_id,
             key_mode=key_mode,
             resolved_inputs=resolved_inputs,
@@ -294,7 +356,77 @@ def _automatic_rejected_profile(
     return [{"profile_id": strategy_id, "reason": "branch_unavailable", "detail": detail}]
 
 
-def _automatic_s3_2_profile_id(strategy_id: str, blocked_reasons: list[str]) -> str:
+def _missing_bucket_create_profile_id(strategy_id: str) -> str | None:
+    if strategy_id == S3_2_OAC_STRATEGY_ID:
+        return S3_2_OAC_CREATE_PROFILE_ID
+    if strategy_id == S3_9_STRATEGY_ID:
+        return S3_9_CREATE_PROFILE_ID
+    if strategy_id == S3_5_STRICT_STRATEGY_ID:
+        return S3_5_STRICT_CREATE_PROFILE_ID
+    if strategy_id == S3_5_EXEMPTION_STRATEGY_ID:
+        return S3_5_EXEMPTION_CREATE_PROFILE_ID
+    if strategy_id == S3_11_STRATEGY_ID:
+        return S3_11_CREATE_PROFILE_ID
+    if strategy_id == S3_15_STRATEGY_ID:
+        return S3_15_CREATE_PROFILE_ID
+    return None
+
+
+def _create_missing_bucket_requested(
+    strategy_id: str,
+    profile_id: str,
+    resolved_inputs: Mapping[str, Any] | None,
+) -> bool:
+    if _coerce_bool(_mapping_value(resolved_inputs, "create_bucket_if_missing"), default=False):
+        return True
+    return profile_id == _missing_bucket_create_profile_id(strategy_id)
+
+
+def _missing_target_bucket_reason(runtime_signals: Mapping[str, Any] | None) -> str | None:
+    if _mapping_value(runtime_signals, "s3_target_bucket_missing") is not True:
+        return None
+    reason = _clean_text(_mapping_value(runtime_signals, "s3_target_bucket_reason"))
+    if reason is not None:
+        return reason
+    bucket = _clean_text(_mapping_value(runtime_signals, "s3_target_bucket_name"))
+    if bucket is None:
+        bucket = _clean_text(_evidence(runtime_signals).get("target_bucket"))
+    if bucket is None:
+        return "Target bucket no longer exists."
+    return f"Target bucket '{bucket}' no longer exists."
+
+
+def _unverified_target_bucket_reason(runtime_signals: Mapping[str, Any] | None) -> str | None:
+    if _missing_target_bucket_reason(runtime_signals) is not None:
+        return None
+    if _mapping_value(runtime_signals, "s3_target_bucket_verification_available") is not False:
+        return None
+    reason = _clean_text(_mapping_value(runtime_signals, "s3_target_bucket_verification_reason"))
+    if reason is not None:
+        return reason
+    reason = _clean_text(_mapping_value(runtime_signals, "s3_target_bucket_reason"))
+    if reason is not None:
+        return reason
+    bucket = _clean_text(_mapping_value(runtime_signals, "s3_target_bucket_name"))
+    if bucket is None:
+        bucket = _clean_text(_evidence(runtime_signals).get("target_bucket"))
+    if bucket is None:
+        return "Target bucket existence could not be verified from this account context."
+    return (
+        f"Target bucket '{bucket}' existence could not be verified from this account context. "
+        "Do not keep the existing-bucket remediation path executable until bucket existence is proven."
+    )
+
+
+def _automatic_s3_2_profile_id(
+    strategy_id: str,
+    blocked_reasons: list[str],
+    runtime_signals: Mapping[str, Any] | None,
+) -> str:
+    if _missing_target_bucket_reason(runtime_signals) is not None:
+        create_profile_id = _missing_bucket_create_profile_id(strategy_id)
+        if create_profile_id is not None:
+            return create_profile_id
     if not blocked_reasons:
         return strategy_id
     if strategy_id == S3_2_STANDARD_STRATEGY_ID and blocked_reasons == [
@@ -304,10 +436,39 @@ def _automatic_s3_2_profile_id(strategy_id: str, blocked_reasons: list[str]) -> 
     return _s3_2_fallback_profile_id(strategy_id)
 
 
-def _automatic_s3_9_profile_id(blocked_reasons: list[str]) -> str:
+def _automatic_s3_9_profile_id(
+    blocked_reasons: list[str],
+    runtime_signals: Mapping[str, Any] | None,
+) -> str:
+    if _missing_target_bucket_reason(runtime_signals) is not None:
+        return S3_9_CREATE_PROFILE_ID
     if not blocked_reasons:
         return S3_9_STRATEGY_ID
     return S3_9_REVIEW_PROFILE_ID
+
+
+def _automatic_s3_5_profile_id(
+    *,
+    strategy_id: str,
+    runtime_signals: Mapping[str, Any] | None,
+) -> str:
+    if _missing_target_bucket_reason(runtime_signals) is not None:
+        create_profile_id = _missing_bucket_create_profile_id(strategy_id)
+        if create_profile_id is not None:
+            return create_profile_id
+    return strategy_id
+
+
+def _automatic_s3_11_profile_id(
+    *,
+    strategy_id: str,
+    runtime_signals: Mapping[str, Any] | None,
+) -> str:
+    if _missing_target_bucket_reason(runtime_signals) is not None:
+        create_profile_id = _missing_bucket_create_profile_id(strategy_id)
+        if create_profile_id is not None:
+            return create_profile_id
+    return strategy_id
 
 
 def _s3_2_fallback_profile_id(strategy_id: str) -> str:
@@ -324,6 +485,8 @@ def _s3_2_support_tier(
     profile_id: str,
     blocked_reasons: list[str],
 ) -> SupportTier:
+    if profile_id == S3_2_OAC_CREATE_PROFILE_ID:
+        return "deterministic_bundle" if not blocked_reasons else "review_required_bundle"
     if profile_id in {
         S3_2_STANDARD_MANUAL_PROFILE_ID,
         S3_2_OAC_MANUAL_PROFILE_ID,
@@ -341,6 +504,8 @@ def _s3_2_support_tier(
 
 
 def _s3_9_support_tier(*, profile_id: str, blocked_reasons: list[str]) -> SupportTier:
+    if profile_id == S3_9_CREATE_PROFILE_ID:
+        return "deterministic_bundle" if not blocked_reasons else "review_required_bundle"
     if profile_id == S3_9_REVIEW_PROFILE_ID:
         return "review_required_bundle"
     if blocked_reasons:
@@ -353,7 +518,19 @@ def _s3_2_blocked_reasons(
     strategy_id: str,
     explicit_inputs: Mapping[str, Any] | None,
     runtime_signals: Mapping[str, Any] | None,
+    requested_profile_id: str | None,
 ) -> list[str]:
+    if _missing_target_bucket_reason(runtime_signals) is not None:
+        if _missing_bucket_create_profile_id(strategy_id) is not None and _create_missing_bucket_requested(
+            strategy_id,
+            requested_profile_id or "",
+            explicit_inputs,
+        ):
+            return []
+        return [_missing_target_bucket_reason(runtime_signals) or "Target bucket no longer exists."]
+    unverified_reason = _unverified_target_bucket_reason(runtime_signals)
+    if unverified_reason is not None:
+        return [unverified_reason]
     if strategy_id == S3_2_STANDARD_STRATEGY_ID:
         return _s3_2_standard_blocked_reasons(runtime_signals)
     if strategy_id == S3_2_WEBSITE_STRATEGY_ID:
@@ -389,6 +566,10 @@ def _s3_2_oac_blocked_reasons(
     runtime_signals: Mapping[str, Any] | None,
 ) -> list[str]:
     reasons = _s3_2_oac_preservation_blocked_reasons(runtime_signals)
+    website_policy_reason = _s3_2_oac_website_public_policy_reason(runtime_signals)
+    if website_policy_reason is not None:
+        reasons.append(website_policy_reason)
+        return _append_access_path_reason(reasons, runtime_signals)
     if _s3_2_oac_preservation_evidence_available(runtime_signals):
         return _dedupe_strings(reasons)
     return _append_access_path_reason(reasons, runtime_signals)
@@ -454,8 +635,39 @@ def _s3_2_oac_preservation_blocked_reasons(
     return _dedupe_strings(reasons)
 
 
+def _s3_2_oac_website_public_policy_reason(
+    runtime_signals: Mapping[str, Any] | None,
+) -> str | None:
+    website_configured = _optional_bool(_mapping_value(runtime_signals, "s3_bucket_website_configured"))
+    policy_public = _optional_bool(_mapping_value(runtime_signals, "s3_bucket_policy_public"))
+    if website_configured is not True or policy_public is not True:
+        return None
+    effective = _optional_bool(_mapping_value(runtime_signals, "s3_effective_block_public_policy_enabled"))
+    if effective is True:
+        return (
+            "Bucket is still configured for S3 website hosting with a public website-read policy, and "
+            "BlockPublicPolicy would reject preserving that public statement. Use the website-specific "
+            "CloudFront cutover path or manual review instead of the generic CloudFront + OAC migration."
+        )
+    bucket_bpa = _optional_bool(_mapping_value(runtime_signals, "s3_bucket_block_public_policy_enabled"))
+    account_bpa = _optional_bool(_mapping_value(runtime_signals, "s3_account_block_public_policy_enabled"))
+    if bucket_bpa is False and account_bpa is False:
+        return (
+            "Bucket is still configured for S3 website hosting with a public website-read policy. The "
+            "generic CloudFront + OAC migration cannot preserve that public statement and still make the "
+            "bucket private; use the website-specific CloudFront cutover path or manual review instead."
+        )
+    return (
+        "Bucket is still configured for S3 website hosting with a public website-read policy, but "
+        "BlockPublicPolicy visibility is incomplete. Do not keep the generic CloudFront + OAC migration "
+        "executable until the website path is translated or reviewed manually."
+    )
+
+
 def _s3_9_blocked_reasons(
     *,
+    strategy_id: str,
+    requested_profile_id: str | None,
     resolved_inputs: Mapping[str, Any] | None,
     runtime_signals: Mapping[str, Any] | None,
     action: Any | None,
@@ -465,11 +677,25 @@ def _s3_9_blocked_reasons(
         return [
             "Source bucket scope could not be proven for S3 access logging; review the affected bucket relationship manually."
         ]
-    return _s3_9_destination_blocked_reasons(
+    reasons: list[str] = []
+    missing_reason = _missing_target_bucket_reason(runtime_signals)
+    if missing_reason is not None and not _create_missing_bucket_requested(
+        strategy_id,
+        requested_profile_id or "",
+        resolved_inputs,
+    ):
+        reasons.append(missing_reason)
+    unverified_reason = _unverified_target_bucket_reason(runtime_signals)
+    if unverified_reason is not None:
+        reasons.append(unverified_reason)
+    reasons.extend(
+        _s3_9_destination_blocked_reasons(
         source_bucket=source_bucket,
         resolved_inputs=resolved_inputs,
         runtime_signals=runtime_signals,
+        )
     )
+    return _dedupe_strings(reasons)
 
 
 def _append_access_path_reason(
@@ -547,9 +773,18 @@ def _s3_2_preservation_summary(
     evidence = _evidence(runtime_signals)
     apply_time_merge_reason = _s3_2_oac_apply_time_merge_reason(runtime_signals)
     public_policy_scrub_reason = _s3_2_public_policy_scrub_reason(runtime_signals)
+    website_public_policy_reason = _s3_2_oac_website_public_policy_reason(runtime_signals)
     return {
         "family": "s3_bucket_block_public_access",
         "selected_branch": profile_id,
+        "create_bucket_if_missing": _create_missing_bucket_requested(strategy_id, profile_id, explicit_inputs),
+        "target_bucket_exists": _mapping_value(runtime_signals, "s3_target_bucket_exists") is True,
+        "target_bucket_missing": _mapping_value(runtime_signals, "s3_target_bucket_missing") is True,
+        "target_bucket_verification_available": _optional_bool(
+            _mapping_value(runtime_signals, "s3_target_bucket_verification_available")
+        ),
+        "target_bucket_creation_possible": _mapping_value(runtime_signals, "s3_target_bucket_creation_possible") is True,
+        "target_bucket_reason": _clean_text(_mapping_value(runtime_signals, "s3_target_bucket_reason")),
         "bucket_policy_public": _optional_bool(_mapping_value(runtime_signals, "s3_bucket_policy_public")),
         "website_configured": _optional_bool(_mapping_value(runtime_signals, "s3_bucket_website_configured")),
         "website_configuration_captured": _clean_text(
@@ -562,6 +797,17 @@ def _s3_2_preservation_summary(
         "website_translation_reason": _clean_text(
             _mapping_value(runtime_signals, "s3_bucket_website_translation_reason")
         ),
+        "bucket_block_public_policy_enabled": _optional_bool(
+            _mapping_value(runtime_signals, "s3_bucket_block_public_policy_enabled")
+        ),
+        "account_block_public_policy_enabled": _optional_bool(
+            _mapping_value(runtime_signals, "s3_account_block_public_policy_enabled")
+        ),
+        "effective_block_public_policy_enabled": _optional_bool(
+            _mapping_value(runtime_signals, "s3_effective_block_public_policy_enabled")
+        ),
+        "website_public_policy_conflict": website_public_policy_reason is not None,
+        "website_public_policy_reason": website_public_policy_reason,
         "dns_inputs_complete": _s3_2_website_dns_inputs_complete(explicit_inputs),
         "existing_bucket_policy_statement_count": _coerce_int(
             evidence.get("existing_bucket_policy_statement_count")
@@ -613,8 +859,16 @@ def _s3_9_preservation_summary(
         "family": "s3_bucket_access_logging",
         "family_strategy": strategy_id,
         "selected_branch": profile_id,
+        "create_bucket_if_missing": _create_missing_bucket_requested(strategy_id, profile_id, resolved_inputs),
         "source_bucket_name": source_bucket,
         "source_bucket_scope_proven": source_bucket is not None,
+        "target_bucket_exists": _mapping_value(runtime_signals, "s3_target_bucket_exists") is True,
+        "target_bucket_missing": _mapping_value(runtime_signals, "s3_target_bucket_missing") is True,
+        "target_bucket_verification_available": _optional_bool(
+            _mapping_value(runtime_signals, "s3_target_bucket_verification_available")
+        ),
+        "target_bucket_creation_possible": _mapping_value(runtime_signals, "s3_target_bucket_creation_possible") is True,
+        "target_bucket_reason": _clean_text(_mapping_value(runtime_signals, "s3_target_bucket_reason")),
         "destination_bucket_name": _clean_text(_mapping_value(resolved_inputs, "log_bucket_name")),
         "destination_bucket_reachable": _optional_bool(
             _mapping_value(runtime_signals, "s3_access_logging_destination_bucket_reachable")
@@ -633,6 +887,11 @@ def _s3_2_rationale(
     runtime_signals: Mapping[str, Any] | None,
     blocked_reasons: list[str],
 ) -> str:
+    if profile_id == S3_2_OAC_CREATE_PROFILE_ID and not blocked_reasons:
+        return (
+            "Family resolver selected the create-missing-bucket CloudFront/OAC branch because the target bucket "
+            "no longer exists and the new bucket can start from a zero-policy private baseline."
+        )
     apply_time_merge_reason = _s3_2_oac_apply_time_merge_reason(runtime_signals)
     if not blocked_reasons and explicit_profile is not None:
         return f"Family resolver preserved explicit S3.2 profile '{profile_id}' for strategy '{strategy_id}'."
@@ -661,6 +920,8 @@ def _s3_2_rationale(
 
 
 def _s3_9_rationale(*, profile_id: str, blocked_reasons: list[str]) -> str:
+    if profile_id == S3_9_CREATE_PROFILE_ID and not blocked_reasons:
+        return "Family resolver selected the create-missing-bucket S3.9 branch because the source bucket no longer exists."
     if not blocked_reasons:
         return "Family resolver kept S3.9 executable because bucket scope and destination safety are proven."
     if profile_id == S3_9_REVIEW_PROFILE_ID:
@@ -690,9 +951,24 @@ def _s3_2_website_dns_inputs_complete(explicit_inputs: Mapping[str, Any] | None)
 
 def _s3_5_blocked_reasons(
     *,
+    strategy_id: str,
+    profile_id: str,
+    explicit_inputs: Mapping[str, Any] | None,
     preserve_existing_policy: bool,
     runtime_signals: Mapping[str, Any] | None,
 ) -> list[str]:
+    missing_reason = _missing_target_bucket_reason(runtime_signals)
+    if missing_reason is not None and not _create_missing_bucket_requested(
+        strategy_id,
+        profile_id,
+        explicit_inputs,
+    ):
+        return [missing_reason]
+    if missing_reason is not None:
+        return []
+    unverified_reason = _unverified_target_bucket_reason(runtime_signals)
+    if unverified_reason is not None:
+        return [unverified_reason]
     if not preserve_existing_policy:
         return [
             "Unsafe bucket policy overwrite is not executable in Wave 6; preserve_existing_policy must remain true."
@@ -705,6 +981,9 @@ def _s3_5_blocked_reasons(
         runtime_signals=runtime_signals,
     )
     reasons: list[str] = []
+    block_public_policy_reason = _s3_5_block_public_policy_reason(runtime_signals)
+    if block_public_policy_reason is not None:
+        reasons.append(block_public_policy_reason)
     if _mapping_value(runtime_signals, "s3_policy_analysis_possible") is False and apply_time_merge_reason is None:
         reasons.append(
             str(
@@ -729,9 +1008,13 @@ def _s3_5_blocked_reasons(
 
 def _s3_5_support_tier(
     *,
+    strategy_id: str,
+    profile_id: str,
     preserve_existing_policy: bool,
     blocked_reasons: list[str],
 ) -> SupportTier:
+    if profile_id == _missing_bucket_create_profile_id(strategy_id):
+        return "deterministic_bundle" if not blocked_reasons else "review_required_bundle"
     if not blocked_reasons:
         return "deterministic_bundle"
     if not preserve_existing_policy:
@@ -742,6 +1025,8 @@ def _s3_5_support_tier(
 def _s3_5_preservation_summary(
     *,
     strategy_id: str,
+    profile_id: str,
+    explicit_inputs: Mapping[str, Any] | None,
     preserve_existing_policy: bool,
     runtime_signals: Mapping[str, Any] | None,
     blocked_reasons: list[str],
@@ -754,10 +1039,20 @@ def _s3_5_preservation_summary(
     merge_safe_policy_available = (
         _clean_text(evidence.get("existing_bucket_policy_json")) is not None and not blocked_reasons
     )
+    block_public_policy_reason = _s3_5_block_public_policy_reason(runtime_signals)
     return {
         "family": "s3_bucket_require_ssl",
         "family_strategy": strategy_id,
+        "selected_branch": profile_id,
+        "create_bucket_if_missing": _create_missing_bucket_requested(strategy_id, profile_id, explicit_inputs),
         "preserve_existing_policy": preserve_existing_policy,
+        "target_bucket_exists": _mapping_value(runtime_signals, "s3_target_bucket_exists") is True,
+        "target_bucket_missing": _mapping_value(runtime_signals, "s3_target_bucket_missing") is True,
+        "target_bucket_verification_available": _optional_bool(
+            _mapping_value(runtime_signals, "s3_target_bucket_verification_available")
+        ),
+        "target_bucket_creation_possible": _mapping_value(runtime_signals, "s3_target_bucket_creation_possible") is True,
+        "target_bucket_reason": _clean_text(_mapping_value(runtime_signals, "s3_target_bucket_reason")),
         "bucket_policy_analysis_possible": _optional_bool(
             _mapping_value(runtime_signals, "s3_policy_analysis_possible")
         ),
@@ -768,6 +1063,18 @@ def _s3_5_preservation_summary(
             evidence.get("existing_bucket_policy_json")
         )
         is not None,
+        "bucket_policy_public": _optional_bool(_mapping_value(runtime_signals, "s3_bucket_policy_public")),
+        "bucket_block_public_policy_enabled": _optional_bool(
+            _mapping_value(runtime_signals, "s3_bucket_block_public_policy_enabled")
+        ),
+        "account_block_public_policy_enabled": _optional_bool(
+            _mapping_value(runtime_signals, "s3_account_block_public_policy_enabled")
+        ),
+        "effective_block_public_policy_enabled": _optional_bool(
+            _mapping_value(runtime_signals, "s3_effective_block_public_policy_enabled")
+        ),
+        "block_public_policy_conflict": block_public_policy_reason is not None,
+        "block_public_policy_reason": block_public_policy_reason,
         "merge_safe_policy_available": merge_safe_policy_available,
         "unsafe_overwrite_requested": not preserve_existing_policy,
         "apply_time_merge": apply_time_merge_reason is not None and not blocked_reasons,
@@ -779,10 +1086,16 @@ def _s3_5_preservation_summary(
 def _s3_5_rationale(
     *,
     strategy_id: str,
+    profile_id: str,
     preserve_existing_policy: bool,
     runtime_signals: Mapping[str, Any] | None,
     blocked_reasons: list[str],
 ) -> str:
+    if profile_id == _missing_bucket_create_profile_id(strategy_id) and not blocked_reasons:
+        return (
+            f"Family resolver selected the create-missing-bucket S3.5 profile for strategy '{strategy_id}' "
+            "because the target bucket no longer exists."
+        )
     apply_time_merge_reason = _s3_5_apply_time_merge_reason(
         preserve_existing_policy=preserve_existing_policy,
         runtime_signals=runtime_signals,
@@ -797,6 +1110,12 @@ def _s3_5_rationale(
             f"Family resolver kept S3.5 strategy '{strategy_id}' executable because merge-safe policy "
             "preservation evidence is available."
         )
+    block_public_policy_reason = _s3_5_block_public_policy_reason(runtime_signals)
+    if block_public_policy_reason is not None:
+        return (
+            f"Family resolver downgraded S3.5 strategy '{strategy_id}' because preserving the current "
+            f"public bucket policy would conflict with S3 Block Public Access. {block_public_policy_reason}"
+        )
     if not preserve_existing_policy:
         return (
             f"Family resolver downgraded S3.5 strategy '{strategy_id}' because unsafe bucket policy overwrite "
@@ -805,6 +1124,26 @@ def _s3_5_rationale(
     return (
         f"Family resolver downgraded S3.5 strategy '{strategy_id}' because merge-safe bucket policy "
         f"preservation evidence is incomplete. {' '.join(blocked_reasons)}"
+    )
+
+
+def _s3_5_block_public_policy_reason(runtime_signals: Mapping[str, Any] | None) -> str | None:
+    if _optional_bool(_mapping_value(runtime_signals, "s3_bucket_policy_public")) is not True:
+        return None
+    effective = _optional_bool(_mapping_value(runtime_signals, "s3_effective_block_public_policy_enabled"))
+    if effective is True:
+        return (
+            "Current bucket policy is public and S3 Block Public Access prevents public policies, so "
+            "merge-preserving SSL enforcement would be rejected by PutBucketPolicy."
+        )
+    bucket_bpa = _optional_bool(_mapping_value(runtime_signals, "s3_bucket_block_public_policy_enabled"))
+    account_bpa = _optional_bool(_mapping_value(runtime_signals, "s3_account_block_public_policy_enabled"))
+    if bucket_bpa is False and account_bpa is False:
+        return None
+    return (
+        "Current bucket policy is public, but BlockPublicPolicy visibility is incomplete. Do not keep "
+        "merge-preserving SSL enforcement executable until bucket/account S3 Block Public Access proves "
+        "the policy write is safe."
     )
 
 
@@ -832,9 +1171,24 @@ def _s3_5_apply_time_merge_reason(
 
 def _s3_11_blocked_reasons(
     *,
+    strategy_id: str,
+    profile_id: str,
+    explicit_inputs: Mapping[str, Any] | None,
     abort_days: int,
     runtime_signals: Mapping[str, Any] | None,
 ) -> list[str]:
+    missing_reason = _missing_target_bucket_reason(runtime_signals)
+    if missing_reason is not None and not _create_missing_bucket_requested(
+        strategy_id,
+        profile_id,
+        explicit_inputs,
+    ):
+        return [missing_reason]
+    if missing_reason is not None:
+        return []
+    unverified_reason = _unverified_target_bucket_reason(runtime_signals)
+    if unverified_reason is not None:
+        return [unverified_reason]
     evidence = _evidence(runtime_signals)
     analysis_possible = _optional_bool(_mapping_value(runtime_signals, "s3_lifecycle_analysis_possible"))
     rule_count = _coerce_int(evidence.get("existing_lifecycle_rule_count"))
@@ -873,9 +1227,13 @@ def _s3_11_blocked_reasons(
 
 def _s3_11_support_tier(
     *,
+    strategy_id: str,
+    profile_id: str,
     blocked_reasons: list[str],
     runtime_signals: Mapping[str, Any] | None,
 ) -> SupportTier:
+    if profile_id == _missing_bucket_create_profile_id(strategy_id):
+        return "deterministic_bundle" if not blocked_reasons else "review_required_bundle"
     if not blocked_reasons:
         return "deterministic_bundle"
     evidence = _evidence(runtime_signals)
@@ -889,6 +1247,8 @@ def _s3_11_support_tier(
 def _s3_11_preservation_summary(
     *,
     strategy_id: str,
+    profile_id: str,
+    explicit_inputs: Mapping[str, Any] | None,
     abort_days: int,
     runtime_signals: Mapping[str, Any] | None,
     blocked_reasons: list[str],
@@ -900,7 +1260,16 @@ def _s3_11_preservation_summary(
     return {
         "family": "s3_bucket_lifecycle_configuration",
         "family_strategy": strategy_id,
+        "selected_branch": profile_id,
+        "create_bucket_if_missing": _create_missing_bucket_requested(strategy_id, profile_id, explicit_inputs),
         "abort_days": abort_days,
+        "target_bucket_exists": _mapping_value(runtime_signals, "s3_target_bucket_exists") is True,
+        "target_bucket_missing": _mapping_value(runtime_signals, "s3_target_bucket_missing") is True,
+        "target_bucket_verification_available": _optional_bool(
+            _mapping_value(runtime_signals, "s3_target_bucket_verification_available")
+        ),
+        "target_bucket_creation_possible": _mapping_value(runtime_signals, "s3_target_bucket_creation_possible") is True,
+        "target_bucket_reason": _clean_text(_mapping_value(runtime_signals, "s3_target_bucket_reason")),
         "existing_lifecycle_rule_count": _coerce_int(evidence.get("existing_lifecycle_rule_count")),
         "existing_lifecycle_configuration_captured": lifecycle_json is not None,
         "existing_lifecycle_configuration_equivalent": lifecycle_analysis["equivalent_safe_state"],
@@ -917,10 +1286,16 @@ def _s3_11_preservation_summary(
 def _s3_11_rationale(
     *,
     strategy_id: str,
+    profile_id: str,
     abort_days: int,
     runtime_signals: Mapping[str, Any] | None,
     blocked_reasons: list[str],
 ) -> str:
+    if profile_id == _missing_bucket_create_profile_id(strategy_id) and not blocked_reasons:
+        return (
+            f"Family resolver selected the create-missing-bucket S3.11 profile for strategy '{strategy_id}' "
+            "because the target bucket no longer exists."
+        )
     if not blocked_reasons:
         apply_time_merge_reason = _s3_11_apply_time_merge_reason(runtime_signals)
         if apply_time_merge_reason is not None:
@@ -957,7 +1332,16 @@ def _s3_11_apply_time_merge_reason(runtime_signals: Mapping[str, Any] | None) ->
     )
 
 
-def _automatic_s3_15_profile_id(*, strategy_id: str, key_mode: str) -> str:
+def _automatic_s3_15_profile_id(
+    *,
+    strategy_id: str,
+    key_mode: str,
+    runtime_signals: Mapping[str, Any] | None,
+) -> str:
+    if _missing_target_bucket_reason(runtime_signals) is not None and key_mode != "custom":
+        create_profile_id = _missing_bucket_create_profile_id(strategy_id)
+        if create_profile_id is not None:
+            return create_profile_id
     if key_mode == "custom":
         return S3_15_CUSTOMER_MANAGED_PROFILE_ID
     return strategy_id
@@ -965,12 +1349,24 @@ def _automatic_s3_15_profile_id(*, strategy_id: str, key_mode: str) -> str:
 
 def _s3_15_blocked_reasons(
     *,
+    strategy_id: str,
+    requested_profile_id: str | None,
     key_mode: str,
     resolved_inputs: Mapping[str, Any] | None,
     runtime_signals: Mapping[str, Any] | None,
     action: Any | None,
 ) -> list[str]:
     reasons: list[str] = []
+    missing_reason = _missing_target_bucket_reason(runtime_signals)
+    if missing_reason is not None and not _create_missing_bucket_requested(
+        strategy_id,
+        requested_profile_id or "",
+        resolved_inputs,
+    ):
+        reasons.append(missing_reason)
+    unverified_reason = _unverified_target_bucket_reason(runtime_signals)
+    if unverified_reason is not None:
+        reasons.append(unverified_reason)
     if _bucket_name_from_action_fields(action, "target_id", "resource_id") is None:
         reasons.append("Target bucket scope could not be proven for S3 SSE-KMS enforcement.")
     if key_mode != "custom":
@@ -989,11 +1385,14 @@ def _s3_15_blocked_reasons(
 
 def _s3_15_support_tier(
     *,
+    strategy_id: str,
     profile_id: str,
     key_mode: str,
     resolved_inputs: Mapping[str, Any] | None,
     blocked_reasons: list[str],
 ) -> SupportTier:
+    if profile_id == _missing_bucket_create_profile_id(strategy_id):
+        return "deterministic_bundle" if not blocked_reasons else "review_required_bundle"
     if not blocked_reasons:
         return "deterministic_bundle"
     if profile_id != S3_15_CUSTOMER_MANAGED_PROFILE_ID and key_mode != "custom":
@@ -1018,10 +1417,18 @@ def _s3_15_preservation_summary(
         "family": "s3_bucket_encryption_kms",
         "family_strategy": strategy_id,
         "selected_branch": profile_id,
+        "create_bucket_if_missing": _create_missing_bucket_requested(strategy_id, profile_id, resolved_inputs),
         "kms_key_mode": key_mode,
         "kms_key_arn_present": _clean_text(_mapping_value(resolved_inputs, "kms_key_arn")) is not None,
         "target_bucket_name": _bucket_name_from_action_fields(action, "target_id", "resource_id"),
         "target_bucket_scope_proven": _bucket_name_from_action_fields(action, "target_id", "resource_id") is not None,
+        "target_bucket_exists": _mapping_value(runtime_signals, "s3_target_bucket_exists") is True,
+        "target_bucket_missing": _mapping_value(runtime_signals, "s3_target_bucket_missing") is True,
+        "target_bucket_verification_available": _optional_bool(
+            _mapping_value(runtime_signals, "s3_target_bucket_verification_available")
+        ),
+        "target_bucket_creation_possible": _mapping_value(runtime_signals, "s3_target_bucket_creation_possible") is True,
+        "target_bucket_reason": _clean_text(_mapping_value(runtime_signals, "s3_target_bucket_reason")),
         "customer_managed_key_valid": _optional_bool(_mapping_value(runtime_signals, "s3_customer_kms_key_valid")),
         "customer_managed_dependency_proven": _mapping_value(runtime_signals, "s3_customer_kms_dependency_proven") is True,
         "customer_managed_policy_json_captured": _clean_text(evidence.get("customer_kms_policy_json")) is not None,
@@ -1031,6 +1438,8 @@ def _s3_15_preservation_summary(
 
 
 def _s3_15_rationale(*, profile_id: str, key_mode: str, blocked_reasons: list[str]) -> str:
+    if profile_id == S3_15_CREATE_PROFILE_ID and not blocked_reasons:
+        return "Family resolver selected the create-missing-bucket S3.15 branch because the target bucket no longer exists."
     if not blocked_reasons:
         return f"Family resolver kept S3.15 branch '{profile_id}' executable with key_mode={key_mode}."
     return f"Family resolver downgraded S3.15 branch '{profile_id}' because KMS safety is under-proven. {' '.join(blocked_reasons)}"

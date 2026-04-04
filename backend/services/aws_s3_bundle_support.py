@@ -5,6 +5,7 @@ from textwrap import dedent
 from typing import Any
 
 AWS_S3_POLICY_CAPTURE_SCRIPT_PATH = "scripts/s3_policy_capture.py"
+AWS_S3_POLICY_FETCH_SCRIPT_PATH = "scripts/s3_policy_fetch.py"
 AWS_S3_POLICY_ROLLBACK_DIR = ".s3-rollback"
 AWS_S3_POLICY_RESTORE_SCRIPT_PATH = "rollback/s3_policy_restore.py"
 
@@ -115,6 +116,80 @@ def aws_s3_policy_capture_script_content() -> str:
                 print(f"Captured existing bucket policy to {snapshot_path}")
             else:
                 print(f"No existing bucket policy found; captured empty pre-state to {snapshot_path}")
+
+
+        if __name__ == "__main__":
+            main()
+        """
+    )
+
+
+def aws_s3_policy_fetch_script_content() -> str:
+    """Return the apply-time fetch helper for S3.5 policy merge bundles."""
+    return dedent(
+        """\
+        #!/usr/bin/env python3
+        \"\"\"
+        Security Autopilot — S3 bucket policy fetch helper for Terraform external data.
+        \"\"\"
+        from __future__ import annotations
+
+        import json
+        import subprocess
+        import sys
+
+
+        def fail(message: str) -> None:
+            raise SystemExit(message)
+
+
+        def read_query() -> tuple[str, str]:
+            query = json.load(sys.stdin)
+            bucket_name = str(query.get("bucket_name") or "").strip()
+            region = str(query.get("region") or "").strip()
+            if not bucket_name or not region:
+                fail("bucket_name and region are required")
+            return bucket_name, region
+
+
+        def run_aws(bucket_name: str, region: str) -> subprocess.CompletedProcess[str]:
+            return subprocess.run(
+                [
+                    "aws",
+                    "s3api",
+                    "get-bucket-policy",
+                    "--bucket",
+                    bucket_name,
+                    "--region",
+                    region,
+                    "--query",
+                    "Policy",
+                    "--output",
+                    "text",
+                ],
+                capture_output=True,
+                text=True,
+            )
+
+
+        def main() -> None:
+            bucket_name, region = read_query()
+            result = run_aws(bucket_name, region)
+            output = f"{result.stdout}\\n{result.stderr}"
+            if result.returncode == 0:
+                policy_json = (result.stdout or "").strip()
+                if policy_json in {"", "None", "null"}:
+                    policy_json = '{"Version":"2012-10-17","Statement":[]}'
+                json.loads(policy_json)
+                print(json.dumps({"policy_json": policy_json}))
+                return
+            if "NoSuchBucketPolicy" in output:
+                print(json.dumps({"policy_json": '{"Version":"2012-10-17","Statement":[]}' }))
+                return
+            if "NoSuchBucket" in output or "Not Found" in output:
+                fail(f"Target bucket '{bucket_name}' no longer exists.")
+            message = result.stderr.strip() or result.stdout.strip() or "get-bucket-policy failed"
+            fail(f"AWS CLI error: {message}")
 
 
         if __name__ == "__main__":

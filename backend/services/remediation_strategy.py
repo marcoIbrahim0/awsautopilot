@@ -218,7 +218,18 @@ STRATEGY_REGISTRY: dict[str, tuple[RemediationStrategy, ...]] = {
             risk_level="low",
             recommended=True,
             requires_inputs=False,
-            input_schema=_schema(),
+            input_schema=_schema(
+                [
+                    {
+                        "key": "create_bucket_if_missing",
+                        "type": "boolean",
+                        "required": False,
+                        "description": "When true, create the missing target bucket as a new private bucket before applying the OAC migration.",
+                        "default_value": False,
+                        "group": "Bucket Recovery",
+                    },
+                ]
+            ),
             supports_exception_flow=False,
             exception_only=False,
             impact_text="All four account-level public access block settings will be enabled.",
@@ -904,6 +915,14 @@ STRATEGY_REGISTRY: dict[str, tuple[RemediationStrategy, ...]] = {
             input_schema=_schema(
                 [
                     {
+                        "key": "create_bucket_if_missing",
+                        "type": "boolean",
+                        "required": False,
+                        "description": "When true, create the missing source bucket as a new private bucket before enabling access logging.",
+                        "default_value": False,
+                        "group": "Logging Settings",
+                    },
+                    {
                         "key": "log_bucket_name",
                         "type": "string",
                         "required": True,
@@ -945,6 +964,14 @@ STRATEGY_REGISTRY: dict[str, tuple[RemediationStrategy, ...]] = {
             input_schema=_schema(
                 [
                     {
+                        "key": "create_bucket_if_missing",
+                        "type": "boolean",
+                        "required": False,
+                        "description": "When true, create the missing target bucket as a new private bucket before applying the lifecycle rule.",
+                        "default_value": False,
+                        "group": "Lifecycle Settings",
+                    },
+                    {
                         "key": "abort_days",
                         "type": "number",
                         "required": False,
@@ -984,6 +1011,14 @@ STRATEGY_REGISTRY: dict[str, tuple[RemediationStrategy, ...]] = {
             requires_inputs=True,
             input_schema=_schema(
                 [
+                    {
+                        "key": "create_bucket_if_missing",
+                        "type": "boolean",
+                        "required": False,
+                        "description": "When true, create the missing target bucket as a new private bucket before enforcing SSE-KMS.",
+                        "default_value": False,
+                        "group": "Encryption Settings",
+                    },
                     {
                         "key": "kms_key_mode",
                         "type": "select",
@@ -1043,6 +1078,14 @@ STRATEGY_REGISTRY: dict[str, tuple[RemediationStrategy, ...]] = {
             input_schema=_schema(
                 [
                     {
+                        "key": "create_bucket_if_missing",
+                        "type": "boolean",
+                        "required": False,
+                        "description": "When true, create the missing target bucket as a new private bucket before enforcing SSL-only requests.",
+                        "default_value": False,
+                        "group": "Policy Settings",
+                    },
+                    {
                         "key": "preserve_existing_policy",
                         "type": "boolean",
                         "required": False,
@@ -1082,6 +1125,14 @@ STRATEGY_REGISTRY: dict[str, tuple[RemediationStrategy, ...]] = {
             requires_inputs=True,
             input_schema=_schema(
                 [
+                    {
+                        "key": "create_bucket_if_missing",
+                        "type": "boolean",
+                        "required": False,
+                        "description": "When true, create the missing target bucket as a new private bucket before enforcing SSL-only requests.",
+                        "default_value": False,
+                        "group": "Policy Settings",
+                    },
                     {
                         "key": "preserve_existing_policy",
                         "type": "boolean",

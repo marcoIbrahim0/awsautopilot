@@ -23,5 +23,6 @@ COPY alembic ${LAMBDA_TASK_ROOT}/alembic
 COPY alembic.ini ${LAMBDA_TASK_ROOT}/alembic.ini
 COPY backend ${LAMBDA_TASK_ROOT}/backend
 COPY backend/workers ${LAMBDA_TASK_ROOT}/backend/workers
+COPY infrastructure ${LAMBDA_TASK_ROOT}/infrastructure
 
 CMD ["backend.workers.lambda_handler.handler"]

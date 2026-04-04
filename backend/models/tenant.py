@@ -1,8 +1,8 @@
 # backend/models/tenant.py
 import uuid
-from sqlalchemy import Boolean, DateTime, String, Text, func
+from sqlalchemy import Boolean, DateTime, String, Text, func, inspect
 from sqlalchemy.dialects.postgresql import JSONB, UUID
-from sqlalchemy.orm import Mapped, mapped_column, relationship
+from sqlalchemy.orm import Mapped, mapped_column, relationship, validates
 
 from backend.models.base import Base
 
@@ -53,3 +53,14 @@ class Tenant(Base):
     # Relationships
     users = relationship("User", back_populates="tenant", cascade="all, delete-orphan")
     aws_accounts = relationship("AwsAccount", back_populates="tenant", cascade="all, delete-orphan")
+
+    @validates("external_id")
+    def _validate_external_id(self, key: str, value: str) -> str:
+        normalized = str(value or "").strip()
+        if not normalized:
+            raise ValueError("Tenant.external_id cannot be empty.")
+        state = inspect(self)
+        current = str(getattr(self, key, "") or "").strip()
+        if state.persistent and current and current != normalized:
+            raise ValueError("Tenant.external_id is immutable after tenant creation.")
+        return normalized

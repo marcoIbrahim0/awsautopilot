@@ -159,6 +159,7 @@ def test_pr_only_create_defaults_profile_id_to_strategy_id_and_persists_resoluti
             "mode": "pr_only",
             "strategy_id": "s3_migrate_cloudfront_oac_private",
             "pr_bundle_variant": "cloudfront_oac_private_s3",
+            "risk_acknowledged": True,
         },
         runtime_signals={
             "s3_bucket_policy_public": False,
@@ -357,6 +358,7 @@ def test_s3_2_create_keeps_oac_strategy_executable_with_runtime_proven_zero_poli
             "mode": "pr_only",
             "strategy_id": "s3_migrate_cloudfront_oac_private",
             "pr_bundle_variant": "cloudfront_oac_private_s3",
+            "risk_acknowledged": True,
         },
         runtime_signals={
             "s3_bucket_policy_public": False,
@@ -442,6 +444,72 @@ def test_s3_2_create_keeps_oac_apply_time_merge_executable_after_risk_acknowledg
     assert "AccessDenied" in resolution["preservation_summary"]["apply_time_merge_reason"]
     assert "existing_bucket_policy_json" not in _added_run(session).artifacts["strategy_inputs"]
     assert _queued_payload(mock_sqs)["resolution"]["support_tier"] == "deterministic_bundle"
+
+
+def test_s3_2_create_downgrades_oac_strategy_for_public_website_bucket_under_bpa(
+    client: TestClient,
+) -> None:
+    tenant_id = uuid.uuid4()
+    tenant = _mock_tenant()
+    tenant.id = tenant_id
+    user = _mock_user(tenant_id)
+    action = _mock_action(tenant_id, action_type="s3_bucket_block_public_access")
+    action.target_id = "123456789012|us-east-1|arn:aws:s3:::website-bucket|S3.2"
+    action.resource_id = "arn:aws:s3:::website-bucket"
+    session = _mock_async_session(tenant, action, None, None)
+    _install_refresh(session)
+
+    response, mock_sqs = _post_create(
+        client,
+        session,
+        user,
+        {
+            "action_id": str(action.id),
+            "mode": "pr_only",
+            "strategy_id": "s3_migrate_cloudfront_oac_private",
+            "pr_bundle_variant": "cloudfront_oac_private_s3",
+            "risk_acknowledged": True,
+        },
+        runtime_signals={
+            "s3_bucket_policy_public": True,
+            "s3_bucket_website_configured": True,
+            "s3_bucket_website_translation_supported": True,
+            "s3_bucket_block_public_policy_enabled": True,
+            "s3_account_block_public_policy_enabled": True,
+            "s3_effective_block_public_policy_enabled": True,
+            "access_path_evidence_available": True,
+            "evidence": {
+                "existing_bucket_policy_statement_count": 1,
+                "existing_bucket_policy_json": json.dumps(
+                    {
+                        "Version": "2012-10-17",
+                        "Statement": [
+                            {
+                                "Sid": "PublicReadWebsiteObjects",
+                                "Effect": "Allow",
+                                "Principal": "*",
+                                "Action": "s3:GetObject",
+                                "Resource": "arn:aws:s3:::website-bucket/*",
+                            }
+                        ],
+                    }
+                ),
+                "existing_bucket_website_configuration_json": json.dumps(
+                    {"IndexDocument": {"Suffix": "index.html"}}
+                ),
+            },
+        },
+    )
+
+    resolution = _added_run(session).artifacts["resolution"]
+    assert response.status_code == 201
+    assert resolution["profile_id"] == "s3_migrate_cloudfront_oac_private_manual_preservation"
+    assert resolution["support_tier"] == "manual_guidance_only"
+    assert resolution["blocked_reasons"] == [
+        "Bucket is still configured for S3 website hosting with a public website-read policy, and BlockPublicPolicy would reject preserving that public statement. Use the website-specific CloudFront cutover path or manual review instead of the generic CloudFront + OAC migration."
+    ]
+    assert resolution["preservation_summary"]["website_public_policy_conflict"] is True
+    assert _queued_payload(mock_sqs)["resolution"]["profile_id"] == resolution["profile_id"]
 
 
 def test_s3_2_create_keeps_website_strategy_executable_for_simple_website_cutover(
@@ -693,6 +761,53 @@ def test_s3_5_create_keeps_apply_time_merge_executable_after_risk_acknowledgemen
     assert _queued_payload(mock_sqs)["resolution"]["support_tier"] == "deterministic_bundle"
 
 
+def test_s3_5_create_downgrades_public_policy_when_bpa_blocks_public_policies(
+    client: TestClient,
+) -> None:
+    tenant_id = uuid.uuid4()
+    tenant = _mock_tenant()
+    tenant.id = tenant_id
+    user = _mock_user(tenant_id)
+    action = _mock_action(tenant_id, action_type="s3_bucket_require_ssl")
+    action.target_id = "123456789012|us-east-1|arn:aws:s3:::ssl-bucket|S3.5"
+    action.resource_id = "arn:aws:s3:::ssl-bucket"
+    session = _mock_async_session(tenant, action, None, None)
+    _install_refresh(session)
+
+    response, mock_sqs = _post_create(
+        client,
+        session,
+        user,
+        {
+            "action_id": str(action.id),
+            "mode": "pr_only",
+            "strategy_id": "s3_enforce_ssl_strict_deny",
+            "risk_acknowledged": True,
+        },
+        runtime_signals={
+            "s3_policy_analysis_possible": False,
+            "s3_policy_analysis_error": "AccessDenied",
+            "s3_bucket_policy_public": True,
+            "s3_effective_block_public_policy_enabled": True,
+            "s3_bucket_block_public_policy_enabled": True,
+            "evidence": {
+                "target_bucket": "ssl-bucket",
+                "existing_bucket_policy_capture_error": "AccessDenied",
+            },
+        },
+        risk_snapshot={"checks": [], "recommendation": "safe_to_proceed", "warnings": [], "evidence": {}},
+    )
+
+    resolution = _added_run(session).artifacts["resolution"]
+    assert response.status_code == 201
+    assert resolution["support_tier"] == "review_required_bundle"
+    assert resolution["preservation_summary"]["apply_time_merge"] is False
+    assert resolution["blocked_reasons"] == [
+        "Current bucket policy is public and S3 Block Public Access prevents public policies, so merge-preserving SSL enforcement would be rejected by PutBucketPolicy."
+    ]
+    assert _queued_payload(mock_sqs)["resolution"]["support_tier"] == "review_required_bundle"
+
+
 def test_s3_5_create_preserves_executable_support_tier_after_risk_acknowledgement(client: TestClient) -> None:
     tenant_id = uuid.uuid4()
     tenant = _mock_tenant()
@@ -809,6 +924,100 @@ def test_s3_5_create_keeps_zero_policy_fallback_executable_without_risk_acknowle
     assert resolution["preservation_summary"]["apply_time_merge"] is False
     assert run.artifacts["strategy_inputs"]["existing_bucket_policy_statement_count"] == 0
     assert _queued_payload(mock_sqs)["resolution"]["support_tier"] == "deterministic_bundle"
+
+
+def test_s3_5_create_missing_bucket_requires_bucket_creation_acknowledgement(client: TestClient) -> None:
+    tenant_id = uuid.uuid4()
+    tenant = _mock_tenant()
+    tenant.id = tenant_id
+    user = _mock_user(tenant_id)
+    action = _mock_action(tenant_id, action_type="s3_bucket_require_ssl")
+    action.target_id = "123456789012|us-east-1|arn:aws:s3:::missing-ssl-bucket|S3.5"
+    action.resource_id = "arn:aws:s3:::missing-ssl-bucket"
+    session = _mock_async_session(tenant, action, None, None)
+    _install_refresh(session)
+
+    response, mock_sqs = _post_create(
+        client,
+        session,
+        user,
+        {
+            "action_id": str(action.id),
+            "mode": "pr_only",
+            "strategy_id": "s3_enforce_ssl_strict_deny",
+        },
+        runtime_signals={
+            "s3_target_bucket_exists": False,
+            "s3_target_bucket_missing": True,
+            "s3_target_bucket_creation_possible": True,
+            "s3_target_bucket_reason": (
+                "Target bucket 'missing-ssl-bucket' no longer exists. Select the create-missing-bucket path or refresh action state before generating a bundle."
+            ),
+            "context": {"default_inputs": {"create_bucket_if_missing": True}},
+            "evidence": {
+                "target_bucket": "missing-ssl-bucket",
+                "existing_bucket_policy_statement_count": 0,
+            },
+            "s3_policy_analysis_possible": True,
+        },
+        risk_snapshot={"checks": [], "recommendation": "safe_to_proceed", "warnings": [], "evidence": {}},
+    )
+
+    assert response.status_code == 400
+    assert response.json()["detail"]["error"] == "Bucket creation acknowledgement required"
+    assert session.add.call_count == 0
+    assert mock_sqs.send_message.call_count == 0
+
+
+def test_s3_5_create_missing_bucket_auto_selects_create_profile_and_persists_inputs(
+    client: TestClient,
+) -> None:
+    tenant_id = uuid.uuid4()
+    tenant = _mock_tenant()
+    tenant.id = tenant_id
+    user = _mock_user(tenant_id)
+    action = _mock_action(tenant_id, action_type="s3_bucket_require_ssl")
+    action.target_id = "123456789012|us-east-1|arn:aws:s3:::missing-ssl-bucket|S3.5"
+    action.resource_id = "arn:aws:s3:::missing-ssl-bucket"
+    session = _mock_async_session(tenant, action, None, None)
+    _install_refresh(session)
+
+    response, mock_sqs = _post_create(
+        client,
+        session,
+        user,
+        {
+            "action_id": str(action.id),
+            "mode": "pr_only",
+            "strategy_id": "s3_enforce_ssl_strict_deny",
+            "bucket_creation_acknowledged": True,
+        },
+        runtime_signals={
+            "s3_target_bucket_exists": False,
+            "s3_target_bucket_missing": True,
+            "s3_target_bucket_creation_possible": True,
+            "s3_target_bucket_reason": (
+                "Target bucket 'missing-ssl-bucket' no longer exists. Select the create-missing-bucket path or refresh action state before generating a bundle."
+            ),
+            "context": {"default_inputs": {"create_bucket_if_missing": True}},
+            "evidence": {
+                "target_bucket": "missing-ssl-bucket",
+                "existing_bucket_policy_statement_count": 0,
+            },
+            "s3_policy_analysis_possible": True,
+        },
+        risk_snapshot={"checks": [], "recommendation": "safe_to_proceed", "warnings": [], "evidence": {}},
+    )
+
+    run = _added_run(session)
+    resolution = run.artifacts["resolution"]
+    assert response.status_code == 201
+    assert resolution["profile_id"] == "s3_enforce_ssl_strict_deny_create_missing_bucket"
+    assert resolution["support_tier"] == "deterministic_bundle"
+    assert resolution["resolved_inputs"]["create_bucket_if_missing"] is True
+    assert run.artifacts["strategy_inputs"]["create_bucket_if_missing"] is True
+    assert run.artifacts["cloudtrail_bucket_creation_approval"]["approved"] is True
+    assert _queued_payload(mock_sqs)["strategy_inputs"]["create_bucket_if_missing"] is True
 
 
 def test_s3_11_create_requires_lifecycle_preservation_evidence_before_executable_output(client: TestClient) -> None:
@@ -997,6 +1206,106 @@ def test_s3_11_create_keeps_renderable_captured_lifecycle_executable(client: Tes
     assert resolution["blocked_reasons"] == []
     assert resolution["preservation_summary"]["existing_lifecycle_merge_renderable"] is True
     assert _queued_payload(mock_sqs)["resolution"]["support_tier"] == "deterministic_bundle"
+
+
+def test_s3_11_create_missing_bucket_requires_bucket_creation_acknowledgement(
+    client: TestClient,
+) -> None:
+    tenant_id = uuid.uuid4()
+    tenant = _mock_tenant()
+    tenant.id = tenant_id
+    user = _mock_user(tenant_id)
+    action = _mock_action(tenant_id, action_type="s3_bucket_lifecycle_configuration")
+    action.target_id = "123456789012|us-east-1|arn:aws:s3:::missing-lifecycle-bucket|S3.11"
+    action.resource_id = "arn:aws:s3:::missing-lifecycle-bucket"
+    session = _mock_async_session(tenant, action, None, None)
+    _install_refresh(session)
+
+    response, mock_sqs = _post_create(
+        client,
+        session,
+        user,
+        {
+            "action_id": str(action.id),
+            "mode": "pr_only",
+            "strategy_id": "s3_enable_abort_incomplete_uploads",
+        },
+        runtime_signals={
+            "s3_target_bucket_exists": False,
+            "s3_target_bucket_missing": True,
+            "s3_target_bucket_creation_possible": True,
+            "s3_target_bucket_reason": (
+                "Target bucket 'missing-lifecycle-bucket' no longer exists. "
+                "Choose the create-missing-bucket path to recreate it before remediation."
+            ),
+            "context": {"default_inputs": {"create_bucket_if_missing": True}},
+            "evidence": {
+                "target_bucket": "missing-lifecycle-bucket",
+                "s3_target_bucket_name": "missing-lifecycle-bucket",
+                "existing_lifecycle_rule_count": 0,
+            },
+            "s3_lifecycle_analysis_possible": True,
+        },
+        risk_snapshot={"checks": [], "recommendation": "safe_to_proceed", "warnings": [], "evidence": {}},
+    )
+
+    assert response.status_code == 400
+    assert response.json()["detail"]["error"] == "Bucket creation acknowledgement required"
+    assert session.add.call_count == 0
+    assert mock_sqs.send_message.call_count == 0
+
+
+def test_s3_11_create_missing_bucket_auto_selects_create_profile_and_persists_inputs(
+    client: TestClient,
+) -> None:
+    tenant_id = uuid.uuid4()
+    tenant = _mock_tenant()
+    tenant.id = tenant_id
+    user = _mock_user(tenant_id)
+    action = _mock_action(tenant_id, action_type="s3_bucket_lifecycle_configuration")
+    action.target_id = "123456789012|us-east-1|arn:aws:s3:::missing-lifecycle-bucket|S3.11"
+    action.resource_id = "arn:aws:s3:::missing-lifecycle-bucket"
+    session = _mock_async_session(tenant, action, None, None)
+    _install_refresh(session)
+
+    response, mock_sqs = _post_create(
+        client,
+        session,
+        user,
+        {
+            "action_id": str(action.id),
+            "mode": "pr_only",
+            "strategy_id": "s3_enable_abort_incomplete_uploads",
+            "bucket_creation_acknowledged": True,
+        },
+        runtime_signals={
+            "s3_target_bucket_exists": False,
+            "s3_target_bucket_missing": True,
+            "s3_target_bucket_creation_possible": True,
+            "s3_target_bucket_reason": (
+                "Target bucket 'missing-lifecycle-bucket' no longer exists. "
+                "Choose the create-missing-bucket path to recreate it before remediation."
+            ),
+            "context": {"default_inputs": {"create_bucket_if_missing": True}},
+            "evidence": {
+                "target_bucket": "missing-lifecycle-bucket",
+                "s3_target_bucket_name": "missing-lifecycle-bucket",
+                "existing_lifecycle_rule_count": 0,
+            },
+            "s3_lifecycle_analysis_possible": True,
+        },
+        risk_snapshot={"checks": [], "recommendation": "safe_to_proceed", "warnings": [], "evidence": {}},
+    )
+
+    run = _added_run(session)
+    resolution = run.artifacts["resolution"]
+    assert response.status_code == 201
+    assert resolution["profile_id"] == "s3_enable_abort_incomplete_uploads_create_missing_bucket"
+    assert resolution["support_tier"] == "deterministic_bundle"
+    assert resolution["resolved_inputs"]["create_bucket_if_missing"] is True
+    assert run.artifacts["strategy_inputs"]["create_bucket_if_missing"] is True
+    assert run.artifacts["cloudtrail_bucket_creation_approval"]["approved"] is True
+    assert _queued_payload(mock_sqs)["strategy_inputs"]["create_bucket_if_missing"] is True
 
 
 def test_snapshot_create_preserves_executable_support_tier_after_risk_acknowledgement(client: TestClient) -> None:

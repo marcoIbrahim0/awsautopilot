@@ -488,17 +488,41 @@ def _with_direct_fix_approval(
     return merged
 
 
-def _requires_cloudtrail_bucket_creation_approval(
+_BUCKET_CREATION_ACK_ACTION_TYPES = frozenset(
+    {
+        "cloudtrail_enabled",
+        "s3_bucket_access_logging",
+        "s3_bucket_block_public_access",
+        "s3_bucket_require_ssl",
+        "s3_bucket_lifecycle_configuration",
+        "s3_bucket_encryption_kms",
+    }
+)
+
+
+def _requires_bucket_creation_approval(
     *,
     action_type: str | None,
     strategy_id: str | None,
     strategy_inputs: Mapping[str, Any] | None,
 ) -> bool:
+    del strategy_id
     return (
-        action_type == "cloudtrail_enabled"
-        and strategy_id == "cloudtrail_enable_guided"
+        action_type in _BUCKET_CREATION_ACK_ACTION_TYPES
         and isinstance(strategy_inputs, Mapping)
         and strategy_inputs.get("create_bucket_if_missing") is True
+    )
+
+
+def _bucket_creation_ack_detail(action_type: str | None) -> str:
+    if action_type == "cloudtrail_enabled":
+        return (
+            "This CloudTrail remediation may create a new S3 bucket and bucket policy for log delivery. "
+            "Set bucket_creation_acknowledged=true after review."
+        )
+    return (
+        "This remediation may create a new private S3 bucket before applying the selected control change. "
+        "Set bucket_creation_acknowledged=true after review."
     )
 
 
@@ -1668,6 +1692,7 @@ async def create_remediation_run(
             strategy=selected_strategy,
             strategy_inputs=probe_inputs,
             account=account,
+            tenant_external_id=tenant.external_id,
         )
         if body.mode == "pr_only":
             try:
@@ -1764,7 +1789,7 @@ async def create_remediation_run(
                         "risk_snapshot": risk_snapshot,
                     },
                 )
-        if _requires_cloudtrail_bucket_creation_approval(
+        if _requires_bucket_creation_approval(
             action_type=action.action_type,
             strategy_id=selected_strategy_id,
             strategy_inputs=selected_strategy_inputs,
@@ -1780,10 +1805,7 @@ async def create_remediation_run(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail={
                     "error": "Bucket creation acknowledgement required",
-                    "detail": (
-                        "This CloudTrail remediation may create a new S3 bucket and bucket policy for log delivery. "
-                        "Set bucket_creation_acknowledged=true after review."
-                    ),
+                    "detail": _bucket_creation_ack_detail(action.action_type),
                 },
             )
     if body.mode == "direct_fix":
@@ -1857,7 +1879,11 @@ async def create_remediation_run(
                     ),
                 },
             )
-        probe_ok, probe_detail = probe_direct_fix_permissions(action=action, account=account)
+        probe_ok, probe_detail = probe_direct_fix_permissions(
+            action=action,
+            account=account,
+            tenant_external_id=tenant.external_id,
+        )
         if probe_ok is False:
             emit_validation_failure(
                 logger,
@@ -2363,6 +2389,7 @@ async def create_group_pr_bundle_run(
             group_bundle_seed={"group_id": str(group_id), "group_key": persistent_group_key},
             account=account,
             tenant_settings=getattr(tenant, "remediation_settings", None),
+            tenant_external_id=tenant.external_id,
         )
     except GroupedRemediationRunValidationError as exc:
         _raise_grouped_validation_error(
@@ -2371,7 +2398,7 @@ async def create_group_pr_bundle_run(
             strategy_id=normalized_request.strategy_id,
         )
     requires_bucket_creation_ack = any(
-        _requires_cloudtrail_bucket_creation_approval(
+        _requires_bucket_creation_approval(
             action_type=action_type,
             strategy_id=entry.strategy_id,
             strategy_inputs=entry.strategy_inputs,
@@ -2383,10 +2410,7 @@ async def create_group_pr_bundle_run(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail={
                 "error": "Bucket creation acknowledgement required",
-                "detail": (
-                    "This CloudTrail remediation may create a new S3 bucket and bucket policy for log delivery. "
-                    "Set bucket_creation_acknowledged=true after review."
-                ),
+                "detail": _bucket_creation_ack_detail(action_type),
             },
         )
 

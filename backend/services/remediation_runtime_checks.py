@@ -10,7 +10,7 @@ import json
 import logging
 import re
 from datetime import datetime, timezone
-from typing import Any
+from typing import Any, Mapping
 
 from botocore.exceptions import ClientError
 
@@ -21,6 +21,7 @@ from backend.services.aws import (
     assume_role,
     build_assume_role_tags,
 )
+from backend.services.account_trust import account_assume_role_external_id
 from backend.services.remediation_support_bucket import probe_support_bucket_safety
 from backend.services.remediation_strategy import RemediationStrategy, get_adjacency_contract
 from backend.services.s3_family_resolution_adapter import default_s3_access_logging_log_bucket_name
@@ -231,6 +232,170 @@ def _context_payload(signals: dict[str, Any]) -> dict[str, Any]:
     return payload
 
 
+def _default_inputs_payload(signals: dict[str, Any]) -> dict[str, Any]:
+    """Return mutable default_inputs payload nested under runtime context."""
+    context = _context_payload(signals)
+    default_inputs = context.get("default_inputs")
+    if isinstance(default_inputs, dict):
+        return default_inputs
+    if isinstance(default_inputs, Mapping):
+        copied = dict(default_inputs)
+        context["default_inputs"] = copied
+        return copied
+    created: dict[str, Any] = {}
+    context["default_inputs"] = created
+    return created
+
+
+def _s3_block_public_policy_enabled(config: Mapping[str, Any] | None) -> bool:
+    if not isinstance(config, Mapping):
+        return False
+    return bool(config.get("BlockPublicPolicy"))
+
+
+def _bucket_block_public_policy_state(s3: Any, bucket: str) -> tuple[bool | None, str | None]:
+    try:
+        response = s3.get_public_access_block(Bucket=bucket)
+    except ClientError as exc:
+        code = _error_code(exc)
+        if code == "NoSuchPublicAccessBlockConfiguration":
+            return False, None
+        return None, code or "GetBucketPublicAccessBlockFailed"
+    config = response.get("PublicAccessBlockConfiguration")
+    return _s3_block_public_policy_enabled(config), None
+
+
+def _account_block_public_policy_state(
+    session: Any,
+    account_id: str,
+    region: str | None,
+) -> tuple[bool | None, str | None]:
+    try:
+        client = session.client("s3control", region_name=region or session.region_name or "eu-north-1")
+        response = client.get_public_access_block(AccountId=account_id)
+    except ClientError as exc:
+        code = _error_code(exc)
+        if code == "NoSuchPublicAccessBlockConfiguration":
+            return False, None
+        return None, code or "GetAccountPublicAccessBlockFailed"
+    config = response.get("PublicAccessBlockConfiguration")
+    return _s3_block_public_policy_enabled(config), None
+
+
+def _record_s3_block_public_policy_state(
+    *,
+    signals: dict[str, Any],
+    session: Any,
+    bucket: str,
+    account_id: str,
+    region: str | None,
+) -> None:
+    bucket_enabled, bucket_error = _bucket_block_public_policy_state(session.client("s3"), bucket)
+    account_enabled, account_error = _account_block_public_policy_state(session, account_id, region)
+    if bucket_enabled is not None:
+        signals["s3_bucket_block_public_policy_enabled"] = bucket_enabled
+    if account_enabled is not None:
+        signals["s3_account_block_public_policy_enabled"] = account_enabled
+    if bucket_error is not None:
+        signals["s3_bucket_block_public_policy_error"] = bucket_error
+    if account_error is not None:
+        signals["s3_account_block_public_policy_error"] = account_error
+    if bucket_enabled is True or account_enabled is True:
+        signals["s3_effective_block_public_policy_enabled"] = True
+    elif bucket_enabled is False and account_enabled is False:
+        signals["s3_effective_block_public_policy_enabled"] = False
+
+
+def _probe_s3_target_bucket(
+    *,
+    signals: dict[str, Any],
+    bucket: str | None,
+    read_probe_error: str | None,
+    session: Any | None,
+) -> None:
+    """Collect shared existence signals for workload-targeted S3 bucket families."""
+    if not bucket:
+        return
+
+    evidence_payload = signals.setdefault("evidence", {})
+    if not isinstance(evidence_payload, dict):
+        evidence_payload = {}
+        signals["evidence"] = evidence_payload
+    evidence_payload["target_bucket"] = bucket
+    signals["s3_target_bucket_name"] = bucket
+
+    if session is None:
+        detail = (
+            read_probe_error or "Target bucket existence could not be verified because ReadRole runtime probe is unavailable."
+        )
+        signals["s3_target_bucket_probe_error"] = detail
+        signals["s3_target_bucket_verification_available"] = False
+        signals["s3_target_bucket_creation_possible"] = False
+        signals["s3_target_bucket_verification_reason"] = (
+            f"Target bucket '{bucket}' existence could not be verified from this account context. "
+            f"Do not keep the existing-bucket remediation path executable until bucket existence is proven. {detail}"
+        )
+        signals["s3_target_bucket_reason"] = signals["s3_target_bucket_verification_reason"]
+        return
+
+    s3 = session.client("s3")
+    try:
+        s3.head_bucket(Bucket=bucket)
+        signals["s3_target_bucket_verification_available"] = True
+        signals["s3_target_bucket_exists"] = True
+        signals["s3_target_bucket_missing"] = False
+        signals["s3_target_bucket_creation_possible"] = False
+        signals.pop("s3_target_bucket_reason", None)
+        signals.pop("s3_target_bucket_probe_error", None)
+        signals.pop("s3_target_bucket_verification_reason", None)
+    except ClientError as exc:
+        code = _error_code(exc) or "HeadBucketFailed"
+        signals["s3_target_bucket_probe_error"] = code
+        if _is_not_found_bucket_error(exc):
+            reason = (
+                f"Target bucket '{bucket}' no longer exists. Select the create-missing-bucket path or refresh action state before generating a bundle."
+            )
+            signals["s3_target_bucket_verification_available"] = True
+            signals["s3_target_bucket_exists"] = False
+            signals["s3_target_bucket_missing"] = True
+            signals["s3_target_bucket_creation_possible"] = True
+            signals["s3_target_bucket_reason"] = reason
+            signals.pop("s3_target_bucket_verification_reason", None)
+            _default_inputs_payload(signals)["create_bucket_if_missing"] = True
+            return
+        signals["s3_target_bucket_verification_available"] = False
+        signals["s3_target_bucket_creation_possible"] = False
+        signals["s3_target_bucket_verification_reason"] = (
+            f"Target bucket '{bucket}' existence could not be verified from this account context ({code}). "
+            "Do not keep the existing-bucket remediation path executable until bucket existence is proven."
+        )
+        signals["s3_target_bucket_reason"] = signals["s3_target_bucket_verification_reason"]
+    except Exception as exc:  # pragma: no cover - defensive
+        signals["s3_target_bucket_probe_error"] = type(exc).__name__
+        signals["s3_target_bucket_verification_available"] = False
+        signals["s3_target_bucket_creation_possible"] = False
+        signals["s3_target_bucket_verification_reason"] = (
+            f"Target bucket '{bucket}' existence could not be verified from this account context ({type(exc).__name__}). "
+            "Do not keep the existing-bucket remediation path executable until bucket existence is proven."
+        )
+        signals["s3_target_bucket_reason"] = signals["s3_target_bucket_verification_reason"]
+
+
+def _mark_s3_target_bucket_proven(signals: dict[str, Any]) -> None:
+    signals["s3_target_bucket_verification_available"] = True
+    signals["s3_target_bucket_exists"] = True
+    signals["s3_target_bucket_missing"] = False
+    signals.pop("s3_target_bucket_reason", None)
+    signals.pop("s3_target_bucket_verification_reason", None)
+
+
+def _mark_s3_target_bucket_missing(signals: dict[str, Any], bucket: str) -> None:
+    signals["s3_target_bucket_verification_available"] = True
+    signals["s3_target_bucket_exists"] = False
+    signals["s3_target_bucket_missing"] = True
+    signals["s3_target_bucket_reason"] = f"Target bucket '{bucket}' no longer exists."
+
+
 def _estimate_ssl_policy_size_bytes(bucket: str, exempt_principals: list[str]) -> int:
     statements: list[dict[str, Any]] = [
         {
@@ -433,7 +598,12 @@ def _has_preservation_evidence(action_type: str, payload: dict[str, Any]) -> boo
     return True
 
 
-def probe_direct_fix_permissions(action: Action, account: AwsAccount) -> tuple[bool | None, str | None]:
+def probe_direct_fix_permissions(
+    action: Action,
+    account: AwsAccount,
+    *,
+    tenant_external_id: str | None = None,
+) -> tuple[bool | None, str | None]:
     """
     Non-mutating direct-fix permission probe.
 
@@ -443,7 +613,7 @@ def probe_direct_fix_permissions(action: Action, account: AwsAccount) -> tuple[b
       - (None, msg): probe unavailable (do not block solely on this signal)
     """
     role_arn = (account.role_write_arn or "").strip()
-    external_id = (account.external_id or "").strip()
+    external_id = account_assume_role_external_id(account, tenant_external_id=tenant_external_id) or ""
     if not role_arn or not external_id:
         return None, "WriteRole probe skipped: missing role or external_id."
 
@@ -522,6 +692,7 @@ def collect_runtime_risk_signals(
     strategy: RemediationStrategy,
     strategy_inputs: dict[str, Any] | None,
     account: AwsAccount | None,
+    tenant_external_id: str | None = None,
 ) -> dict[str, Any]:
     """
     Collect optional runtime signals for strategy risk evaluation.
@@ -550,7 +721,7 @@ def collect_runtime_risk_signals(
             read_probe_error = "AWS account metadata missing for runtime probes."
             return None
         role_arn = (account.role_read_arn or "").strip()
-        external_id = (account.external_id or "").strip()
+        external_id = account_assume_role_external_id(account, tenant_external_id=tenant_external_id) or ""
         if not role_arn or not external_id:
             read_probe_error = "ReadRole is not configured for runtime probes."
             return None
@@ -636,6 +807,12 @@ def collect_runtime_risk_signals(
                 evidence_payload["log_bucket_name"] = log_bucket
             if auto_generated_log_bucket:
                 evidence_payload["log_bucket_name_auto_generated"] = True
+        _probe_s3_target_bucket(
+            signals=signals,
+            bucket=source_bucket,
+            read_probe_error=read_probe_error,
+            session=_get_read_session(),
+        )
         if not log_bucket:
             signals["s3_access_logging_destination_safe"] = False
             signals["s3_access_logging_destination_safety_reason"] = (
@@ -705,6 +882,13 @@ def collect_runtime_risk_signals(
                     )
 
     if strategy_id == "s3_enable_sse_kms_guided":
+        bucket = _bucket_name_from_action(action)
+        _probe_s3_target_bucket(
+            signals=signals,
+            bucket=bucket,
+            read_probe_error=read_probe_error,
+            session=_get_read_session(),
+        )
         session = _get_read_session()
         context_payload = _context_payload(signals)
         if session is None:
@@ -1188,13 +1372,38 @@ def collect_runtime_risk_signals(
                 exempt_principals=exempt_principals,
             )
             session = _get_read_session()
+            _probe_s3_target_bucket(
+                signals=signals,
+                bucket=bucket,
+                read_probe_error=read_probe_error,
+                session=session,
+            )
             if session is None:
                 if is_access_path_strategy and account is not None:
                     _mark_access_path_unavailable(read_probe_error or "Unable to read current bucket policy.")
             else:
                 s3 = session.client("s3")
+                _record_s3_block_public_policy_state(
+                    signals=signals,
+                    session=session,
+                    bucket=bucket,
+                    account_id=(action.account_id or "").strip(),
+                    region=action.region or None,
+                )
+                try:
+                    policy_status = s3.get_bucket_policy_status(Bucket=bucket).get("PolicyStatus", {})
+                    _mark_s3_target_bucket_proven(signals)
+                    signals["s3_bucket_policy_public"] = bool(policy_status.get("IsPublic"))
+                except ClientError as exc:
+                    status_code = _error_code(exc)
+                    if status_code == "NoSuchBucketPolicy":
+                        _mark_s3_target_bucket_proven(signals)
+                        signals["s3_bucket_policy_public"] = False
+                    elif status_code == "NoSuchBucket":
+                        _mark_s3_target_bucket_missing(signals, bucket)
                 try:
                     raw_policy = s3.get_bucket_policy(Bucket=bucket).get("Policy")
+                    _mark_s3_target_bucket_proven(signals)
                     normalized_policy = _normalize_bucket_policy_document(raw_policy)
                     evidence_payload = signals.setdefault("evidence", {})
                     if isinstance(evidence_payload, dict):
@@ -1213,24 +1422,36 @@ def collect_runtime_risk_signals(
                 except ClientError as exc:
                     code = _error_code(exc)
                     if code == "NoSuchBucketPolicy":
+                        _mark_s3_target_bucket_proven(signals)
                         signals["s3_policy_analysis_possible"] = True
                         evidence_payload = signals.setdefault("evidence", {})
                         if isinstance(evidence_payload, dict):
                             evidence_payload["existing_bucket_policy_statement_count"] = 0
                             evidence_payload["s3_ssl_deny_present"] = False
+                        signals["s3_bucket_policy_public"] = False
+                    elif code == "NoSuchBucket":
+                        _mark_s3_target_bucket_missing(signals, bucket)
+                        signals["s3_policy_analysis_possible"] = False
                     else:
                         status_code: str | None = None
                         try:
-                            s3.get_bucket_policy_status(Bucket=bucket)
+                            policy_status = s3.get_bucket_policy_status(Bucket=bucket).get("PolicyStatus", {})
+                            _mark_s3_target_bucket_proven(signals)
+                            signals["s3_bucket_policy_public"] = bool(policy_status.get("IsPublic"))
                         except ClientError as status_exc:
                             status_code = _error_code(status_exc)
                         if status_code == "NoSuchBucketPolicy":
+                            _mark_s3_target_bucket_proven(signals)
                             signals["s3_policy_analysis_possible"] = True
                             evidence_payload = signals.setdefault("evidence", {})
                             if isinstance(evidence_payload, dict):
                                 evidence_payload.pop("existing_bucket_policy_capture_error", None)
                                 evidence_payload["existing_bucket_policy_statement_count"] = 0
                                 evidence_payload["s3_ssl_deny_present"] = False
+                            signals["s3_bucket_policy_public"] = False
+                        elif status_code == "NoSuchBucket":
+                            _mark_s3_target_bucket_missing(signals, bucket)
+                            signals["s3_policy_analysis_possible"] = False
                         else:
                             signals["s3_policy_analysis_possible"] = False
                             signals["s3_policy_analysis_error"] = code or "GetBucketPolicyFailed"
@@ -1253,17 +1474,32 @@ def collect_runtime_risk_signals(
         if bucket:
             signals["evidence"]["target_bucket"] = bucket
             session = _get_read_session()
+            _probe_s3_target_bucket(
+                signals=signals,
+                bucket=bucket,
+                read_probe_error=read_probe_error,
+                session=session,
+            )
             if session is None:
                 if account is not None:
                     _mark_access_path_unavailable(read_probe_error or "Unable to inspect bucket access posture.")
             else:
                 s3 = session.client("s3")
+                _record_s3_block_public_policy_state(
+                    signals=signals,
+                    session=session,
+                    bucket=bucket,
+                    account_id=(action.account_id or "").strip(),
+                    region=action.region or None,
+                )
                 try:
                     policy_status = s3.get_bucket_policy_status(Bucket=bucket).get("PolicyStatus", {})
+                    _mark_s3_target_bucket_proven(signals)
                     signals["s3_bucket_policy_public"] = bool(policy_status.get("IsPublic"))
                 except ClientError as exc:
                     code = _error_code(exc)
                     if code == "NoSuchBucketPolicy":
+                        _mark_s3_target_bucket_proven(signals)
                         signals["s3_bucket_policy_public"] = False
                     elif code not in {"NoSuchBucket"}:
                         if account is not None:
@@ -1276,6 +1512,7 @@ def collect_runtime_risk_signals(
                 }:
                     try:
                         raw_policy = s3.get_bucket_policy(Bucket=bucket).get("Policy")
+                        _mark_s3_target_bucket_proven(signals)
                         normalized_policy = _normalize_bucket_policy_document(raw_policy)
                         if normalized_policy is not None:
                             statement_count = _policy_statement_count(normalized_policy)
@@ -1295,6 +1532,7 @@ def collect_runtime_risk_signals(
                         evidence_payload = signals.setdefault("evidence", {})
                         if isinstance(evidence_payload, dict):
                             if code == "NoSuchBucketPolicy":
+                                _mark_s3_target_bucket_proven(signals)
                                 evidence_payload["existing_bucket_policy_statement_count"] = 0
                             else:
                                 evidence_payload["existing_bucket_policy_capture_error"] = (
@@ -1314,6 +1552,7 @@ def collect_runtime_risk_signals(
                             )
                 try:
                     website_configuration = s3.get_bucket_website(Bucket=bucket)
+                    _mark_s3_target_bucket_proven(signals)
                     signals["s3_bucket_website_configured"] = True
                     normalized_website = _normalize_bucket_website_configuration_document(website_configuration)
                     translation_supported, translation_reason = _classify_bucket_website_configuration(
@@ -1328,6 +1567,7 @@ def collect_runtime_risk_signals(
                 except ClientError as exc:
                     code = _error_code(exc)
                     if code == "NoSuchWebsiteConfiguration":
+                        _mark_s3_target_bucket_proven(signals)
                         signals["s3_bucket_website_configured"] = False
                         signals["s3_bucket_website_translation_supported"] = False
                         signals["s3_bucket_website_translation_reason"] = "S3 static website hosting is not enabled."
@@ -1345,6 +1585,12 @@ def collect_runtime_risk_signals(
         if bucket:
             signals["evidence"]["target_bucket"] = bucket
             session = _get_read_session()
+            _probe_s3_target_bucket(
+                signals=signals,
+                bucket=bucket,
+                read_probe_error=read_probe_error,
+                session=session,
+            )
             if session is None:
                 signals["s3_lifecycle_analysis_possible"] = False
                 signals["s3_lifecycle_analysis_error"] = (

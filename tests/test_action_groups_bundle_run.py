@@ -596,7 +596,44 @@ def test_create_action_group_bundle_run_cloudtrail_unresolved_bucket_returns_400
     assert response.status_code == 400
     detail = response.json()["detail"]
     assert detail["error"] == "Bucket creation acknowledgement required"
-    assert "may create a new S3 bucket and bucket policy" in detail["detail"]
+    assert "may create" in detail["detail"]
+    assert "S3 bucket" in detail["detail"]
+    assert session.add.call_count == 0
+    assert session.commit.await_count == 0
+    assert mock_boto_client.call_count == 0
+
+
+def test_create_action_group_bundle_run_s3_create_if_missing_requires_bucket_acknowledgement(
+    client: TestClient,
+) -> None:
+    tenant_id = uuid.uuid4()
+    user = _mock_user(tenant_id)
+    group = _make_group(tenant_id, action_type="s3_bucket_lifecycle_configuration")
+    action = _make_action(action_type=group.action_type, priority=100, minutes_ago=1)
+    session, _ = _mock_group_session(group=group, actions=[action])
+    _install_action_group_dependencies(session, user)
+
+    with patch("backend.routers.action_groups.settings") as mock_settings:
+        mock_settings.has_ingest_queue = True
+        mock_settings.SQS_INGEST_QUEUE_URL = "https://sqs.us-east-1.amazonaws.com/123/test"
+        mock_settings.API_PUBLIC_URL = "https://api.example.com"
+        with patch("backend.routers.action_groups.boto3.client") as mock_boto_client:
+            try:
+                response = client.post(
+                    f"/api/action-groups/{group.id}/bundle-run",
+                    json={
+                        "strategy_id": "s3_enable_abort_incomplete_uploads",
+                        "strategy_inputs": {"create_bucket_if_missing": True},
+                    },
+                )
+            finally:
+                _clear_action_group_dependencies()
+
+    assert response.status_code == 400
+    detail = response.json()["detail"]
+    assert detail["error"] == "Bucket creation acknowledgement required"
+    assert "create" in detail["detail"]
+    assert "S3 bucket" in detail["detail"]
     assert session.add.call_count == 0
     assert session.commit.await_count == 0
     assert mock_boto_client.call_count == 0

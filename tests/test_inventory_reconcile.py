@@ -7,6 +7,10 @@ import pytest
 from botocore.exceptions import ClientError
 
 from backend.services.control_scope import unsupported_control_decision
+from backend.services.remediation_support_bucket import (
+    SUPPORT_BUCKET_ROLE_S3_ACCESS_LOGS,
+    support_bucket_tag_map,
+)
 from backend.workers.services.inventory_reconcile import (
     INVENTORY_SERVICES_DEFAULT,
     _policy_has_ssl_deny,
@@ -16,7 +20,7 @@ from backend.workers.services.inventory_reconcile import (
 from scripts.run_no_ui_pr_bundle_agent import _reconcile_services_for_control
 
 
-_FINDINGS_PRE_RAW_PATH = Path("artifacts/no-ui-agent/20260220T022820Z/findings_pre_raw.json")
+_FINDINGS_PRE_RAW_PATH = Path("tests/fixtures/no_ui_agent/20260220T022820Z_findings_pre_raw.json")
 
 
 def _identity_from_findings(control_id: str, expected_resource_type: str) -> tuple[str, str, str, str]:
@@ -260,6 +264,16 @@ class _FakeS3SingleBucket:
             ],
         }
         return {"Policy": json.dumps(policy)}
+
+
+class _FakeS3SingleBucketTaggedSupportLogSink(_FakeS3SingleBucket):
+    def get_bucket_tagging(self, Bucket):  # noqa: N803
+        if Bucket != self.bucket:
+            raise AssertionError(f"unexpected bucket {Bucket}")
+        tag_map = support_bucket_tag_map(support_bucket_role=SUPPORT_BUCKET_ROLE_S3_ACCESS_LOGS)
+        return {
+            "TagSet": [{"Key": key, "Value": value} for key, value in tag_map.items()]
+        }
 
 
 class _FakeS3Control:
@@ -1027,12 +1041,19 @@ def test_collect_inventory_snapshots_ec2_skips_missing_ids_and_evaluates_found()
         resource_ids=["sg-missing", "sg-123"],
     )
 
-    assert len(snapshots) == 1
-    snapshot = snapshots[0]
-    assert snapshot.resource_id == "sg-123"
-    assert snapshot.service == "ec2"
-    assert len(snapshot.evaluations) == 1
-    evaluation = snapshot.evaluations[0]
+    assert len(snapshots) == 2
+    snapshots_by_id = {snapshot.resource_id: snapshot for snapshot in snapshots}
+
+    deleted_snapshot = snapshots_by_id["sg-missing"]
+    assert deleted_snapshot.service == "ec2"
+    assert deleted_snapshot.evaluations[0].control_id == "EC2.53"
+    assert deleted_snapshot.evaluations[0].status == "RESOLVED"
+    assert deleted_snapshot.evaluations[0].status_reason == "inventory_resource_deleted"
+
+    found_snapshot = snapshots_by_id["sg-123"]
+    assert found_snapshot.service == "ec2"
+    assert len(found_snapshot.evaluations) == 1
+    evaluation = found_snapshot.evaluations[0]
     assert evaluation.control_id == "EC2.53"
     assert evaluation.status == "OPEN"
 
@@ -1925,6 +1946,31 @@ def test_s3_global_sweep_mixed_bucket_states_keeps_per_bucket_statuses_isolated(
     }
 
 
+def test_s3_global_sweep_does_not_emit_duplicate_account_shaped_s3_2_evaluations() -> None:
+    account_id = "123456789012"
+    region = "eu-north-1"
+    session = _FakeSession(
+        clients={
+            "s3": _FakeS3MultiBucketMixedPublicPosture(region=region),
+            "s3control": _FakeS3Control(),
+        }
+    )
+    snapshots = collect_inventory_snapshots(
+        session_boto=session,
+        account_id=account_id,
+        region=region,
+        service="s3",
+    )
+
+    evaluations = [evaluation for snapshot in snapshots for evaluation in snapshot.evaluations]
+    account_s32 = [
+        evaluation
+        for evaluation in evaluations
+        if evaluation.control_id == "S3.2" and evaluation.resource_type == "AwsAccount"
+    ]
+    assert account_s32 == []
+
+
 def test_s3_5_emits_bucket_shaped_only() -> None:
     account_id = "123456789012"
     region = "eu-north-1"
@@ -2117,6 +2163,35 @@ def test_s3_9_full_logging_config_is_compliant() -> None:
     evaluations = [evaluation for snapshot in snapshots for evaluation in snapshot.evaluations]
     s39 = next(evaluation for evaluation in evaluations if evaluation.control_id == "S3.9")
     assert s39.status == "RESOLVED"
+
+
+def test_s3_9_tagged_product_managed_support_log_sink_is_resolved_without_recursive_logging() -> None:
+    account_id = "123456789012"
+    region = "eu-north-1"
+    bucket = "example-s3-9-product-managed-log-sink"
+    session = _FakeSession(
+        clients={
+            "s3": _FakeS3SingleBucketTaggedSupportLogSink(
+                bucket=bucket,
+                region=region,
+                logging_enabled={},
+            ),
+            "s3control": _FakeS3Control(),
+        }
+    )
+    snapshots = collect_inventory_snapshots(
+        session_boto=session,
+        account_id=account_id,
+        region=region,
+        service="s3",
+        resource_ids=[bucket],
+    )
+    evaluations = [evaluation for snapshot in snapshots for evaluation in snapshot.evaluations]
+    s39 = next(evaluation for evaluation in evaluations if evaluation.control_id == "S3.9")
+    assert s39.status == "RESOLVED"
+    assert s39.status_reason == "inventory_product_managed_support_log_sink"
+    assert s39.evidence_ref["product_managed_support_log_sink"] is True
+    assert s39.evidence_ref["support_bucket_role"] == SUPPORT_BUCKET_ROLE_S3_ACCESS_LOGS
 
 
 def test_s3_15_first_rule_non_kms_later_kms_is_compliant() -> None:

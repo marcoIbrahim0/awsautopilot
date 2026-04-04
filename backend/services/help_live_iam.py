@@ -15,6 +15,7 @@ from backend.models.action import Action
 from backend.models.aws_account import AwsAccount
 from backend.models.finding import Finding
 from backend.models.user import User
+from backend.services.account_trust import canonical_tenant_external_id_async
 from backend.services.aws import API_ASSUME_ROLE_SOURCE_IDENTITY, assume_role, build_assume_role_tags
 
 logger = logging.getLogger(__name__)
@@ -236,11 +237,13 @@ async def run_live_iam_lookup(
     *,
     account: AwsAccount,
     current_user: User,
+    db: AsyncSession,
 ) -> HelpLiveLookupState:
     try:
+        tenant_external_id = await canonical_tenant_external_id_async(db, current_user.tenant_id)
         session = assume_role(
             role_arn=account.role_read_arn,
-            external_id=account.external_id,
+            external_id=tenant_external_id or "",
             source_identity=f"{API_ASSUME_ROLE_SOURCE_IDENTITY}-help",
             tags=build_assume_role_tags(service_component="help-ai", tenant_id=current_user.tenant_id),
         )

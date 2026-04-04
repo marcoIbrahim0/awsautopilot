@@ -14,6 +14,7 @@
 - Introduce a backend `RemediationProfileResolver` as the sole safety authority for generic remediation flows.
 - Introduce a `RootKeyResolutionAdapter` so generic IAM.4 bundle and guidance generation uses the same decision model without bypassing the existing root-key state machine or changing execution authority.
 - Keep the current public `strategy_id` catalog as the compatibility contract. Profiles are additive execution variants nested beneath strategies.
+- `Tenant.external_id` is now the canonical AssumeRole `ExternalId` for all remediation/runtime flows. `AwsAccount.external_id` remains a mirrored compatibility field only.
 - Persist resolved decisions in `remediation_runs.artifacts`, using `artifacts.resolution` for single-action runs and `artifacts.group_bundle.action_resolutions` for grouped runs.
 - Keep grouped runs on the current single-`RemediationRun`-row model in phase 1.
 - Store tenant-scoped remediation defaults on `Tenant.remediation_settings` JSONB and expose them through `GET/PATCH /api/users/me/remediation-settings`.
@@ -50,6 +51,57 @@ Current landed behavior for the `cloudtrail_enabled` / `cloudtrail_enable_guided
 - Remediation-options now expose resolver-backed CloudTrail defaults through `context.default_inputs`, so UI and no-UI clients can render the same effective bucket name and create-vs-reuse mode before run creation.
 
 This keeps existing-bucket reuse fail-closed while making the no-trail bootstrap path deterministic through a generated bucket name plus the existing bucket-creation approval gate.
+
+## Current Missing-S3-Bucket Contract
+
+Current landed behavior for the missing-workload-bucket S3 families (`S3.2` OAC, `S3.5`, `S3.9`, `S3.11`, `S3.15`) as of 2026-04-01:
+
+- Runtime checks now probe the primary target bucket with `HeadBucket` before options, preview, and run creation.
+- The runtime payload now surfaces shared target-bucket metadata:
+  - `s3_target_bucket_exists`
+  - `s3_target_bucket_missing`
+  - `s3_target_bucket_creation_possible`
+  - `s3_target_bucket_reason`
+  - `s3_target_bucket_name`
+- When the target bucket is missing, the resolver now switches to a create-capable internal profile instead of leaving the legacy executable branch selected with a guaranteed apply-time `NoSuchBucket` failure.
+- The affected internal create profiles are:
+  - `s3_migrate_cloudfront_oac_private_create_missing_bucket`
+  - `s3_enforce_ssl_strict_deny_create_missing_bucket`
+  - `s3_enforce_ssl_with_principal_exemptions_create_missing_bucket`
+  - `s3_enable_access_logging_create_missing_bucket`
+  - `s3_enable_abort_incomplete_uploads_create_missing_bucket`
+  - `s3_enable_sse_kms_guided_create_missing_bucket`
+- `context.default_inputs.create_bucket_if_missing=true` is now emitted on the missing-bucket path so UI and no-UI callers can render the same recommended executable branch before create time.
+- Single-run and grouped create requests that would create a workload bucket now require `bucket_creation_acknowledged=true`, reusing the same approval contract previously used for CloudTrail bucket creation.
+- Bundle generation now supports the create path for these families on Terraform only:
+  - `S3.2` OAC creates the bucket with a minimal private baseline, then applies the OAC/private-origin migration.
+  - `S3.5` creates the bucket with a minimal private baseline, then applies the SSL-only bucket policy.
+  - `S3.9` can create the missing source bucket before enabling access logging; the destination log-bucket path still uses the existing support-bucket baseline and `create_log_bucket`, and Terraform customer-run bundles can now switch to `adopt_existing_log_bucket=true` when the intended destination bucket already exists and is already owned.
+  - `S3.11` creates the bucket with a minimal private baseline, then applies the lifecycle rule.
+  - `S3.15` creates the bucket with a minimal private baseline, then applies SSE-KMS.
+- CloudFormation remains fail-closed for these new create-if-missing workload-bucket branches. Generate Terraform bundles for those paths.
+
+## Current Grouped Bundle, Support-Bucket, And Trust Contract
+
+Current landed behavior for grouped customer-run bundles and support-bucket families as of 2026-04-01:
+
+- Flat and mixed-tier grouped bundles now both load the checked-in [`infrastructure/templates/run_all.sh`](/Users/marcomaher/AWS%20Security%20Autopilot/infrastructure/templates/run_all.sh) template. Mixed-tier bundles no longer emit the older `embedded_mixed_tier` runner shape.
+- Mixed-tier bundles keep the same `executable/actions/`, `review_required/actions/`, and `manual_guidance/actions/` layout, but the shared runner now switches layout only through `EXECUTION_ROOT`, not through a second embedded shell implementation.
+- Newly generated grouped bundle metadata now records `runner_template_source = repo:infrastructure/templates/run_all.sh` and preserves `helper_bucket_inventory[]` for any product-managed support buckets that were created or reused during bundle generation.
+- Product-managed helper buckets now carry deterministic tags:
+  - `security-autopilot:managed-support-bucket=true`
+  - `security-autopilot:support-bucket-role=<role>`
+- Current helper-bucket roles are:
+  - `s3-access-logs`
+  - `cloudtrail-logs`
+  - `aws-config-delivery`
+- Inventory reconciliation now treats `S3.9` as non-actionable only for tagged product-managed support log sinks. This is intentionally narrow:
+  - no broad S3 bucket exemption is introduced
+  - reused customer-owned buckets remain fully evaluated
+  - adjacent controls such as `S3.2`, `S3.5`, `S3.11`, and `S3.15` remain evaluated normally on those buckets
+- Grouped callback finalization now schedules targeted post-apply reconcile for both the remediated source resources and any recorded helper buckets so follow-on findings surface or clear on the exact affected resource set.
+- Validation and service-readiness flows now return an explicit `ReadRole trust update required` recovery payload on STS `AccessDenied`, including the current tenant `ExternalId`, latest template URL, stack name default, and SaaS execution-role parameters needed to repair stale trust without manual AWS guesswork.
+- `Tenant.external_id` is now immutable after tenant creation. Runtime AssumeRole callers are expected to use the tenant value as authority, while `aws_accounts.external_id` is kept in sync only as a compatibility mirror plus startup audit surface.
 
 ## Wave 0 Baselines
 
@@ -348,16 +400,22 @@ Phase-1 migration rules captured in the source plan:
 - IAM.4 keeps `iam_root_key_disable` and `iam_root_key_delete`, each starting with `profile_id == strategy_id`.
 - S3.2 keeps current strategy families and adds `website_manual` as manual-only.
 - S3.5 executable output requires resolver-side policy-document classification proving merge and preservation are safe.
-- S3.11 executable output requires resolver-side lifecycle classification proving additive merge is safe.
+- S3.11 executable output requires resolver-side lifecycle classification proving additive merge is safe, or the missing-bucket create branch when runtime proves the workload bucket no longer exists.
 - S3.9 stays under `s3_bucket_access_logging` and preserves public strategy `s3_enable_access_logging_guided`.
   - Executable compatibility branch remains `s3_enable_access_logging_guided`.
+  - Explicit create branch is `s3_enable_access_logging_create_missing_bucket`.
   - Explicit downgrade branch is `s3_enable_access_logging_review_destination_safety`.
   - When the caller omits `log_bucket_name`, bucket-scoped actions now auto-derive `log_bucket_name=<source-bucket>-access-logs` and persist that value through preview/create/grouped artifacts.
   - Bucket scope and destination safety must still be proven before the branch remains executable, with runtime bucket discovery trying `target_id` first and `resource_id` second for stale/account-scoped actions.
+  - When runtime proves the source bucket itself is missing, the resolver now auto-selects the create branch and requires `bucket_creation_acknowledged=true` at create time.
   - Account-scoped or otherwise ambiguous actions do not invent a destination bucket and remain downgraded/fail-closed.
+- S3.5 keeps the same public strategies but now also exposes create-if-missing internal branches so missing workload buckets no longer route to guaranteed apply-time failures; bucket creation requires `bucket_creation_acknowledged=true`.
+- S3.11 keeps the same public strategy but now also exposes a create-if-missing internal branch so missing workload buckets no longer route to guaranteed apply-time failures; bucket creation requires `bucket_creation_acknowledged=true`.
 - S3.15 stays under `s3_bucket_encryption_kms` and preserves public strategy `s3_enable_sse_kms_guided`.
   - Executable compatibility branch remains the AWS-managed-key path.
+  - Explicit create branch is `s3_enable_sse_kms_guided_create_missing_bucket`.
   - Explicit customer-managed branch is `s3_enable_sse_kms_customer_managed`.
+  - When runtime proves the target bucket is missing and the caller is still on the AWS-managed branch, the resolver now auto-selects the create branch and requires `bucket_creation_acknowledged=true` at create time.
   - Missing or under-proven customer-managed KMS evidence downgrades explicitly instead of silently falling back to executable output, and the runtime scope proof now accepts `resource_id` fallback when `target_id` is stale/account-scoped.
 - CloudTrail.1 stays under `cloudtrail_enabled` and preserves public strategy `cloudtrail_enable_guided`.
   - `cloudtrail.default_bucket_name` and `cloudtrail.default_kms_key_arn` can populate resolver inputs, but missing defaults are never silently invented.

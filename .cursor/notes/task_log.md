@@ -1,5 +1,118 @@
 # Task Log
 
+## Reconcile clean master to the live production runtime and redeploy from the guarded paths (2026-04-04)
+
+**Task:** Bring clean `master` back in sync with the already-live April 2 production backend/runtime state, then redeploy backend/worker and frontend from the guarded production paths without losing the existing live deployment or local recovery options.
+
+**Files modified:**
+- `/Users/marcomaher/AWS Security Autopilot/Containerfile.lambda-worker`
+- `/Users/marcomaher/AWS Security Autopilot/alembic/versions/0055_sync_account_external_id_mirror.py`
+- `/Users/marcomaher/AWS Security Autopilot/artifacts/no-ui-agent/20260220T022820Z/findings_pre_raw.json`
+- `/Users/marcomaher/AWS Security Autopilot/backend/config.py`
+- `/Users/marcomaher/AWS Security Autopilot/backend/main.py`
+- `/Users/marcomaher/AWS Security Autopilot/backend/models/aws_account.py`
+- `/Users/marcomaher/AWS Security Autopilot/backend/models/tenant.py`
+- `/Users/marcomaher/AWS Security Autopilot/backend/routers/action_groups.py`
+- `/Users/marcomaher/AWS Security Autopilot/backend/routers/actions.py`
+- `/Users/marcomaher/AWS Security Autopilot/backend/routers/aws_accounts.py`
+- `/Users/marcomaher/AWS Security Autopilot/backend/routers/help.py`
+- `/Users/marcomaher/AWS Security Autopilot/backend/routers/internal.py`
+- `/Users/marcomaher/AWS Security Autopilot/backend/routers/remediation_runs.py`
+- `/Users/marcomaher/AWS Security Autopilot/backend/routers/root_key_remediation_runs.py`
+- `/Users/marcomaher/AWS Security Autopilot/backend/services/account_trust.py`
+- `/Users/marcomaher/AWS Security Autopilot/backend/services/action_groups.py`
+- `/Users/marcomaher/AWS Security Autopilot/backend/services/aws_cloudfront_bundle_support.py`
+- `/Users/marcomaher/AWS Security Autopilot/backend/services/aws_config_bundle_support.py`
+- `/Users/marcomaher/AWS Security Autopilot/backend/services/aws_s3_bundle_support.py`
+- `/Users/marcomaher/AWS Security Autopilot/backend/services/database_failover.py`
+- `/Users/marcomaher/AWS Security Autopilot/backend/services/grouped_remediation_runs.py`
+- `/Users/marcomaher/AWS Security Autopilot/backend/services/help_live_iam.py`
+- `/Users/marcomaher/AWS Security Autopilot/backend/services/pr_bundle.py`
+- `/Users/marcomaher/AWS Security Autopilot/backend/services/remediation_profile_catalog.py`
+- `/Users/marcomaher/AWS Security Autopilot/backend/services/remediation_profile_selection.py`
+- `/Users/marcomaher/AWS Security Autopilot/backend/services/remediation_risk.py`
+- `/Users/marcomaher/AWS Security Autopilot/backend/services/remediation_runtime_checks.py`
+- `/Users/marcomaher/AWS Security Autopilot/backend/services/remediation_strategy.py`
+- `/Users/marcomaher/AWS Security Autopilot/backend/services/remediation_support_bucket.py`
+- `/Users/marcomaher/AWS Security Autopilot/backend/services/s3_family_resolution_adapter.py`
+- `/Users/marcomaher/AWS Security Autopilot/backend/services/secret_migration_service.py`
+- `/Users/marcomaher/AWS Security Autopilot/backend/workers/jobs/ingest_access_analyzer.py`
+- `/Users/marcomaher/AWS Security Autopilot/backend/workers/jobs/ingest_control_plane_events.py`
+- `/Users/marcomaher/AWS Security Autopilot/backend/workers/jobs/ingest_findings.py`
+- `/Users/marcomaher/AWS Security Autopilot/backend/workers/jobs/ingest_inspector.py`
+- `/Users/marcomaher/AWS Security Autopilot/backend/workers/jobs/reconcile_inventory_shard.py`
+- `/Users/marcomaher/AWS Security Autopilot/backend/workers/jobs/remediation_run.py`
+- `/Users/marcomaher/AWS Security Autopilot/backend/workers/jobs/remediation_run_execution.py`
+- `/Users/marcomaher/AWS Security Autopilot/backend/workers/jobs/run_all_template.sh`
+- `/Users/marcomaher/AWS Security Autopilot/backend/workers/services/inventory_reconcile.py`
+- `/Users/marcomaher/AWS Security Autopilot/backend/workers/services/post_apply_reconcile.py`
+- `/Users/marcomaher/AWS Security Autopilot/docs/README.md`
+- `/Users/marcomaher/AWS Security Autopilot/docs/control-plane-event-monitoring.md`
+- `/Users/marcomaher/AWS Security Autopilot/docs/deployment/secrets-config.md`
+- `/Users/marcomaher/AWS Security Autopilot/docs/live-e2e-testing/README.md`
+- `/Users/marcomaher/AWS Security Autopilot/docs/prod-readiness/README.md`
+- `/Users/marcomaher/AWS Security Autopilot/docs/prod-readiness/remediation-determinism-hardening-implementation-plan.md`
+- `/Users/marcomaher/AWS Security Autopilot/docs/remediation-profile-resolution/README.md`
+- `/Users/marcomaher/AWS Security Autopilot/docs/remediation-profile-resolution/wave-6-control-family-migration.md`
+- `/Users/marcomaher/AWS Security Autopilot/docs/trust/README.md`
+- `/Users/marcomaher/AWS Security Autopilot/infrastructure/templates/run_all.sh`
+- `/Users/marcomaher/AWS Security Autopilot/scripts/deploy_saas_serverless.sh`
+- `/Users/marcomaher/AWS Security Autopilot/scripts/lib/control_plane_forwarder_audit.py`
+- `/Users/marcomaher/AWS Security Autopilot/scripts/lib/no_ui_agent_client.py`
+- `/Users/marcomaher/AWS Security Autopilot/scripts/run_live_all_groups_pr_bundle_campaign.py`
+- `/Users/marcomaher/AWS Security Autopilot/scripts/verify_control_plane_forwarder.sh`
+- `/Users/marcomaher/AWS Security Autopilot/tests/test_account_trust.py`
+- `/Users/marcomaher/AWS Security Autopilot/tests/test_action_groups_bundle_run.py`
+- `/Users/marcomaher/AWS Security Autopilot/tests/test_action_groups_service.py`
+- `/Users/marcomaher/AWS Security Autopilot/tests/test_control_plane_forwarder_audit.py`
+- `/Users/marcomaher/AWS Security Autopilot/tests/test_database_failover.py`
+- `/Users/marcomaher/AWS Security Autopilot/tests/test_inventory_reconcile.py`
+- `/Users/marcomaher/AWS Security Autopilot/tests/test_remediation_profile_catalog.py`
+- `/Users/marcomaher/AWS Security Autopilot/tests/test_remediation_profile_options_preview.py`
+- `/Users/marcomaher/AWS Security Autopilot/tests/test_remediation_run_execution.py`
+- `/Users/marcomaher/AWS Security Autopilot/tests/test_remediation_run_resolution_create.py`
+- `/Users/marcomaher/AWS Security Autopilot/tests/test_remediation_run_worker.py`
+- `/Users/marcomaher/AWS Security Autopilot/tests/test_remediation_runtime_checks.py`
+- `/Users/marcomaher/AWS Security Autopilot/tests/test_remediation_support_bucket.py`
+- `/Users/marcomaher/AWS Security Autopilot/tests/test_step7_components.py`
+- `/Users/marcomaher/AWS Security Autopilot/tests/test_validate_account.py`
+- `/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md`
+- `/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md`
+
+**What was done:**
+- Captured pre-deploy rollback anchors under `/Users/marcomaher/repo-backups/aws-security-autopilot/20260404T024255Z-deploy-clean-master/` before changing live infrastructure.
+- Verified clean `master` could not be deployed safely at first because production DB revision `0055_sync_account_external_id_mirror` was ahead of the then-current repo head `0054_control_plane_previous_token_grace`.
+- Reconciled the real live-only source delta from `codex/preserve-local-master-state-20260404` onto a clean branch, added the missing checked-in no-UI findings fixture used by inventory tests, validated the branch, and fast-forwarded local `master` to commit `df3b6f578`.
+- Deployed backend/worker from clean `master` through `./scripts/deploy_saas_serverless.sh --region eu-north-1` using live DB/secrets injected at process scope so the sanitized checked-in env files stayed untouched.
+- Deployed the frontend from clean `master` through the guarded `frontend` production path with `npm run deploy`.
+
+**Validation / outcome:**
+- `./venv/bin/alembic heads`
+  - returned `0055_sync_account_external_id_mirror (head)`
+- Focused validation slice:
+  - `ENV=test DATABASE_URL='postgresql+asyncpg://user:pass@localhost/test' DATABASE_URL_SYNC='postgresql://user:pass@localhost/test' DATABASE_URL_FALLBACK='' DATABASE_URL_SYNC_FALLBACK='' JWT_SECRET='test-secret' BUNDLE_REPORTING_TOKEN_SECRET='test-bundle-secret' CONTROL_PLANE_EVENTS_SECRET='test-cp-secret' PYTHONPATH=. pytest tests/test_account_trust.py tests/test_database_failover.py tests/test_control_plane_forwarder_audit.py tests/test_validate_account.py tests/test_action_groups_service.py tests/test_inventory_reconcile.py tests/test_remediation_runtime_checks.py tests/test_remediation_run_worker.py tests/test_remediation_run_execution.py tests/test_remediation_support_bucket.py -q`
+  - `285 passed`
+- Runtime/DB alignment check against the live DB with injected runtime secrets:
+  - passed before deploy and after deploy
+- Backend/runtime rollout:
+  - CodeBuild build `security-autopilot-dev-serverless-image-builder:3183b716-0cf0-41a2-8e43-95432f2110ee` succeeded
+  - API and worker Lambdas now run image tag `20260404T025252Z`
+- Frontend rollout:
+  - guarded frontend deploy succeeded
+  - current Cloudflare Worker version is `b7607861-35b5-40d8-b42d-331efb95335e`
+- Live checks after rollout:
+  - `https://api.ocypheris.com/health` returned `{"status":"ok","app":"AWS Security Autopilot"}`
+  - `https://api.ocypheris.com/ready` returned `ready=true`
+  - Wrangler deployment history now includes deployment `65f89844-4cba-43dc-bfaf-e6d31be3ac71` created `2026-04-04T02:59:20.176187Z`
+
+**Technical debt / gotchas:**
+- The checked-in local env files remain sanitized with placeholders; production deploys in this checkout still require injecting the real DB URLs and secrets at process scope or restoring a real operator env file outside git.
+- The frontend deploy still emits the pre-existing OpenNext/esbuild duplicate `"options"` warnings in generated `.open-next/server-functions/default/handler.mjs`; they did not block the publish.
+- Local `master` is now ahead of `origin/master`; pushing the new deployable state back to GitHub `master` still has to respect the repository’s protected-branch / PR workflow.
+
+**Open questions / TODOs:**
+- Push the reconciled deployable state to a review branch on GitHub and merge it through the required branch-protection flow so remote `master` matches the live deployment.
+
 ## Add resource-scope handoff UX to findings cards (2026-03-31)
 
 **Task:** Turn `managed_on_resource_scope` from a dead-end informational badge into a real handoff flow so summary/account rows explain what the state means and provide direct navigation to the actionable resource rows.

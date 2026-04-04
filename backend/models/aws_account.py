@@ -30,7 +30,7 @@ class AwsAccount(Base):
     role_read_arn: Mapped[str] = mapped_column(String(2048), nullable=False)
     role_write_arn: Mapped[str | None] = mapped_column(String(2048), nullable=True)
 
-    # Redundant copy (per your requirement). Your app should ensure it matches tenant.external_id.
+    # Mirrored compatibility copy. tenant.external_id is the canonical AssumeRole ExternalId.
     external_id: Mapped[str] = mapped_column(String(255), nullable=False)
 
     regions: Mapped[list] = mapped_column(JSONB, nullable=False, default=list)  # e.g. ["us-east-1","eu-west-1"]

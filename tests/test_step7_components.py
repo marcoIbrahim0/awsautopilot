@@ -17,6 +17,11 @@ import uuid
 import pytest
 
 from backend.models.enums import RemediationRunStatus
+from backend.services.aws_cloudfront_bundle_support import (
+    AWS_CLOUDFRONT_OAC_DISCOVERY_QUERY_PATH,
+    AWS_CLOUDFRONT_OAC_DISCOVERY_SCRIPT_PATH,
+    aws_cloudfront_oac_discovery_script_content,
+)
 from backend.services.pr_bundle import (
     ACTION_TYPE_AWS_CONFIG_ENABLED,
     ACTION_TYPE_CLOUDTRAIL_ENABLED,
@@ -107,6 +112,55 @@ def _terraform_env_with_mirror(temp_dir: Path) -> dict[str, str]:
     terraform_env = dict(os.environ)
     terraform_env["TF_CLI_CONFIG_FILE"] = str(tf_cli_config)
     return terraform_env
+
+
+def _run_cloudfront_oac_discovery_script(
+    query: dict[str, str],
+    responses: dict[str, object],
+) -> subprocess.CompletedProcess[str]:
+    with tempfile.TemporaryDirectory() as temp_dir_name:
+        temp_dir = Path(temp_dir_name)
+        script_path = temp_dir / "cloudfront_oac_discovery.py"
+        script_path.write_text(
+            aws_cloudfront_oac_discovery_script_content(),
+            encoding="utf-8",
+        )
+        script_path.chmod(0o755)
+
+        aws_path = temp_dir / "aws"
+        aws_path.write_text(
+            (
+                "#!/usr/bin/env python3\n"
+                "import json\n"
+                "import os\n"
+                "import sys\n"
+                "\n"
+                "responses = json.loads(os.environ['FAKE_AWS_RESPONSES'])\n"
+                "args = sys.argv[1:]\n"
+                "if args[-2:] == ['--output', 'json']:\n"
+                "    args = args[:-2]\n"
+                "key = ' '.join(args)\n"
+                "payload = responses[key]\n"
+                "if isinstance(payload, dict) and '__error__' in payload:\n"
+                "    sys.stderr.write(str(payload['__error__']))\n"
+                "    sys.exit(int(payload.get('__code__', 1)))\n"
+                "json.dump(payload, sys.stdout)\n"
+            ),
+            encoding="utf-8",
+        )
+        aws_path.chmod(0o755)
+
+        env = os.environ.copy()
+        env["FAKE_AWS_RESPONSES"] = json.dumps(responses)
+        env["PATH"] = f"{temp_dir}{os.pathsep}{env['PATH']}"
+        return subprocess.run(
+            ["python3", str(script_path)],
+            input=json.dumps(query),
+            text=True,
+            capture_output=True,
+            check=False,
+            env=env,
+        )
 
 
 def test_pr_bundle_returns_dict_with_format_files_steps() -> None:
@@ -413,6 +467,10 @@ def test_pr_bundle_aws_config_enabled_uses_json_boolean_recording_group_payload(
     assert '"allSupported": True' in apply_script
     assert '"includeGlobalResourceTypes": True' in apply_script
     assert 'put_structured_payload("put-configuration-recorder"' in apply_script
+    assert 'create_bucket(bucket, region, object_lock_enabled=True)' in apply_script
+    assert "put-bucket-versioning" in apply_script
+    assert "put-bucket-notification-configuration" in apply_script
+    assert "put-object-lock-configuration" in apply_script
 
 
 def test_pr_bundle_aws_config_enabled_declares_null_provider_for_local_exec_bundle() -> None:
@@ -994,14 +1052,30 @@ def test_pr_bundle_s3_cloudfront_oac_private_variant_generates_real_iac() -> Non
     paths = [f["path"] for f in r["files"]]
     assert "providers.tf" in paths
     assert "s3_cloudfront_oac_private_s3.tf" in paths
+    assert AWS_CLOUDFRONT_OAC_DISCOVERY_SCRIPT_PATH in paths
+    assert AWS_CLOUDFRONT_OAC_DISCOVERY_QUERY_PATH in paths
     assert "README.txt" in paths
 
+    providers = _bundle_file_content(r, "providers.tf")
     content = next(f for f in r["files"] if f["path"] == "s3_cloudfront_oac_private_s3.tf")["content"]
+    assert 'external = {' not in providers
+    assert 'source  = "hashicorp/external"' not in providers
     assert "aws_cloudfront_origin_access_control" in content
     assert "aws_cloudfront_distribution" in content
     assert "aws_s3_bucket_policy" in content
     assert "aws_s3_bucket_public_access_block" in content
-    assert 'bucket_name = "my-bucket"' in content
+    assert 'data "external" "cloudfront_reuse"' not in content
+    assert 'variable "cloudfront_reuse_mode"' in content
+    assert 'variable "reuse_oac_id"' in content
+    assert 'variable "reuse_distribution_id"' in content
+    assert 'variable "reuse_distribution_arn"' in content
+    assert 'variable "reuse_distribution_domain_name"' in content
+    assert "effective_oac_id = (" in content
+    assert "effective_distribution_id = (" in content
+    assert 'count                             = local.reuse_oac ? 0 : 1' in content
+    assert 'count               = local.reuse_distribution ? 0 : 1' in content
+    assert 'bucket_name                         = "my-bucket"' in content
+    assert 'cloudfront_reuse_mode = var.cloudfront_reuse_mode' in content
 
 
 def test_pr_bundle_s3_cloudfront_oac_private_variant_uses_unique_oac_name_seed() -> None:
@@ -1019,8 +1093,9 @@ def test_pr_bundle_s3_cloudfront_oac_private_variant_uses_unique_oac_name_seed()
         risk_snapshot={"evidence": {"existing_bucket_policy_statement_count": 0}},
     )
     content = next(f for f in result["files"] if f["path"] == "s3_cloudfront_oac_private_s3.tf")["content"]
-    assert "oac_name_seed" in content
-    assert "security-autopilot-oac-${substr(md5(local.oac_name_seed)" in content
+    query = json.loads(_bundle_file_content(result, AWS_CLOUDFRONT_OAC_DISCOVERY_QUERY_PATH))
+    assert 'oac_name                            = "security-autopilot-oac-' in content
+    assert query["expected_oac_name"].startswith("security-autopilot-oac-")
     assert "substr(md5(local.bucket_name), 0, 8)" not in content
 
 
@@ -1109,6 +1184,52 @@ def test_pr_bundle_s3_cloudfront_oac_private_auto_preserves_existing_policy_from
     assert preserved_sids == ["AllowCrossAccountRead", "AllowVpcScopedReadPath"]
 
 
+def test_pr_bundle_s3_cloudfront_oac_private_strips_previous_managed_cloudfront_statement() -> None:
+    """Preloaded S3.2 policy JSON should drop the prior managed AllowCloudFrontReadOnly statement."""
+    action = _make_action(
+        action_type=ACTION_TYPE_S3_BUCKET_BLOCK_PUBLIC_ACCESS,
+        target_id="my-bucket",
+        region="us-east-1",
+        control_id="S3.2",
+    )
+    existing_policy = {
+        "Version": "2012-10-17",
+        "Statement": [
+            {
+                "Sid": "AllowCloudFrontReadOnly",
+                "Effect": "Allow",
+                "Principal": {"Service": "cloudfront.amazonaws.com"},
+                "Action": "s3:GetObject",
+                "Resource": "arn:aws:s3:::my-bucket/*",
+            },
+            {
+                "Sid": "KeepDirectRead",
+                "Effect": "Allow",
+                "Principal": {"AWS": "arn:aws:iam::123456789012:root"},
+                "Action": "s3:GetObject",
+                "Resource": "arn:aws:s3:::my-bucket/*",
+            },
+        ],
+    }
+
+    result = generate_pr_bundle(
+        action,
+        "terraform",
+        strategy_id="s3_migrate_cloudfront_oac_private",
+        risk_snapshot={
+            "evidence": {
+                "existing_bucket_policy_statement_count": 2,
+                "existing_bucket_policy_json": json.dumps(existing_policy),
+            }
+        },
+    )
+
+    tfvars = json.loads(_bundle_file_content(result, "terraform.auto.tfvars.json"))
+    preserved_policy = json.loads(tfvars["existing_bucket_policy_json"])
+    preserved_sids = [stmt.get("Sid") for stmt in preserved_policy["Statement"]]
+    assert preserved_sids == ["KeepDirectRead"]
+
+
 def test_pr_bundle_s3_cloudfront_oac_private_apply_time_merge_uses_resolution_summary() -> None:
     """CloudFront+OAC variant can fetch and merge the live bucket policy at apply time."""
     action = _make_action(
@@ -1136,9 +1257,13 @@ def test_pr_bundle_s3_cloudfront_oac_private_apply_time_merge_uses_resolution_su
     )
 
     paths = [f["path"] for f in result["files"]]
+    providers = _bundle_file_content(result, "providers.tf")
     content = next(f for f in result["files"] if f["path"] == "s3_cloudfront_oac_private_s3.tf")["content"]
 
+    assert 'external = {' not in providers
     assert 'data "aws_s3_bucket_policy" "existing"' in content
+    assert 'data "external" "cloudfront_reuse"' not in content
+    assert "effective_oac_id = (" in content
     assert "filtered_existing_policy_statements" in content
     assert 'data "aws_iam_policy_document" "bucket_policy"' in content
     assert 'resource "aws_s3_bucket_policy" "security_autopilot"' in content
@@ -1673,13 +1798,63 @@ def test_pr_bundle_s3_bucket_access_logging_terraform_with_separate_log_bucket_o
     assert 'resource "aws_s3_bucket_logging" "security_autopilot"' in content
     assert 'variable "source_bucket_name"' in content
     assert 'default     = "log-source-bucket"' in content
-    assert "bucket        = var.source_bucket_name" in content
+    assert "bucket        = local.source_bucket_name" in content
     assert 'variable "log_bucket_name"' in content
     assert 'default     = "dedicated-access-log-bucket"' in content
     assert "REPLACE_LOG_BUCKET_NAME" not in content
     assert "target_bucket = var.log_bucket_name" in content
     assert "Do not use the source bucket as the log destination." in r["steps"]
     assert "S3.9" in content or "Control:" in content
+
+
+def test_pr_bundle_s3_bucket_access_logging_terraform_creates_missing_source_bucket_when_requested() -> None:
+    action = _make_action(
+        action_type=ACTION_TYPE_S3_BUCKET_ACCESS_LOGGING,
+        target_id="source-bucket",
+        region="us-east-1",
+        control_id="S3.9",
+    )
+    r = generate_pr_bundle(
+        action,
+        "terraform",
+        strategy_inputs={
+            "log_bucket_name": "dedicated-access-log-bucket",
+            "create_bucket_if_missing": True,
+        },
+    )
+    content = _bundle_file_content(r, "s3_bucket_access_logging.tf")
+
+    assert 'variable "create_bucket_if_missing"' in content
+    assert "default     = true" in content
+    assert 'resource "aws_s3_bucket" "source_bucket"' in content
+    assert "source_bucket_name" in content
+    assert "var.create_bucket_if_missing ? aws_s3_bucket.source_bucket[0].bucket : var.source_bucket_name" in content
+    assert "bucket        = local.source_bucket_name" in content
+    assert any("create the missing source bucket" in step for step in r["steps"])
+
+
+def test_pr_bundle_s3_bucket_access_logging_terraform_can_adopt_existing_log_bucket() -> None:
+    action = _make_action(
+        action_type=ACTION_TYPE_S3_BUCKET_ACCESS_LOGGING,
+        target_id="source-bucket",
+        region="us-east-1",
+        control_id="S3.9",
+    )
+    r = generate_pr_bundle(
+        action,
+        "terraform",
+        strategy_inputs={
+            "log_bucket_name": "dedicated-access-log-bucket",
+            "create_log_bucket": True,
+        },
+    )
+    content = _bundle_file_content(r, "s3_bucket_access_logging.tf")
+
+    assert 'variable "adopt_existing_log_bucket"' in content
+    assert "manage_log_bucket_baseline = var.create_log_bucket || var.adopt_existing_log_bucket" in content
+    assert 'log_bucket_id              = var.create_log_bucket ? aws_s3_bucket.access_logs[0].id : var.log_bucket_name' in content
+    assert "local.manage_log_bucket_baseline ? 1 : 0" in content
+    assert "If the destination bucket already exists and is already owned" in " ".join(r["steps"])
 
 
 def test_pr_bundle_s3_bucket_lifecycle_configuration_terraform() -> None:
@@ -1696,10 +1871,34 @@ def test_pr_bundle_s3_bucket_lifecycle_configuration_terraform() -> None:
         f for f in r["files"] if f["path"] == "s3_bucket_lifecycle_configuration.tf"
     )["content"]
     assert 'resource "aws_s3_bucket_lifecycle_configuration" "security_autopilot"' in content
-    assert 'bucket = "lifecycle-bucket"' in content
+    assert 'bucket = local.target_bucket_name' in content
     assert "abort_incomplete_multipart_upload" in content
     assert 'variable "abort_incomplete_multipart_days"' in content
     assert "S3.11" in content or "Control:" in content
+
+
+def test_pr_bundle_s3_bucket_lifecycle_configuration_terraform_creates_missing_bucket_when_requested() -> None:
+    action = _make_action(
+        action_type=ACTION_TYPE_S3_BUCKET_LIFECYCLE_CONFIGURATION,
+        target_id="lifecycle-bucket",
+        region="us-east-1",
+        control_id="S3.11",
+    )
+    r = generate_pr_bundle(
+        action,
+        "terraform",
+        strategy_inputs={"create_bucket_if_missing": True},
+    )
+    content = _bundle_file_content(r, "s3_bucket_lifecycle_configuration.tf")
+    paths = [f["path"] for f in r["files"]]
+
+    assert 'variable "create_bucket_if_missing"' in content
+    assert 'resource "aws_s3_bucket" "target_bucket"' in content
+    assert 'resource "aws_s3_bucket_server_side_encryption_configuration" "target_bucket"' in content
+    assert 'depends_on = [aws_s3_bucket_ownership_controls.target_bucket]' in content
+    assert "scripts/s3_lifecycle_merge.py" not in paths
+    assert "rollback/s3_lifecycle_restore.py" not in paths
+    assert any("create the missing target bucket" in step for step in r["steps"])
 
 
 def test_pr_bundle_s3_bucket_lifecycle_configuration_terraform_preserves_renderable_rules() -> None:
@@ -1950,11 +2149,35 @@ def test_pr_bundle_s3_bucket_encryption_kms_terraform() -> None:
     assert r["format"] == "terraform"
     content = next(f for f in r["files"] if f["path"] == "s3_bucket_encryption_kms.tf")["content"]
     assert 'resource "aws_s3_bucket_server_side_encryption_configuration" "security_autopilot"' in content
-    assert 'bucket = "kms-bucket"' in content
+    assert 'bucket = local.target_bucket_name' in content
     assert 'sse_algorithm     = "aws:kms"' in content
     assert 'variable "kms_key_arn"' in content
     assert 'default     = "arn:aws:kms:us-east-1:123456789012:alias/aws/s3"' in content
     assert "S3.15" in content or "Control:" in content
+
+
+def test_pr_bundle_s3_bucket_encryption_kms_terraform_creates_missing_bucket_when_requested() -> None:
+    action = _make_action(
+        action_type=ACTION_TYPE_S3_BUCKET_ENCRYPTION_KMS,
+        target_id="kms-bucket",
+        region="us-east-1",
+        control_id="S3.15",
+    )
+    r = generate_pr_bundle(
+        action,
+        "terraform",
+        strategy_inputs={"create_bucket_if_missing": True},
+    )
+    content = _bundle_file_content(r, "s3_bucket_encryption_kms.tf")
+    paths = [f["path"] for f in r["files"]]
+
+    assert 'variable "create_bucket_if_missing"' in content
+    assert 'resource "aws_s3_bucket" "target_bucket"' in content
+    assert content.count('resource "aws_s3_bucket_server_side_encryption_configuration"') == 1
+    assert 'depends_on = [aws_s3_bucket_ownership_controls.target_bucket]' in content
+    assert "scripts/s3_encryption_capture.py" not in paths
+    assert "rollback/s3_encryption_restore.py" not in paths
+    assert any("create the missing target bucket" in step for step in r["steps"])
 
 
 def test_pr_bundle_s3_bucket_encryption_kms_includes_exact_capture_and_restore_helpers() -> None:
@@ -2815,6 +3038,257 @@ def test_pr_bundle_s3_9_terraform_create_log_bucket_uses_local_support_bucket_ar
 
     assert "local.arn_prefix_access_logs" in content
     assert "${arn_prefix_access_logs}" not in content
+    assert 'bucket = local.log_bucket_id' in content
+
+
+def test_pr_bundle_s3_cloudfront_oac_private_terraform_creates_missing_bucket_when_requested() -> None:
+    action = _make_action(
+        action_type=ACTION_TYPE_S3_BUCKET_BLOCK_PUBLIC_ACCESS,
+        target_id="123456789012|us-east-1|arn:aws:s3:::oac-bucket|S3.2",
+        region="us-east-1",
+        control_id="S3.2",
+    )
+    action.resource_id = "arn:aws:s3:::oac-bucket"
+
+    r = generate_pr_bundle(
+        action,
+        "terraform",
+        strategy_id="s3_migrate_cloudfront_oac_private",
+        strategy_inputs={"create_bucket_if_missing": True},
+    )
+    content = _bundle_file_content(r, "s3_cloudfront_oac_private_s3.tf")
+
+    assert 'variable "create_bucket_if_missing"' in content
+    assert 'resource "aws_s3_bucket" "target_bucket"' in content
+    assert 'data "aws_s3_bucket" "existing_target"' in content
+    assert 'data "external" "cloudfront_reuse"' not in content
+    assert 'count  = var.create_bucket_if_missing ? 0 : 1' in content
+    assert content.count('resource "aws_s3_bucket_public_access_block"') == 1
+    assert "data \"aws_s3_bucket_policy\" \"existing\"" not in content
+    assert any("create the missing target bucket" in step for step in r["steps"])
+
+
+def test_cloudfront_oac_discovery_script_reuses_matching_distribution_and_oac() -> None:
+    query = {
+        "bucket_name": "my-bucket",
+        "expected_bucket_regional_domain_name": "my-bucket.s3.us-east-1.amazonaws.com",
+        "expected_distribution_comment": "Security Autopilot migration for my-bucket",
+        "expected_oac_name": "security-autopilot-oac-123456789abc",
+        "expected_origin_id": "s3-my-bucket",
+    }
+    responses = {
+        "cloudfront list-distributions": {
+            "DistributionList": {
+                "Items": [
+                    {
+                        "Id": "E123DIST",
+                        "ARN": "arn:aws:cloudfront::123456789012:distribution/E123DIST",
+                        "DomainName": "d123.cloudfront.net",
+                        "Comment": "Security Autopilot migration for my-bucket",
+                        "Origins": {
+                            "Items": [
+                                {
+                                    "Id": "s3-my-bucket",
+                                    "DomainName": "my-bucket.s3.us-east-1.amazonaws.com",
+                                    "OriginAccessControlId": "OAC123",
+                                }
+                            ]
+                        },
+                    }
+                ]
+            }
+        },
+        "cloudfront list-origin-access-controls": {
+            "OriginAccessControlList": {
+                "Items": [
+                    {
+                        "Id": "OAC123",
+                        "Name": "security-autopilot-oac-123456789abc",
+                        "OriginAccessControlOriginType": "s3",
+                        "SigningBehavior": "always",
+                        "SigningProtocol": "sigv4",
+                    }
+                ]
+            }
+        },
+    }
+
+    completed = _run_cloudfront_oac_discovery_script(query, responses)
+
+    assert completed.returncode == 0, completed.stderr
+    payload = json.loads(completed.stdout)
+    assert payload == {
+        "cloudfront_reuse_mode": "reuse_distribution",
+        "reuse_distribution_id": "E123DIST",
+        "reuse_distribution_arn": "arn:aws:cloudfront::123456789012:distribution/E123DIST",
+        "reuse_distribution_domain_name": "d123.cloudfront.net",
+        "reuse_oac_id": "OAC123",
+    }
+
+
+def test_cloudfront_oac_discovery_script_reuses_safe_standalone_oac() -> None:
+    query = {
+        "bucket_name": "my-bucket",
+        "expected_bucket_regional_domain_name": "my-bucket.s3.us-east-1.amazonaws.com",
+        "expected_distribution_comment": "Security Autopilot migration for my-bucket",
+        "expected_oac_name": "security-autopilot-oac-123456789abc",
+        "expected_origin_id": "s3-my-bucket",
+    }
+    responses = {
+        "cloudfront list-distributions": {
+            "DistributionList": {
+                "Items": [
+                    {
+                        "Id": "EUNRELATED",
+                        "ARN": "arn:aws:cloudfront::123456789012:distribution/EUNRELATED",
+                        "DomainName": "other.cloudfront.net",
+                        "Comment": "Security Autopilot migration for other-bucket",
+                        "Origins": {
+                            "Items": [
+                                {
+                                    "Id": "s3-other-bucket",
+                                    "DomainName": "other-bucket.s3.us-east-1.amazonaws.com",
+                                    "OriginAccessControlId": "OTHEROAC",
+                                }
+                            ]
+                        },
+                    }
+                ]
+            }
+        },
+        "cloudfront list-origin-access-controls": {
+            "OriginAccessControlList": {
+                "Items": [
+                    {
+                        "Id": "OAC123",
+                        "Name": "security-autopilot-oac-123456789abc",
+                        "OriginAccessControlOriginType": "s3",
+                        "SigningBehavior": "always",
+                        "SigningProtocol": "sigv4",
+                    },
+                    {
+                        "Id": "OTHEROAC",
+                        "Name": "other-oac",
+                        "OriginAccessControlOriginType": "s3",
+                        "SigningBehavior": "always",
+                        "SigningProtocol": "sigv4",
+                    },
+                ]
+            }
+        },
+    }
+
+    completed = _run_cloudfront_oac_discovery_script(query, responses)
+
+    assert completed.returncode == 0, completed.stderr
+    payload = json.loads(completed.stdout)
+    assert payload == {
+        "cloudfront_reuse_mode": "reuse_oac_only",
+        "reuse_oac_id": "OAC123",
+    }
+
+
+@pytest.mark.parametrize(
+    ("responses", "expected_error"),
+    [
+        (
+            {
+                "cloudfront list-distributions": {
+                    "DistributionList": {
+                        "Items": [
+                            {
+                                "Id": "E1",
+                                "ARN": "arn:aws:cloudfront::123456789012:distribution/E1",
+                                "DomainName": "d1.cloudfront.net",
+                                "Comment": "Security Autopilot migration for my-bucket",
+                                "Origins": {
+                                    "Items": [
+                                        {
+                                            "Id": "s3-my-bucket",
+                                            "DomainName": "my-bucket.s3.us-east-1.amazonaws.com",
+                                            "OriginAccessControlId": "OAC123",
+                                        }
+                                    ]
+                                },
+                            },
+                            {
+                                "Id": "E2",
+                                "ARN": "arn:aws:cloudfront::123456789012:distribution/E2",
+                                "DomainName": "d2.cloudfront.net",
+                                "Comment": "Security Autopilot migration for other-bucket",
+                                "Origins": {
+                                    "Items": [
+                                        {
+                                            "Id": "s3-my-bucket",
+                                            "DomainName": "my-bucket.s3.us-east-1.amazonaws.com",
+                                            "OriginAccessControlId": "OAC456",
+                                        }
+                                    ]
+                                },
+                            },
+                        ]
+                    }
+                },
+                "cloudfront list-origin-access-controls": {
+                    "OriginAccessControlList": {
+                        "Items": [
+                            {
+                                "Id": "OAC123",
+                                "Name": "security-autopilot-oac-123456789abc",
+                                "OriginAccessControlOriginType": "s3",
+                                "SigningBehavior": "always",
+                                "SigningProtocol": "sigv4",
+                            },
+                            {
+                                "Id": "OAC456",
+                                "Name": "other-safe-oac",
+                                "OriginAccessControlOriginType": "s3",
+                                "SigningBehavior": "always",
+                                "SigningProtocol": "sigv4",
+                            },
+                        ]
+                    }
+                },
+            },
+            "Multiple existing Security Autopilot CloudFront distributions appear to target this bucket",
+        ),
+        (
+            {
+                "cloudfront list-distributions": {"DistributionList": {"Items": []}},
+                "cloudfront list-origin-access-controls": {
+                    "OriginAccessControlList": {
+                        "Items": [
+                            {
+                                "Id": "OAC123",
+                                "Name": "security-autopilot-oac-123456789abc",
+                                "OriginAccessControlOriginType": "s3",
+                                "SigningBehavior": "never",
+                                "SigningProtocol": "sigv4",
+                            }
+                        ]
+                    }
+                },
+            },
+            "does not use signing_behavior=always",
+        ),
+    ],
+)
+def test_cloudfront_oac_discovery_script_fails_closed_for_ambiguous_or_incompatible_matches(
+    responses: dict[str, object],
+    expected_error: str,
+) -> None:
+    query = {
+        "bucket_name": "my-bucket",
+        "expected_bucket_regional_domain_name": "my-bucket.s3.us-east-1.amazonaws.com",
+        "expected_distribution_comment": "Security Autopilot migration for my-bucket",
+        "expected_oac_name": "security-autopilot-oac-123456789abc",
+        "expected_origin_id": "s3-my-bucket",
+    }
+
+    completed = _run_cloudfront_oac_discovery_script(query, responses)
+
+    assert completed.returncode != 0
+    assert expected_error in completed.stderr
 
 
 def test_task_6_s3_impact_text_present_for_s3_1_s3_2_s3_4() -> None:
@@ -3284,11 +3758,13 @@ def test_pr_bundle_s3_ssl_terraform_apply_time_merge_uses_resolution_summary() -
     content = _bundle_file_content(r, "s3_bucket_require_ssl.tf")
     paths = [f["path"] for f in r["files"]]
 
-    assert 'data "aws_s3_bucket_policy" "existing"' in content
+    assert 'data "external" "existing_policy"' in content
+    assert 'program = ["python3", "${path.module}/scripts/s3_policy_fetch.py"]' in content
     assert "filtered_existing_policy_statements" in content
     assert 'data "aws_iam_policy_document" "merged_policy"' in content
     assert 'resource "aws_s3_bucket_policy" "security_autopilot"' in content
     assert "terraform.auto.tfvars.json" not in paths
+    assert "scripts/s3_policy_fetch.py" in paths
     assert "scripts/s3_policy_capture.py" in paths
     assert "rollback/s3_policy_restore.py" in paths
     assert any("fetched and merged at terraform plan/apply time" in step for step in r["steps"])
@@ -3323,6 +3799,7 @@ def test_pr_bundle_s3_ssl_apply_time_merge_filters_existing_ssl_deny_statement()
     content = _bundle_file_content(r, "s3_bucket_require_ssl.tf")
     assert 'lower(try(tostring(stmt.Sid), "")) == "denyinsecuretransport"' in content
     assert 'stmt.Condition.Bool["aws:SecureTransport"]' in content
+    assert 'lookup(data.external.existing_policy.result, "policy_json", "")' in content
 
 
 def test_pr_bundle_s3_ssl_terraform_preloads_policy_json_for_merge() -> None:
@@ -3367,6 +3844,30 @@ def test_pr_bundle_s3_ssl_terraform_preloads_policy_json_for_merge() -> None:
     assert "local-exec" not in content
     assert "KeepAppRead" in json.dumps(preserved_policy)
     assert "DenyInsecureTransport" in content
+
+
+def test_pr_bundle_s3_ssl_terraform_creates_missing_bucket_when_requested() -> None:
+    action = _make_action(
+        action_type=ACTION_TYPE_S3_BUCKET_REQUIRE_SSL,
+        target_id="ssl-bucket",
+        region="us-east-1",
+        control_id="S3.5",
+    )
+    r = generate_pr_bundle(
+        action,
+        "terraform",
+        strategy_id="s3_enforce_ssl_strict_deny",
+        strategy_inputs={"create_bucket_if_missing": True},
+    )
+    content = _bundle_file_content(r, "s3_bucket_require_ssl.tf")
+    paths = [f["path"] for f in r["files"]]
+
+    assert 'variable "create_bucket_if_missing"' in content
+    assert 'resource "aws_s3_bucket" "target_bucket"' in content
+    assert "terraform.auto.tfvars.json" not in paths
+    assert "scripts/s3_policy_capture.py" not in paths
+    assert "rollback/s3_policy_restore.py" not in paths
+    assert any("create the missing target bucket" in step for step in r["steps"])
 
 
 def test_pr_bundle_s3_ssl_cloudformation_apply_time_merge_stays_fail_closed() -> None:
