@@ -103,7 +103,7 @@
   - `/Users/marcomaher/AWS Security Autopilot/backend/workers/services/inventory_reconcile.py:915`
   - Join behavior reference: `/Users/marcomaher/AWS Security Autopilot/backend/workers/services/shadow_state.py:85`
 - **Evidence artifact**:
-  - `/Users/marcomaher/AWS Security Autopilot/artifacts/no-ui-agent/20260220T022820Z/findings_pre_raw.json`
+  - `/Users/marcomaher/AWS Security Autopilot/tests/fixtures/no_ui_agent/20260220T022820Z_findings_pre_raw.json`
 - **Code-state update (2026-02-22)**:
   - `_collect_config_account` now emits `resource_id=account_id`, `resource_type=AwsAccount`.
   - `_collect_ssm_account` now emits `resource_id=account_id`, `resource_type=AwsAccount`.

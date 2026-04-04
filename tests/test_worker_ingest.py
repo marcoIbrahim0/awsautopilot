@@ -438,7 +438,8 @@ def test_execute_ingest_job_success() -> None:
     # Mock account
     mock_account = MagicMock()
     mock_account.role_read_arn = "arn:aws:iam::123456789012:role/TestRole"
-    mock_account.external_id = "ext-123"
+    tenant_external_id = "ext-123"
+    mock_account.external_id = "account-mirror-ext-123"
     
     # Mock DB session
     mock_session = MagicMock()
@@ -465,14 +466,18 @@ def test_execute_ingest_job_success() -> None:
         with patch("backend.workers.jobs.ingest_findings.assume_role") as mock_assume:
             mock_boto_session = MagicMock()
             mock_assume.return_value = mock_boto_session
-            
-            with patch("backend.workers.jobs.ingest_findings.fetch_all_findings", return_value=mock_findings):
-                execute_ingest_job(job)
+
+            with patch(
+                "backend.workers.jobs.ingest_findings.canonical_tenant_external_id",
+                return_value=tenant_external_id,
+            ):
+                with patch("backend.workers.jobs.ingest_findings.fetch_all_findings", return_value=mock_findings):
+                    execute_ingest_job(job)
         
         # Verify assume_role was called with correct args
         mock_assume.assert_called_once_with(
             role_arn=mock_account.role_read_arn,
-            external_id=mock_account.external_id,
+            external_id=tenant_external_id,
             source_identity="security-autopilot-worker",
             tags=[
                 {"Key": "ServiceComponent", "Value": "worker"},

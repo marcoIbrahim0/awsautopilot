@@ -20,7 +20,7 @@ from backend.workers.services.inventory_reconcile import (
 from scripts.run_no_ui_pr_bundle_agent import _reconcile_services_for_control
 
 
-_FINDINGS_PRE_RAW_PATH = Path("artifacts/no-ui-agent/20260220T022820Z/findings_pre_raw.json")
+_FINDINGS_PRE_RAW_PATH = Path("tests/fixtures/no_ui_agent/20260220T022820Z_findings_pre_raw.json")
 
 
 def _identity_from_findings(control_id: str, expected_resource_type: str) -> tuple[str, str, str, str]:
