@@ -1,0 +1,48 @@
+{
+  "request": {
+    "method": "GET",
+    "url": "https://api.ocypheris.com/api/aws/accounts/696505809372/control-plane-readiness",
+    "params": {
+      "stale_after_minutes": 30
+    },
+    "json": null
+  },
+  "status_code": 200,
+  "headers": {
+    "Date": "Thu, 02 Apr 2026 15:57:43 GMT",
+    "Content-Type": "application/json",
+    "Transfer-Encoding": "chunked",
+    "Connection": "keep-alive",
+    "CF-Ray": "9e6107e8ebade289-MRS",
+    "CF-Cache-Status": "DYNAMIC",
+    "Nel": "{\"report_to\":\"cf-nel\",\"success_fraction\":0.0,\"max_age\":604800}",
+    "Server": "cloudflare",
+    "apigw-requestid": "bMu-tgTdAi0EJow=",
+    "Report-To": "{\"group\":\"cf-nel\",\"max_age\":604800,\"endpoints\":[{\"url\":\"https://a.nel.cloudflare.com/report/v4?s=ARclxoqDOG5gtmzYRCXmxDZ7Nm7FlABSzf9YJeMLPheZJHzNtzD7c65MgV4vG4Y8AcnskqXPzmEVRxB2HAF08voAAzaTHBkUJedtyulSbCBxX85Pk7H4O1l0zQQabrlVpYUmKw%3D%3D\"}]}",
+    "Content-Encoding": "gzip",
+    "alt-svc": "h3=\":443\"; ma=86400"
+  },
+  "body": {
+    "account_id": "696505809372",
+    "stale_after_minutes": 30,
+    "overall_ready": true,
+    "missing_regions": [],
+    "regions": [
+      {
+        "region": "eu-north-1",
+        "last_event_time": "2026-04-02T15:57:42.020945Z",
+        "last_intake_time": "2026-04-02T15:57:42.020945Z",
+        "is_recent": true,
+        "age_minutes": 0.03
+      },
+      {
+        "region": "us-east-1",
+        "last_event_time": "2026-04-02T15:57:42.824113Z",
+        "last_intake_time": "2026-04-02T15:57:42.824113Z",
+        "is_recent": true,
+        "age_minutes": 0.01
+      }
+    ]
+  },
+  "captured_at_utc": "2026-04-02T15:57:43.604405+00:00"
+}

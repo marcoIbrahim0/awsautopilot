@@ -1,0 +1,149 @@
+{
+  "artifact_type": "provider_agnostic_pr_payload",
+  "body_markdown": "## Summary\n\n- Repository: `example/security-autopilot-remediations`\n- Base branch: `main`\n- Head branch: `20260401t004147z-all-groups-pr-bundle-live-11-eu-north-1-ebs-default-encryption-ebs-enable-default-encryption-aws-manage`\n- Action: `EC2.7` \u00b7 `696505809372` \u00b7 `696505809372|eu-north-1|AWS::::Account:696505809372|EC2.7`\n\n## Generated diff\n\n- Fingerprint: `4584bfc035c4a88afb7a0ef2d72061b7c24962b01e29aa97cbcf956b2a85a771`\n- File count: `12`\n- `run_all.sh` <- `run_all.sh` (103 lines, sha256:683ef802907b)\n- `replay_group_run_reports.sh` <- `replay_group_run_reports.sh` (54 lines, sha256:722cb6d7017b)\n- `run_actions.sh` <- `run_actions.sh` (409 lines, sha256:611cdb62cfd5)\n- `README_GROUP.txt` <- `README_GROUP.txt` (21 lines, sha256:4b89b5f1a906)\n- `bundle_manifest.json` <- `bundle_manifest.json` (47 lines, sha256:3c87ddd432c9)\n- `decision_log.md` <- `decision_log.md` (9 lines, sha256:0dee7b0367f1)\n- `finding_coverage.json` <- `finding_coverage.json` (10 lines, sha256:65c1bcc450d4)\n- `executable/actions/01-aws-account-696505809372-c400ae42/providers.tf` <- `executable/actions/01-aws-account-696505809372-c400ae42/providers.tf` (18 lines, sha256:9a0536e0e979)\n- `executable/actions/01-aws-account-696505809372-c400ae42/ebs_default_encryption.tf` <- `executable/actions/01-aws-account-696505809372-c400ae42/ebs_default_encryption.tf` (5 lines, sha256:896641668207)\n- `executable/actions/01-aws-account-696505809372-c400ae42/README.txt` <- `executable/actions/01-aws-account-696505809372-c400ae42/README.txt` (23 lines, sha256:b7679db4da08)\n\n## Rollback\n\n- Recommended path: Prefer reverting through version control and the same reviewed deployment workflow.\n- EBS default encryption should be enabled: `aws ec2 disable-ebs-encryption-by-default`\n\n## Control mapping context\n\n- Control IDs: `EC2.7`",
+  "commit_message": "Apply AWS Security Autopilot remediation for EC2.7",
+  "diff_metadata": {
+    "artifact_type": "generated_diff_summary",
+    "file_count": 12,
+    "files": [
+      {
+        "bundle_path": "run_all.sh",
+        "byte_count": 4871,
+        "change_type": "create_or_update",
+        "content_sha256": "683ef802907b6c525c75a180da8f6173f77027352fc4e24574c550e01fa7d7ae",
+        "line_count": 103,
+        "repo_path": "run_all.sh"
+      },
+      {
+        "bundle_path": "replay_group_run_reports.sh",
+        "byte_count": 1521,
+        "change_type": "create_or_update",
+        "content_sha256": "722cb6d7017b682c0f4c44153d15e7e4a9918cfc102cf87fa92fef591f5dbd4f",
+        "line_count": 54,
+        "repo_path": "replay_group_run_reports.sh"
+      },
+      {
+        "bundle_path": "run_actions.sh",
+        "byte_count": 11759,
+        "change_type": "create_or_update",
+        "content_sha256": "611cdb62cfd5526780e3e903fa18a88693f0f6cb631dceb97ba450ada38981bb",
+        "line_count": 409,
+        "repo_path": "run_actions.sh"
+      },
+      {
+        "bundle_path": "README_GROUP.txt",
+        "byte_count": 676,
+        "change_type": "create_or_update",
+        "content_sha256": "4b89b5f1a906a03cc214cf685ccfcf9f456e0be002d65ad001adcfd70f1fdea0",
+        "line_count": 21,
+        "repo_path": "README_GROUP.txt"
+      },
+      {
+        "bundle_path": "bundle_manifest.json",
+        "byte_count": 2089,
+        "change_type": "create_or_update",
+        "content_sha256": "3c87ddd432c9fc6ecf7f84f25c400ef5253f8d3c0c9a7fdeff7ea7b86942c579",
+        "line_count": 47,
+        "repo_path": "bundle_manifest.json"
+      },
+      {
+        "bundle_path": "decision_log.md",
+        "byte_count": 576,
+        "change_type": "create_or_update",
+        "content_sha256": "0dee7b0367f167aac4dc10326eb004124b1ed7f0e2d40a36180f3c1ce0724781",
+        "line_count": 9,
+        "repo_path": "decision_log.md"
+      },
+      {
+        "bundle_path": "finding_coverage.json",
+        "byte_count": 221,
+        "change_type": "create_or_update",
+        "content_sha256": "65c1bcc450d424af31ca92ed625101dc5ad4d2a5574c4316d1a6c5e2ff12d520",
+        "line_count": 10,
+        "repo_path": "finding_coverage.json"
+      },
+      {
+        "bundle_path": "executable/actions/01-aws-account-696505809372-c400ae42/providers.tf",
+        "byte_count": 479,
+        "change_type": "create_or_update",
+        "content_sha256": "9a0536e0e9790c63a892e3b288fc6b299b5f7a1ea52e004cf4a0a8833e7227f3",
+        "line_count": 18,
+        "repo_path": "executable/actions/01-aws-account-696505809372-c400ae42/providers.tf"
+      },
+      {
+        "bundle_path": "executable/actions/01-aws-account-696505809372-c400ae42/ebs_default_encryption.tf",
+        "byte_count": 156,
+        "change_type": "create_or_update",
+        "content_sha256": "89664166820714027f635565fa47d4d42e4acaa06d6dc1e6124e1fc23b865214",
+        "line_count": 5,
+        "repo_path": "executable/actions/01-aws-account-696505809372-c400ae42/ebs_default_encryption.tf"
+      },
+      {
+        "bundle_path": "executable/actions/01-aws-account-696505809372-c400ae42/README.txt",
+        "byte_count": 926,
+        "change_type": "create_or_update",
+        "content_sha256": "b7679db4da08cfaacf5da1bafd29312ac3eddac0a680cafcaeff818793508b3c",
+        "line_count": 23,
+        "repo_path": "executable/actions/01-aws-account-696505809372-c400ae42/README.txt"
+      },
+      {
+        "bundle_path": "executable/actions/01-aws-account-696505809372-c400ae42/README_ACTION.txt",
+        "byte_count": 678,
+        "change_type": "create_or_update",
+        "content_sha256": "9f4a0e29eec44fa9f4083697b22b1b445919693107053066c22b90ec27c2feed",
+        "line_count": 12,
+        "repo_path": "executable/actions/01-aws-account-696505809372-c400ae42/README_ACTION.txt"
+      },
+      {
+        "bundle_path": "executable/actions/01-aws-account-696505809372-c400ae42/decision.json",
+        "byte_count": 1526,
+        "change_type": "create_or_update",
+        "content_sha256": "b7fe5c9393e7478296920f4a5a0a394da2ccfc3dd8281f7f44d1c2657069372d",
+        "line_count": 29,
+        "repo_path": "executable/actions/01-aws-account-696505809372-c400ae42/decision.json"
+      }
+    ],
+    "fingerprint_sha256": "4584bfc035c4a88afb7a0ef2d72061b7c24962b01e29aa97cbcf956b2a85a771",
+    "repo_target_configured": true,
+    "summary_lines": [
+      "`run_all.sh` <- `run_all.sh` (103 lines, sha256:683ef802907b)",
+      "`replay_group_run_reports.sh` <- `replay_group_run_reports.sh` (54 lines, sha256:722cb6d7017b)",
+      "`run_actions.sh` <- `run_actions.sh` (409 lines, sha256:611cdb62cfd5)",
+      "`README_GROUP.txt` <- `README_GROUP.txt` (21 lines, sha256:4b89b5f1a906)",
+      "`bundle_manifest.json` <- `bundle_manifest.json` (47 lines, sha256:3c87ddd432c9)",
+      "`decision_log.md` <- `decision_log.md` (9 lines, sha256:0dee7b0367f1)",
+      "`finding_coverage.json` <- `finding_coverage.json` (10 lines, sha256:65c1bcc450d4)",
+      "`executable/actions/01-aws-account-696505809372-c400ae42/providers.tf` <- `executable/actions/01-aws-account-696505809372-c400ae42/providers.tf` (18 lines, sha256:9a0536e0e979)",
+      "`executable/actions/01-aws-account-696505809372-c400ae42/ebs_default_encryption.tf` <- `executable/actions/01-aws-account-696505809372-c400ae42/ebs_default_encryption.tf` (5 lines, sha256:896641668207)",
+      "`executable/actions/01-aws-account-696505809372-c400ae42/README.txt` <- `executable/actions/01-aws-account-696505809372-c400ae42/README.txt` (23 lines, sha256:b7679db4da08)",
+      "`executable/actions/01-aws-account-696505809372-c400ae42/README_ACTION.txt` <- `executable/actions/01-aws-account-696505809372-c400ae42/README_ACTION.txt` (12 lines, sha256:9f4a0e29eec4)",
+      "`executable/actions/01-aws-account-696505809372-c400ae42/decision.json` <- `executable/actions/01-aws-account-696505809372-c400ae42/decision.json` (29 lines, sha256:b7fe5c9393e7)"
+    ],
+    "version": 1
+  },
+  "provider_agnostic": true,
+  "repo_target": {
+    "base_branch": "main",
+    "head_branch": "20260401t004147z-all-groups-pr-bundle-live-11-eu-north-1-ebs-default-encryption-ebs-enable-default-encryption-aws-manage",
+    "provider": "github",
+    "repository": "example/security-autopilot-remediations"
+  },
+  "rollback_notes": {
+    "artifact_type": "rollback_notes",
+    "entries": [
+      {
+        "action_id": "c400ae42-865c-4808-8aa0-11450b717714",
+        "action_type": "ebs_default_encryption",
+        "control_id": "EC2.7",
+        "rollback_command": "aws ec2 disable-ebs-encryption-by-default",
+        "target_id": "696505809372|eu-north-1|AWS::::Account:696505809372|EC2.7",
+        "title": "EBS default encryption should be enabled"
+      }
+    ],
+    "entry_count": 1,
+    "recommended_path": "Prefer reverting through version control and the same reviewed deployment workflow.",
+    "version": 1
+  },
+  "title": "Apply AWS Security Autopilot remediation for EC2.7",
+  "version": 1
+}

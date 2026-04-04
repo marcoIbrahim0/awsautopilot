@@ -292,6 +292,7 @@ zip -r "$TMP_ZIP" \
   alembic \
   alembic.ini \
   backend \
+  infrastructure \
   worker \
   -x "*/__pycache__/*" \
   -x "__pycache__/*" \

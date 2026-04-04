@@ -1,0 +1,100 @@
+aws_s3_bucket.target_bucket[0]: Refreshing state... [id=phase2-wi1-lifecycle-696505809372-20260329004157]
+aws_s3_bucket_ownership_controls.target_bucket[0]: Refreshing state... [id=phase2-wi1-lifecycle-696505809372-20260329004157]
+aws_s3_bucket_public_access_block.target_bucket[0]: Refreshing state... [id=phase2-wi1-lifecycle-696505809372-20260329004157]
+aws_s3_bucket_server_side_encryption_configuration.security_autopilot: Refreshing state... [id=phase2-wi1-lifecycle-696505809372-20260329004157]
+
+Terraform used the selected providers to generate the following execution
+plan. Resource actions are indicated with the following symbols:
+  - destroy
+
+Terraform will perform the following actions:
+
+  # aws_s3_bucket.target_bucket[0] will be destroyed
+  - resource "aws_s3_bucket" "target_bucket" {
+      - arn                         = "arn:aws:s3:::phase2-wi1-lifecycle-696505809372-20260329004157" -> null
+      - bucket                      = "phase2-wi1-lifecycle-696505809372-20260329004157" -> null
+      - bucket_domain_name          = "phase2-wi1-lifecycle-696505809372-20260329004157.s3.amazonaws.com" -> null
+      - bucket_regional_domain_name = "phase2-wi1-lifecycle-696505809372-20260329004157.s3.eu-north-1.amazonaws.com" -> null
+      - force_destroy               = false -> null
+      - hosted_zone_id              = "Z3BAZG2TWCNX0D" -> null
+      - id                          = "phase2-wi1-lifecycle-696505809372-20260329004157" -> null
+      - object_lock_enabled         = false -> null
+      - region                      = "eu-north-1" -> null
+      - request_payer               = "BucketOwner" -> null
+      - tags                        = {} -> null
+      - tags_all                    = {} -> null
+        # (3 unchanged attributes hidden)
+
+      - grant {
+          - id          = "2d735bbb71d4146170966dc3fa559ad48e4a2ce47d9aadccfc95d721c99c4bdc" -> null
+          - permissions = [
+              - "FULL_CONTROL",
+            ] -> null
+          - type        = "CanonicalUser" -> null
+            # (1 unchanged attribute hidden)
+        }
+
+      - server_side_encryption_configuration {
+          - rule {
+              - bucket_key_enabled = true -> null
+
+              - apply_server_side_encryption_by_default {
+                  - kms_master_key_id = "arn:aws:kms:eu-north-1:696505809372:alias/aws/s3" -> null
+                  - sse_algorithm     = "aws:kms" -> null
+                }
+            }
+        }
+
+      - versioning {
+          - enabled    = false -> null
+          - mfa_delete = false -> null
+        }
+    }
+
+  # aws_s3_bucket_ownership_controls.target_bucket[0] will be destroyed
+  - resource "aws_s3_bucket_ownership_controls" "target_bucket" {
+      - bucket = "phase2-wi1-lifecycle-696505809372-20260329004157" -> null
+      - id     = "phase2-wi1-lifecycle-696505809372-20260329004157" -> null
+
+      - rule {
+          - object_ownership = "BucketOwnerEnforced" -> null
+        }
+    }
+
+  # aws_s3_bucket_public_access_block.target_bucket[0] will be destroyed
+  - resource "aws_s3_bucket_public_access_block" "target_bucket" {
+      - block_public_acls       = true -> null
+      - block_public_policy     = true -> null
+      - bucket                  = "phase2-wi1-lifecycle-696505809372-20260329004157" -> null
+      - id                      = "phase2-wi1-lifecycle-696505809372-20260329004157" -> null
+      - ignore_public_acls      = true -> null
+      - restrict_public_buckets = true -> null
+    }
+
+  # aws_s3_bucket_server_side_encryption_configuration.security_autopilot will be destroyed
+  - resource "aws_s3_bucket_server_side_encryption_configuration" "security_autopilot" {
+      - bucket                = "phase2-wi1-lifecycle-696505809372-20260329004157" -> null
+      - id                    = "phase2-wi1-lifecycle-696505809372-20260329004157" -> null
+        # (1 unchanged attribute hidden)
+
+      - rule {
+          - bucket_key_enabled = true -> null
+
+          - apply_server_side_encryption_by_default {
+              - kms_master_key_id = "arn:aws:kms:eu-north-1:696505809372:alias/aws/s3" -> null
+              - sse_algorithm     = "aws:kms" -> null
+            }
+        }
+    }
+
+Plan: 0 to add, 0 to change, 4 to destroy.
+aws_s3_bucket_public_access_block.target_bucket[0]: Destroying... [id=phase2-wi1-lifecycle-696505809372-20260329004157]
+aws_s3_bucket_server_side_encryption_configuration.security_autopilot: Destroying... [id=phase2-wi1-lifecycle-696505809372-20260329004157]
+aws_s3_bucket_server_side_encryption_configuration.security_autopilot: Destruction complete after 0s
+aws_s3_bucket_public_access_block.target_bucket[0]: Destruction complete after 1s
+aws_s3_bucket_ownership_controls.target_bucket[0]: Destroying... [id=phase2-wi1-lifecycle-696505809372-20260329004157]
+aws_s3_bucket_ownership_controls.target_bucket[0]: Destruction complete after 0s
+aws_s3_bucket.target_bucket[0]: Destroying... [id=phase2-wi1-lifecycle-696505809372-20260329004157]
+aws_s3_bucket.target_bucket[0]: Destruction complete after 1s
+
+Destroy complete! Resources: 4 destroyed.

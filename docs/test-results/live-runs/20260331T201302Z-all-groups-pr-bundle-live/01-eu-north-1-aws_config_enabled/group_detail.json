@@ -1,0 +1,53 @@
+{
+  "account_id": "696505809372",
+  "action_type": "aws_config_enabled",
+  "blocked_by_run_id": null,
+  "blocked_detail": null,
+  "blocked_reason": null,
+  "can_generate_bundle": true,
+  "counters": {
+    "metadata_only": 0,
+    "not_run_yet": 1,
+    "run_not_successful": 0,
+    "run_successful": 0,
+    "total_actions": 1
+  },
+  "created_at": "2026-03-29T00:25:00.796439+00:00",
+  "group_key": "e4e07aa8-b8ea-4c1d-9fd7-4362a2fc1195|aws_config_enabled|696505809372|eu-north-1",
+  "id": "02575097-6342-4ee5-a9e2-737eebcfcc29",
+  "members": [
+    {
+      "action_id": "80499866-2447-4d0d-bcb4-88e903797ca1",
+      "action_status": "open",
+      "assigned_at": "2026-03-29T00:25:00.796439+00:00",
+      "control_id": "Config.1",
+      "followup_kind": null,
+      "last_attempt_at": null,
+      "last_confirmation_source": null,
+      "last_confirmed_at": null,
+      "latest_run": {
+        "finished_at": null,
+        "id": null,
+        "started_at": null,
+        "status": null
+      },
+      "pending_confirmation": false,
+      "pending_confirmation_deadline_at": null,
+      "pending_confirmation_message": null,
+      "pending_confirmation_severity": null,
+      "pending_confirmation_started_at": null,
+      "priority": 86,
+      "resource_id": "AWS::::Account:696505809372",
+      "status_bucket": "not_run_yet",
+      "status_message": null,
+      "status_severity": null,
+      "title": "AWS Config should be enabled and use the service-linked role for resource recording"
+    }
+  ],
+  "metadata": {
+    "source": "auto_assign"
+  },
+  "region": "eu-north-1",
+  "tenant_id": "e4e07aa8-b8ea-4c1d-9fd7-4362a2fc1195",
+  "updated_at": "2026-03-29T00:25:00.796439+00:00"
+}

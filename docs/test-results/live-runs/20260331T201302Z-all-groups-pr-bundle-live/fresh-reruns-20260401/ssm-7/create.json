@@ -1,0 +1,11 @@
+{
+  "ok": true,
+  "status_code": 201,
+  "body": {
+    "group_run_id": "fd7b8ba5-f5e6-4bdb-a42c-64ce2ede59c9",
+    "remediation_run_id": "f5eb6579-6901-4374-b4ff-3bd466d29958",
+    "reporting_token": "***",
+    "reporting_callback_url": "https://api.ocypheris.com/api/internal/group-runs/report",
+    "status": "queued"
+  }
+}

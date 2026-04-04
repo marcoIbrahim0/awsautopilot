@@ -1,0 +1,30 @@
+{
+  "request": {
+    "method": "POST",
+    "url": "https://api.ocypheris.com/api/aws/accounts/696505809372/control-plane-synthetic-event",
+    "params": {
+      "region": "eu-north-1"
+    },
+    "json": null
+  },
+  "status_code": 200,
+  "headers": {
+    "Date": "Thu, 02 Apr 2026 15:57:42 GMT",
+    "Content-Type": "application/json",
+    "Content-Length": "44",
+    "Connection": "keep-alive",
+    "CF-Ray": "9e6107df78ef49f0-MRS",
+    "CF-Cache-Status": "DYNAMIC",
+    "Server": "cloudflare",
+    "apigw-requestid": "bMu-eiA5gi0EMEw=",
+    "Report-To": "{\"group\":\"cf-nel\",\"max_age\":604800,\"endpoints\":[{\"url\":\"https://a.nel.cloudflare.com/report/v4?s=wKgAxvrEXDg%2BEVEVDBHqF8tdjin2aPa16X%2Bd0%2B2XN068FiAt1pfeBsvCVXiDns56Ff8cuRPtjXrph%2BhMTO3%2F%2BGPmF%2BLb61SL7Ihp2vQDnf5pzuMKqmDSX4HeAPG%2FYjgz4Ma2DA%3D%3D\"}]}",
+    "Nel": "{\"report_to\":\"cf-nel\",\"success_fraction\":0.0,\"max_age\":604800}",
+    "alt-svc": "h3=\":443\"; ma=86400"
+  },
+  "body": {
+    "enqueued": 1,
+    "dropped": 0,
+    "drop_reasons": {}
+  },
+  "captured_at_utc": "2026-04-02T15:57:42.259717+00:00"
+}

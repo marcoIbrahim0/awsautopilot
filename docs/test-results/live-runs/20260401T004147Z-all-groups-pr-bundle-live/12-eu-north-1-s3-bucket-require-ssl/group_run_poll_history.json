@@ -1,0 +1,213 @@
+[
+  {
+    "payload": {
+      "created_at": "2026-04-01T00:43:50.386698+00:00",
+      "finished_at": "2026-04-01T00:45:01+00:00",
+      "id": "50a03134-1191-426f-8428-bfeefd00cef0",
+      "initiated_by_user_id": "a5fab489-9b8e-4656-b2f4-8accfbed6142",
+      "mode": "download_bundle",
+      "remediation_run_id": "38bddb1d-d90c-42d8-95fe-1acd3f71dfa7",
+      "reporting_source": "bundle_callback",
+      "results": [
+        {
+          "action_id": "7451c997-3ebc-48cc-a67e-c35b3dbb76b1",
+          "blocked_reasons": [],
+          "execution_error_code": "bundle_runner_failed",
+          "execution_error_message": "run_actions.sh exited non-zero",
+          "execution_finished_at": "2026-04-01T00:45:01+00:00",
+          "execution_started_at": "2026-04-01T00:43:57.178398+00:00",
+          "execution_status": "failed",
+          "reason": null,
+          "result_type": "executable",
+          "support_tier": null
+        },
+        {
+          "action_id": "f791c98c-ec11-4af7-9f19-abf8ebc44d21",
+          "blocked_reasons": [],
+          "execution_error_code": "bundle_runner_failed",
+          "execution_error_message": "run_actions.sh exited non-zero",
+          "execution_finished_at": "2026-04-01T00:45:01+00:00",
+          "execution_started_at": "2026-04-01T00:43:57.178398+00:00",
+          "execution_status": "failed",
+          "reason": null,
+          "result_type": "executable",
+          "support_tier": null
+        },
+        {
+          "action_id": "d7a6479a-8ab3-4077-8b6a-19c378ae20d1",
+          "blocked_reasons": [],
+          "execution_error_code": "bundle_runner_failed",
+          "execution_error_message": "run_actions.sh exited non-zero",
+          "execution_finished_at": "2026-04-01T00:45:01+00:00",
+          "execution_started_at": "2026-04-01T00:43:57.178398+00:00",
+          "execution_status": "failed",
+          "reason": null,
+          "result_type": "executable",
+          "support_tier": null
+        },
+        {
+          "action_id": "e532a4a7-e830-4b75-a06b-2e0d1c52b75b",
+          "blocked_reasons": [],
+          "execution_error_code": "bundle_runner_failed",
+          "execution_error_message": "run_actions.sh exited non-zero",
+          "execution_finished_at": "2026-04-01T00:45:01+00:00",
+          "execution_started_at": "2026-04-01T00:43:57.178398+00:00",
+          "execution_status": "failed",
+          "reason": null,
+          "result_type": "executable",
+          "support_tier": null
+        },
+        {
+          "action_id": "ec2c5925-08d5-437c-8019-90f703484649",
+          "blocked_reasons": [],
+          "execution_error_code": "bundle_runner_failed",
+          "execution_error_message": "run_actions.sh exited non-zero",
+          "execution_finished_at": "2026-04-01T00:45:01+00:00",
+          "execution_started_at": "2026-04-01T00:43:57.178398+00:00",
+          "execution_status": "failed",
+          "reason": null,
+          "result_type": "executable",
+          "support_tier": null
+        },
+        {
+          "action_id": "d33c0b28-2a54-4623-8a5d-1f9bffc4884d",
+          "blocked_reasons": [],
+          "execution_error_code": "bundle_runner_failed",
+          "execution_error_message": "run_actions.sh exited non-zero",
+          "execution_finished_at": "2026-04-01T00:45:01+00:00",
+          "execution_started_at": "2026-04-01T00:43:57.178398+00:00",
+          "execution_status": "failed",
+          "reason": null,
+          "result_type": "executable",
+          "support_tier": null
+        },
+        {
+          "action_id": "329b2b93-2959-430e-8a83-6d963ddce512",
+          "blocked_reasons": [],
+          "execution_error_code": "bundle_runner_failed",
+          "execution_error_message": "run_actions.sh exited non-zero",
+          "execution_finished_at": "2026-04-01T00:45:01+00:00",
+          "execution_started_at": "2026-04-01T00:43:57.178398+00:00",
+          "execution_status": "failed",
+          "reason": null,
+          "result_type": "executable",
+          "support_tier": null
+        },
+        {
+          "action_id": "78237cc2-e47f-4f0f-80de-22b08d8725c7",
+          "blocked_reasons": [],
+          "execution_error_code": "bundle_runner_failed",
+          "execution_error_message": "run_actions.sh exited non-zero",
+          "execution_finished_at": "2026-04-01T00:45:01+00:00",
+          "execution_started_at": "2026-04-01T00:43:57.178398+00:00",
+          "execution_status": "failed",
+          "reason": null,
+          "result_type": "executable",
+          "support_tier": null
+        },
+        {
+          "action_id": "96bd1efb-91ee-4b22-9e1e-29613c8492aa",
+          "blocked_reasons": [],
+          "execution_error_code": "bundle_runner_failed",
+          "execution_error_message": "run_actions.sh exited non-zero",
+          "execution_finished_at": "2026-04-01T00:45:01+00:00",
+          "execution_started_at": "2026-04-01T00:43:57.178398+00:00",
+          "execution_status": "failed",
+          "reason": null,
+          "result_type": "executable",
+          "support_tier": null
+        },
+        {
+          "action_id": "6b99bb03-bb75-4535-b9e1-4550fbad76be",
+          "blocked_reasons": [],
+          "execution_error_code": "bundle_runner_failed",
+          "execution_error_message": "run_actions.sh exited non-zero",
+          "execution_finished_at": "2026-04-01T00:45:01+00:00",
+          "execution_started_at": "2026-04-01T00:43:57.178398+00:00",
+          "execution_status": "failed",
+          "reason": null,
+          "result_type": "executable",
+          "support_tier": null
+        },
+        {
+          "action_id": "8f192c29-8cfc-4e0e-a9a4-b5a427bc80ba",
+          "blocked_reasons": [],
+          "execution_error_code": "bundle_runner_failed",
+          "execution_error_message": "run_actions.sh exited non-zero",
+          "execution_finished_at": "2026-04-01T00:45:01+00:00",
+          "execution_started_at": "2026-04-01T00:43:57.178398+00:00",
+          "execution_status": "failed",
+          "reason": null,
+          "result_type": "executable",
+          "support_tier": null
+        },
+        {
+          "action_id": "2cdace24-a63d-481d-81f7-f5bda82b8a80",
+          "blocked_reasons": [],
+          "execution_error_code": "bundle_runner_failed",
+          "execution_error_message": "run_actions.sh exited non-zero",
+          "execution_finished_at": "2026-04-01T00:45:01+00:00",
+          "execution_started_at": "2026-04-01T00:43:57.178398+00:00",
+          "execution_status": "failed",
+          "reason": null,
+          "result_type": "executable",
+          "support_tier": null
+        },
+        {
+          "action_id": "0886946b-cf32-49cb-8f0e-5dcb07433426",
+          "blocked_reasons": [],
+          "execution_error_code": "bundle_runner_failed",
+          "execution_error_message": "run_actions.sh exited non-zero",
+          "execution_finished_at": "2026-04-01T00:45:01+00:00",
+          "execution_started_at": "2026-04-01T00:43:57.178398+00:00",
+          "execution_status": "failed",
+          "reason": null,
+          "result_type": "executable",
+          "support_tier": null
+        },
+        {
+          "action_id": "bcd7f695-772d-418b-921b-a2f9ca3eaa47",
+          "blocked_reasons": [],
+          "execution_error_code": "bundle_runner_failed",
+          "execution_error_message": "run_actions.sh exited non-zero",
+          "execution_finished_at": "2026-04-01T00:45:01+00:00",
+          "execution_started_at": "2026-04-01T00:43:57.178398+00:00",
+          "execution_status": "failed",
+          "reason": null,
+          "result_type": "executable",
+          "support_tier": null
+        },
+        {
+          "action_id": "5bf35adb-e1ca-40aa-af5f-6c0f46fb6c1c",
+          "blocked_reasons": [],
+          "execution_error_code": "bundle_runner_failed",
+          "execution_error_message": "run_actions.sh exited non-zero",
+          "execution_finished_at": "2026-04-01T00:45:01+00:00",
+          "execution_started_at": "2026-04-01T00:43:57.178398+00:00",
+          "execution_status": "failed",
+          "reason": null,
+          "result_type": "executable",
+          "support_tier": null
+        },
+        {
+          "action_id": "2904172f-0491-4248-afca-af30be896885",
+          "blocked_reasons": [
+            "Bucket policy preservation evidence is missing for merge-safe SSL enforcement."
+          ],
+          "execution_error_code": null,
+          "execution_error_message": null,
+          "execution_finished_at": "2026-04-01T00:45:01+00:00",
+          "execution_started_at": "2026-04-01T00:43:57.178398+00:00",
+          "execution_status": "unknown",
+          "reason": "review_required_metadata_only",
+          "result_type": "non_executable",
+          "support_tier": "review_required_bundle"
+        }
+      ],
+      "started_at": "2026-04-01T00:43:57.178398+00:00",
+      "status": "failed",
+      "updated_at": "2026-04-01T00:45:01.614443+00:00"
+    },
+    "polled_at": "2026-04-01T00:45:07.073931+00:00"
+  }
+]

@@ -1,0 +1,12 @@
+{
+  "id": "d92861be-cbb7-4508-8f3e-2ddaf87df362",
+  "remediation_run_id": "f124f569-9391-4f74-85df-23e64b83fa92",
+  "initiated_by_user_id": "7c43e0b3-6e98-43af-826f-f4eeaa5af674",
+  "mode": "download_bundle",
+  "status": "failed",
+  "started_at": "2026-04-02 01:39:21.447146+00:00",
+  "finished_at": "2026-04-02 03:07:00+00:00",
+  "reporting_source": "bundle_callback",
+  "created_at": "2026-04-02 01:38:49.837672+00:00",
+  "updated_at": "2026-04-02 03:07:01.084500+00:00"
+}

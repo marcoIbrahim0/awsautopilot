@@ -15,11 +15,14 @@ from backend.services.root_key_resolution_adapter import (
 )
 from backend.services.s3_family_resolution_adapter import (
     S3_11_FAMILY_RESOLVER_KIND,
+    S3_11_CREATE_PROFILE_ID,
     S3_11_STRATEGY_ID,
     S3_15_CUSTOMER_MANAGED_PROFILE_ID,
+    S3_15_CREATE_PROFILE_ID,
     S3_15_FAMILY_RESOLVER_KIND,
     S3_15_STRATEGY_ID,
     S3_2_FAMILY_RESOLVER_KIND,
+    S3_2_OAC_CREATE_PROFILE_ID,
     S3_2_OAC_MANUAL_PROFILE_ID,
     S3_2_OAC_STRATEGY_ID,
     S3_2_STANDARD_MANUAL_PROFILE_ID,
@@ -28,9 +31,12 @@ from backend.services.s3_family_resolution_adapter import (
     S3_2_WEBSITE_REVIEW_PROFILE_ID,
     S3_2_WEBSITE_STRATEGY_ID,
     S3_5_EXEMPTION_STRATEGY_ID,
+    S3_5_EXEMPTION_CREATE_PROFILE_ID,
     S3_5_FAMILY_RESOLVER_KIND,
     S3_5_STRICT_STRATEGY_ID,
+    S3_5_STRICT_CREATE_PROFILE_ID,
     S3_9_FAMILY_RESOLVER_KIND,
+    S3_9_CREATE_PROFILE_ID,
     S3_9_REVIEW_PROFILE_ID,
     S3_9_STRATEGY_ID,
 )
@@ -255,6 +261,20 @@ def _s3_2_oac_family_profiles() -> tuple[RemediationProfileDefinition, ...]:
         RemediationProfileDefinition(
             action_type="s3_bucket_block_public_access",
             strategy_id=S3_2_OAC_STRATEGY_ID,
+            profile_id=S3_2_OAC_CREATE_PROFILE_ID,
+            label="Create missing bucket, then migrate to CloudFront + OAC + private S3",
+            default_support_tier="deterministic_bundle",
+            recommended=False,
+            requires_inputs=False,
+            supports_exception_flow=False,
+            exception_only=False,
+            family_resolver_kind=S3_2_FAMILY_RESOLVER_KIND,
+            default_inputs={"create_bucket_if_missing": True},
+            legacy_input_hints={"create_bucket_if_missing": True},
+        ),
+        RemediationProfileDefinition(
+            action_type="s3_bucket_block_public_access",
+            strategy_id=S3_2_OAC_STRATEGY_ID,
             profile_id=S3_2_OAC_MANUAL_PROFILE_ID,
             label="Manual CloudFront/OAC preservation review",
             default_support_tier="manual_guidance_only",
@@ -313,6 +333,20 @@ def _s3_9_family_profiles() -> tuple[RemediationProfileDefinition, ...]:
         RemediationProfileDefinition(
             action_type="s3_bucket_access_logging",
             strategy_id=S3_9_STRATEGY_ID,
+            profile_id=S3_9_CREATE_PROFILE_ID,
+            label="Create missing source bucket, then enable S3 access logging",
+            default_support_tier="deterministic_bundle",
+            recommended=False,
+            requires_inputs=True,
+            supports_exception_flow=False,
+            exception_only=False,
+            family_resolver_kind=S3_9_FAMILY_RESOLVER_KIND,
+            default_inputs={"create_bucket_if_missing": True},
+            legacy_input_hints={"create_bucket_if_missing": True},
+        ),
+        RemediationProfileDefinition(
+            action_type="s3_bucket_access_logging",
+            strategy_id=S3_9_STRATEGY_ID,
             profile_id=S3_9_REVIEW_PROFILE_ID,
             label="Review destination safety and bucket scope manually",
             default_support_tier="review_required_bundle",
@@ -342,6 +376,20 @@ def _s3_15_family_profiles() -> tuple[RemediationProfileDefinition, ...]:
         RemediationProfileDefinition(
             action_type="s3_bucket_encryption_kms",
             strategy_id=S3_15_STRATEGY_ID,
+            profile_id=S3_15_CREATE_PROFILE_ID,
+            label="Create missing bucket, then enable SSE-KMS with the AWS managed S3 key",
+            default_support_tier="deterministic_bundle",
+            recommended=False,
+            requires_inputs=True,
+            supports_exception_flow=False,
+            exception_only=False,
+            family_resolver_kind=S3_15_FAMILY_RESOLVER_KIND,
+            default_inputs={"create_bucket_if_missing": True},
+            legacy_input_hints={"create_bucket_if_missing": True},
+        ),
+        RemediationProfileDefinition(
+            action_type="s3_bucket_encryption_kms",
+            strategy_id=S3_15_STRATEGY_ID,
             profile_id=S3_15_CUSTOMER_MANAGED_PROFILE_ID,
             label="Use a customer-managed KMS key after dependency review",
             default_support_tier="review_required_bundle",
@@ -352,6 +400,73 @@ def _s3_15_family_profiles() -> tuple[RemediationProfileDefinition, ...]:
             family_resolver_kind=S3_15_FAMILY_RESOLVER_KIND,
             default_inputs={"kms_key_mode": "custom"},
             legacy_input_hints={"kms_key_mode": "custom"},
+        ),
+    )
+
+
+def _s3_5_family_profiles(strategy: RemediationStrategy) -> tuple[RemediationProfileDefinition, ...]:
+    create_profile_id = (
+        S3_5_STRICT_CREATE_PROFILE_ID
+        if strategy["strategy_id"] == S3_5_STRICT_STRATEGY_ID
+        else S3_5_EXEMPTION_CREATE_PROFILE_ID
+    )
+    return (
+        RemediationProfileDefinition(
+            action_type="s3_bucket_require_ssl",
+            strategy_id=strategy["strategy_id"],
+            profile_id=strategy["strategy_id"],
+            label=strategy["label"],
+            default_support_tier="deterministic_bundle",
+            recommended=strategy["recommended"],
+            requires_inputs=strategy["requires_inputs"],
+            supports_exception_flow=strategy["supports_exception_flow"],
+            exception_only=strategy["exception_only"],
+            family_resolver_kind=S3_5_FAMILY_RESOLVER_KIND,
+        ),
+        RemediationProfileDefinition(
+            action_type="s3_bucket_require_ssl",
+            strategy_id=strategy["strategy_id"],
+            profile_id=create_profile_id,
+            label="Create missing bucket, then enforce SSL-only requests",
+            default_support_tier="deterministic_bundle",
+            recommended=False,
+            requires_inputs=strategy["requires_inputs"],
+            supports_exception_flow=strategy["supports_exception_flow"],
+            exception_only=strategy["exception_only"],
+            family_resolver_kind=S3_5_FAMILY_RESOLVER_KIND,
+            default_inputs={"create_bucket_if_missing": True},
+            legacy_input_hints={"create_bucket_if_missing": True},
+        ),
+    )
+
+
+def _s3_11_family_profiles() -> tuple[RemediationProfileDefinition, ...]:
+    return (
+        RemediationProfileDefinition(
+            action_type="s3_bucket_lifecycle_configuration",
+            strategy_id=S3_11_STRATEGY_ID,
+            profile_id=S3_11_STRATEGY_ID,
+            label="Enable lifecycle cleanup for incomplete uploads",
+            default_support_tier="deterministic_bundle",
+            recommended=True,
+            requires_inputs=True,
+            supports_exception_flow=False,
+            exception_only=False,
+            family_resolver_kind=S3_11_FAMILY_RESOLVER_KIND,
+        ),
+        RemediationProfileDefinition(
+            action_type="s3_bucket_lifecycle_configuration",
+            strategy_id=S3_11_STRATEGY_ID,
+            profile_id=S3_11_CREATE_PROFILE_ID,
+            label="Create missing bucket, then enable lifecycle cleanup for incomplete uploads",
+            default_support_tier="deterministic_bundle",
+            recommended=False,
+            requires_inputs=True,
+            supports_exception_flow=False,
+            exception_only=False,
+            family_resolver_kind=S3_11_FAMILY_RESOLVER_KIND,
+            default_inputs={"create_bucket_if_missing": True},
+            legacy_input_hints={"create_bucket_if_missing": True},
         ),
     )
 
@@ -403,9 +518,9 @@ def _profile_rows_for_strategy(
         S3_5_STRICT_STRATEGY_ID,
         S3_5_EXEMPTION_STRATEGY_ID,
     }:
-        return _family_clone(action_type, strategy, family_kind=S3_5_FAMILY_RESOLVER_KIND)
+        return _s3_5_family_profiles(strategy)
     if action_type == "s3_bucket_lifecycle_configuration" and strategy_id == S3_11_STRATEGY_ID:
-        return _family_clone(action_type, strategy, family_kind=S3_11_FAMILY_RESOLVER_KIND)
+        return _s3_11_family_profiles()
     if action_type == "s3_bucket_encryption_kms" and strategy_id == S3_15_STRATEGY_ID:
         return _s3_15_family_profiles()
     if action_type == "cloudtrail_enabled" and strategy_id == "cloudtrail_enable_guided":

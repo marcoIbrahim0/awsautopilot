@@ -1,0 +1,42 @@
+{
+  "blocked_reasons": [
+    "Current bucket policy is public and S3 Block Public Access prevents public policies, so merge-preserving SSL enforcement would be rejected by PutBucketPolicy."
+  ],
+  "decision_rationale": "Family resolver downgraded S3.5 strategy 's3_enforce_ssl_strict_deny' because preserving the current public bucket policy would conflict with S3 Block Public Access. Current bucket policy is public and S3 Block Public Access prevents public policies, so merge-preserving SSL enforcement would be rejected by PutBucketPolicy. Run creation did not require additional risk-only acceptance.",
+  "decision_version": "resolver/v1",
+  "finding_coverage": {},
+  "missing_defaults": [],
+  "missing_inputs": [],
+  "preservation_summary": {
+    "account_block_public_policy_enabled": null,
+    "apply_time_merge": false,
+    "apply_time_merge_reason": null,
+    "block_public_policy_conflict": true,
+    "block_public_policy_reason": "Current bucket policy is public and S3 Block Public Access prevents public policies, so merge-preserving SSL enforcement would be rejected by PutBucketPolicy.",
+    "bucket_block_public_policy_enabled": true,
+    "bucket_policy_analysis_possible": true,
+    "bucket_policy_public": true,
+    "effective_block_public_policy_enabled": true,
+    "executable_policy_merge_allowed": false,
+    "existing_bucket_policy_json_captured": true,
+    "existing_bucket_policy_statement_count": 1,
+    "family": "s3_bucket_require_ssl",
+    "family_strategy": "s3_enforce_ssl_strict_deny",
+    "merge_safe_policy_available": false,
+    "preserve_existing_policy": true,
+    "single_profile_compatible": true,
+    "strategy_only_supported": true,
+    "target_bucket_exists": true,
+    "target_bucket_missing": false,
+    "target_bucket_reason": null,
+    "target_bucket_verification_available": true,
+    "unsafe_overwrite_requested": false
+  },
+  "profile_id": "s3_enforce_ssl_strict_deny",
+  "rejected_profiles": [],
+  "resolved_inputs": {
+    "preserve_existing_policy": true
+  },
+  "strategy_id": "s3_enforce_ssl_strict_deny",
+  "support_tier": "review_required_bundle"
+}

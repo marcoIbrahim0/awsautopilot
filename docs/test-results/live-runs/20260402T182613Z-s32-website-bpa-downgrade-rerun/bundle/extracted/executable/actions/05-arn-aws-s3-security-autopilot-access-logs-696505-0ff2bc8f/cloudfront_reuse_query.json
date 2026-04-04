@@ -1,0 +1,7 @@
+{
+  "bucket_name": "security-autopilot-access-logs-696505809372",
+  "expected_bucket_regional_domain_name": "security-autopilot-access-logs-696505809372.s3.eu-north-1.amazonaws.com",
+  "expected_distribution_comment": "Security Autopilot migration for security-autopilot-access-logs-696505809372",
+  "expected_oac_name": "security-autopilot-oac-182c6f9d8266",
+  "expected_origin_id": "s3-security-autopilot-access-logs-696505809372"
+}

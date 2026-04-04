@@ -18,6 +18,7 @@ from botocore.exceptions import ClientError
 from backend.models import AwsAccount
 from backend.models.action_finding import ActionFinding
 from backend.models.finding import Finding
+from backend.services.account_trust import canonical_tenant_external_id
 from backend.services.action_engine import compute_actions_for_tenant
 from backend.services.action_run_confirmation import reevaluate_confirmation_for_actions
 from backend.services.canonicalization import build_resource_key, canonicalize_control_id
@@ -131,10 +132,11 @@ def execute_reconcile_inventory_shard_job(job: dict) -> None:
             )
             if account is None:
                 raise ValueError(f"aws_account not found tenant_id={tenant_id} account_id={account_id}")
+            tenant_external_id = canonical_tenant_external_id(session, tenant_id) or ""
 
             assumed = assume_role(
                 role_arn=account.role_read_arn,
-                external_id=account.external_id,
+                external_id=tenant_external_id,
                 source_identity=WORKER_ASSUME_ROLE_SOURCE_IDENTITY,
                 tags=build_assume_role_tags(service_component="worker", tenant_id=tenant_id),
             )

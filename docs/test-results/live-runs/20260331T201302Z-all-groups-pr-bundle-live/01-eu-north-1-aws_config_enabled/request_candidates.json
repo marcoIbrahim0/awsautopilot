@@ -1,0 +1,20 @@
+[
+  {
+    "bucket_creation_acknowledged": false,
+    "risk_acknowledged": true,
+    "strategy_id": "config_enable_account_local_delivery"
+  },
+  {
+    "bucket_creation_acknowledged": false,
+    "risk_acknowledged": true,
+    "strategy_id": "config_enable_centralized_delivery",
+    "strategy_inputs": {
+      "delivery_bucket": "security-autopilot-config-696505809372-eu-north-1"
+    }
+  },
+  {
+    "bucket_creation_acknowledged": false,
+    "risk_acknowledged": true,
+    "strategy_id": "config_keep_exception"
+  }
+]

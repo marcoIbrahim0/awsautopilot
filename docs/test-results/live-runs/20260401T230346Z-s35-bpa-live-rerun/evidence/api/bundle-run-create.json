@@ -1,0 +1,7 @@
+{
+  "group_run_id": "01463b29-b5a9-4d11-8ba4-e8527c9f41de",
+  "remediation_run_id": "59436c70-4aaa-4cbf-b557-93e6bfbb27f2",
+  "reporting_callback_url": "https://api.ocypheris.com/api/internal/group-runs/report",
+  "reporting_token": "***",
+  "status": "queued"
+}

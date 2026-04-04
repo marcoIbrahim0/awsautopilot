@@ -1,0 +1,292 @@
+Running 7 bundle folder(s) with parallel executions=3 (max=5)
+
+=== Running terraform in executable/actions/08-arn-aws-s3-sa-wi7-seed-696505809372-202603282058-3ae05cd4 ===
+
+=== Running terraform in executable/actions/13-arn-aws-s3-sa-wi5-site-696505809372-20260328t164-51f0f65a ===
+
+=== Running terraform in executable/actions/16-arn-aws-s3-phase2-wi1-lifecycle-696505809372-202-8f162041 ===
+[0m[1mInitializing the backend...[0m
+[0m[1mInitializing the backend...[0m
+[0m[1mInitializing the backend...[0m
+[31m╷[0m[0m
+[31m│[0m [0m[1m[31mError: [0m[0m[1m[0mTerraform encountered problems during initialisation, including problems
+[31m│[0m [0mwith the configuration, described below.
+[31m│[0m [0m
+[31m│[0m [0mThe Terraform configuration must be valid before initialization so that
+[31m│[0m [0mTerraform can determine which modules and providers need to be installed.[0m[0m
+[31m│[0m [0m
+[31m│[0m [0m[0m
+[31m╵[0m[0m
+[31m╷[0m[0m
+[31m│[0m [0m[1m[31mError: [0m[0m[1m[0mTerraform encountered problems during initialisation, including problems
+[31m│[0m [0mwith the configuration, described below.
+[31m│[0m [0m
+[31m│[0m [0mThe Terraform configuration must be valid before initialization so that
+[31m│[0m [0mTerraform can determine which modules and providers need to be installed.[0m[0m
+[31m│[0m [0m
+[31m│[0m [0m[0m
+[31m╵[0m[0m
+[31m╷[0m[0m
+[31m│[0m [0m[1m[31mError: [0m[0m[1m[0mTerraform encountered problems during initialisation, including problems
+[31m│[0m [0mwith the configuration, described below.
+[31m│[0m [0m
+[31m│[0m [0mThe Terraform configuration must be valid before initialization so that
+[31m│[0m [0mTerraform can determine which modules and providers need to be installed.[0m[0m
+[31m│[0m [0m
+[31m│[0m [0m[0m
+[31m╵[0m[0m
+[31m╷[0m[0m
+[31m│[0m [0m[1m[31mError: [0m[0m[1mArgument or block definition required[0m
+[31m│[0m [0m
+[31m│[0m [0m[0m  on s3_cloudfront_oac_private_s3.tf line 138, in locals:
+[31m│[0m [0m 138:     [4m?[0m lookup(data.external.cloudfront_reuse.result, "oac_id", "")[0m
+[31m│[0m [0m
+[31m│[0m [0mAn argument or block definition is required here.
+[31m╵[0m[0m
+[31m╷[0m[0m
+[31m│[0m [0m[1m[31mError: [0m[0m[1mArgument or block definition required[0m
+[31m│[0m [0m
+[31m│[0m [0m[0m  on s3_cloudfront_oac_private_s3.tf line 138, in locals:
+[31m│[0m [0m 138:     [4m?[0m lookup(data.external.cloudfront_reuse.result, "oac_id", "")[0m
+[31m│[0m [0m
+[31m│[0m [0mAn argument or block definition is required here.
+[31m╵[0m[0m
+[31m╷[0m[0m
+[31m│[0m [0m[1m[31mError: [0m[0m[1mArgument or block definition required[0m
+[31m│[0m [0m
+[31m│[0m [0m[0m  on s3_cloudfront_oac_private_s3.tf line 138, in locals:
+[31m│[0m [0m 138:     [4m?[0m lookup(data.external.cloudfront_reuse.result, "oac_id", "")[0m
+[31m│[0m [0m
+[31m│[0m [0mAn argument or block definition is required here.
+[31m╵[0m[0m
+WARNING: terraform init failed for /var/folders/xb/8sp19fms4h5gvptlrvnqdzyr0000gn/T//aws-security-autopilot-tf-9taGtm/action (attempt 1/5). Retrying in 3s...
+WARNING: terraform init failed for /var/folders/xb/8sp19fms4h5gvptlrvnqdzyr0000gn/T//aws-security-autopilot-tf-eKy1sL/action (attempt 1/5). Retrying in 3s...
+WARNING: terraform init failed for /var/folders/xb/8sp19fms4h5gvptlrvnqdzyr0000gn/T//aws-security-autopilot-tf-vQMrNs/action (attempt 1/5). Retrying in 3s...
+[0m[1mInitializing the backend...[0m
+[0m[1mInitializing the backend...[0m
+[0m[1mInitializing the backend...[0m
+[31m╷[0m[0m
+[31m│[0m [0m[1m[31mError: [0m[0m[1m[0mTerraform encountered problems during initialisation, including problems
+[31m│[0m [0mwith the configuration, described below.
+[31m│[0m [0m
+[31m│[0m [0mThe Terraform configuration must be valid before initialization so that
+[31m│[0m [0mTerraform can determine which modules and providers need to be installed.[0m[0m
+[31m│[0m [0m
+[31m│[0m [0m[0m
+[31m╵[0m[0m
+[31m╷[0m[0m
+[31m│[0m [0m[1m[31mError: [0m[0m[1m[0mTerraform encountered problems during initialisation, including problems
+[31m│[0m [0mwith the configuration, described below.
+[31m│[0m [0m
+[31m│[0m [0mThe Terraform configuration must be valid before initialization so that
+[31m│[0m [0mTerraform can determine which modules and providers need to be installed.[0m[0m
+[31m│[0m [0m
+[31m│[0m [0m[0m
+[31m╵[0m[0m
+[31m╷[0m[0m
+[31m│[0m [0m[1m[31mError: [0m[0m[1m[0mTerraform encountered problems during initialisation, including problems
+[31m│[0m [0mwith the configuration, described below.
+[31m│[0m [0m
+[31m│[0m [0mThe Terraform configuration must be valid before initialization so that
+[31m│[0m [0mTerraform can determine which modules and providers need to be installed.[0m[0m
+[31m│[0m [0m
+[31m│[0m [0m[0m
+[31m╵[0m[0m
+[31m╷[0m[0m
+[31m│[0m [0m[1m[31mError: [0m[0m[1mArgument or block definition required[0m
+[31m│[0m [0m
+[31m│[0m [0m[0m  on s3_cloudfront_oac_private_s3.tf line 138, in locals:
+[31m│[0m [0m 138:     [4m?[0m lookup(data.external.cloudfront_reuse.result, "oac_id", "")[0m
+[31m│[0m [0m
+[31m│[0m [0mAn argument or block definition is required here.
+[31m╵[0m[0m
+[31m╷[0m[0m
+[31m│[0m [0m[1m[31mError: [0m[0m[1mArgument or block definition required[0m
+[31m│[0m [0m
+[31m│[0m [0m[0m  on s3_cloudfront_oac_private_s3.tf line 138, in locals:
+[31m│[0m [0m 138:     [4m?[0m lookup(data.external.cloudfront_reuse.result, "oac_id", "")[0m
+[31m│[0m [0m
+[31m│[0m [0mAn argument or block definition is required here.
+[31m╵[0m[0m
+[31m╷[0m[0m
+[31m│[0m [0m[1m[31mError: [0m[0m[1mArgument or block definition required[0m
+[31m│[0m [0m
+[31m│[0m [0m[0m  on s3_cloudfront_oac_private_s3.tf line 138, in locals:
+[31m│[0m [0m 138:     [4m?[0m lookup(data.external.cloudfront_reuse.result, "oac_id", "")[0m
+[31m│[0m [0m
+[31m│[0m [0mAn argument or block definition is required here.
+[31m╵[0m[0m
+WARNING: terraform init failed for /var/folders/xb/8sp19fms4h5gvptlrvnqdzyr0000gn/T//aws-security-autopilot-tf-vQMrNs/action (attempt 2/5). Retrying in 6s...
+WARNING: terraform init failed for /var/folders/xb/8sp19fms4h5gvptlrvnqdzyr0000gn/T//aws-security-autopilot-tf-eKy1sL/action (attempt 2/5). Retrying in 6s...
+WARNING: terraform init failed for /var/folders/xb/8sp19fms4h5gvptlrvnqdzyr0000gn/T//aws-security-autopilot-tf-9taGtm/action (attempt 2/5). Retrying in 6s...
+[0m[1mInitializing the backend...[0m
+[0m[1mInitializing the backend...[0m
+[0m[1mInitializing the backend...[0m
+[31m╷[0m[0m
+[31m│[0m [0m[1m[31mError: [0m[0m[1m[0mTerraform encountered problems during initialisation, including problems
+[31m│[0m [0mwith the configuration, described below.
+[31m│[0m [0m
+[31m│[0m [0mThe Terraform configuration must be valid before initialization so that
+[31m│[0m [0mTerraform can determine which modules and providers need to be installed.[0m[0m
+[31m│[0m [0m
+[31m│[0m [0m[0m
+[31m╵[0m[0m
+[31m╷[0m[0m
+[31m│[0m [0m[1m[31mError: [0m[0m[1m[0mTerraform encountered problems during initialisation, including problems
+[31m│[0m [0mwith the configuration, described below.
+[31m│[0m [0m
+[31m│[0m [0mThe Terraform configuration must be valid before initialization so that
+[31m│[0m [0mTerraform can determine which modules and providers need to be installed.[0m[0m
+[31m│[0m [0m
+[31m│[0m [0m[0m
+[31m╵[0m[0m
+[31m╷[0m[0m
+[31m│[0m [0m[1m[31mError: [0m[0m[1m[0mTerraform encountered problems during initialisation, including problems
+[31m│[0m [0mwith the configuration, described below.
+[31m│[0m [0m
+[31m│[0m [0mThe Terraform configuration must be valid before initialization so that
+[31m│[0m [0mTerraform can determine which modules and providers need to be installed.[0m[0m
+[31m│[0m [0m
+[31m│[0m [0m[0m
+[31m╵[0m[0m
+[31m╷[0m[0m
+[31m│[0m [0m[1m[31mError: [0m[0m[1mArgument or block definition required[0m
+[31m│[0m [0m
+[31m│[0m [0m[0m  on s3_cloudfront_oac_private_s3.tf line 138, in locals:
+[31m│[0m [0m 138:     [4m?[0m lookup(data.external.cloudfront_reuse.result, "oac_id", "")[0m
+[31m│[0m [0m
+[31m│[0m [0mAn argument or block definition is required here.
+[31m╵[0m[0m
+[31m╷[0m[0m
+[31m│[0m [0m[1m[31mError: [0m[0m[1mArgument or block definition required[0m
+[31m│[0m [0m
+[31m│[0m [0m[0m  on s3_cloudfront_oac_private_s3.tf line 138, in locals:
+[31m│[0m [0m 138:     [4m?[0m lookup(data.external.cloudfront_reuse.result, "oac_id", "")[0m
+[31m│[0m [0m
+[31m│[0m [0mAn argument or block definition is required here.
+[31m╵[0m[0m
+[31m╷[0m[0m
+[31m│[0m [0m[1m[31mError: [0m[0m[1mArgument or block definition required[0m
+[31m│[0m [0m
+[31m│[0m [0m[0m  on s3_cloudfront_oac_private_s3.tf line 138, in locals:
+[31m│[0m [0m 138:     [4m?[0m lookup(data.external.cloudfront_reuse.result, "oac_id", "")[0m
+[31m│[0m [0m
+[31m│[0m [0mAn argument or block definition is required here.
+[31m╵[0m[0m
+WARNING: terraform init failed for /var/folders/xb/8sp19fms4h5gvptlrvnqdzyr0000gn/T//aws-security-autopilot-tf-9taGtm/action (attempt 3/5). Retrying in 12s...
+WARNING: terraform init failed for /var/folders/xb/8sp19fms4h5gvptlrvnqdzyr0000gn/T//aws-security-autopilot-tf-vQMrNs/action (attempt 3/5). Retrying in 12s...
+WARNING: terraform init failed for /var/folders/xb/8sp19fms4h5gvptlrvnqdzyr0000gn/T//aws-security-autopilot-tf-eKy1sL/action (attempt 3/5). Retrying in 12s...
+[0m[1mInitializing the backend...[0m
+[0m[1mInitializing the backend...[0m
+[0m[1mInitializing the backend...[0m
+[31m╷[0m[0m
+[31m│[0m [0m[1m[31mError: [0m[0m[1m[0mTerraform encountered problems during initialisation, including problems
+[31m│[0m [0mwith the configuration, described below.
+[31m│[0m [0m
+[31m│[0m [0mThe Terraform configuration must be valid before initialization so that
+[31m│[0m [0mTerraform can determine which modules and providers need to be installed.[0m[0m
+[31m│[0m [0m
+[31m│[0m [0m[0m
+[31m╵[0m[0m
+[31m╷[0m[0m
+[31m│[0m [0m[1m[31mError: [0m[0m[1m[0mTerraform encountered problems during initialisation, including problems
+[31m│[0m [0mwith the configuration, described below.
+[31m│[0m [0m
+[31m│[0m [0mThe Terraform configuration must be valid before initialization so that
+[31m│[0m [0mTerraform can determine which modules and providers need to be installed.[0m[0m
+[31m│[0m [0m
+[31m│[0m [0m[0m
+[31m╵[0m[0m
+[31m╷[0m[0m
+[31m│[0m [0m[1m[31mError: [0m[0m[1m[0mTerraform encountered problems during initialisation, including problems
+[31m│[0m [0mwith the configuration, described below.
+[31m│[0m [0m
+[31m│[0m [0mThe Terraform configuration must be valid before initialization so that
+[31m│[0m [0mTerraform can determine which modules and providers need to be installed.[0m[0m
+[31m│[0m [0m
+[31m│[0m [0m[0m
+[31m╵[0m[0m
+[31m╷[0m[0m
+[31m│[0m [0m[1m[31mError: [0m[0m[1mArgument or block definition required[0m
+[31m│[0m [0m
+[31m│[0m [0m[0m  on s3_cloudfront_oac_private_s3.tf line 138, in locals:
+[31m│[0m [0m 138:     [4m?[0m lookup(data.external.cloudfront_reuse.result, "oac_id", "")[0m
+[31m│[0m [0m
+[31m│[0m [0mAn argument or block definition is required here.
+[31m╵[0m[0m
+[31m╷[0m[0m
+[31m│[0m [0m[1m[31mError: [0m[0m[1mArgument or block definition required[0m
+[31m│[0m [0m
+[31m│[0m [0m[0m  on s3_cloudfront_oac_private_s3.tf line 138, in locals:
+[31m│[0m [0m 138:     [4m?[0m lookup(data.external.cloudfront_reuse.result, "oac_id", "")[0m
+[31m│[0m [0m
+[31m│[0m [0mAn argument or block definition is required here.
+[31m╵[0m[0m
+[31m╷[0m[0m
+[31m│[0m [0m[1m[31mError: [0m[0m[1mArgument or block definition required[0m
+[31m│[0m [0m
+[31m│[0m [0m[0m  on s3_cloudfront_oac_private_s3.tf line 138, in locals:
+[31m│[0m [0m 138:     [4m?[0m lookup(data.external.cloudfront_reuse.result, "oac_id", "")[0m
+[31m│[0m [0m
+[31m│[0m [0mAn argument or block definition is required here.
+[31m╵[0m[0m
+WARNING: terraform init failed for /var/folders/xb/8sp19fms4h5gvptlrvnqdzyr0000gn/T//aws-security-autopilot-tf-9taGtm/action (attempt 4/5). Retrying in 24s...
+WARNING: terraform init failed for /var/folders/xb/8sp19fms4h5gvptlrvnqdzyr0000gn/T//aws-security-autopilot-tf-vQMrNs/action (attempt 4/5). Retrying in 24s...
+WARNING: terraform init failed for /var/folders/xb/8sp19fms4h5gvptlrvnqdzyr0000gn/T//aws-security-autopilot-tf-eKy1sL/action (attempt 4/5). Retrying in 24s...
+[0m[1mInitializing the backend...[0m
+[0m[1mInitializing the backend...[0m
+[0m[1mInitializing the backend...[0m
+[31m╷[0m[0m
+[31m│[0m [0m[1m[31mError: [0m[0m[1m[0mTerraform encountered problems during initialisation, including problems
+[31m│[0m [0mwith the configuration, described below.
+[31m│[0m [0m
+[31m│[0m [0mThe Terraform configuration must be valid before initialization so that
+[31m│[0m [0mTerraform can determine which modules and providers need to be installed.[0m[0m
+[31m│[0m [0m
+[31m│[0m [0m[0m
+[31m╵[0m[0m
+[31m╷[0m[0m
+[31m│[0m [0m[1m[31mError: [0m[0m[1m[0mTerraform encountered problems during initialisation, including problems
+[31m│[0m [0mwith the configuration, described below.
+[31m│[0m [0m
+[31m│[0m [0mThe Terraform configuration must be valid before initialization so that
+[31m│[0m [0mTerraform can determine which modules and providers need to be installed.[0m[0m
+[31m│[0m [0m
+[31m│[0m [0m[0m
+[31m╵[0m[0m
+[31m╷[0m[0m
+[31m│[0m [0m[1m[31mError: [0m[0m[1m[0mTerraform encountered problems during initialisation, including problems
+[31m│[0m [0mwith the configuration, described below.
+[31m│[0m [0m
+[31m│[0m [0mThe Terraform configuration must be valid before initialization so that
+[31m│[0m [0mTerraform can determine which modules and providers need to be installed.[0m[0m
+[31m│[0m [0m
+[31m│[0m [0m[0m
+[31m╵[0m[0m
+[31m╷[0m[0m
+[31m│[0m [0m[1m[31mError: [0m[0m[1mArgument or block definition required[0m
+[31m│[0m [0m
+[31m│[0m [0m[0m  on s3_cloudfront_oac_private_s3.tf line 138, in locals:
+[31m│[0m [0m 138:     [4m?[0m lookup(data.external.cloudfront_reuse.result, "oac_id", "")[0m
+[31m│[0m [0m
+[31m│[0m [0mAn argument or block definition is required here.
+[31m╵[0m[0m
+[31m╷[0m[0m
+[31m│[0m [0m[1m[31mError: [0m[0m[1mArgument or block definition required[0m
+[31m│[0m [0m
+[31m│[0m [0m[0m  on s3_cloudfront_oac_private_s3.tf line 138, in locals:
+[31m│[0m [0m 138:     [4m?[0m lookup(data.external.cloudfront_reuse.result, "oac_id", "")[0m
+[31m│[0m [0m
+[31m│[0m [0mAn argument or block definition is required here.
+[31m╵[0m[0m
+[31m╷[0m[0m
+[31m│[0m [0m[1m[31mError: [0m[0m[1mArgument or block definition required[0m
+[31m│[0m [0m
+[31m│[0m [0m[0m  on s3_cloudfront_oac_private_s3.tf line 138, in locals:
+[31m│[0m [0m 138:     [4m?[0m lookup(data.external.cloudfront_reuse.result, "oac_id", "")[0m
+[31m│[0m [0m
+[31m│[0m [0mAn argument or block definition is required here.
+[31m╵[0m[0m
+ERROR: terraform init failed for executable/actions/08-arn-aws-s3-sa-wi7-seed-696505809372-202603282058-3ae05cd4 after retries. Skipping this action folder.
+ERROR: terraform init failed for executable/actions/16-arn-aws-s3-phase2-wi1-lifecycle-696505809372-202-8f162041 after retries. Skipping this action folder.
+ERROR: terraform init failed for executable/actions/13-arn-aws-s3-sa-wi5-site-696505809372-20260328t164-51f0f65a after retries. Skipping this action folder.

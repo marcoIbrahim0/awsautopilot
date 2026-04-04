@@ -1,0 +1,10 @@
+[
+  {
+    "bucket_creation_acknowledged": false,
+    "risk_acknowledged": true,
+    "strategy_id": "s3_enable_access_logging_guided",
+    "strategy_inputs": {
+      "log_bucket_name": "{{source_bucket}}-access-logs"
+    }
+  }
+]

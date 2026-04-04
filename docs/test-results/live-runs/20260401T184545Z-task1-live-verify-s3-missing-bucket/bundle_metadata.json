@@ -1,0 +1,8 @@
+{
+  "bundle_rollback_entries": {
+    "00000000-0000-0000-0000-000000000015": {
+      "path": "rollback/s3_encryption_restore.py",
+      "runner": "python3"
+    }
+  }
+}

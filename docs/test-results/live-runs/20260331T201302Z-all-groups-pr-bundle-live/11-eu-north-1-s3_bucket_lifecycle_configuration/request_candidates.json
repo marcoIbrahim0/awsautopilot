@@ -1,0 +1,7 @@
+[
+  {
+    "bucket_creation_acknowledged": false,
+    "risk_acknowledged": true,
+    "strategy_id": "s3_enable_abort_incomplete_uploads"
+  }
+]

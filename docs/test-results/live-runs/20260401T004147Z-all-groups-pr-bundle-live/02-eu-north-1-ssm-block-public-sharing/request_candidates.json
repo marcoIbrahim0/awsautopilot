@@ -1,0 +1,26 @@
+[
+  {
+    "bucket_creation_acknowledged": false,
+    "repo_target": {
+      "base_branch": "main",
+      "head_branch": "20260401t004147z-all-groups-pr-bundle-live-02-eu-north-1-ssm-block-public-sharing-ssm-disable-public-document-sharing",
+      "provider": "github",
+      "repository": "example/security-autopilot-remediations"
+    },
+    "risk_acknowledged": true,
+    "strategy_id": "ssm_disable_public_document_sharing",
+    "strategy_inputs": {}
+  },
+  {
+    "bucket_creation_acknowledged": false,
+    "repo_target": {
+      "base_branch": "main",
+      "head_branch": "20260401t004147z-all-groups-pr-bundle-live-02-eu-north-1-ssm-block-public-sharing-ssm-keep-public-sharing-exception",
+      "provider": "github",
+      "repository": "example/security-autopilot-remediations"
+    },
+    "risk_acknowledged": true,
+    "strategy_id": "ssm_keep_public_sharing_exception",
+    "strategy_inputs": {}
+  }
+]

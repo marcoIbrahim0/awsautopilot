@@ -1,0 +1,11 @@
+{
+  "strategy_id": "config_enable_account_local_delivery",
+  "risk_acknowledged": true,
+  "bucket_creation_acknowledged": true,
+  "repo_target": {
+    "repository": "live-validation/helper-rerun-20260402T034144Z",
+    "base_branch": "main",
+    "head_branch": "helper-rerun-20260402T034144Z",
+    "root_path": "evidence/helper-rerun-20260402T034144Z"
+  }
+}

@@ -1,0 +1,8 @@
+{
+  "region": "us-east-1",
+  "connection_name": "SecurityAutopilotControlPlaneConnection-us-east-1",
+  "secret_arn": "arn:aws:secretsmanager:us-east-1:696505809372:secret:events!connection/SecurityAutopilotControlPlaneConnection-us-east-1/f15ec5fb-14ec-4b67-9d33-5dec4d601f26-4j30Ma",
+  "expected_fingerprint": "cptok-OA...hkhc",
+  "connection_secret_fingerprint": "cptok-OA...hkhc",
+  "matches_current_token": true
+}

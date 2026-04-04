@@ -1,0 +1,64 @@
+{
+  "action_id": "0ff2bc8f-d6f6-483b-adca-30619d4ac208",
+  "action_type": "s3_bucket_block_public_access",
+  "blocked_reasons": [
+    "Target bucket 'security-autopilot-access-logs-696505809372' existence could not be verified from this account context (403). Do not keep the existing-bucket remediation path executable until bucket existence is proven."
+  ],
+  "control_id": "S3.2",
+  "decision_rationale": "Family resolver downgraded strategy 's3_migrate_cloudfront_oac_private' to manual S3.2 preservation profile 's3_migrate_cloudfront_oac_private_manual_preservation'. Target bucket 'security-autopilot-access-logs-696505809372' existence could not be verified from this account context (403). Do not keep the existing-bucket remediation path executable until bucket existence is proven. Run creation did not require additional risk-only acceptance.",
+  "decision_summary": "Family resolver downgraded strategy 's3_migrate_cloudfront_oac_private' to manual S3.2 preservation profile 's3_migrate_cloudfront_oac_private_manual_preservation'. Target bucket 'security-autopilot-access-logs-696505809372' existence could not be verified from this account context (403). Do not keep the existing-bucket remediation path executable until bucket existence is proven. Run creation did not require additional risk-only acceptance.",
+  "decision_version": "resolver/v1",
+  "finding_coverage": {},
+  "folder": "manual_guidance/actions/04-arn-aws-s3-security-autopilot-access-logs-696505-0ff2bc8f",
+  "has_runnable_terraform": false,
+  "index": 4,
+  "missing_defaults": [],
+  "missing_inputs": [],
+  "outcome": "manual_guidance_metadata_only",
+  "preservation_summary": {
+    "access_path_evidence_available": true,
+    "apply_time_merge": false,
+    "apply_time_merge_reason": null,
+    "bucket_policy_public": false,
+    "create_bucket_if_missing": false,
+    "dns_inputs_complete": false,
+    "executable_preservation_allowed": false,
+    "existing_bucket_policy_json_captured": true,
+    "existing_bucket_policy_statement_count": 2,
+    "family": "s3_bucket_block_public_access",
+    "family_strategy": "s3_migrate_cloudfront_oac_private",
+    "manual_preservation_required": true,
+    "public_policy_scrub_available": false,
+    "public_policy_scrub_reason": null,
+    "selected_branch": "s3_migrate_cloudfront_oac_private_manual_preservation",
+    "single_profile_compatible": false,
+    "strategy_only_supported": true,
+    "target_bucket_creation_possible": false,
+    "target_bucket_exists": false,
+    "target_bucket_missing": false,
+    "target_bucket_reason": "Target bucket 'security-autopilot-access-logs-696505809372' existence could not be verified from this account context (403). Do not keep the existing-bucket remediation path executable until bucket existence is proven.",
+    "target_bucket_verification_available": false,
+    "website_configuration_captured": false,
+    "website_configured": false,
+    "website_translation_reason": "S3 static website hosting is not enabled.",
+    "website_translation_supported": false
+  },
+  "profile_id": "s3_migrate_cloudfront_oac_private_manual_preservation",
+  "rejected_profiles": [
+    {
+      "detail": "Target bucket 'security-autopilot-access-logs-696505809372' existence could not be verified from this account context (403). Do not keep the existing-bucket remediation path executable until bucket existence is proven.",
+      "profile_id": "s3_migrate_cloudfront_oac_private",
+      "reason": "branch_unavailable"
+    }
+  ],
+  "strategy_id": "s3_migrate_cloudfront_oac_private",
+  "strategy_inputs": {
+    "existing_bucket_policy_json": "{\"Statement\":[{\"Action\":\"s3:PutObject\",\"Condition\":{\"ArnLike\":{\"aws:SourceArn\":\"arn:aws:s3:::config-bucket-696505809372\"},\"StringEquals\":{\"aws:SourceAccount\":\"696505809372\"}},\"Effect\":\"Allow\",\"Principal\":{\"Service\":\"logging.s3.amazonaws.com\"},\"Resource\":\"arn:aws:s3:::security-autopilot-access-logs-696505809372/s3-access-logs/*\",\"Sid\":\"AllowS3ServerAccessLogs\"},{\"Action\":\"s3:*\",\"Condition\":{\"Bool\":{\"aws:SecureTransport\":\"false\"}},\"Effect\":\"Deny\",\"Principal\":\"*\",\"Resource\":[\"arn:aws:s3:::security-autopilot-access-logs-696505809372/*\",\"arn:aws:s3:::security-autopilot-access-logs-696505809372\"],\"Sid\":\"DenyInsecureTransport\"}],\"Version\":\"2012-10-17\"}",
+    "existing_bucket_policy_statement_count": 2
+  },
+  "support_tier": "manual_guidance_only",
+  "target_id": "696505809372|eu-north-1|arn:aws:s3:::security-autopilot-access-logs-696505809372|S3.2",
+  "tier": "manual_guidance",
+  "tier_root": "manual_guidance/actions",
+  "title": "S3 general purpose buckets should block public write access"
+}

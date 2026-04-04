@@ -1,0 +1,7 @@
+{
+  "bucket_name": "sa-wi7-seed-696505809372-20260328205857-access-logs",
+  "expected_bucket_regional_domain_name": "sa-wi7-seed-696505809372-20260328205857-access-logs.s3.eu-north-1.amazonaws.com",
+  "expected_distribution_comment": "Security Autopilot migration for sa-wi7-seed-696505809372-20260328205857-access-logs",
+  "expected_oac_name": "security-autopilot-oac-16e51814c0b2",
+  "expected_origin_id": "s3-sa-wi7-seed-696505809372-20260328205857-access-logs"
+}

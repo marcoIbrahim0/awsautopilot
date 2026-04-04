@@ -1,0 +1,14 @@
+[
+  {
+    "bucket_creation_acknowledged": false,
+    "repo_target": {
+      "base_branch": "main",
+      "head_branch": "20260401t004147z-all-groups-pr-bundle-live-08-eu-north-1-s3-block-public-access-s3-account-block-public-access-pr-bundle",
+      "provider": "github",
+      "repository": "example/security-autopilot-remediations"
+    },
+    "risk_acknowledged": true,
+    "strategy_id": "s3_account_block_public_access_pr_bundle",
+    "strategy_inputs": {}
+  }
+]

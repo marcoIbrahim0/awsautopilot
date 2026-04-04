@@ -1,0 +1,86 @@
+[
+  {
+    "action_type": "aws_config_enabled",
+    "folder": "01-eu-north-1-aws-config-enabled",
+    "group_id": "02575097-6342-4ee5-a9e2-737eebcfcc29",
+    "region": "eu-north-1"
+  },
+  {
+    "action_type": "ssm_block_public_sharing",
+    "folder": "02-eu-north-1-ssm-block-public-sharing",
+    "group_id": "ed48e583-8b8e-43b4-ad5e-3641b8276909",
+    "region": "eu-north-1"
+  },
+  {
+    "action_type": "enable_guardduty",
+    "folder": "03-eu-north-1-enable-guardduty",
+    "group_id": "c84d5c12-593d-4ab3-b790-ce56e5484f92",
+    "region": "eu-north-1"
+  },
+  {
+    "action_type": "s3_bucket_lifecycle_configuration",
+    "folder": "04-eu-north-1-s3-bucket-lifecycle-configuration",
+    "group_id": "9a904e6a-3ab8-4eca-be92-b727b0aacf67",
+    "region": "eu-north-1"
+  },
+  {
+    "action_type": "s3_bucket_access_logging",
+    "folder": "05-eu-north-1-s3-bucket-access-logging",
+    "group_id": "984e6f5e-d1e6-44aa-90e6-1a3ddc152a2c",
+    "region": "eu-north-1"
+  },
+  {
+    "action_type": "s3_bucket_encryption_kms",
+    "folder": "06-eu-north-1-s3-bucket-encryption-kms",
+    "group_id": "97e52204-f7f6-40c1-b2ac-acb99308e241",
+    "region": "eu-north-1"
+  },
+  {
+    "action_type": "ebs_snapshot_block_public_access",
+    "folder": "07-eu-north-1-ebs-snapshot-block-public-access",
+    "group_id": "957c3871-cad3-4530-aa29-386f6bda5cc6",
+    "region": "eu-north-1"
+  },
+  {
+    "action_type": "s3_block_public_access",
+    "folder": "08-eu-north-1-s3-block-public-access",
+    "group_id": "8b81c1a8-a2c7-4250-aaf2-d5ae62f08dda",
+    "region": "eu-north-1"
+  },
+  {
+    "action_type": "sg_restrict_public_ports",
+    "folder": "09-eu-north-1-sg-restrict-public-ports",
+    "group_id": "595cb7e3-5f4f-49a4-9c48-9388f139f012",
+    "region": "eu-north-1"
+  },
+  {
+    "action_type": "iam_root_access_key_absent",
+    "folder": "10-eu-north-1-iam-root-access-key-absent",
+    "group_id": "549cd627-4bab-4e34-a15a-d9d50d11b3d9",
+    "region": "eu-north-1"
+  },
+  {
+    "action_type": "ebs_default_encryption",
+    "folder": "11-eu-north-1-ebs-default-encryption",
+    "group_id": "3ff809df-3a5b-4012-b60d-5ffa124b0035",
+    "region": "eu-north-1"
+  },
+  {
+    "action_type": "s3_bucket_require_ssl",
+    "folder": "12-eu-north-1-s3-bucket-require-ssl",
+    "group_id": "3cf29e81-7d1b-414a-ab78-d2e1c3abad27",
+    "region": "eu-north-1"
+  },
+  {
+    "action_type": "cloudtrail_enabled",
+    "folder": "13-eu-north-1-cloudtrail-enabled",
+    "group_id": "2efa04dd-8768-4668-a8a7-666ac895ba6b",
+    "region": "eu-north-1"
+  },
+  {
+    "action_type": "s3_bucket_block_public_access",
+    "folder": "14-eu-north-1-s3-bucket-block-public-access",
+    "group_id": "2990907c-b6bb-4821-9825-a523cb380bf5",
+    "region": "eu-north-1"
+  }
+]

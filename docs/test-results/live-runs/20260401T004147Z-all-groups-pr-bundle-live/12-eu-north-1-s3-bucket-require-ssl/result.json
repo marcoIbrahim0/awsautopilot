@@ -1,0 +1,40 @@
+{
+  "account_id": "696505809372",
+  "action_type": "s3_bucket_require_ssl",
+  "apply_status": "failed",
+  "folder": "12-eu-north-1-s3-bucket-require-ssl",
+  "generation_status": "success",
+  "group_id": "3cf29e81-7d1b-414a-ab78-d2e1c3abad27",
+  "group_run_id": "50a03134-1191-426f-8428-bfeefd00cef0",
+  "manual_guidance_action_count": 0,
+  "non_runnable_reasons": [
+    {
+      "action_id": "2904172f-0491-4248-afca-af30be896885",
+      "blocked_reasons": [
+        "Bucket policy preservation evidence is missing for merge-safe SSL enforcement."
+      ],
+      "decision_summary": "Family resolver downgraded S3.5 strategy 's3_enforce_ssl_strict_deny' because merge-safe bucket policy preservation evidence is incomplete. Bucket policy preservation evidence is missing for merge-safe SSL enforcement. Run creation did not require additional risk-only acceptance.",
+      "outcome": "review_required_metadata_only",
+      "support_tier": "review_required_bundle",
+      "tier": "review_required",
+      "title": "S3 general purpose buckets should require requests to use SSL"
+    }
+  ],
+  "region": "eu-north-1",
+  "remediation_run_id": "38bddb1d-d90c-42d8-95fe-1acd3f71dfa7",
+  "review_required_action_count": 1,
+  "runnable_action_count": 15,
+  "selected_request": {
+    "bucket_creation_acknowledged": false,
+    "repo_target": {
+      "base_branch": "main",
+      "head_branch": "20260401t004147z-all-groups-pr-bundle-live-12-eu-north-1-s3-bucket-require-ssl-s3-enforce-ssl-strict-deny",
+      "provider": "github",
+      "repository": "example/security-autopilot-remediations"
+    },
+    "risk_acknowledged": true,
+    "strategy_id": "s3_enforce_ssl_strict_deny",
+    "strategy_inputs": {}
+  },
+  "summary_status": "APPLY NOT SUCCESSFUL"
+}

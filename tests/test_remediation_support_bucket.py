@@ -28,13 +28,23 @@ from backend.services.remediation_strategy import (
 )
 from backend.services.remediation_support_bucket import (
     SUPPORT_BUCKET_APPLY_SNIPPET,
+    SUPPORT_BUCKET_MANAGED_TAG_KEY,
+    SUPPORT_BUCKET_MANAGED_TAG_VALUE,
     SUPPORT_BUCKET_KMS_MASTER_KEY_ID,
+    SUPPORT_BUCKET_ROLE_AWS_CONFIG_DELIVERY,
+    SUPPORT_BUCKET_ROLE_CLOUDTRAIL_LOGS,
+    SUPPORT_BUCKET_ROLE_S3_ACCESS_LOGS,
+    SUPPORT_BUCKET_ROLE_TAG_KEY,
     SUPPORT_BUCKET_SSE_ALGORITHM,
     SupportBucketProbeResult,
     downgrade_reason,
+    is_product_managed_support_bucket,
+    is_product_managed_support_log_sink,
     merge_ssl_only_into_policy,
     probe_support_bucket_safety,
     ssl_only_policy_statement,
+    support_bucket_role_from_tags,
+    support_bucket_tag_map,
     terraform_support_bucket_blocks,
 )
 
@@ -511,6 +521,30 @@ class TestTerraformSupportBucketBlocks(unittest.TestCase):
         self.assertNotIn("AES256", hcl)
         self.assertIn("aws:kms", hcl)
 
+    def test_support_bucket_role_adds_bucket_tagging_resource(self) -> None:
+        hcl = self._generate(support_bucket_role=SUPPORT_BUCKET_ROLE_S3_ACCESS_LOGS)
+        self.assertIn("aws_s3_bucket_tagging", hcl)
+        self.assertIn(SUPPORT_BUCKET_MANAGED_TAG_KEY, hcl)
+        self.assertIn(SUPPORT_BUCKET_ROLE_TAG_KEY, hcl)
+        self.assertIn(SUPPORT_BUCKET_ROLE_S3_ACCESS_LOGS, hcl)
+
+
+class TestSupportBucketTags(unittest.TestCase):
+    def test_support_bucket_tag_map_marks_bucket_as_product_managed(self) -> None:
+        tag_map = support_bucket_tag_map(support_bucket_role=SUPPORT_BUCKET_ROLE_CLOUDTRAIL_LOGS)
+        self.assertEqual(tag_map[SUPPORT_BUCKET_MANAGED_TAG_KEY], SUPPORT_BUCKET_MANAGED_TAG_VALUE)
+        self.assertEqual(tag_map[SUPPORT_BUCKET_ROLE_TAG_KEY], SUPPORT_BUCKET_ROLE_CLOUDTRAIL_LOGS)
+        self.assertTrue(is_product_managed_support_bucket(tag_map))
+        self.assertTrue(is_product_managed_support_log_sink(tag_map))
+        self.assertEqual(
+            support_bucket_role_from_tags(tag_map),
+            SUPPORT_BUCKET_ROLE_CLOUDTRAIL_LOGS,
+        )
+
+    def test_config_delivery_role_is_treated_as_support_log_sink(self) -> None:
+        tag_map = support_bucket_tag_map(support_bucket_role=SUPPORT_BUCKET_ROLE_AWS_CONFIG_DELIVERY)
+        self.assertTrue(is_product_managed_support_log_sink(tag_map))
+
 
 # ---------------------------------------------------------------------------
 # SUPPORT_BUCKET_APPLY_SNIPPET sanity
@@ -529,6 +563,15 @@ class TestSupportBucketApplySnippet(unittest.TestCase):
 
     def test_snippet_references_abort_incomplete(self) -> None:
         self.assertIn("abort-incomplete-multipart", SUPPORT_BUCKET_APPLY_SNIPPET)
+
+    def test_snippet_references_versioning_for_log_retaining_roles(self) -> None:
+        self.assertIn("put-bucket-versioning", SUPPORT_BUCKET_APPLY_SNIPPET)
+
+    def test_snippet_references_config_delivery_eventbridge_notifications(self) -> None:
+        self.assertIn("put-bucket-notification-configuration", SUPPORT_BUCKET_APPLY_SNIPPET)
+
+    def test_snippet_references_object_lock_for_config_delivery(self) -> None:
+        self.assertIn("put-object-lock-configuration", SUPPORT_BUCKET_APPLY_SNIPPET)
 
 
 if __name__ == "__main__":

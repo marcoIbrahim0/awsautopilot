@@ -497,6 +497,7 @@ async def _group_bundle_generation_state(
     actions: list[Action],
     account: AwsAccount | None,
     tenant_settings: Mapping[str, Any] | None,
+    tenant_external_id: str | None,
 ) -> tuple[bool, str | None, str | None, str | None]:
     try:
         request = _normalize_group_request_or_400(CreateActionGroupBundleRunRequest(), action_type=group.action_type)
@@ -516,6 +517,7 @@ async def _group_bundle_generation_state(
             callback_url="availability-only",
             account=account,
             tenant_settings=tenant_settings,
+            tenant_external_id=tenant_external_id,
         )
     except HTTPException:
         return True, None, None, None
@@ -551,6 +553,7 @@ def _build_action_group_plan_or_400(
     callback_url: str,
     account: AwsAccount | None,
     tenant_settings: Mapping[str, Any] | None,
+    tenant_external_id: str | None,
 ):
     try:
         return build_grouped_run_persistence_plan(
@@ -566,6 +569,7 @@ def _build_action_group_plan_or_400(
             group_bundle_seed=_group_bundle_seed(group, group_run=group_run, token=token, callback_url=callback_url),
             account=account,
             tenant_settings=tenant_settings,
+            tenant_external_id=tenant_external_id,
         )
     except GroupedRemediationRunValidationError as exc:
         _raise_action_group_grouped_validation_error(exc)
@@ -679,6 +683,7 @@ async def get_action_group_detail(
         actions=group_actions,
         account=account,
         tenant_settings=getattr(tenant, "remediation_settings", None),
+        tenant_external_id=tenant.external_id,
     )
 
     return ActionGroupDetailResponse(
@@ -814,10 +819,10 @@ async def create_action_group_bundle_run(
         callback_url=callback_url,
         account=account,
         tenant_settings=getattr(tenant, "remediation_settings", None),
+        tenant_external_id=tenant.external_id,
     )
     requires_bucket_creation_ack = any(
-        entry.strategy_id == "cloudtrail_enable_guided"
-        and entry.strategy_inputs.get("create_bucket_if_missing") is True
+        entry.strategy_inputs.get("create_bucket_if_missing") is True
         for entry in plan.action_resolutions
     )
     if requires_bucket_creation_ack and not request_body.bucket_creation_acknowledged:
@@ -826,7 +831,7 @@ async def create_action_group_bundle_run(
             detail={
                 "error": "Bucket creation acknowledgement required",
                 "detail": (
-                    "This CloudTrail remediation may create a new S3 bucket and bucket policy for log delivery. "
+                    "This grouped remediation may create one or more private S3 buckets before applying the selected controls. "
                     "Set bucket_creation_acknowledged=true after review."
                 ),
             },

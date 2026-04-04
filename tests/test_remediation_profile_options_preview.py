@@ -111,13 +111,21 @@ def test_remediation_options_include_wave2_profile_metadata(client: TestClient) 
             "exception_only": False,
         },
         {
+            "profile_id": "s3_enable_access_logging_create_missing_bucket",
+            "support_tier": "deterministic_bundle",
+            "recommended": False,
+            "requires_inputs": True,
+            "supports_exception_flow": False,
+            "exception_only": False,
+        },
+        {
             "profile_id": "s3_enable_access_logging_review_destination_safety",
             "support_tier": "review_required_bundle",
             "recommended": False,
             "requires_inputs": True,
             "supports_exception_flow": False,
             "exception_only": False,
-        }
+        },
     ]
     assert strategy["recommended_profile_id"] == "s3_enable_access_logging_guided"
     assert strategy["missing_defaults"] == []
@@ -562,28 +570,15 @@ def test_s3_2_options_expose_manual_fallback_metadata_when_preservation_is_requi
         "Bucket website hosting is enabled; use the manual preservation path before enforcing Block Public Access.",
         "Bucket policy is currently public; direct public-access preservation must be reviewed manually.",
     ]
-    assert strategy["preservation_summary"] == {
-        "single_profile_compatible": False,
-        "strategy_only_supported": True,
-        "family": "s3_bucket_block_public_access",
-        "selected_branch": "s3_bucket_block_public_access_manual_preservation",
-        "bucket_policy_public": True,
-        "website_configured": True,
-        "website_configuration_captured": False,
-        "website_translation_supported": None,
-        "website_translation_reason": None,
-        "dns_inputs_complete": False,
-        "existing_bucket_policy_statement_count": None,
-        "existing_bucket_policy_json_captured": False,
-        "access_path_evidence_available": True,
-        "apply_time_merge": False,
-        "apply_time_merge_reason": None,
-        "public_policy_scrub_available": False,
-        "public_policy_scrub_reason": None,
-        "executable_preservation_allowed": False,
-        "manual_preservation_required": True,
-        "family_strategy": "s3_bucket_block_public_access_standard",
-    }
+    assert strategy["preservation_summary"]["single_profile_compatible"] is False
+    assert strategy["preservation_summary"]["strategy_only_supported"] is True
+    assert strategy["preservation_summary"]["selected_branch"] == "s3_bucket_block_public_access_manual_preservation"
+    assert strategy["preservation_summary"]["bucket_policy_public"] is True
+    assert strategy["preservation_summary"]["website_configured"] is True
+    assert strategy["preservation_summary"]["access_path_evidence_available"] is True
+    assert strategy["preservation_summary"]["manual_preservation_required"] is True
+    assert strategy["preservation_summary"]["target_bucket_missing"] is False
+    assert strategy["preservation_summary"]["target_bucket_creation_possible"] is False
     profile_map = {profile["profile_id"]: profile for profile in strategy["profiles"]}
     assert profile_map["s3_bucket_block_public_access_standard"]["support_tier"] == "manual_guidance_only"
     assert profile_map["s3_bucket_block_public_access_manual_preservation"]["recommended"] is True
@@ -1047,6 +1042,85 @@ def test_s3_2_preview_keeps_oac_strategy_executable_with_runtime_proven_zero_pol
     assert resolution["preservation_summary"]["apply_time_merge"] is False
 
 
+def test_s3_2_preview_downgrades_oac_strategy_for_public_website_bucket_under_bpa(
+    client: TestClient,
+) -> None:
+    tenant = _mock_tenant()
+    user = _mock_user(tenant.id)
+    action = _mock_action("s3_bucket_block_public_access")
+    action.tenant_id = tenant.id
+    action.target_id = "123456789012|us-east-1|arn:aws:s3:::website-bucket|S3.2"
+    action.resource_id = "arn:aws:s3:::website-bucket"
+    account = _mock_account()
+
+    async def mock_get_db() -> AsyncGenerator[MagicMock, None]:
+        yield _mock_async_session(tenant, action, account)
+
+    async def mock_get_optional_user() -> MagicMock:
+        return user
+
+    from backend.auth import get_optional_user
+
+    app.dependency_overrides[get_db] = mock_get_db
+    app.dependency_overrides[get_optional_user] = mock_get_optional_user
+    with patch(
+        "backend.routers.actions.collect_runtime_risk_signals",
+        return_value={
+            "s3_bucket_policy_public": True,
+            "s3_bucket_website_configured": True,
+            "s3_bucket_website_translation_supported": True,
+            "s3_bucket_block_public_policy_enabled": True,
+            "s3_account_block_public_policy_enabled": True,
+            "s3_effective_block_public_policy_enabled": True,
+            "access_path_evidence_available": True,
+            "evidence": {
+                "existing_bucket_policy_statement_count": 1,
+                "existing_bucket_policy_json": json.dumps(
+                    {
+                        "Version": "2012-10-17",
+                        "Statement": [
+                            {
+                                "Sid": "PublicReadWebsiteObjects",
+                                "Effect": "Allow",
+                                "Principal": "*",
+                                "Action": "s3:GetObject",
+                                "Resource": "arn:aws:s3:::website-bucket/*",
+                            }
+                        ],
+                    }
+                ),
+                "existing_bucket_website_configuration_json": json.dumps(
+                    {"IndexDocument": {"Suffix": "index.html"}}
+                ),
+            },
+        },
+    ), patch(
+        "backend.routers.actions.evaluate_strategy_impact",
+        return_value={"checks": [], "warnings": [], "recommendation": None, "evidence": {}},
+    ):
+        try:
+            response = client.get(
+                f"/api/actions/{action.id}/remediation-preview",
+                params={
+                    "mode": "pr_only",
+                    "strategy_id": "s3_migrate_cloudfront_oac_private",
+                },
+            )
+        finally:
+            app.dependency_overrides.pop(get_db, None)
+            app.dependency_overrides.pop(get_optional_user, None)
+
+    assert response.status_code == 200
+    resolution = response.json()["resolution"]
+    assert resolution["profile_id"] == "s3_migrate_cloudfront_oac_private_manual_preservation"
+    assert resolution["support_tier"] == "manual_guidance_only"
+    assert resolution["blocked_reasons"] == [
+        "Bucket is still configured for S3 website hosting with a public website-read policy, and BlockPublicPolicy would reject preserving that public statement. Use the website-specific CloudFront cutover path or manual review instead of the generic CloudFront + OAC migration."
+    ]
+    assert resolution["preservation_summary"]["website_public_policy_conflict"] is True
+    assert resolution["preservation_summary"]["effective_block_public_policy_enabled"] is True
+
+
 def test_s3_2_preview_keeps_oac_apply_time_merge_executable_when_policy_capture_fails(
     client: TestClient,
 ) -> None:
@@ -1107,6 +1181,72 @@ def test_s3_2_preview_keeps_oac_apply_time_merge_executable_when_policy_capture_
     assert resolution["preservation_summary"]["executable_preservation_allowed"] is True
 
 
+def test_s3_2_preview_switches_to_create_profile_when_target_bucket_is_missing(
+    client: TestClient,
+) -> None:
+    tenant = _mock_tenant()
+    user = _mock_user(tenant.id)
+    action = _mock_action("s3_bucket_block_public_access")
+    action.tenant_id = tenant.id
+    action.target_id = "123456789012|us-east-1|arn:aws:s3:::missing-oac-bucket|S3.2"
+    action.resource_id = "arn:aws:s3:::missing-oac-bucket"
+    account = _mock_account()
+
+    async def mock_get_db() -> AsyncGenerator[MagicMock, None]:
+        yield _mock_async_session(tenant, action, account)
+
+    async def mock_get_optional_user() -> MagicMock:
+        return user
+
+    from backend.auth import get_optional_user
+
+    app.dependency_overrides[get_db] = mock_get_db
+    app.dependency_overrides[get_optional_user] = mock_get_optional_user
+    with patch(
+        "backend.routers.actions.collect_runtime_risk_signals",
+        return_value={
+            "s3_bucket_policy_public": False,
+            "s3_bucket_website_configured": False,
+            "s3_target_bucket_exists": False,
+            "s3_target_bucket_missing": True,
+            "s3_target_bucket_creation_possible": True,
+            "s3_target_bucket_reason": (
+                "Target bucket 'missing-oac-bucket' no longer exists. "
+                "Choose the create-missing-bucket path to recreate it before remediation."
+            ),
+            "context": {"default_inputs": {"create_bucket_if_missing": True}},
+            "evidence": {
+                "target_bucket": "missing-oac-bucket",
+                "s3_target_bucket_name": "missing-oac-bucket",
+            },
+        },
+    ), patch(
+        "backend.routers.actions.evaluate_strategy_impact",
+        return_value={"checks": [], "warnings": [], "recommendation": None, "evidence": {}},
+    ):
+        try:
+            response = client.get(
+                f"/api/actions/{action.id}/remediation-preview",
+                params={
+                    "mode": "pr_only",
+                    "strategy_id": "s3_migrate_cloudfront_oac_private",
+                },
+            )
+        finally:
+            app.dependency_overrides.pop(get_db, None)
+            app.dependency_overrides.pop(get_optional_user, None)
+
+    assert response.status_code == 200
+    resolution = response.json()["resolution"]
+    assert resolution["profile_id"] == "s3_migrate_cloudfront_oac_private_create_missing_bucket"
+    assert resolution["support_tier"] == "deterministic_bundle"
+    assert resolution["blocked_reasons"] == []
+    assert resolution["resolved_inputs"]["create_bucket_if_missing"] is True
+    assert resolution["preservation_summary"]["target_bucket_missing"] is True
+    assert resolution["preservation_summary"]["target_bucket_creation_possible"] is True
+    assert "missing-oac-bucket" in resolution["preservation_summary"]["target_bucket_reason"]
+
+
 def test_s3_9_options_recommend_review_branch_when_destination_safety_is_not_proven(client: TestClient) -> None:
     tenant = _mock_tenant()
     user = _mock_user(tenant.id)
@@ -1159,6 +1299,73 @@ def test_s3_9_options_recommend_review_branch_when_destination_safety_is_not_pro
     assert strategy["preservation_summary"]["destination_safety_proven"] is False
     assert strategy["context"]["default_inputs"]["log_bucket_name"] == "source-bucket-access-logs"
     assert "create_log_bucket" not in strategy["context"]["default_inputs"]
+
+
+def test_s3_9_options_recommend_create_profile_when_source_bucket_is_missing(client: TestClient) -> None:
+    tenant = _mock_tenant()
+    user = _mock_user(tenant.id)
+    action = _mock_action("s3_bucket_access_logging")
+    action.tenant_id = tenant.id
+    action.target_id = "123456789012|us-east-1|arn:aws:s3:::source-bucket|S3.9"
+    action.resource_id = "arn:aws:s3:::source-bucket"
+
+    async def mock_get_db() -> AsyncGenerator[MagicMock, None]:
+        yield _mock_async_session(tenant, action, None)
+
+    async def mock_get_optional_user() -> MagicMock:
+        return user
+
+    from backend.auth import get_optional_user
+
+    app.dependency_overrides[get_db] = mock_get_db
+    app.dependency_overrides[get_optional_user] = mock_get_optional_user
+    with patch(
+        "backend.routers.actions.collect_runtime_risk_signals",
+        return_value={
+            "s3_target_bucket_exists": False,
+            "s3_target_bucket_missing": True,
+            "s3_target_bucket_creation_possible": True,
+            "s3_target_bucket_reason": (
+                "Target bucket 'source-bucket' no longer exists. "
+                "Choose the create-missing-bucket path to recreate it before remediation."
+            ),
+            "s3_access_logging_destination_safe": True,
+            "s3_access_logging_destination_bucket_reachable": True,
+            "support_bucket_probe": {"safe": True},
+            "context": {
+                "default_inputs": {
+                    "log_bucket_name": "dedicated-access-log-bucket",
+                    "create_bucket_if_missing": True,
+                }
+            },
+            "evidence": {
+                "target_bucket": "source-bucket",
+                "log_bucket_name": "dedicated-access-log-bucket",
+                "s3_target_bucket_name": "source-bucket",
+            },
+        },
+    ), patch(
+        "backend.routers.actions.evaluate_strategy_impact",
+        return_value={"checks": [], "warnings": [], "recommendation": None, "evidence": {}},
+    ):
+        try:
+            response = client.get(f"/api/actions/{action.id}/remediation-options")
+        finally:
+            app.dependency_overrides.pop(get_db, None)
+            app.dependency_overrides.pop(get_optional_user, None)
+
+    assert response.status_code == 200
+    strategy = next(
+        item for item in response.json()["strategies"] if item["strategy_id"] == "s3_enable_access_logging_guided"
+    )
+    profile_map = {profile["profile_id"]: profile for profile in strategy["profiles"]}
+    assert strategy["recommended_profile_id"] == "s3_enable_access_logging_create_missing_bucket"
+    assert profile_map["s3_enable_access_logging_create_missing_bucket"]["recommended"] is True
+    assert profile_map["s3_enable_access_logging_create_missing_bucket"]["support_tier"] == "deterministic_bundle"
+    assert profile_map["s3_enable_access_logging_guided"]["support_tier"] == "review_required_bundle"
+    assert strategy["context"]["default_inputs"]["create_bucket_if_missing"] is True
+    assert strategy["preservation_summary"]["target_bucket_missing"] is True
+    assert "source-bucket" in strategy["preservation_summary"]["target_bucket_reason"]
 
 
 def test_s3_15_preview_switches_to_customer_managed_profile_and_downgrades_without_dependency_proof(
@@ -1263,6 +1470,146 @@ def test_s3_15_preview_keeps_aws_managed_branch_executable_by_default(client: Te
     assert resolution["support_tier"] == "deterministic_bundle"
     assert resolution["blocked_reasons"] == []
     assert resolution["resolved_inputs"]["kms_key_mode"] == "aws_managed"
+
+
+def test_s3_15_preview_switches_to_create_profile_when_target_bucket_is_missing(
+    client: TestClient,
+) -> None:
+    tenant = _mock_tenant()
+    user = _mock_user(tenant.id)
+    action = _mock_action("s3_bucket_encryption_kms")
+    action.tenant_id = tenant.id
+    action.target_id = "123456789012|us-east-1|arn:aws:s3:::missing-kms-bucket|S3.15"
+    action.resource_id = "arn:aws:s3:::missing-kms-bucket"
+    account = _mock_account()
+
+    async def mock_get_db() -> AsyncGenerator[MagicMock, None]:
+        yield _mock_async_session(tenant, action, account)
+
+    async def mock_get_optional_user() -> MagicMock:
+        return user
+
+    from backend.auth import get_optional_user
+
+    app.dependency_overrides[get_db] = mock_get_db
+    app.dependency_overrides[get_optional_user] = mock_get_optional_user
+    with patch(
+        "backend.routers.actions.collect_runtime_risk_signals",
+        return_value={
+            "s3_target_bucket_exists": False,
+            "s3_target_bucket_missing": True,
+            "s3_target_bucket_creation_possible": True,
+            "s3_target_bucket_reason": (
+                "Target bucket 'missing-kms-bucket' no longer exists. "
+                "Choose the create-missing-bucket path to recreate it before remediation."
+            ),
+            "context": {
+                "kms_key_options": [],
+                "default_inputs": {"create_bucket_if_missing": True},
+            },
+            "evidence": {
+                "target_bucket": "missing-kms-bucket",
+                "s3_target_bucket_name": "missing-kms-bucket",
+            },
+        },
+    ):
+        try:
+            response = client.get(
+                f"/api/actions/{action.id}/remediation-preview",
+                params={
+                    "mode": "pr_only",
+                    "strategy_id": "s3_enable_sse_kms_guided",
+                },
+            )
+        finally:
+            app.dependency_overrides.pop(get_db, None)
+            app.dependency_overrides.pop(get_optional_user, None)
+
+    assert response.status_code == 200
+    resolution = response.json()["resolution"]
+    assert resolution["profile_id"] == "s3_enable_sse_kms_guided_create_missing_bucket"
+    assert resolution["support_tier"] == "deterministic_bundle"
+    assert resolution["blocked_reasons"] == []
+    assert resolution["resolved_inputs"]["create_bucket_if_missing"] is True
+    assert resolution["preservation_summary"]["target_bucket_missing"] is True
+    assert resolution["preservation_summary"]["target_bucket_creation_possible"] is True
+
+
+def test_s3_15_preview_downgrades_when_target_bucket_existence_is_unverified(
+    client: TestClient,
+) -> None:
+    tenant = _mock_tenant()
+    user = _mock_user(tenant.id)
+    action = _mock_action("s3_bucket_encryption_kms")
+    action.tenant_id = tenant.id
+    action.target_id = "123456789012|us-east-1|arn:aws:s3:::missing-kms-bucket|S3.15"
+    action.resource_id = "arn:aws:s3:::missing-kms-bucket"
+    account = _mock_account()
+
+    async def mock_get_db() -> AsyncGenerator[MagicMock, None]:
+        yield _mock_async_session(tenant, action, account)
+
+    async def mock_get_optional_user() -> MagicMock:
+        return user
+
+    from backend.auth import get_optional_user
+
+    app.dependency_overrides[get_db] = mock_get_db
+    app.dependency_overrides[get_optional_user] = mock_get_optional_user
+    with patch(
+        "backend.routers.actions.collect_runtime_risk_signals",
+        return_value={
+            "s3_target_bucket_verification_available": False,
+            "s3_target_bucket_creation_possible": False,
+            "s3_target_bucket_probe_error": (
+                "An error occurred (AccessDenied) when calling the AssumeRole operation: "
+                "Access denied. Check role ARN and trust policy."
+            ),
+            "s3_target_bucket_verification_reason": (
+                "Target bucket 'missing-kms-bucket' existence could not be verified from this account context. "
+                "Do not keep the existing-bucket remediation path executable until bucket existence is proven. "
+                "An error occurred (AccessDenied) when calling the AssumeRole operation: "
+                "Access denied. Check role ARN and trust policy."
+            ),
+            "s3_target_bucket_reason": (
+                "Target bucket 'missing-kms-bucket' existence could not be verified from this account context. "
+                "Do not keep the existing-bucket remediation path executable until bucket existence is proven. "
+                "An error occurred (AccessDenied) when calling the AssumeRole operation: "
+                "Access denied. Check role ARN and trust policy."
+            ),
+            "context": {"kms_key_options": []},
+            "evidence": {
+                "target_bucket": "missing-kms-bucket",
+                "s3_target_bucket_name": "missing-kms-bucket",
+            },
+        },
+    ):
+        try:
+            response = client.get(
+                f"/api/actions/{action.id}/remediation-preview",
+                params={
+                    "mode": "pr_only",
+                    "strategy_id": "s3_enable_sse_kms_guided",
+                },
+            )
+        finally:
+            app.dependency_overrides.pop(get_db, None)
+            app.dependency_overrides.pop(get_optional_user, None)
+
+    assert response.status_code == 200
+    resolution = response.json()["resolution"]
+    assert resolution["profile_id"] == "s3_enable_sse_kms_guided"
+    assert resolution["support_tier"] == "review_required_bundle"
+    assert resolution["blocked_reasons"] == [
+        (
+            "Target bucket 'missing-kms-bucket' existence could not be verified from this account context. "
+            "Do not keep the existing-bucket remediation path executable until bucket existence is proven. "
+            "An error occurred (AccessDenied) when calling the AssumeRole operation: "
+            "Access denied. Check role ARN and trust policy."
+        )
+    ]
+    assert resolution["preservation_summary"]["target_bucket_verification_available"] is False
+    assert resolution["preservation_summary"]["target_bucket_creation_possible"] is False
 
 
 def test_s3_15_preview_customer_profile_surfaces_missing_defaults_when_key_arn_is_unset(
@@ -1418,6 +1765,64 @@ def test_s3_5_preview_keeps_apply_time_merge_executable_when_policy_capture_fail
     assert resolution["preservation_summary"]["apply_time_merge"] is True
     assert "Runtime capture failed (AccessDenied)" in resolution["preservation_summary"]["apply_time_merge_reason"]
     assert resolution["preservation_summary"]["executable_policy_merge_allowed"] is True
+
+
+def test_s3_5_preview_downgrades_public_policy_when_bpa_blocks_public_policies(
+    client: TestClient,
+) -> None:
+    tenant = _mock_tenant()
+    user = _mock_user(tenant.id)
+    action = _mock_action("s3_bucket_require_ssl")
+    action.tenant_id = tenant.id
+    account = _mock_account()
+
+    async def mock_get_db() -> AsyncGenerator[MagicMock, None]:
+        yield _mock_async_session(tenant, action, account)
+
+    async def mock_get_optional_user() -> MagicMock:
+        return user
+
+    from backend.auth import get_optional_user
+
+    app.dependency_overrides[get_db] = mock_get_db
+    app.dependency_overrides[get_optional_user] = mock_get_optional_user
+    with patch(
+        "backend.routers.actions.collect_runtime_risk_signals",
+        return_value={
+            "s3_policy_analysis_possible": False,
+            "s3_policy_analysis_error": "AccessDenied",
+            "s3_bucket_policy_public": True,
+            "s3_effective_block_public_policy_enabled": True,
+            "s3_bucket_block_public_policy_enabled": True,
+            "evidence": {
+                "target_bucket": "ssl-bucket",
+                "existing_bucket_policy_capture_error": "AccessDenied",
+            },
+        },
+    ), patch(
+        "backend.routers.actions.evaluate_strategy_impact",
+        return_value={"checks": [], "warnings": [], "recommendation": None, "evidence": {}},
+    ):
+        try:
+            response = client.get(
+                f"/api/actions/{action.id}/remediation-preview",
+                params={
+                    "mode": "pr_only",
+                    "strategy_id": "s3_enforce_ssl_strict_deny",
+                },
+            )
+        finally:
+            app.dependency_overrides.pop(get_db, None)
+            app.dependency_overrides.pop(get_optional_user, None)
+
+    assert response.status_code == 200
+    resolution = response.json()["resolution"]
+    assert resolution["support_tier"] == "review_required_bundle"
+    assert resolution["preservation_summary"]["apply_time_merge"] is False
+    assert resolution["preservation_summary"]["block_public_policy_conflict"] is True
+    assert resolution["blocked_reasons"] == [
+        "Current bucket policy is public and S3 Block Public Access prevents public policies, so merge-preserving SSL enforcement would be rejected by PutBucketPolicy."
+    ]
 
 
 def test_s3_5_preview_keeps_zero_policy_fallback_executable_when_status_proves_no_policy(

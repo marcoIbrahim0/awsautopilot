@@ -1,0 +1,5 @@
+{
+    "BucketArn": "arn:aws:s3:::phase2-wi1-lifecycle-696505809372-20260329004157",
+    "BucketRegion": "eu-north-1",
+    "AccessPointAlias": false
+}

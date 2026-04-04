@@ -1,0 +1,9 @@
+{
+  "account_id": "696505809372",
+  "regions": ["eu-north-1"],
+  "services": ["s3"],
+  "max_resources": 500,
+  "sweep_mode": "global",
+  "require_preflight_pass": false,
+  "force": true
+}

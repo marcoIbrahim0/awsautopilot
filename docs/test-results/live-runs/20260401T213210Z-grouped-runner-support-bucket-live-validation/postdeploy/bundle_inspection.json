@@ -1,0 +1,33 @@
+{
+  "runner_template_source": "embedded_fallback",
+  "helper_bucket_inventory": [],
+  "has_non_executable_results": false,
+  "manifest_keys": [
+    "action_count",
+    "actions",
+    "execution_root",
+    "grouped_actions",
+    "helper_bucket_inventory",
+    "layout_version",
+    "runnable_action_count",
+    "runner_template_source",
+    "runner_template_version",
+    "tier_counts"
+  ],
+  "bundle_files": [
+    "README_GROUP.txt",
+    "bundle_manifest.json",
+    "decision_log.md",
+    "finding_coverage.json",
+    "pr_automation",
+    "replay_group_run_reports.sh",
+    "review_required",
+    "run_actions.sh",
+    "run_all.sh"
+  ],
+  "run_all_contains_adopt_existing_log_bucket": false,
+  "run_all_contains_EXECUTION_ROOT": false,
+  "run_actions_contains_EXECUTION_ROOT": true,
+  "executable_action_dirs": 0,
+  "review_required_action_dirs": 14
+}

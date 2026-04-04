@@ -1,0 +1,28 @@
+{
+  "account_id": "696505809372",
+  "action_type": "aws_config_enabled",
+  "apply_status": "failed",
+  "folder": "01-eu-north-1-aws-config-enabled",
+  "generation_status": "success",
+  "group_id": "02575097-6342-4ee5-a9e2-737eebcfcc29",
+  "group_run_id": "2b2d0792-766b-471d-b2d5-4cf09205a95e",
+  "manual_guidance_action_count": 0,
+  "non_runnable_reasons": [],
+  "region": "eu-north-1",
+  "remediation_run_id": "e862d0fc-1156-48d3-ba4e-4bcba2e1170e",
+  "review_required_action_count": 0,
+  "runnable_action_count": 1,
+  "selected_request": {
+    "bucket_creation_acknowledged": false,
+    "repo_target": {
+      "base_branch": "main",
+      "head_branch": "20260401t004147z-all-groups-pr-bundle-live-01-eu-north-1-aws-config-enabled-config-enable-account-local-delivery",
+      "provider": "github",
+      "repository": "example/security-autopilot-remediations"
+    },
+    "risk_acknowledged": true,
+    "strategy_id": "config_enable_account_local_delivery",
+    "strategy_inputs": {}
+  },
+  "summary_status": "APPLY NOT SUCCESSFUL"
+}

@@ -1,0 +1,7 @@
+{
+  "bucket_name": "arch1-bucket-website-a1-696505809372-eu-north-1",
+  "expected_bucket_regional_domain_name": "arch1-bucket-website-a1-696505809372-eu-north-1.s3.eu-north-1.amazonaws.com",
+  "expected_distribution_comment": "Security Autopilot migration for arch1-bucket-website-a1-696505809372-eu-north-1",
+  "expected_oac_name": "security-autopilot-oac-599a0757f77f",
+  "expected_origin_id": "s3-arch1-bucket-website-a1-696505809372-eu-north-1"
+}

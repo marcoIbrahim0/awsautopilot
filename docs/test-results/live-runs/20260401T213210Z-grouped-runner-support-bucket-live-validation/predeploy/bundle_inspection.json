@@ -1,0 +1,9 @@
+{
+  "manifest_candidates": [],
+  "run_all_paths": [
+    "run_all.sh"
+  ],
+  "run_all_contains_adopt_existing_log_bucket": false,
+  "run_all_contains_execution_root": false,
+  "run_all_contains_embedded_mixed_tier_marker": false
+}

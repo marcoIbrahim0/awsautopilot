@@ -65,6 +65,7 @@ from backend.services.tenant_reconciliation import (
     normalize_services,
     normalize_sweep_mode,
 )
+from backend.workers.services.post_apply_reconcile import enqueue_post_apply_reconcile_for_run_id
 from backend.utils.sqs import (
     build_backfill_action_groups_job_payload,
     build_backfill_finding_keys_job_payload,
@@ -1252,6 +1253,28 @@ async def report_group_run_event(
         time.monotonic() - phase_projection_started,
         time.monotonic() - callback_started,
     )
+    if terminal_status == ActionGroupRunStatus.finished:
+        remediation_run_id_result = await db.execute(
+            select(ActionGroupRun.remediation_run_id).where(
+                ActionGroupRun.id == group_run_id,
+                ActionGroupRun.tenant_id == tenant_id,
+            )
+        )
+        remediation_run_id = remediation_run_id_result.scalar_one_or_none()
+        if remediation_run_id is not None:
+            reconcile_enqueue_result = await db.run_sync(
+                lambda session: enqueue_post_apply_reconcile_for_run_id(
+                    session,
+                    run_id=remediation_run_id,
+                    tenant_id=tenant_id,
+                )
+            )
+            logger.info(
+                "group_run_callback post_apply_reconcile_enqueued group_run_id=%s remediation_run_id=%s result=%s",
+                group_run_id,
+                remediation_run_id,
+                json.dumps(reconcile_enqueue_result, sort_keys=True, default=str),
+            )
     if replay_repair:
         return _group_run_report_replay_accepted_detail(
             group_run_id=group_run_id,

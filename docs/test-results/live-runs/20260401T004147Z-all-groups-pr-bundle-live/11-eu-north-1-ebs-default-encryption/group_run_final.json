@@ -1,0 +1,26 @@
+{
+  "created_at": "2026-04-01T00:43:42.012015+00:00",
+  "finished_at": "2026-04-01T00:44:00+00:00",
+  "id": "95b83a1b-5843-47c1-8d5d-7280cce436dd",
+  "initiated_by_user_id": "a5fab489-9b8e-4656-b2f4-8accfbed6142",
+  "mode": "download_bundle",
+  "remediation_run_id": "f1ec8c94-63ec-4539-8c2e-3e67dd1101ed",
+  "reporting_source": "bundle_callback",
+  "results": [
+    {
+      "action_id": "c400ae42-865c-4808-8aa0-11450b717714",
+      "blocked_reasons": [],
+      "execution_error_code": "bundle_runner_failed",
+      "execution_error_message": "run_actions.sh exited non-zero",
+      "execution_finished_at": "2026-04-01T00:44:00+00:00",
+      "execution_started_at": "2026-04-01T00:43:44.040266+00:00",
+      "execution_status": "failed",
+      "reason": null,
+      "result_type": "executable",
+      "support_tier": null
+    }
+  ],
+  "started_at": "2026-04-01T00:43:44.040266+00:00",
+  "status": "failed",
+  "updated_at": "2026-04-01T00:44:01.100680+00:00"
+}

@@ -1,0 +1,590 @@
+{
+  "action": {
+    "account_id": "696505809372",
+    "id": "30efce6e-bcd7-4583-8400-aaf9569130ef",
+    "region": "eu-north-1",
+    "status": "resolved",
+    "title": "GuardDuty should be enabled"
+  },
+  "action_id": "30efce6e-bcd7-4583-8400-aaf9569130ef",
+  "approved_by_user_id": "a5fab489-9b8e-4656-b2f4-8accfbed6142",
+  "artifact_metadata": {
+    "closure_checklist": [
+      {
+        "detail": "Implementation artifact linked for engineering handoff.",
+        "evidence_keys": [
+          "pr_bundle",
+          "pr_payload"
+        ],
+        "id": "artifact_recorded",
+        "status": "complete",
+        "title": "Implementation artifact recorded"
+      },
+      {
+        "detail": "Evidence pointers are attached to this run.",
+        "evidence_keys": [
+          "pr_bundle",
+          "pr_payload",
+          "diff_summary",
+          "rollback_notes",
+          "control_mapping_context",
+          "activity_log"
+        ],
+        "id": "evidence_attached",
+        "status": "complete",
+        "title": "Evidence pointers attached"
+      },
+      {
+        "detail": "The parent action is already marked resolved/suppressed.",
+        "evidence_keys": [],
+        "id": "action_closure_verified",
+        "status": "complete",
+        "title": "Action closure verified"
+      }
+    ],
+    "evidence_pointers": [
+      {
+        "description": "Terraform remediation bundle with 13 files.",
+        "href": "/remediation-runs/79c80b66-ca47-4215-85d1-f9f9a329b66b#run-generated-files",
+        "key": "pr_bundle",
+        "kind": "bundle",
+        "label": "Engineering PR bundle",
+        "metadata": {
+          "file_count": 13,
+          "format": "terraform",
+          "generated_action_count": 1,
+          "has_readme": true,
+          "skipped_action_count": 0,
+          "step_count": 3
+        }
+      },
+      {
+        "description": "Draft PR payload for example/security-autopilot-remediations -> main covering 9 mapped files.",
+        "href": "/remediation-runs/79c80b66-ca47-4215-85d1-f9f9a329b66b#run-generated-files",
+        "key": "pr_payload",
+        "kind": "pr_payload",
+        "label": "Provider-agnostic PR payload",
+        "metadata": {
+          "base_branch": "main",
+          "file_count": 9,
+          "fingerprint_sha256": "804095dbea86ed9ba815172b2d2a497470443b6e24714d81c93aa8eb6457e69b",
+          "head_branch": "20260401t004147z-all-groups-pr-bundle-live-03-eu-north-1-enable-guardduty-guardduty-enable-pr-bundle",
+          "provider": "github",
+          "repository": "example/security-autopilot-remediations",
+          "root_path": null
+        }
+      },
+      {
+        "description": "9 mapped file(s) captured with reproducible hashes.",
+        "href": "/remediation-runs/79c80b66-ca47-4215-85d1-f9f9a329b66b#run-generated-files",
+        "key": "diff_summary",
+        "kind": "diff_summary",
+        "label": "Generated diff summary",
+        "metadata": {
+          "file_count": 9,
+          "fingerprint_sha256": "804095dbea86ed9ba815172b2d2a497470443b6e24714d81c93aa8eb6457e69b"
+        }
+      },
+      {
+        "description": "1 rollback note(s) prepared for this run.",
+        "href": "/remediation-runs/79c80b66-ca47-4215-85d1-f9f9a329b66b#run-generated-files",
+        "key": "rollback_notes",
+        "kind": "rollback_notes",
+        "label": "Rollback notes",
+        "metadata": {
+          "entry_count": 1
+        }
+      },
+      {
+        "description": "1 control ID(s) and 2 framework mapping row(s) attached.",
+        "href": "/remediation-runs/79c80b66-ca47-4215-85d1-f9f9a329b66b#run-generated-files",
+        "key": "control_mapping_context",
+        "kind": "control_mapping_context",
+        "label": "Control mapping context",
+        "metadata": {
+          "control_count": 1,
+          "mapping_count": 2
+        }
+      },
+      {
+        "description": "4 execution log lines recorded for this run.",
+        "href": "/remediation-runs/79c80b66-ca47-4215-85d1-f9f9a329b66b#run-activity",
+        "key": "activity_log",
+        "kind": "activity_log",
+        "label": "Run activity log",
+        "metadata": {
+          "line_count": 4
+        }
+      }
+    ],
+    "implementation_artifacts": [
+      {
+        "description": "Terraform remediation bundle with 13 files.",
+        "executable": true,
+        "href": "/remediation-runs/79c80b66-ca47-4215-85d1-f9f9a329b66b#run-generated-files",
+        "key": "pr_bundle",
+        "kind": "bundle",
+        "label": "Engineering PR bundle",
+        "metadata": {
+          "file_count": 13,
+          "format": "terraform",
+          "generated_action_count": 1,
+          "has_readme": true,
+          "skipped_action_count": 0,
+          "step_count": 3
+        }
+      },
+      {
+        "description": "Draft PR payload for example/security-autopilot-remediations -> main covering 9 mapped files.",
+        "executable": false,
+        "href": "/remediation-runs/79c80b66-ca47-4215-85d1-f9f9a329b66b#run-generated-files",
+        "key": "pr_payload",
+        "kind": "pr_payload",
+        "label": "Provider-agnostic PR payload",
+        "metadata": {
+          "base_branch": "main",
+          "file_count": 9,
+          "fingerprint_sha256": "804095dbea86ed9ba815172b2d2a497470443b6e24714d81c93aa8eb6457e69b",
+          "head_branch": "20260401t004147z-all-groups-pr-bundle-live-03-eu-north-1-enable-guardduty-guardduty-enable-pr-bundle",
+          "provider": "github",
+          "repository": "example/security-autopilot-remediations",
+          "root_path": null
+        }
+      }
+    ]
+  },
+  "artifacts": {
+    "control_mapping_context": {
+      "artifact_type": "control_mapping_context",
+      "control_ids": [
+        "GuardDuty.1"
+      ],
+      "mapped_control_ids": [
+        "GuardDuty.1"
+      ],
+      "mappings": [
+        {
+          "control_id": "GuardDuty.1",
+          "control_title": "Ensure GuardDuty enabled",
+          "description": "GuardDuty threat detection",
+          "framework_control_code": "4.1",
+          "framework_name": "CIS AWS Foundations Benchmark"
+        },
+        {
+          "control_id": "GuardDuty.1",
+          "control_title": "System monitoring",
+          "description": "Threat detection and monitoring",
+          "framework_control_code": "CC7.2",
+          "framework_name": "SOC 2"
+        }
+      ],
+      "unmapped_control_ids": [],
+      "version": 1
+    },
+    "diff_summary": {
+      "artifact_type": "generated_diff_summary",
+      "file_count": 9,
+      "files": [
+        {
+          "bundle_path": "run_all.sh",
+          "byte_count": 5139,
+          "change_type": "create_or_update",
+          "content_sha256": "8632e5dd745c531f0ba4a59c5e06459a7135812b9bbe222942686e296991e79c",
+          "line_count": 103,
+          "repo_path": "run_all.sh"
+        },
+        {
+          "bundle_path": "replay_group_run_reports.sh",
+          "byte_count": 1521,
+          "change_type": "create_or_update",
+          "content_sha256": "722cb6d7017b682c0f4c44153d15e7e4a9918cfc102cf87fa92fef591f5dbd4f",
+          "line_count": 54,
+          "repo_path": "replay_group_run_reports.sh"
+        },
+        {
+          "bundle_path": "run_actions.sh",
+          "byte_count": 11759,
+          "change_type": "create_or_update",
+          "content_sha256": "611cdb62cfd5526780e3e903fa18a88693f0f6cb631dceb97ba450ada38981bb",
+          "line_count": 409,
+          "repo_path": "run_actions.sh"
+        },
+        {
+          "bundle_path": "README_GROUP.txt",
+          "byte_count": 670,
+          "change_type": "create_or_update",
+          "content_sha256": "fceaec95eddac8e11fe0b92b3e7e8fd1fe32d125d4e86f09c73ff7a4563a16f7",
+          "line_count": 21,
+          "repo_path": "README_GROUP.txt"
+        },
+        {
+          "bundle_path": "bundle_manifest.json",
+          "byte_count": 1982,
+          "change_type": "create_or_update",
+          "content_sha256": "0759ff8a0231bed47881b1124eef5563279f2deff7c5da7c4b2f3df06cbdb264",
+          "line_count": 47,
+          "repo_path": "bundle_manifest.json"
+        },
+        {
+          "bundle_path": "decision_log.md",
+          "byte_count": 481,
+          "change_type": "create_or_update",
+          "content_sha256": "149f239156155eee6dd7f517ce4d131605f19ee1beb02d69b38eaee4e314cd54",
+          "line_count": 9,
+          "repo_path": "decision_log.md"
+        },
+        {
+          "bundle_path": "finding_coverage.json",
+          "byte_count": 223,
+          "change_type": "create_or_update",
+          "content_sha256": "f36058c0d5e4d90b467152f59fc8648767fcfde7163fa2b8fdfd73f26ff5e6cf",
+          "line_count": 10,
+          "repo_path": "finding_coverage.json"
+        },
+        {
+          "bundle_path": "review_required/actions/01-aws-account-696505809372-30efce6e/README_ACTION.txt",
+          "byte_count": 612,
+          "change_type": "create_or_update",
+          "content_sha256": "cf2c10137e6b6647b67643ae2bd09b3df536236b6a5da44d3f1a8d1e5db1db11",
+          "line_count": 12,
+          "repo_path": "review_required/actions/01-aws-account-696505809372-30efce6e/README_ACTION.txt"
+        },
+        {
+          "bundle_path": "review_required/actions/01-aws-account-696505809372-30efce6e/decision.json",
+          "byte_count": 1419,
+          "change_type": "create_or_update",
+          "content_sha256": "83abb9532dc66153a26e1b46b730e202d460b88ef4633c4e72c09dc930c3af92",
+          "line_count": 29,
+          "repo_path": "review_required/actions/01-aws-account-696505809372-30efce6e/decision.json"
+        }
+      ],
+      "fingerprint_sha256": "804095dbea86ed9ba815172b2d2a497470443b6e24714d81c93aa8eb6457e69b",
+      "repo_target_configured": true,
+      "summary_lines": [
+        "`run_all.sh` <- `run_all.sh` (103 lines, sha256:8632e5dd745c)",
+        "`replay_group_run_reports.sh` <- `replay_group_run_reports.sh` (54 lines, sha256:722cb6d7017b)",
+        "`run_actions.sh` <- `run_actions.sh` (409 lines, sha256:611cdb62cfd5)",
+        "`README_GROUP.txt` <- `README_GROUP.txt` (21 lines, sha256:fceaec95edda)",
+        "`bundle_manifest.json` <- `bundle_manifest.json` (47 lines, sha256:0759ff8a0231)",
+        "`decision_log.md` <- `decision_log.md` (9 lines, sha256:149f23915615)",
+        "`finding_coverage.json` <- `finding_coverage.json` (10 lines, sha256:f36058c0d5e4)",
+        "`review_required/actions/01-aws-account-696505809372-30efce6e/README_ACTION.txt` <- `review_required/actions/01-aws-account-696505809372-30efce6e/README_ACTION.txt` (12 lines, sha256:cf2c10137e6b)",
+        "`review_required/actions/01-aws-account-696505809372-30efce6e/decision.json` <- `review_required/actions/01-aws-account-696505809372-30efce6e/decision.json` (29 lines, sha256:83abb9532dc6)"
+      ],
+      "version": 1
+    },
+    "group_bundle": {
+      "account_id": "696505809372",
+      "action_count": 1,
+      "action_ids": [
+        "30efce6e-bcd7-4583-8400-aaf9569130ef"
+      ],
+      "action_resolutions": [
+        {
+          "action_id": "30efce6e-bcd7-4583-8400-aaf9569130ef",
+          "profile_id": "guardduty_enable_pr_bundle",
+          "resolution": {
+            "blocked_reasons": [],
+            "decision_rationale": "Compatibility resolver defaulted to the compatible profile 'guardduty_enable_pr_bundle' for strategy 'guardduty_enable_pr_bundle'. Run creation was accepted after risk_acknowledged=true satisfied review-required checks.",
+            "decision_version": "resolver/v1",
+            "finding_coverage": {},
+            "missing_defaults": [],
+            "missing_inputs": [],
+            "preservation_summary": {
+              "single_profile_compatible": true,
+              "strategy_only_supported": true
+            },
+            "profile_id": "guardduty_enable_pr_bundle",
+            "rejected_profiles": [],
+            "resolved_inputs": {},
+            "strategy_id": "guardduty_enable_pr_bundle",
+            "support_tier": "review_required_bundle"
+          },
+          "strategy_id": "guardduty_enable_pr_bundle",
+          "strategy_inputs": {}
+        }
+      ],
+      "action_type": "enable_guardduty",
+      "diff_fingerprint_sha256": "804095dbea86ed9ba815172b2d2a497470443b6e24714d81c93aa8eb6457e69b",
+      "executable_action_count": 0,
+      "execution_root": "executable/actions",
+      "generated_action_count": 1,
+      "group_id": "c84d5c12-593d-4ab3-b790-ce56e5484f92",
+      "group_key": "e4e07aa8-b8ea-4c1d-9fd7-4362a2fc1195|enable_guardduty|696505809372|eu-north-1",
+      "group_run_id": "5fc290b9-b5f2-4db6-8a7c-2dd24e306c24",
+      "layout_version": "grouped_bundle_mixed_tier/v1",
+      "manual_guidance_action_count": 0,
+      "region": "eu-north-1",
+      "repo_base_branch": "main",
+      "repo_head_branch": "20260401t004147z-all-groups-pr-bundle-live-03-eu-north-1-enable-guardduty-guardduty-enable-pr-bundle",
+      "repo_repository": "example/security-autopilot-remediations",
+      "repo_target_configured": true,
+      "reporting": {
+        "callback_url": "https://api.ocypheris.com/api/internal/group-runs/report",
+        "reporting_source": "bundle_callback",
+        "token": "***"
+      },
+      "represented_action_count": 1,
+      "resolved_action_count": 1,
+      "resolved_action_ids": [
+        "30efce6e-bcd7-4583-8400-aaf9569130ef"
+      ],
+      "review_required_action_count": 1,
+      "runnable_action_count": 0,
+      "runner_template_source": "embedded_mixed_tier",
+      "runner_template_version": "grouped_bundle_mixed_tier/v1",
+      "skipped_action_count": 0,
+      "skipped_actions": [],
+      "tier_counts": {
+        "executable": 0,
+        "manual_guidance": 0,
+        "review_required": 1
+      }
+    },
+    "pr_bundle": {
+      "files": [
+        {
+          "content": "#!/usr/bin/env bash\nset +e\n\nREPORT_URL=https://api.ocypheris.com/api/internal/group-runs/report\nREPORT_TOKEN=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0ZW5hbnRfaWQiOiJlNGUwN2FhOC1iOGVhLTRjMWQtOWZkNy00MzYyYTJmYzExOTUiLCJncm91cF9ydW5faWQiOiI1ZmMyOTBiOS1iNWYyLTRkYjYtOGE3Yy0yZGQyNGUzMDZjMjQiLCJncm91cF9pZCI6ImM4NGQ1YzEyLTU5M2QtNGFiMy1iNzkwLWNlNTZlNTQ4NGY5MiIsImFsbG93ZWRfYWN0aW9uX2lkcyI6WyIzMGVmY2U2ZS1iY2Q3LTQ1ODMtODQwMC1hYWY5NTY5MTMwZWYiXSwianRpIjoiMTQyMGQ4MzgtMWUzNS00MTAyLWEwNTQtMWNhYzIyZTg3MzExIiwiaWF0IjoxNzc1MDA0MTMwLCJleHAiOjE3NzUwOTA1MzB9.4mtIpiYmR_Ql2GDA-MZbIaSZXsMelwCG2flj7x3Pamw\nSTARTED_TEMPLATE='{\"token\":\"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0ZW5hbnRfaWQiOiJlNGUwN2FhOC1iOGVhLTRjMWQtOWZkNy00MzYyYTJmYzExOTUiLCJncm91cF9ydW5faWQiOiI1ZmMyOTBiOS1iNWYyLTRkYjYtOGE3Yy0yZGQyNGUzMDZjMjQiLCJncm91cF9pZCI6ImM4NGQ1YzEyLTU5M2QtNGFiMy1iNzkwLWNlNTZlNTQ4NGY5MiIsImFsbG93ZWRfYWN0aW9uX2lkcyI6WyIzMGVmY2U2ZS1iY2Q3LTQ1ODMtODQwMC1hYWY5NTY5MTMwZWYiXSwianRpIjoiMTQyMGQ4MzgtMWUzNS00MTAyLWEwNTQtMWNhYzIyZTg3MzExIiwiaWF0IjoxNzc1MDA0MTMwLCJleHAiOjE3NzUwOTA1MzB9.4mtIpiYmR_Ql2GDA-MZbIaSZXsMelwCG2flj7x3Pamw\",\"event\":\"started\",\"reporting_source\":\"bundle_callback\"}'\nFINISHED_SUCCESS_TEMPLATE='{\"token\":\"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0ZW5hbnRfaWQiOiJlNGUwN2FhOC1iOGVhLTRjMWQtOWZkNy00MzYyYTJmYzExOTUiLCJncm91cF9ydW5faWQiOiI1ZmMyOTBiOS1iNWYyLTRkYjYtOGE3Yy0yZGQyNGUzMDZjMjQiLCJncm91cF9pZCI6ImM4NGQ1YzEyLTU5M2QtNGFiMy1iNzkwLWNlNTZlNTQ4NGY5MiIsImFsbG93ZWRfYWN0aW9uX2lkcyI6WyIzMGVmY2U2ZS1iY2Q3LTQ1ODMtODQwMC1hYWY5NTY5MTMwZWYiXSwianRpIjoiMTQyMGQ4MzgtMWUzNS00MTAyLWEwNTQtMWNhYzIyZTg3MzExIiwiaWF0IjoxNzc1MDA0MTMwLCJleHAiOjE3NzUwOTA1MzB9.4mtIpiYmR_Ql2GDA-MZbIaSZXsMelwCG2flj7x3Pamw\",\"event\":\"finished\",\"reporting_source\":\"bundle_callback\",\"action_results\":[],\"non_executable_results\":[{\"action_id\":\"30efce6e-bcd7-4583-8400-aaf9569130ef\",\"support_tier\":\"review_required_bundle\",\"profile_id\":\"guardduty_enable_pr_bundle\",\"strategy_id\":\"guardduty_enable_pr_bundle\",\"reason\":\"review_required_metadata_only\",\"blocked_reasons\":[]}]}'\nFINISHED_FAILED_TEMPLATE='{\"token\":\"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0ZW5hbnRfaWQiOiJlNGUwN2FhOC1iOGVhLTRjMWQtOWZkNy00MzYyYTJmYzExOTUiLCJncm91cF9ydW5faWQiOiI1ZmMyOTBiOS1iNWYyLTRkYjYtOGE3Yy0yZGQyNGUzMDZjMjQiLCJncm91cF9pZCI6ImM4NGQ1YzEyLTU5M2QtNGFiMy1iNzkwLWNlNTZlNTQ4NGY5MiIsImFsbG93ZWRfYWN0aW9uX2lkcyI6WyIzMGVmY2U2ZS1iY2Q3LTQ1ODMtODQwMC1hYWY5NTY5MTMwZWYiXSwianRpIjoiMTQyMGQ4MzgtMWUzNS00MTAyLWEwNTQtMWNhYzIyZTg3MzExIiwiaWF0IjoxNzc1MDA0MTMwLCJleHAiOjE3NzUwOTA1MzB9.4mtIpiYmR_Ql2GDA-MZbIaSZXsMelwCG2flj7x3Pamw\",\"event\":\"finished\",\"reporting_source\":\"bundle_callback\",\"action_results\":[],\"non_executable_results\":[{\"action_id\":\"30efce6e-bcd7-4583-8400-aaf9569130ef\",\"support_tier\":\"review_required_bundle\",\"profile_id\":\"guardduty_enable_pr_bundle\",\"strategy_id\":\"guardduty_enable_pr_bundle\",\"reason\":\"review_required_metadata_only\",\"blocked_reasons\":[]}]}'\nREPLAY_DIR=\"./.bundle-callback-replay\"\nRUNNER=\"./run_actions.sh\"\nRUN_RC=1\nFINISH_SENT=0\n\nmkdir -p \"$REPLAY_DIR\"\n\niso_now() {\n  date -u +\"%Y-%m-%dT%H:%M:%SZ\"\n}\n\ninject_timestamp() {\n  local template_json=\"$1\"\n  local field_name=\"$2\"\n  local field_value=\"$3\"\n  python3 - \"$template_json\" \"$field_name\" \"$field_value\" <<'PY'\nimport json\nimport sys\n\npayload = json.loads(sys.argv[1])\npayload[str(sys.argv[2])] = str(sys.argv[3])\nprint(json.dumps(payload, separators=(\",\", \":\")))\nPY\n}\n\npost_payload() {\n  local payload=\"$1\"\n  if [ -z \"$REPORT_URL\" ] || [ -z \"$REPORT_TOKEN\" ]; then\n    return 1\n  fi\n  if command -v curl >/dev/null 2>&1; then\n    local response_file http_code rc\n    response_file=$(mktemp)\n    http_code=$(curl -sS       --connect-timeout 5       --max-time 20       --retry 4       --retry-delay 2       --retry-all-errors       -o \"$response_file\"       -w \"%{http_code}\"       -X POST \"$REPORT_URL\"       -H \"Content-Type: application/json\"       -d \"$payload\")\n    rc=$?\n    if [ \"$rc\" -ne 0 ]; then\n      rm -f \"$response_file\"\n      return \"$rc\"\n    fi\n    rm -f \"$response_file\"\n    case \"$http_code\" in\n      2??)\n        return 0\n        ;;\n    esac\n    return 1\n  fi\n  return 1\n}\n\npersist_replay() {\n  local suffix=\"$1\"\n  local payload=\"$2\"\n  local file=\"$REPLAY_DIR/${suffix}-$(date +%s).json\"\n  printf '%s\\n' \"$payload\" > \"$file\"\n}\n\nemit_finished_callback() {\n  local exit_code=\"$1\"\n  local finished_at payload\n  if [ \"$FINISH_SENT\" -eq 1 ]; then\n    return 0\n  fi\n  FINISH_SENT=1\n  finished_at=\"$(iso_now)\"\n  if [ \"$exit_code\" -eq 0 ]; then\n    payload=\"$(inject_timestamp \"$FINISHED_SUCCESS_TEMPLATE\" \"finished_at\" \"$finished_at\")\"\n  else\n    payload=\"$(inject_timestamp \"$FINISHED_FAILED_TEMPLATE\" \"finished_at\" \"$finished_at\")\"\n  fi\n  if ! post_payload \"$payload\"; then\n    persist_replay \"finished\" \"$payload\"\n  fi\n}\n\nhandle_exit() {\n  local exit_code=\"$1\"\n  emit_finished_callback \"$exit_code\"\n  exit \"$exit_code\"\n}\n\nSTARTED_AT=\"$(iso_now)\"\nSTART_PAYLOAD=\"$(inject_timestamp \"$STARTED_TEMPLATE\" \"started_at\" \"$STARTED_AT\")\"\nif ! post_payload \"$START_PAYLOAD\"; then\n  persist_replay \"started\" \"$START_PAYLOAD\"\nfi\n\ntrap 'handle_exit $?' EXIT\ntrap 'exit 130' INT\ntrap 'exit 143' TERM\n\nchmod +x \"$RUNNER\"\n\"$RUNNER\"\nRUN_RC=$?\nexit \"$RUN_RC\"\n",
+          "path": "run_all.sh"
+        },
+        {
+          "content": "#!/usr/bin/env bash\nset -euo pipefail\n\nREPORT_URL=https://api.ocypheris.com/api/internal/group-runs/report\nREPLAY_DIR=\"./.bundle-callback-replay\"\n\nif [ ! -d \"$REPLAY_DIR\" ]; then\n  echo \"Replay directory not found: $REPLAY_DIR\"\n  exit 1\nfi\n\nif ! command -v curl >/dev/null 2>&1; then\n  echo \"curl is required for replay.\"\n  exit 1\nfi\n\nshopt -s nullglob\nfiles=(\"$REPLAY_DIR\"/*.json)\nif [ \"${#files[@]}\" -eq 0 ]; then\n  echo \"No replay payloads found under $REPLAY_DIR.\"\n  exit 0\nfi\n\nfor payload_file in \"${files[@]}\"; do\n  response_file=$(mktemp)\n  http_code=$(curl -sS     --connect-timeout 5     --max-time 20     --retry 4     --retry-delay 2     --retry-all-errors     -o \"$response_file\"     -w \"%{http_code}\"     -X POST \"$REPORT_URL\"     -H \"Content-Type: application/json\"     --data-binary \"@$payload_file\")\n  rc=$?\n  response_body=\"$(cat \"$response_file\" 2>/dev/null || true)\"\n  rm -f \"$response_file\"\n  if [ \"$rc\" -ne 0 ]; then\n    echo \"Replay failed for $payload_file\"\n    exit \"$rc\"\n  fi\n  case \"$http_code\" in\n    2??)\n      echo \"Replayed $payload_file\"\n      rm -f \"$payload_file\"\n      ;;\n    409)\n      if printf '%s' \"$response_body\" | grep -q 'group_run_report_replay'; then\n        echo \"Replay already consumed for $payload_file\"\n        rm -f \"$payload_file\"\n      else\n        echo \"Replay conflict for $payload_file\"\n        exit 1\n      fi\n      ;;\n    *)\n      echo \"Replay rejected for $payload_file with HTTP $http_code\"\n      printf '%s\\n' \"$response_body\"\n      exit 1\n      ;;\n  esac\ndone\n",
+          "path": "replay_group_run_reports.sh"
+        },
+        {
+          "content": "#!/usr/bin/env bash\nset -euo pipefail\n\nEXECUTION_ROOT=\"executable/actions\"\n\nif ! command -v terraform >/dev/null 2>&1; then\n  echo \"terraform is required but not installed.\"\n  exit 1\nfi\n\nCACHE_ROOT=\"${HOME}/.aws-security-autopilot/terraform\"\nmkdir -p \"${CACHE_ROOT}/plugin-cache\" \"${CACHE_ROOT}/provider-mirror\"\nexport TF_PLUGIN_CACHE_DIR=\"${CACHE_ROOT}/plugin-cache\"\nexport TF_PROVIDER_MIRROR_DIR=\"${CACHE_ROOT}/provider-mirror\"\nPREFERRED_TF_PROVIDER_MIRROR_DIR=\"${HOME}/.terraform.d/plugin-cache\"\nACTIVE_TF_PROVIDER_MIRROR_DIR=\"${TF_PROVIDER_MIRROR_DIR}\"\nexport TF_REGISTRY_CLIENT_TIMEOUT=\"${TF_REGISTRY_CLIENT_TIMEOUT:-30}\"\nexport TF_REGISTRY_DISCOVERY_RETRY=\"${TF_REGISTRY_DISCOVERY_RETRY:-3}\"\n\nTFRC_PATH=\"${CACHE_ROOT}/terraformrc\"\nwrite_tfrc_with_cache_only() {\n  cat > \"${TFRC_PATH}\" <<EOF\nplugin_cache_dir = \"${TF_PLUGIN_CACHE_DIR}\"\nEOF\n}\n\nwrite_tfrc_with_mirror() {\n  local mirror_dir=\"$1\"\n  cat > \"${TFRC_PATH}\" <<EOF\nprovider_installation {\n  filesystem_mirror {\n    path    = \"${mirror_dir}\"\n    include = [\"registry.terraform.io/hashicorp/aws\"]\n  }\n  direct {\n    exclude = [\"registry.terraform.io/hashicorp/aws\"]\n  }\n}\nEOF\n}\n\nexport TF_CLI_CONFIG_FILE=\"${TFRC_PATH}\"\n\nAWS_PROVIDER_VERSION=\"5.100.0\"\nAWS_PROVIDER_LOCKFILE=\"${CACHE_ROOT}/.aws-provider-${AWS_PROVIDER_VERSION}.lock.hcl\"\nTERRAFORM_PROVIDER_OS=\"$(uname | tr '[:upper:]' '[:lower:]')\"\nTERRAFORM_PROVIDER_ARCH=\"$(uname -m)\"\ncase \"${TERRAFORM_PROVIDER_ARCH}\" in\n  x86_64)\n    TERRAFORM_PROVIDER_ARCH=\"amd64\"\n    ;;\n  aarch64|arm64)\n    TERRAFORM_PROVIDER_ARCH=\"arm64\"\n    ;;\nesac\nTERRAFORM_PROVIDER_PLATFORM=\"${TERRAFORM_PROVIDER_OS}_${TERRAFORM_PROVIDER_ARCH}\"\n\nhas_cached_aws_provider() {\n  find -L \"${TF_PLUGIN_CACHE_DIR}/registry.terraform.io/hashicorp/aws/${AWS_PROVIDER_VERSION}\" -type f -name 'terraform-provider-aws_v*_x5' -print -quit 2>/dev/null | grep -q .\n}\n\nhas_mirrored_aws_provider() {\n  local mirror_dir=\"${1:-${ACTIVE_TF_PROVIDER_MIRROR_DIR}}\"\n  find -L \"${mirror_dir}/registry.terraform.io/hashicorp/aws/${AWS_PROVIDER_VERSION}\" -type f -print -quit 2>/dev/null | grep -q .\n}\n\nhas_preferred_mirrored_aws_provider() {\n  has_mirrored_aws_provider \"${PREFERRED_TF_PROVIDER_MIRROR_DIR}\"\n}\n\nbootstrap_provider_cache() {\n  local bootstrap_dir marker\n  marker=\"${CACHE_ROOT}/.aws-provider-${AWS_PROVIDER_VERSION}.ready\"\n  ACTIVE_TF_PROVIDER_MIRROR_DIR=\"${TF_PROVIDER_MIRROR_DIR}\"\n  if has_preferred_mirrored_aws_provider; then\n    ACTIVE_TF_PROVIDER_MIRROR_DIR=\"${PREFERRED_TF_PROVIDER_MIRROR_DIR}\"\n  fi\n  if [ -f \"${marker}\" ] && has_mirrored_aws_provider \"${ACTIVE_TF_PROVIDER_MIRROR_DIR}\" && [ -s \"${AWS_PROVIDER_LOCKFILE}\" ]; then\n    return 0\n  fi\n  bootstrap_dir=$(mktemp -d)\n  cat > \"${bootstrap_dir}/versions.tf\" <<'EOF'\nterraform {\n  required_providers {\n    aws = {\n      source  = \"hashicorp/aws\"\n      version = \"= 5.100.0\"\n    }\n  }\n}\nEOF\n\n  if [ \"${ACTIVE_TF_PROVIDER_MIRROR_DIR}\" = \"${PREFERRED_TF_PROVIDER_MIRROR_DIR}\" ]; then\n    (\n      cd \"${bootstrap_dir}\"\n      terraform providers lock -fs-mirror=\"${ACTIVE_TF_PROVIDER_MIRROR_DIR}\" -platform=\"${TERRAFORM_PROVIDER_PLATFORM}\" >/dev/null\n      cp .terraform.lock.hcl \"${AWS_PROVIDER_LOCKFILE}\"\n    )\n  else\n    (\n      cd \"${bootstrap_dir}\"\n      env -u TF_CLI_CONFIG_FILE -u TF_PLUGIN_CACHE_DIR -u TF_PROVIDER_MIRROR_DIR terraform providers mirror \"${ACTIVE_TF_PROVIDER_MIRROR_DIR}\" >/dev/null\n      terraform providers lock -fs-mirror=\"${ACTIVE_TF_PROVIDER_MIRROR_DIR}\" -platform=\"${TERRAFORM_PROVIDER_PLATFORM}\" >/dev/null\n      cp .terraform.lock.hcl \"${AWS_PROVIDER_LOCKFILE}\"\n    )\n  fi\n  rm -rf \"${bootstrap_dir}\"\n  touch \"${marker}\"\n}\n\nseed_canonical_aws_lockfile() {\n  local dir=\"$1\"\n  if [ ! -s \"${AWS_PROVIDER_LOCKFILE}\" ]; then\n    echo \"ERROR: canonical AWS provider lockfile is missing at ${AWS_PROVIDER_LOCKFILE}.\"\n    return 1\n  fi\n  rm -rf \"$dir/.terraform\"\n  cp \"${AWS_PROVIDER_LOCKFILE}\" \"$dir/.terraform.lock.hcl\"\n}\n\nterraform_init_with_lockfile_fallback() {\n  local dir=\"$1\"\n  local log_file rc\n  log_file=$(mktemp)\n  set +e\n  (\n    cd \"$dir\"\n    terraform init -input=false -lockfile=readonly\n  ) 2>&1 | tee \"$log_file\"\n  rc=${PIPESTATUS[0]}\n  set -e\n  if [ \"$rc\" -eq 0 ]; then\n    rm -f \"$log_file\"\n    return 0\n  fi\n  if ! grep -q \"Provider dependency changes detected\" \"$log_file\"; then\n    rm -f \"$log_file\"\n    return \"$rc\"\n  fi\n  echo \"WARNING: terraform init detected additional providers for $dir; refreshing lockfile.\"\n  rm -f \"$log_file\"\n  (\n    cd \"$dir\"\n    terraform init -input=false\n  )\n}\n\ncopy_action_folder_to_workspace() {\n  local source_dir=\"$1\"\n  local workspace_dir=\"$2\"\n\n  mkdir -p \"$workspace_dir\"\n  if command -v rsync >/dev/null 2>&1; then\n    rsync -a --exclude '.terraform' --exclude '.terraform.tfstate*' \"$source_dir\"/ \"$workspace_dir\"/\n    return 0\n  fi\n\n  (\n    cd \"$source_dir\"\n    tar --exclude='.terraform' --exclude='.terraform.tfstate*' -cf - .\n  ) | (\n    cd \"$workspace_dir\"\n    tar -xf -\n  )\n}\n\nprepare_action_workspace() {\n  local source_dir=\"$1\"\n  local workspace_root workspace_dir\n\n  workspace_root=$(mktemp -d \"${TMPDIR:-/tmp}/aws-security-autopilot-tf-XXXXXX\")\n  workspace_dir=\"${workspace_root}/action\"\n  if ! copy_action_folder_to_workspace \"$source_dir\" \"$workspace_dir\"; then\n    rm -rf \"$workspace_root\"\n    return 1\n  fi\n  printf '%s\\n' \"$workspace_dir\"\n}\n\ncleanup_action_workspace() {\n  local workspace_dir=\"$1\"\n  local workspace_root\n\n  workspace_root=$(dirname \"$workspace_dir\")\n  rm -rf \"$workspace_root\"\n}\n\ncollect_action_dirs() {\n  local dir\n  while IFS= read -r dir; do\n    if find \"$dir\" -maxdepth 1 -name '*.tf' -print -quit 2>/dev/null | grep -q .; then\n      ACTION_DIRS+=(\"$dir\")\n    fi\n  done < <(find \"${EXECUTION_ROOT}\" -mindepth 1 -maxdepth 1 -type d 2>/dev/null | sort)\n}\n\nis_known_duplicate_only() {\n  local log_file=\"$1\"\n  local duplicate_pattern\n  local error_lines\n  duplicate_pattern='InvalidPermission\\.Duplicate|already exists|AlreadyExists|EntityAlreadyExists'\n  error_lines=$(sed -E $'s/\u001b\\[[0-9;]*[[:alpha:]]//g' \"$log_file\" | grep -E '^[[:space:]]*(Error:|\u2502)' || true)\n\n  if [ -z \"$error_lines\" ]; then\n    return 1\n  fi\n  if ! printf '%s\\n' \"$error_lines\" | grep -Eiq \"$duplicate_pattern\"; then\n    return 1\n  fi\n  if printf '%s\\n' \"$error_lines\" | grep -Eiq 'AccessDenied|UnauthorizedOperation|InvalidGroupId|DependencyViolation|Throttl|ExpiredToken|not found|NoSuch'; then\n    return 1\n  fi\n  return 0\n}\n\napply_with_duplicate_tolerance() {\n  local dir=\"$1\"\n  local timeout_secs=\"${2:-${ACTION_TIMEOUT_SECS}}\"\n  local log_file rc resource existing_id duplicate_line\n  export TF_DATA_DIR=\"${dir}/.terraform-data\"\n  mkdir -p \"${TF_DATA_DIR}\"\n\n  log_file=$(mktemp)\n  set +e\n  (\n    cd \"$dir\"\n    run_with_timeout \"$timeout_secs\" terraform apply -auto-approve\n  ) >\"$log_file\" 2>&1\n  rc=$?\n  set -e\n  cat \"$log_file\"\n\n  if [ \"$rc\" -eq 0 ]; then\n    rm -f \"$log_file\"\n    return 0\n  fi\n\n  if is_known_duplicate_only \"$log_file\"; then\n    resource=$(sed -n 's/.*with \\([^,]*\\),/\\1/p' \"$log_file\" | head -n 1)\n    existing_id=$(grep -Eo 'sg-[0-9A-Za-z-]+' \"$log_file\" | head -n 1)\n    duplicate_line=$(grep -Ei 'InvalidPermission\\.Duplicate|already exists|AlreadyExists|EntityAlreadyExists' \"$log_file\" | head -n 1)\n    echo \"WARNING: duplicate/already-existing resource detected; continuing without failure.\"\n    echo \"  action: $dir\"\n    if [ -n \"$resource\" ]; then\n      echo \"  resource: $resource\"\n    fi\n    if [ -n \"$existing_id\" ]; then\n      echo \"  existing identifier: $existing_id\"\n    fi\n    if [ -n \"$duplicate_line\" ]; then\n      echo \"  detail: $duplicate_line\"\n    fi\n    rm -f \"$log_file\"\n    return 0\n  fi\n\n  rm -f \"$log_file\"\n  return \"$rc\"\n}\n\nrun_with_timeout() {\n  local timeout_secs=\"$1\"\n  shift\n  python3 - \"$timeout_secs\" \"$@\" <<'PY'\nimport subprocess\nimport sys\n\ntimeout_secs = int(sys.argv[1])\ncommand = sys.argv[2:]\ntry:\n    completed = subprocess.run(command, check=False, timeout=timeout_secs)\nexcept subprocess.TimeoutExpired:\n    print(\"ERROR: command timed out after %ss: %s\" % (timeout_secs, \" \".join(command)))\n    sys.exit(124)\nsys.exit(int(completed.returncode))\nPY\n}\n\nrun_terraform_init_with_retry() {\n  local dir=\"$1\"\n  local attempts=5\n  local attempt=1\n  local sleep_seconds=3\n  local rc=0\n  export TF_DATA_DIR=\"${dir}/.terraform-data\"\n  mkdir -p \"${TF_DATA_DIR}\"\n\n  while [ \"$attempt\" -le \"$attempts\" ]; do\n    if ! seed_canonical_aws_lockfile \"$dir\"; then\n      return 1\n    fi\n    set +e\n    terraform_init_with_lockfile_fallback \"$dir\"\n    rc=$?\n    set -e\n    if [ \"$rc\" -eq 0 ]; then\n      return 0\n    fi\n    if [ \"$attempt\" -lt \"$attempts\" ]; then\n      echo \"WARNING: terraform init failed for $dir (attempt $attempt/$attempts). Retrying in ${sleep_seconds}s...\"\n      sleep \"$sleep_seconds\"\n      sleep_seconds=$((sleep_seconds * 2))\n      if [ \"$sleep_seconds\" -gt 30 ]; then\n        sleep_seconds=30\n      fi\n    fi\n    attempt=$((attempt + 1))\n  done\n\n  return \"$rc\"\n}\n\nhas_unresolved_placeholders() {\n  local dir=\"$1\"\n  local placeholders\n  placeholders=$(grep -R -n --include='*.tf' -E 'REPLACE_[A-Z0-9_]+' \"$dir\" 2>/dev/null || true)\n  if [ -n \"$placeholders\" ]; then\n    echo \"ERROR: unresolved placeholder token(s) found in Terraform files for $dir:\"\n    echo \"$placeholders\"\n    return 0\n  fi\n  return 1\n}\n\nbootstrap_provider_cache\nwrite_tfrc_with_mirror \"${ACTIVE_TF_PROVIDER_MIRROR_DIR}\"\n\nACTION_DIRS=()\ncollect_action_dirs\nTOTAL=\"${#ACTION_DIRS[@]}\"\nif [ \"${TOTAL:-0}\" -eq 0 ]; then\n  echo \"No executable Terraform action folders found under ${EXECUTION_ROOT}/.\"\n  exit 0\nfi\n\nSUCCESS_COUNT=0\nFAILED_COUNT=0\nFAILED_ACTIONS=()\n\nACTION_TIMEOUT_SECS=\"${ACTION_TIMEOUT_SECS:-300}\"\nif ! [[ \"${ACTION_TIMEOUT_SECS}\" =~ ^[0-9]+$ ]] || [ \"${ACTION_TIMEOUT_SECS}\" -le 0 ]; then\n  ACTION_TIMEOUT_SECS=300\nfi\n\nfor dir in \"${ACTION_DIRS[@]}\"; do\n  workspace_dir=\"\"\n  echo \"\"\n  echo \"=== Running terraform in $dir ===\"\n\n  if has_unresolved_placeholders \"$dir\"; then\n    echo \"ERROR: unresolved placeholders detected for $dir. Skipping this action folder.\"\n    FAILED_COUNT=$((FAILED_COUNT + 1))\n    FAILED_ACTIONS+=(\"$dir (precheck)\")\n    continue\n  fi\n\n  workspace_dir=$(prepare_action_workspace \"$dir\") || {\n    echo \"ERROR: failed to prepare isolated terraform workspace for $dir. Skipping this action folder.\"\n    FAILED_COUNT=$((FAILED_COUNT + 1))\n    FAILED_ACTIONS+=(\"$dir (workspace)\")\n    continue\n  }\n\n  if ! run_terraform_init_with_retry \"$workspace_dir\"; then\n    echo \"ERROR: terraform init failed for $dir after retries. Skipping this action folder.\"\n    cleanup_action_workspace \"$workspace_dir\"\n    FAILED_COUNT=$((FAILED_COUNT + 1))\n    FAILED_ACTIONS+=(\"$dir (init)\")\n    continue\n  fi\n\n  set +e\n  (\n    cd \"$workspace_dir\"\n    run_with_timeout \"$ACTION_TIMEOUT_SECS\" terraform plan -input=false\n  )\n  plan_rc=$?\n  set -e\n  if [ \"$plan_rc\" -ne 0 ]; then\n    echo \"ERROR: terraform plan failed for $dir. Skipping apply for this action folder.\"\n    cleanup_action_workspace \"$workspace_dir\"\n    FAILED_COUNT=$((FAILED_COUNT + 1))\n    FAILED_ACTIONS+=(\"$dir (plan)\")\n    continue\n  fi\n\n  if ! apply_with_duplicate_tolerance \"$workspace_dir\" \"$ACTION_TIMEOUT_SECS\"; then\n    echo \"ERROR: terraform apply failed for $dir. Continuing with remaining action folders.\"\n    cleanup_action_workspace \"$workspace_dir\"\n    FAILED_COUNT=$((FAILED_COUNT + 1))\n    FAILED_ACTIONS+=(\"$dir (apply)\")\n    continue\n  fi\n\n  cleanup_action_workspace \"$workspace_dir\"\n  SUCCESS_COUNT=$((SUCCESS_COUNT + 1))\ndone\n\necho \"Bundle run completed.\"\necho \"  Successful action folders: ${SUCCESS_COUNT}/${TOTAL}\"\necho \"  Failed action folders: ${FAILED_COUNT}/${TOTAL}\"\nif [ \"$FAILED_COUNT\" -gt 0 ]; then\n  echo \"Failed folders summary:\"\n  for failed in \"${FAILED_ACTIONS[@]}\"; do\n    echo \"  - $failed\"\n  done\n  exit 1\nfi\necho \"All action folders completed successfully.\"\n",
+          "path": "run_actions.sh"
+        },
+        {
+          "content": "AWS Security Autopilot \u2014 Mixed-tier Group PR bundle\n\nLayout version: grouped_bundle_mixed_tier/v1\nExecution root: executable/actions\n\nOnly executable Terraform lives under executable/actions/.\nreview_required/actions/ and manual_guidance/actions/ contain metadata-only guidance.\nrun_all.sh executes only executable/actions/ and no-ops successfully when no runnable Terraform folders exist.\n\nRun from bundle root:\n  chmod +x ./run_all.sh\n  ./run_all.sh\n\nExecutable actions:\n- none\n\nReview-required actions:\n- 1. GuardDuty should be enabled (review_required_metadata_only) -> review_required/actions/01-aws-account-696505809372-30efce6e\n\nManual-guidance actions:\n- none\n",
+          "path": "README_GROUP.txt"
+        },
+        {
+          "content": "{\n  \"action_count\": 1,\n  \"actions\": [\n    {\n      \"action_id\": \"30efce6e-bcd7-4583-8400-aaf9569130ef\",\n      \"action_type\": \"enable_guardduty\",\n      \"blocked_reasons\": [],\n      \"control_id\": \"GuardDuty.1\",\n      \"decision_rationale\": \"Compatibility resolver defaulted to the compatible profile 'guardduty_enable_pr_bundle' for strategy 'guardduty_enable_pr_bundle'. Run creation was accepted after risk_acknowledged=true satisfied review-required checks.\",\n      \"decision_summary\": \"Compatibility resolver defaulted to the compatible profile 'guardduty_enable_pr_bundle' for strategy 'guardduty_enable_pr_bundle'. Run creation was accepted after risk_acknowledged=true satisfied review-required checks.\",\n      \"decision_version\": \"resolver/v1\",\n      \"finding_coverage\": {},\n      \"folder\": \"review_required/actions/01-aws-account-696505809372-30efce6e\",\n      \"has_runnable_terraform\": false,\n      \"index\": 1,\n      \"missing_defaults\": [],\n      \"missing_inputs\": [],\n      \"outcome\": \"review_required_metadata_only\",\n      \"preservation_summary\": {\n        \"single_profile_compatible\": true,\n        \"strategy_only_supported\": true\n      },\n      \"profile_id\": \"guardduty_enable_pr_bundle\",\n      \"rejected_profiles\": [],\n      \"strategy_id\": \"guardduty_enable_pr_bundle\",\n      \"strategy_inputs\": {},\n      \"support_tier\": \"review_required_bundle\",\n      \"target_id\": \"696505809372|eu-north-1|AWS::::Account:696505809372|GuardDuty.1\",\n      \"tier\": \"review_required\",\n      \"tier_root\": \"review_required/actions\",\n      \"title\": \"GuardDuty should be enabled\"\n    }\n  ],\n  \"execution_root\": \"executable/actions\",\n  \"grouped_actions\": [\n    \"30efce6e-bcd7-4583-8400-aaf9569130ef\"\n  ],\n  \"layout_version\": \"grouped_bundle_mixed_tier/v1\",\n  \"runnable_action_count\": 0,\n  \"runner_template_source\": \"embedded_mixed_tier\",\n  \"runner_template_version\": \"grouped_bundle_mixed_tier/v1\",\n  \"tier_counts\": {\n    \"executable\": 0,\n    \"manual_guidance\": 0,\n    \"review_required\": 1\n  }\n}\n",
+          "path": "bundle_manifest.json"
+        },
+        {
+          "content": "# Decision Log\n\n## 1. GuardDuty should be enabled\n- Action ID: 30efce6e-bcd7-4583-8400-aaf9569130ef\n- Tier: review_required/actions\n- Outcome: review_required_metadata_only\n- Strategy/Profile: guardduty_enable_pr_bundle / guardduty_enable_pr_bundle\n- Summary: Compatibility resolver defaulted to the compatible profile 'guardduty_enable_pr_bundle' for strategy 'guardduty_enable_pr_bundle'. Run creation was accepted after risk_acknowledged=true satisfied review-required checks.\n\n",
+          "path": "decision_log.md"
+        },
+        {
+          "content": "{\n  \"actions\": [\n    {\n      \"action_id\": \"30efce6e-bcd7-4583-8400-aaf9569130ef\",\n      \"finding_coverage\": {},\n      \"support_tier\": \"review_required_bundle\"\n    }\n  ],\n  \"layout_version\": \"grouped_bundle_mixed_tier/v1\"\n}\n",
+          "path": "finding_coverage.json"
+        },
+        {
+          "content": "AWS Security Autopilot \u2014 Group action artifact\n\nAction: GuardDuty should be enabled\nAction ID: 30efce6e-bcd7-4583-8400-aaf9569130ef\nTier: review_required\nTier root: review_required/actions\nOutcome: review_required_metadata_only\nStrategy: guardduty_enable_pr_bundle\nProfile: guardduty_enable_pr_bundle\n\nDecision summary: Compatibility resolver defaulted to the compatible profile 'guardduty_enable_pr_bundle' for strategy 'guardduty_enable_pr_bundle'. Run creation was accepted after risk_acknowledged=true satisfied review-required checks.\nThis folder is metadata only and does not contain runnable Terraform.\n",
+          "path": "review_required/actions/01-aws-account-696505809372-30efce6e/README_ACTION.txt"
+        },
+        {
+          "content": "{\n  \"action_id\": \"30efce6e-bcd7-4583-8400-aaf9569130ef\",\n  \"action_type\": \"enable_guardduty\",\n  \"blocked_reasons\": [],\n  \"control_id\": \"GuardDuty.1\",\n  \"decision_rationale\": \"Compatibility resolver defaulted to the compatible profile 'guardduty_enable_pr_bundle' for strategy 'guardduty_enable_pr_bundle'. Run creation was accepted after risk_acknowledged=true satisfied review-required checks.\",\n  \"decision_summary\": \"Compatibility resolver defaulted to the compatible profile 'guardduty_enable_pr_bundle' for strategy 'guardduty_enable_pr_bundle'. Run creation was accepted after risk_acknowledged=true satisfied review-required checks.\",\n  \"decision_version\": \"resolver/v1\",\n  \"finding_coverage\": {},\n  \"folder\": \"review_required/actions/01-aws-account-696505809372-30efce6e\",\n  \"has_runnable_terraform\": false,\n  \"index\": 1,\n  \"missing_defaults\": [],\n  \"missing_inputs\": [],\n  \"outcome\": \"review_required_metadata_only\",\n  \"preservation_summary\": {\n    \"single_profile_compatible\": true,\n    \"strategy_only_supported\": true\n  },\n  \"profile_id\": \"guardduty_enable_pr_bundle\",\n  \"rejected_profiles\": [],\n  \"strategy_id\": \"guardduty_enable_pr_bundle\",\n  \"strategy_inputs\": {},\n  \"support_tier\": \"review_required_bundle\",\n  \"target_id\": \"696505809372|eu-north-1|AWS::::Account:696505809372|GuardDuty.1\",\n  \"tier\": \"review_required\",\n  \"tier_root\": \"review_required/actions\",\n  \"title\": \"GuardDuty should be enabled\"\n}\n",
+          "path": "review_required/actions/01-aws-account-696505809372-30efce6e/decision.json"
+        },
+        {
+          "content": "{\n  \"artifact_type\": \"generated_diff_summary\",\n  \"file_count\": 9,\n  \"files\": [\n    {\n      \"bundle_path\": \"run_all.sh\",\n      \"byte_count\": 5139,\n      \"change_type\": \"create_or_update\",\n      \"content_sha256\": \"8632e5dd745c531f0ba4a59c5e06459a7135812b9bbe222942686e296991e79c\",\n      \"line_count\": 103,\n      \"repo_path\": \"run_all.sh\"\n    },\n    {\n      \"bundle_path\": \"replay_group_run_reports.sh\",\n      \"byte_count\": 1521,\n      \"change_type\": \"create_or_update\",\n      \"content_sha256\": \"722cb6d7017b682c0f4c44153d15e7e4a9918cfc102cf87fa92fef591f5dbd4f\",\n      \"line_count\": 54,\n      \"repo_path\": \"replay_group_run_reports.sh\"\n    },\n    {\n      \"bundle_path\": \"run_actions.sh\",\n      \"byte_count\": 11759,\n      \"change_type\": \"create_or_update\",\n      \"content_sha256\": \"611cdb62cfd5526780e3e903fa18a88693f0f6cb631dceb97ba450ada38981bb\",\n      \"line_count\": 409,\n      \"repo_path\": \"run_actions.sh\"\n    },\n    {\n      \"bundle_path\": \"README_GROUP.txt\",\n      \"byte_count\": 670,\n      \"change_type\": \"create_or_update\",\n      \"content_sha256\": \"fceaec95eddac8e11fe0b92b3e7e8fd1fe32d125d4e86f09c73ff7a4563a16f7\",\n      \"line_count\": 21,\n      \"repo_path\": \"README_GROUP.txt\"\n    },\n    {\n      \"bundle_path\": \"bundle_manifest.json\",\n      \"byte_count\": 1982,\n      \"change_type\": \"create_or_update\",\n      \"content_sha256\": \"0759ff8a0231bed47881b1124eef5563279f2deff7c5da7c4b2f3df06cbdb264\",\n      \"line_count\": 47,\n      \"repo_path\": \"bundle_manifest.json\"\n    },\n    {\n      \"bundle_path\": \"decision_log.md\",\n      \"byte_count\": 481,\n      \"change_type\": \"create_or_update\",\n      \"content_sha256\": \"149f239156155eee6dd7f517ce4d131605f19ee1beb02d69b38eaee4e314cd54\",\n      \"line_count\": 9,\n      \"repo_path\": \"decision_log.md\"\n    },\n    {\n      \"bundle_path\": \"finding_coverage.json\",\n      \"byte_count\": 223,\n      \"change_type\": \"create_or_update\",\n      \"content_sha256\": \"f36058c0d5e4d90b467152f59fc8648767fcfde7163fa2b8fdfd73f26ff5e6cf\",\n      \"line_count\": 10,\n      \"repo_path\": \"finding_coverage.json\"\n    },\n    {\n      \"bundle_path\": \"review_required/actions/01-aws-account-696505809372-30efce6e/README_ACTION.txt\",\n      \"byte_count\": 612,\n      \"change_type\": \"create_or_update\",\n      \"content_sha256\": \"cf2c10137e6b6647b67643ae2bd09b3df536236b6a5da44d3f1a8d1e5db1db11\",\n      \"line_count\": 12,\n      \"repo_path\": \"review_required/actions/01-aws-account-696505809372-30efce6e/README_ACTION.txt\"\n    },\n    {\n      \"bundle_path\": \"review_required/actions/01-aws-account-696505809372-30efce6e/decision.json\",\n      \"byte_count\": 1419,\n      \"change_type\": \"create_or_update\",\n      \"content_sha256\": \"83abb9532dc66153a26e1b46b730e202d460b88ef4633c4e72c09dc930c3af92\",\n      \"line_count\": 29,\n      \"repo_path\": \"review_required/actions/01-aws-account-696505809372-30efce6e/decision.json\"\n    }\n  ],\n  \"fingerprint_sha256\": \"804095dbea86ed9ba815172b2d2a497470443b6e24714d81c93aa8eb6457e69b\",\n  \"repo_target_configured\": true,\n  \"summary_lines\": [\n    \"`run_all.sh` <- `run_all.sh` (103 lines, sha256:8632e5dd745c)\",\n    \"`replay_group_run_reports.sh` <- `replay_group_run_reports.sh` (54 lines, sha256:722cb6d7017b)\",\n    \"`run_actions.sh` <- `run_actions.sh` (409 lines, sha256:611cdb62cfd5)\",\n    \"`README_GROUP.txt` <- `README_GROUP.txt` (21 lines, sha256:fceaec95edda)\",\n    \"`bundle_manifest.json` <- `bundle_manifest.json` (47 lines, sha256:0759ff8a0231)\",\n    \"`decision_log.md` <- `decision_log.md` (9 lines, sha256:149f23915615)\",\n    \"`finding_coverage.json` <- `finding_coverage.json` (10 lines, sha256:f36058c0d5e4)\",\n    \"`review_required/actions/01-aws-account-696505809372-30efce6e/README_ACTION.txt` <- `review_required/actions/01-aws-account-696505809372-30efce6e/README_ACTION.txt` (12 lines, sha256:cf2c10137e6b)\",\n    \"`review_required/actions/01-aws-account-696505809372-30efce6e/decision.json` <- `review_required/actions/01-aws-account-696505809372-30efce6e/decision.json` (29 lines, sha256:83abb9532dc6)\"\n  ],\n  \"version\": 1\n}\n",
+          "path": "pr_automation/diff_summary.json"
+        },
+        {
+          "content": "# Rollback notes\n\nPrefer reverting through version control and the same reviewed deployment workflow.\n\n## GuardDuty should be enabled\n- Action ID: `30efce6e-bcd7-4583-8400-aaf9569130ef`\n- Control ID: `GuardDuty.1`\n- Target: `696505809372|eu-north-1|AWS::::Account:696505809372|GuardDuty.1`\n- Rollback command: `aws guardduty delete-detector --detector-id 696505809372|eu-north-1|AWS::::Account:696505809372|GuardDuty.1`\n",
+          "path": "pr_automation/rollback_notes.md"
+        },
+        {
+          "content": "{\n  \"artifact_type\": \"control_mapping_context\",\n  \"control_ids\": [\n    \"GuardDuty.1\"\n  ],\n  \"mapped_control_ids\": [\n    \"GuardDuty.1\"\n  ],\n  \"mappings\": [\n    {\n      \"control_id\": \"GuardDuty.1\",\n      \"control_title\": \"Ensure GuardDuty enabled\",\n      \"description\": \"GuardDuty threat detection\",\n      \"framework_control_code\": \"4.1\",\n      \"framework_name\": \"CIS AWS Foundations Benchmark\"\n    },\n    {\n      \"control_id\": \"GuardDuty.1\",\n      \"control_title\": \"System monitoring\",\n      \"description\": \"Threat detection and monitoring\",\n      \"framework_control_code\": \"CC7.2\",\n      \"framework_name\": \"SOC 2\"\n    }\n  ],\n  \"unmapped_control_ids\": [],\n  \"version\": 1\n}\n",
+          "path": "pr_automation/control_mapping_context.json"
+        },
+        {
+          "content": "{\n  \"artifact_type\": \"provider_agnostic_pr_payload\",\n  \"body_markdown\": \"## Summary\\n\\n- Repository: `example/security-autopilot-remediations`\\n- Base branch: `main`\\n- Head branch: `20260401t004147z-all-groups-pr-bundle-live-03-eu-north-1-enable-guardduty-guardduty-enable-pr-bundle`\\n- Action: `GuardDuty.1` \\u00b7 `696505809372` \\u00b7 `696505809372|eu-north-1|AWS::::Account:696505809372|GuardDuty.1`\\n\\n## Generated diff\\n\\n- Fingerprint: `804095dbea86ed9ba815172b2d2a497470443b6e24714d81c93aa8eb6457e69b`\\n- File count: `9`\\n- `run_all.sh` <- `run_all.sh` (103 lines, sha256:8632e5dd745c)\\n- `replay_group_run_reports.sh` <- `replay_group_run_reports.sh` (54 lines, sha256:722cb6d7017b)\\n- `run_actions.sh` <- `run_actions.sh` (409 lines, sha256:611cdb62cfd5)\\n- `README_GROUP.txt` <- `README_GROUP.txt` (21 lines, sha256:fceaec95edda)\\n- `bundle_manifest.json` <- `bundle_manifest.json` (47 lines, sha256:0759ff8a0231)\\n- `decision_log.md` <- `decision_log.md` (9 lines, sha256:149f23915615)\\n- `finding_coverage.json` <- `finding_coverage.json` (10 lines, sha256:f36058c0d5e4)\\n- `review_required/actions/01-aws-account-696505809372-30efce6e/README_ACTION.txt` <- `review_required/actions/01-aws-account-696505809372-30efce6e/README_ACTION.txt` (12 lines, sha256:cf2c10137e6b)\\n- `review_required/actions/01-aws-account-696505809372-30efce6e/decision.json` <- `review_required/actions/01-aws-account-696505809372-30efce6e/decision.json` (29 lines, sha256:83abb9532dc6)\\n\\n## Rollback\\n\\n- Recommended path: Prefer reverting through version control and the same reviewed deployment workflow.\\n- GuardDuty should be enabled: `aws guardduty delete-detector --detector-id 696505809372|eu-north-1|AWS::::Account:696505809372|GuardDuty.1`\\n\\n## Control mapping context\\n\\n- Control IDs: `GuardDuty.1`\\n- `GuardDuty.1` -> `CIS AWS Foundations Benchmark` `4.1`\\n- `GuardDuty.1` -> `SOC 2` `CC7.2`\",\n  \"commit_message\": \"Apply AWS Security Autopilot remediation for GuardDuty.1\",\n  \"diff_metadata\": {\n    \"artifact_type\": \"generated_diff_summary\",\n    \"file_count\": 9,\n    \"files\": [\n      {\n        \"bundle_path\": \"run_all.sh\",\n        \"byte_count\": 5139,\n        \"change_type\": \"create_or_update\",\n        \"content_sha256\": \"8632e5dd745c531f0ba4a59c5e06459a7135812b9bbe222942686e296991e79c\",\n        \"line_count\": 103,\n        \"repo_path\": \"run_all.sh\"\n      },\n      {\n        \"bundle_path\": \"replay_group_run_reports.sh\",\n        \"byte_count\": 1521,\n        \"change_type\": \"create_or_update\",\n        \"content_sha256\": \"722cb6d7017b682c0f4c44153d15e7e4a9918cfc102cf87fa92fef591f5dbd4f\",\n        \"line_count\": 54,\n        \"repo_path\": \"replay_group_run_reports.sh\"\n      },\n      {\n        \"bundle_path\": \"run_actions.sh\",\n        \"byte_count\": 11759,\n        \"change_type\": \"create_or_update\",\n        \"content_sha256\": \"611cdb62cfd5526780e3e903fa18a88693f0f6cb631dceb97ba450ada38981bb\",\n        \"line_count\": 409,\n        \"repo_path\": \"run_actions.sh\"\n      },\n      {\n        \"bundle_path\": \"README_GROUP.txt\",\n        \"byte_count\": 670,\n        \"change_type\": \"create_or_update\",\n        \"content_sha256\": \"fceaec95eddac8e11fe0b92b3e7e8fd1fe32d125d4e86f09c73ff7a4563a16f7\",\n        \"line_count\": 21,\n        \"repo_path\": \"README_GROUP.txt\"\n      },\n      {\n        \"bundle_path\": \"bundle_manifest.json\",\n        \"byte_count\": 1982,\n        \"change_type\": \"create_or_update\",\n        \"content_sha256\": \"0759ff8a0231bed47881b1124eef5563279f2deff7c5da7c4b2f3df06cbdb264\",\n        \"line_count\": 47,\n        \"repo_path\": \"bundle_manifest.json\"\n      },\n      {\n        \"bundle_path\": \"decision_log.md\",\n        \"byte_count\": 481,\n        \"change_type\": \"create_or_update\",\n        \"content_sha256\": \"149f239156155eee6dd7f517ce4d131605f19ee1beb02d69b38eaee4e314cd54\",\n        \"line_count\": 9,\n        \"repo_path\": \"decision_log.md\"\n      },\n      {\n        \"bundle_path\": \"finding_coverage.json\",\n        \"byte_count\": 223,\n        \"change_type\": \"create_or_update\",\n        \"content_sha256\": \"f36058c0d5e4d90b467152f59fc8648767fcfde7163fa2b8fdfd73f26ff5e6cf\",\n        \"line_count\": 10,\n        \"repo_path\": \"finding_coverage.json\"\n      },\n      {\n        \"bundle_path\": \"review_required/actions/01-aws-account-696505809372-30efce6e/README_ACTION.txt\",\n        \"byte_count\": 612,\n        \"change_type\": \"create_or_update\",\n        \"content_sha256\": \"cf2c10137e6b6647b67643ae2bd09b3df536236b6a5da44d3f1a8d1e5db1db11\",\n        \"line_count\": 12,\n        \"repo_path\": \"review_required/actions/01-aws-account-696505809372-30efce6e/README_ACTION.txt\"\n      },\n      {\n        \"bundle_path\": \"review_required/actions/01-aws-account-696505809372-30efce6e/decision.json\",\n        \"byte_count\": 1419,\n        \"change_type\": \"create_or_update\",\n        \"content_sha256\": \"83abb9532dc66153a26e1b46b730e202d460b88ef4633c4e72c09dc930c3af92\",\n        \"line_count\": 29,\n        \"repo_path\": \"review_required/actions/01-aws-account-696505809372-30efce6e/decision.json\"\n      }\n    ],\n    \"fingerprint_sha256\": \"804095dbea86ed9ba815172b2d2a497470443b6e24714d81c93aa8eb6457e69b\",\n    \"repo_target_configured\": true,\n    \"summary_lines\": [\n      \"`run_all.sh` <- `run_all.sh` (103 lines, sha256:8632e5dd745c)\",\n      \"`replay_group_run_reports.sh` <- `replay_group_run_reports.sh` (54 lines, sha256:722cb6d7017b)\",\n      \"`run_actions.sh` <- `run_actions.sh` (409 lines, sha256:611cdb62cfd5)\",\n      \"`README_GROUP.txt` <- `README_GROUP.txt` (21 lines, sha256:fceaec95edda)\",\n      \"`bundle_manifest.json` <- `bundle_manifest.json` (47 lines, sha256:0759ff8a0231)\",\n      \"`decision_log.md` <- `decision_log.md` (9 lines, sha256:149f23915615)\",\n      \"`finding_coverage.json` <- `finding_coverage.json` (10 lines, sha256:f36058c0d5e4)\",\n      \"`review_required/actions/01-aws-account-696505809372-30efce6e/README_ACTION.txt` <- `review_required/actions/01-aws-account-696505809372-30efce6e/README_ACTION.txt` (12 lines, sha256:cf2c10137e6b)\",\n      \"`review_required/actions/01-aws-account-696505809372-30efce6e/decision.json` <- `review_required/actions/01-aws-account-696505809372-30efce6e/decision.json` (29 lines, sha256:83abb9532dc6)\"\n    ],\n    \"version\": 1\n  },\n  \"provider_agnostic\": true,\n  \"repo_target\": {\n    \"base_branch\": \"main\",\n    \"head_branch\": \"20260401t004147z-all-groups-pr-bundle-live-03-eu-north-1-enable-guardduty-guardduty-enable-pr-bundle\",\n    \"provider\": \"github\",\n    \"repository\": \"example/security-autopilot-remediations\"\n  },\n  \"rollback_notes\": {\n    \"artifact_type\": \"rollback_notes\",\n    \"entries\": [\n      {\n        \"action_id\": \"30efce6e-bcd7-4583-8400-aaf9569130ef\",\n        \"action_type\": \"enable_guardduty\",\n        \"control_id\": \"GuardDuty.1\",\n        \"rollback_command\": \"aws guardduty delete-detector --detector-id 696505809372|eu-north-1|AWS::::Account:696505809372|GuardDuty.1\",\n        \"target_id\": \"696505809372|eu-north-1|AWS::::Account:696505809372|GuardDuty.1\",\n        \"title\": \"GuardDuty should be enabled\"\n      }\n    ],\n    \"entry_count\": 1,\n    \"recommended_path\": \"Prefer reverting through version control and the same reviewed deployment workflow.\",\n    \"version\": 1\n  },\n  \"title\": \"Apply AWS Security Autopilot remediation for GuardDuty.1\",\n  \"version\": 1\n}\n",
+          "path": "pr_automation/pr_payload.json"
+        }
+      ],
+      "format": "terraform",
+      "metadata": {
+        "automation_file_count": 4,
+        "bundle_rollback_entries": {},
+        "diff_fingerprint_sha256": "804095dbea86ed9ba815172b2d2a497470443b6e24714d81c93aa8eb6457e69b",
+        "executable_action_count": 0,
+        "execution_root": "executable/actions",
+        "generated_action_count": 1,
+        "layout_version": "grouped_bundle_mixed_tier/v1",
+        "manual_guidance_action_count": 0,
+        "repo_base_branch": "main",
+        "repo_head_branch": "20260401t004147z-all-groups-pr-bundle-live-03-eu-north-1-enable-guardduty-guardduty-enable-pr-bundle",
+        "repo_repository": "example/security-autopilot-remediations",
+        "repo_target_configured": true,
+        "represented_action_count": 1,
+        "requested_action_count": 1,
+        "review_required_action_count": 1,
+        "runnable_action_count": 0,
+        "runner_template_source": "embedded_mixed_tier",
+        "runner_template_version": "grouped_bundle_mixed_tier/v1",
+        "skipped_action_count": 0,
+        "skipped_actions": [],
+        "tier_counts": {
+          "executable": 0,
+          "manual_guidance": 0,
+          "review_required": 1
+        }
+      },
+      "steps": [
+        "Open bundle_manifest.json and decision_log.md to review grouped action outcomes.",
+        "Run from bundle root: `chmod +x ./run_all.sh && ./run_all.sh`.",
+        "Only executable/actions is runnable; review_required/actions and manual_guidance/actions are metadata only."
+      ]
+    },
+    "pr_payload": {
+      "artifact_type": "provider_agnostic_pr_payload",
+      "body_markdown": "## Summary\n\n- Repository: `example/security-autopilot-remediations`\n- Base branch: `main`\n- Head branch: `20260401t004147z-all-groups-pr-bundle-live-03-eu-north-1-enable-guardduty-guardduty-enable-pr-bundle`\n- Action: `GuardDuty.1` \u00b7 `696505809372` \u00b7 `696505809372|eu-north-1|AWS::::Account:696505809372|GuardDuty.1`\n\n## Generated diff\n\n- Fingerprint: `804095dbea86ed9ba815172b2d2a497470443b6e24714d81c93aa8eb6457e69b`\n- File count: `9`\n- `run_all.sh` <- `run_all.sh` (103 lines, sha256:8632e5dd745c)\n- `replay_group_run_reports.sh` <- `replay_group_run_reports.sh` (54 lines, sha256:722cb6d7017b)\n- `run_actions.sh` <- `run_actions.sh` (409 lines, sha256:611cdb62cfd5)\n- `README_GROUP.txt` <- `README_GROUP.txt` (21 lines, sha256:fceaec95edda)\n- `bundle_manifest.json` <- `bundle_manifest.json` (47 lines, sha256:0759ff8a0231)\n- `decision_log.md` <- `decision_log.md` (9 lines, sha256:149f23915615)\n- `finding_coverage.json` <- `finding_coverage.json` (10 lines, sha256:f36058c0d5e4)\n- `review_required/actions/01-aws-account-696505809372-30efce6e/README_ACTION.txt` <- `review_required/actions/01-aws-account-696505809372-30efce6e/README_ACTION.txt` (12 lines, sha256:cf2c10137e6b)\n- `review_required/actions/01-aws-account-696505809372-30efce6e/decision.json` <- `review_required/actions/01-aws-account-696505809372-30efce6e/decision.json` (29 lines, sha256:83abb9532dc6)\n\n## Rollback\n\n- Recommended path: Prefer reverting through version control and the same reviewed deployment workflow.\n- GuardDuty should be enabled: `aws guardduty delete-detector --detector-id 696505809372|eu-north-1|AWS::::Account:696505809372|GuardDuty.1`\n\n## Control mapping context\n\n- Control IDs: `GuardDuty.1`\n- `GuardDuty.1` -> `CIS AWS Foundations Benchmark` `4.1`\n- `GuardDuty.1` -> `SOC 2` `CC7.2`",
+      "commit_message": "Apply AWS Security Autopilot remediation for GuardDuty.1",
+      "diff_metadata": {
+        "artifact_type": "generated_diff_summary",
+        "file_count": 9,
+        "files": [
+          {
+            "bundle_path": "run_all.sh",
+            "byte_count": 5139,
+            "change_type": "create_or_update",
+            "content_sha256": "8632e5dd745c531f0ba4a59c5e06459a7135812b9bbe222942686e296991e79c",
+            "line_count": 103,
+            "repo_path": "run_all.sh"
+          },
+          {
+            "bundle_path": "replay_group_run_reports.sh",
+            "byte_count": 1521,
+            "change_type": "create_or_update",
+            "content_sha256": "722cb6d7017b682c0f4c44153d15e7e4a9918cfc102cf87fa92fef591f5dbd4f",
+            "line_count": 54,
+            "repo_path": "replay_group_run_reports.sh"
+          },
+          {
+            "bundle_path": "run_actions.sh",
+            "byte_count": 11759,
+            "change_type": "create_or_update",
+            "content_sha256": "611cdb62cfd5526780e3e903fa18a88693f0f6cb631dceb97ba450ada38981bb",
+            "line_count": 409,
+            "repo_path": "run_actions.sh"
+          },
+          {
+            "bundle_path": "README_GROUP.txt",
+            "byte_count": 670,
+            "change_type": "create_or_update",
+            "content_sha256": "fceaec95eddac8e11fe0b92b3e7e8fd1fe32d125d4e86f09c73ff7a4563a16f7",
+            "line_count": 21,
+            "repo_path": "README_GROUP.txt"
+          },
+          {
+            "bundle_path": "bundle_manifest.json",
+            "byte_count": 1982,
+            "change_type": "create_or_update",
+            "content_sha256": "0759ff8a0231bed47881b1124eef5563279f2deff7c5da7c4b2f3df06cbdb264",
+            "line_count": 47,
+            "repo_path": "bundle_manifest.json"
+          },
+          {
+            "bundle_path": "decision_log.md",
+            "byte_count": 481,
+            "change_type": "create_or_update",
+            "content_sha256": "149f239156155eee6dd7f517ce4d131605f19ee1beb02d69b38eaee4e314cd54",
+            "line_count": 9,
+            "repo_path": "decision_log.md"
+          },
+          {
+            "bundle_path": "finding_coverage.json",
+            "byte_count": 223,
+            "change_type": "create_or_update",
+            "content_sha256": "f36058c0d5e4d90b467152f59fc8648767fcfde7163fa2b8fdfd73f26ff5e6cf",
+            "line_count": 10,
+            "repo_path": "finding_coverage.json"
+          },
+          {
+            "bundle_path": "review_required/actions/01-aws-account-696505809372-30efce6e/README_ACTION.txt",
+            "byte_count": 612,
+            "change_type": "create_or_update",
+            "content_sha256": "cf2c10137e6b6647b67643ae2bd09b3df536236b6a5da44d3f1a8d1e5db1db11",
+            "line_count": 12,
+            "repo_path": "review_required/actions/01-aws-account-696505809372-30efce6e/README_ACTION.txt"
+          },
+          {
+            "bundle_path": "review_required/actions/01-aws-account-696505809372-30efce6e/decision.json",
+            "byte_count": 1419,
+            "change_type": "create_or_update",
+            "content_sha256": "83abb9532dc66153a26e1b46b730e202d460b88ef4633c4e72c09dc930c3af92",
+            "line_count": 29,
+            "repo_path": "review_required/actions/01-aws-account-696505809372-30efce6e/decision.json"
+          }
+        ],
+        "fingerprint_sha256": "804095dbea86ed9ba815172b2d2a497470443b6e24714d81c93aa8eb6457e69b",
+        "repo_target_configured": true,
+        "summary_lines": [
+          "`run_all.sh` <- `run_all.sh` (103 lines, sha256:8632e5dd745c)",
+          "`replay_group_run_reports.sh` <- `replay_group_run_reports.sh` (54 lines, sha256:722cb6d7017b)",
+          "`run_actions.sh` <- `run_actions.sh` (409 lines, sha256:611cdb62cfd5)",
+          "`README_GROUP.txt` <- `README_GROUP.txt` (21 lines, sha256:fceaec95edda)",
+          "`bundle_manifest.json` <- `bundle_manifest.json` (47 lines, sha256:0759ff8a0231)",
+          "`decision_log.md` <- `decision_log.md` (9 lines, sha256:149f23915615)",
+          "`finding_coverage.json` <- `finding_coverage.json` (10 lines, sha256:f36058c0d5e4)",
+          "`review_required/actions/01-aws-account-696505809372-30efce6e/README_ACTION.txt` <- `review_required/actions/01-aws-account-696505809372-30efce6e/README_ACTION.txt` (12 lines, sha256:cf2c10137e6b)",
+          "`review_required/actions/01-aws-account-696505809372-30efce6e/decision.json` <- `review_required/actions/01-aws-account-696505809372-30efce6e/decision.json` (29 lines, sha256:83abb9532dc6)"
+        ],
+        "version": 1
+      },
+      "provider_agnostic": true,
+      "repo_target": {
+        "base_branch": "main",
+        "head_branch": "20260401t004147z-all-groups-pr-bundle-live-03-eu-north-1-enable-guardduty-guardduty-enable-pr-bundle",
+        "provider": "github",
+        "repository": "example/security-autopilot-remediations"
+      },
+      "rollback_notes": {
+        "artifact_type": "rollback_notes",
+        "entries": [
+          {
+            "action_id": "30efce6e-bcd7-4583-8400-aaf9569130ef",
+            "action_type": "enable_guardduty",
+            "control_id": "GuardDuty.1",
+            "rollback_command": "aws guardduty delete-detector --detector-id 696505809372|eu-north-1|AWS::::Account:696505809372|GuardDuty.1",
+            "target_id": "696505809372|eu-north-1|AWS::::Account:696505809372|GuardDuty.1",
+            "title": "GuardDuty should be enabled"
+          }
+        ],
+        "entry_count": 1,
+        "recommended_path": "Prefer reverting through version control and the same reviewed deployment workflow.",
+        "version": 1
+      },
+      "title": "Apply AWS Security Autopilot remediation for GuardDuty.1",
+      "version": 1
+    },
+    "repo_target": {
+      "base_branch": "main",
+      "head_branch": "20260401t004147z-all-groups-pr-bundle-live-03-eu-north-1-enable-guardduty-guardduty-enable-pr-bundle",
+      "provider": "github",
+      "repository": "example/security-autopilot-remediations"
+    },
+    "risk_acknowledged": true,
+    "rollback_notes": {
+      "artifact_type": "rollback_notes",
+      "entries": [
+        {
+          "action_id": "30efce6e-bcd7-4583-8400-aaf9569130ef",
+          "action_type": "enable_guardduty",
+          "control_id": "GuardDuty.1",
+          "rollback_command": "aws guardduty delete-detector --detector-id 696505809372|eu-north-1|AWS::::Account:696505809372|GuardDuty.1",
+          "target_id": "696505809372|eu-north-1|AWS::::Account:696505809372|GuardDuty.1",
+          "title": "GuardDuty should be enabled"
+        }
+      ],
+      "entry_count": 1,
+      "recommended_path": "Prefer reverting through version control and the same reviewed deployment workflow.",
+      "version": 1
+    },
+    "selected_strategy": "guardduty_enable_pr_bundle"
+  },
+  "completed_at": "2026-04-01T00:42:12.220508+00:00",
+  "created_at": "2026-04-01T00:42:09.186708+00:00",
+  "id": "79c80b66-ca47-4215-85d1-f9f9a329b66b",
+  "logs": "Run started at 2026-04-01T00:42:11.748886+00:00.\nGroup PR bundle generated (actions=1, strategy=guardduty_enable_pr_bundle).\nProvider-agnostic PR payload attached for example/security-autopilot-remediations.\nRun completed at 2026-04-01T00:42:12.220508+00:00.",
+  "mode": "pr_only",
+  "outcome": "Group PR bundle generated (1 actions)",
+  "resolution": null,
+  "started_at": "2026-04-01T00:42:11.748886+00:00",
+  "status": "success",
+  "updated_at": "2026-04-01T00:42:11.614361+00:00"
+}

@@ -1,0 +1,27 @@
+{
+  "artifact_type": "control_mapping_context",
+  "control_ids": [
+    "GuardDuty.1"
+  ],
+  "mapped_control_ids": [
+    "GuardDuty.1"
+  ],
+  "mappings": [
+    {
+      "control_id": "GuardDuty.1",
+      "control_title": "Ensure GuardDuty enabled",
+      "description": "GuardDuty threat detection",
+      "framework_control_code": "4.1",
+      "framework_name": "CIS AWS Foundations Benchmark"
+    },
+    {
+      "control_id": "GuardDuty.1",
+      "control_title": "System monitoring",
+      "description": "Threat detection and monitoring",
+      "framework_control_code": "CC7.2",
+      "framework_name": "SOC 2"
+    }
+  ],
+  "unmapped_control_ids": [],
+  "version": 1
+}

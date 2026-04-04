@@ -1,0 +1,12 @@
+[
+  {
+    "bucket_creation_acknowledged": false,
+    "risk_acknowledged": true,
+    "strategy_id": "ebs_enable_default_encryption_aws_managed_kms_pr_bundle"
+  },
+  {
+    "bucket_creation_acknowledged": false,
+    "risk_acknowledged": true,
+    "strategy_id": "ebs_enable_default_encryption_customer_kms_pr_bundle"
+  }
+]

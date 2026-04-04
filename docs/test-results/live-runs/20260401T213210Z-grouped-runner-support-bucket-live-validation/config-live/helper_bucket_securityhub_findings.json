@@ -1,0 +1,190 @@
+{
+    "Findings": [
+        {
+            "SchemaVersion": "2018-10-08",
+            "Id": "arn:aws:securityhub:eu-north-1:696505809372:security-control/S3.15/finding/3a5ff1cd-3cff-4273-a3f5-73918f200ea1",
+            "ProductArn": "arn:aws:securityhub:eu-north-1::product/aws/securityhub",
+            "ProductName": "Security Hub",
+            "CompanyName": "AWS",
+            "Region": "eu-north-1",
+            "GeneratorId": "security-control/S3.15",
+            "AwsAccountId": "696505809372",
+            "Types": [
+                "Software and Configuration Checks/Industry and Regulatory Standards"
+            ],
+            "FirstObservedAt": "2026-03-24T03:48:24.262Z",
+            "LastObservedAt": "2026-04-01T22:14:36.167Z",
+            "CreatedAt": "2026-03-24T03:48:33.550Z",
+            "UpdatedAt": "2026-04-01T22:14:54.943Z",
+            "Severity": {
+                "Label": "MEDIUM",
+                "Normalized": 40,
+                "Original": "MEDIUM"
+            },
+            "Title": "S3 general purpose buckets should have Object Lock enabled",
+            "Description": "This control checks whether an Amazon S3 general purpose bucket has Object Lock enabled. The control fails if Object Lock isn’t enabled for the bucket. If you provide a custom value for the 'mode' parameter, the control passes only if S3 Object Lock uses the specified retention mode.",
+            "Remediation": {
+                "Recommendation": {
+                    "Text": "For information on how to correct this issue, consult the AWS Security Hub controls documentation.",
+                    "Url": "https://docs.aws.amazon.com/console/securityhub/S3.15/remediation"
+                }
+            },
+            "ProductFields": {
+                "RelatedAWSResources:0/name": "securityhub-s3-bucket-default-lock-enabled-6127f952",
+                "RelatedAWSResources:0/type": "AWS::Config::ConfigRule",
+                "aws/securityhub/ProductName": "Security Hub",
+                "aws/securityhub/CompanyName": "AWS",
+                "aws/securityhub/annotation": "S3 default lock is not enabled",
+                "Resources:0/Id": "arn:aws:s3:::security-autopilot-config-696505809372-eu-north-1",
+                "aws/securityhub/FindingId": "arn:aws:securityhub:eu-north-1::product/aws/securityhub/arn:aws:securityhub:eu-north-1:696505809372:security-control/S3.15/finding/3a5ff1cd-3cff-4273-a3f5-73918f200ea1",
+                "PreviousComplianceStatus": "FAILED"
+            },
+            "Resources": [
+                {
+                    "Type": "AwsS3Bucket",
+                    "Id": "arn:aws:s3:::security-autopilot-config-696505809372-eu-north-1",
+                    "Partition": "aws",
+                    "Region": "eu-north-1",
+                    "Tags": {
+                        "security-autopilot:managed-support-bucket": "true",
+                        "security-autopilot:support-bucket-role": "aws-config-delivery"
+                    },
+                    "Details": {
+                        "AwsS3Bucket": {
+                            "OwnerId": "2d735bbb71d4146170966dc3fa559ad48e4a2ce47d9aadccfc95d721c99c4bdc",
+                            "CreatedAt": "2026-04-01T22:12:58.000Z",
+                            "Name": "security-autopilot-config-696505809372-eu-north-1"
+                        }
+                    }
+                }
+            ],
+            "Compliance": {
+                "Status": "FAILED",
+                "RelatedRequirements": [
+                    "NIST.800-53.r5 CP-6(2)"
+                ],
+                "SecurityControlId": "S3.15",
+                "AssociatedStandards": [
+                    {
+                        "StandardsId": "standards/nist-800-53/v/5.0.0"
+                    }
+                ],
+                "SecurityControlParameters": [
+                    {
+                        "Name": "mode",
+                        "Value": []
+                    }
+                ]
+            },
+            "WorkflowState": "NEW",
+            "Workflow": {
+                "Status": "NEW"
+            },
+            "RecordState": "ACTIVE",
+            "FindingProviderFields": {
+                "Severity": {
+                    "Label": "MEDIUM",
+                    "Original": "MEDIUM"
+                },
+                "Types": [
+                    "Software and Configuration Checks/Industry and Regulatory Standards"
+                ]
+            },
+            "ProcessedAt": "2026-04-01T22:15:18.682Z"
+        },
+        {
+            "SchemaVersion": "2018-10-08",
+            "Id": "arn:aws:securityhub:eu-north-1:696505809372:security-control/S3.11/finding/61410a75-e7e9-4122-8bf0-633d8497f282",
+            "ProductArn": "arn:aws:securityhub:eu-north-1::product/aws/securityhub",
+            "ProductName": "Security Hub",
+            "CompanyName": "AWS",
+            "Region": "eu-north-1",
+            "GeneratorId": "security-control/S3.11",
+            "AwsAccountId": "696505809372",
+            "Types": [
+                "Software and Configuration Checks/Industry and Regulatory Standards"
+            ],
+            "FirstObservedAt": "2026-03-24T03:48:24.513Z",
+            "LastObservedAt": "2026-04-01T22:14:36.390Z",
+            "CreatedAt": "2026-03-24T03:48:40.775Z",
+            "UpdatedAt": "2026-04-01T22:14:49.941Z",
+            "Severity": {
+                "Label": "MEDIUM",
+                "Normalized": 40,
+                "Original": "MEDIUM"
+            },
+            "Title": "S3 general purpose buckets should have event notifications enabled",
+            "Description": "This control checks whether S3 Event Notifications are enabled on an Amazon S3 general purpose bucket. The control fails if S3 Event Notifications are not enabled on a bucket. If you provide custom values for the 'eventTypes' parameter, the control passes only if event notifications are enabled for the specified types of events.",
+            "Remediation": {
+                "Recommendation": {
+                    "Text": "For information on how to correct this issue, consult the AWS Security Hub controls documentation.",
+                    "Url": "https://docs.aws.amazon.com/console/securityhub/S3.11/remediation"
+                }
+            },
+            "ProductFields": {
+                "RelatedAWSResources:0/name": "securityhub-s3-event-notifications-enabled-265072cb",
+                "RelatedAWSResources:0/type": "AWS::Config::ConfigRule",
+                "aws/securityhub/ProductName": "Security Hub",
+                "aws/securityhub/CompanyName": "AWS",
+                "Resources:0/Id": "arn:aws:s3:::security-autopilot-config-696505809372-eu-north-1",
+                "aws/securityhub/FindingId": "arn:aws:securityhub:eu-north-1::product/aws/securityhub/arn:aws:securityhub:eu-north-1:696505809372:security-control/S3.11/finding/61410a75-e7e9-4122-8bf0-633d8497f282",
+                "PreviousComplianceStatus": "FAILED"
+            },
+            "Resources": [
+                {
+                    "Type": "AwsS3Bucket",
+                    "Id": "arn:aws:s3:::security-autopilot-config-696505809372-eu-north-1",
+                    "Partition": "aws",
+                    "Region": "eu-north-1",
+                    "Tags": {
+                        "security-autopilot:managed-support-bucket": "true",
+                        "security-autopilot:support-bucket-role": "aws-config-delivery"
+                    },
+                    "Details": {
+                        "AwsS3Bucket": {
+                            "OwnerId": "2d735bbb71d4146170966dc3fa559ad48e4a2ce47d9aadccfc95d721c99c4bdc",
+                            "CreatedAt": "2026-04-01T22:12:58.000Z",
+                            "Name": "security-autopilot-config-696505809372-eu-north-1"
+                        }
+                    }
+                }
+            ],
+            "Compliance": {
+                "Status": "FAILED",
+                "RelatedRequirements": [
+                    "NIST.800-53.r5 CA-7",
+                    "NIST.800-53.r5 SI-3(8)",
+                    "NIST.800-53.r5 SI-4",
+                    "NIST.800-53.r5 SI-4(4)"
+                ],
+                "SecurityControlId": "S3.11",
+                "AssociatedStandards": [
+                    {
+                        "StandardsId": "standards/nist-800-53/v/5.0.0"
+                    }
+                ],
+                "SecurityControlParameters": [
+                    {
+                        "Name": "eventTypes",
+                        "Value": []
+                    }
+                ]
+            },
+            "WorkflowState": "NEW",
+            "Workflow": {
+                "Status": "NEW"
+            },
+            "RecordState": "ACTIVE",
+            "FindingProviderFields": {
+                "Severity": {
+                    "Label": "MEDIUM",
+                    "Original": "MEDIUM"
+                },
+                "Types": [
+                    "Software and Configuration Checks/Industry and Regulatory Standards"
+                ]
+            },
+            "ProcessedAt": "2026-04-01T22:15:07.465Z"
+        }
+    ]
+}

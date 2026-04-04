@@ -1,0 +1,129 @@
+{
+  "action_id": "4c8c904a-1683-4b29-ab97-3b6eb1b50260",
+  "action_type": "s3_bucket_access_logging",
+  "manual_high_risk": false,
+  "mode_options": [
+    "pr_only"
+  ],
+  "pre_execution_notice": null,
+  "recommendation": {
+    "advisory": true,
+    "default_mode": "pr_only",
+    "enforced_by_policy": null,
+    "evidence": {
+      "context_incomplete": false,
+      "data_sensitivity": 0.65,
+      "exploit_signals": 0.0,
+      "internet_exposure": 0.0,
+      "matched_signals": [
+        "keyword:log"
+      ],
+      "privilege_level": 0.0,
+      "score": 28
+    },
+    "matrix_position": {
+      "business_criticality": "medium",
+      "cell": "risk_low__criticality_medium",
+      "risk_tier": "low"
+    },
+    "mode": "pr_only",
+    "rationale": "Matrix cell risk_low__criticality_medium maps to default recommendation 'pr_only'. Risk is low and business criticality is medium. Criticality evidence: data_sensitivity=0.65, privilege_level=0.00, internet_exposure=0.00, matched_signals=keyword:log. Relationship context is complete enough for advisory matrix placement. Current execution surfaces stay PR-only, so this recommendation remains advisory until the reviewed bundle is applied."
+  },
+  "runbook_url": null,
+  "strategies": [
+    {
+      "blast_radius": "resource",
+      "blocked_reasons": [
+        "An error occurred (AccessDenied) when calling the AssumeRole operation: Access denied. Check role ARN and trust policy.",
+        "Downgrade to review_required_bundle when the destination log bucket fails public-access-block, encryption, SSL-only policy, or lifecycle verification."
+      ],
+      "context": {
+        "default_inputs": {
+          "log_bucket_name": "security-autopilot-config-696505809372-eu-north-1-access-logs"
+        }
+      },
+      "decision_rationale": "Family resolver downgraded S3.9 to destination-safety review. An error occurred (AccessDenied) when calling the AssumeRole operation: Access denied. Check role ARN and trust policy. Blocking checks: Downgrade to review_required_bundle when the destination log bucket fails public-access-block, encryption, SSL-only policy, or lifecycle verification..",
+      "dependency_checks": [
+        {
+          "code": "s3_access_logging_bucket_scope_confirmed",
+          "message": "Bucket-scoped target was identified for S3 access logging. This action can stay executable once destination safety is proven.",
+          "status": "pass"
+        },
+        {
+          "code": "s3_access_logging_destination_safety_unproven",
+          "message": "An error occurred (AccessDenied) when calling the AssumeRole operation: Access denied. Check role ARN and trust policy.",
+          "status": "fail"
+        },
+        {
+          "code": "adjacency_safety_unproven",
+          "message": "Downgrade to review_required_bundle when the destination log bucket fails public-access-block, encryption, SSL-only policy, or lifecycle verification.",
+          "status": "fail"
+        }
+      ],
+      "estimated_resolution_time": "12-24 hours",
+      "exception_only": false,
+      "impact_text": "S3 server access logs will be enabled and delivered to a dedicated destination bucket.",
+      "input_schema": {
+        "fields": [
+          {
+            "description": "Name of the S3 bucket that receives access logs (must be different from the source bucket).",
+            "group": "Logging Settings",
+            "impact_text": "S3 server access logs will be delivered to the selected dedicated log bucket.",
+            "key": "log_bucket_name",
+            "placeholder": "security-autopilot-access-logs-123456789012",
+            "required": true,
+            "safe_default_label": "Auto-generate a dedicated access-log bucket from the source bucket name",
+            "safe_default_value": "{{source_bucket}}-access-logs",
+            "type": "string"
+          }
+        ]
+      },
+      "label": "Enable S3 access logging (guided)",
+      "missing_defaults": [],
+      "mode": "pr_only",
+      "preservation_summary": {
+        "ambiguous_source_destination_relationship": true,
+        "destination_bucket_name": "security-autopilot-config-696505809372-eu-north-1-access-logs",
+        "destination_bucket_reachable": false,
+        "destination_safety_proven": false,
+        "executable_destination_allowed": false,
+        "family": "s3_bucket_access_logging",
+        "family_strategy": "s3_enable_access_logging_guided",
+        "selected_branch": "s3_enable_access_logging_review_destination_safety",
+        "single_profile_compatible": false,
+        "source_bucket_name": "security-autopilot-config-696505809372-eu-north-1",
+        "source_bucket_scope_proven": true,
+        "strategy_only_supported": true
+      },
+      "profiles": [
+        {
+          "exception_only": false,
+          "profile_id": "s3_enable_access_logging_guided",
+          "recommended": false,
+          "requires_inputs": true,
+          "support_tier": "review_required_bundle",
+          "supports_exception_flow": false
+        },
+        {
+          "exception_only": false,
+          "profile_id": "s3_enable_access_logging_review_destination_safety",
+          "recommended": true,
+          "requires_inputs": true,
+          "support_tier": "review_required_bundle",
+          "supports_exception_flow": false
+        }
+      ],
+      "recommended": true,
+      "recommended_profile_id": "s3_enable_access_logging_review_destination_safety",
+      "requires_inputs": true,
+      "risk_level": "low",
+      "rollback_command": "aws s3api put-bucket-logging --bucket <SOURCE_BUCKET> --bucket-logging-status '{}'",
+      "strategy_id": "s3_enable_access_logging_guided",
+      "supports_exception_flow": false,
+      "supports_immediate_reeval": true,
+      "warnings": [
+        "Do not use the source bucket as the logging destination."
+      ]
+    }
+  ]
+}

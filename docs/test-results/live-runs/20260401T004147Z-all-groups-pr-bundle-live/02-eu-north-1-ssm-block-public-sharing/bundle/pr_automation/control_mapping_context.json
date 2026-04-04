@@ -1,0 +1,12 @@
+{
+  "artifact_type": "control_mapping_context",
+  "control_ids": [
+    "SSM.7"
+  ],
+  "mapped_control_ids": [],
+  "mappings": [],
+  "unmapped_control_ids": [
+    "SSM.7"
+  ],
+  "version": 1
+}

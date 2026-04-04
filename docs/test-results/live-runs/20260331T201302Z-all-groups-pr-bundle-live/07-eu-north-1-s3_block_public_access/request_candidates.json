@@ -1,0 +1,7 @@
+[
+  {
+    "bucket_creation_acknowledged": false,
+    "risk_acknowledged": true,
+    "strategy_id": "s3_account_block_public_access_pr_bundle"
+  }
+]

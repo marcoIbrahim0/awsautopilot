@@ -1,0 +1,28 @@
+{
+  "account_id": "696505809372",
+  "action_type": "ebs_default_encryption",
+  "apply_status": "failed",
+  "folder": "11-eu-north-1-ebs-default-encryption",
+  "generation_status": "success",
+  "group_id": "3ff809df-3a5b-4012-b60d-5ffa124b0035",
+  "group_run_id": "95b83a1b-5843-47c1-8d5d-7280cce436dd",
+  "manual_guidance_action_count": 0,
+  "non_runnable_reasons": [],
+  "region": "eu-north-1",
+  "remediation_run_id": "f1ec8c94-63ec-4539-8c2e-3e67dd1101ed",
+  "review_required_action_count": 0,
+  "runnable_action_count": 1,
+  "selected_request": {
+    "bucket_creation_acknowledged": false,
+    "repo_target": {
+      "base_branch": "main",
+      "head_branch": "20260401t004147z-all-groups-pr-bundle-live-11-eu-north-1-ebs-default-encryption-ebs-enable-default-encryption-aws-manage",
+      "provider": "github",
+      "repository": "example/security-autopilot-remediations"
+    },
+    "risk_acknowledged": true,
+    "strategy_id": "ebs_enable_default_encryption_aws_managed_kms_pr_bundle",
+    "strategy_inputs": {}
+  },
+  "summary_status": "APPLY NOT SUCCESSFUL"
+}

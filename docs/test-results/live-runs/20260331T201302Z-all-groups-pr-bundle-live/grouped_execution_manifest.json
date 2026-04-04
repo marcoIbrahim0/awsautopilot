@@ -1,0 +1,106 @@
+[
+  {
+    "folder": "01-eu-north-1-aws_config_enabled",
+    "action_type": "aws_config_enabled",
+    "group_id": "02575097-6342-4ee5-a9e2-737eebcfcc29",
+    "region": "eu-north-1",
+    "remediation_run_id": "f799b6d4-b6b9-452f-85cd-e2a54fb265a0",
+    "group_run_id": null
+  },
+  {
+    "folder": "02-eu-north-1-cloudtrail_enabled",
+    "action_type": "cloudtrail_enabled",
+    "group_id": "2efa04dd-8768-4668-a8a7-666ac895ba6b",
+    "region": "eu-north-1",
+    "remediation_run_id": "b971e542-e5c2-474b-91da-71141a467ffa",
+    "group_run_id": "78cb0346-f171-4e9e-a9eb-c2f107bd0f70"
+  },
+  {
+    "folder": "03-eu-north-1-ebs_default_encryption",
+    "action_type": "ebs_default_encryption",
+    "group_id": "3ff809df-3a5b-4012-b60d-5ffa124b0035",
+    "region": "eu-north-1",
+    "remediation_run_id": "25a33c5c-5f4e-402c-936f-59a64963ec8d",
+    "group_run_id": null
+  },
+  {
+    "folder": "04-eu-north-1-ebs_snapshot_block_public_access",
+    "action_type": "ebs_snapshot_block_public_access",
+    "group_id": "957c3871-cad3-4530-aa29-386f6bda5cc6",
+    "region": "eu-north-1",
+    "remediation_run_id": "80604a9c-8db6-43fa-bf8f-6ef99762c611",
+    "group_run_id": null
+  },
+  {
+    "folder": "05-eu-north-1-enable_guardduty",
+    "action_type": "enable_guardduty",
+    "group_id": "c84d5c12-593d-4ab3-b790-ce56e5484f92",
+    "region": "eu-north-1",
+    "remediation_run_id": "980bfde1-cf8f-4f64-917e-1f0ed3a1b900",
+    "group_run_id": null
+  },
+  {
+    "folder": "07-eu-north-1-s3_block_public_access",
+    "action_type": "s3_block_public_access",
+    "group_id": "8b81c1a8-a2c7-4250-aaf2-d5ae62f08dda",
+    "region": "eu-north-1",
+    "remediation_run_id": "a15b76d4-c577-42fe-8d93-561266140f00",
+    "group_run_id": null
+  },
+  {
+    "folder": "08-eu-north-1-s3_bucket_access_logging",
+    "action_type": "s3_bucket_access_logging",
+    "group_id": "984e6f5e-d1e6-44aa-90e6-1a3ddc152a2c",
+    "region": "eu-north-1",
+    "remediation_run_id": "716aad69-72aa-455c-8d95-bd1701198a25",
+    "group_run_id": null
+  },
+  {
+    "folder": "09-eu-north-1-s3_bucket_block_public_access",
+    "action_type": "s3_bucket_block_public_access",
+    "group_id": "2990907c-b6bb-4821-9825-a523cb380bf5",
+    "region": "eu-north-1",
+    "remediation_run_id": "ff6c285d-2584-4d1b-903d-618d2fcf3567",
+    "group_run_id": null
+  },
+  {
+    "folder": "10-eu-north-1-s3_bucket_encryption_kms",
+    "action_type": "s3_bucket_encryption_kms",
+    "group_id": "97e52204-f7f6-40c1-b2ac-acb99308e241",
+    "region": "eu-north-1",
+    "remediation_run_id": "c5673554-bdfc-4f6e-8ce4-6a6d3e05c01d",
+    "group_run_id": null
+  },
+  {
+    "folder": "11-eu-north-1-s3_bucket_lifecycle_configuration",
+    "action_type": "s3_bucket_lifecycle_configuration",
+    "group_id": "9a904e6a-3ab8-4eca-be92-b727b0aacf67",
+    "region": "eu-north-1",
+    "remediation_run_id": "a9bce1f0-80b9-486f-affe-17e449aa030b",
+    "group_run_id": null
+  },
+  {
+    "folder": "12-eu-north-1-s3_bucket_require_ssl",
+    "action_type": "s3_bucket_require_ssl",
+    "group_id": "3cf29e81-7d1b-414a-ab78-d2e1c3abad27",
+    "region": "eu-north-1",
+    "remediation_run_id": "137a42b9-c2d5-4099-9272-0608be02c682",
+    "group_run_id": null
+  },
+  {
+    "folder": "13-eu-north-1-sg_restrict_public_ports",
+    "action_type": "sg_restrict_public_ports",
+    "group_id": "595cb7e3-5f4f-49a4-9c48-9388f139f012",
+    "region": "eu-north-1",
+    "remediation_run_id": "90f51295-d36b-46ff-9b57-44c7fdd18250",
+    "group_run_id": null
+  },
+  {
+    "folder": "14-eu-north-1-ssm_block_public_sharing",
+    "action_type": "ssm_block_public_sharing",
+    "group_id": "ed48e583-8b8e-43b4-ad5e-3641b8276909",
+    "region": "eu-north-1",
+    "remediation_run_id": "c2b3ea9d-e215-4446-ab84-d0d2090dcfb4",
+    "group_run_id": null
+  }
+]

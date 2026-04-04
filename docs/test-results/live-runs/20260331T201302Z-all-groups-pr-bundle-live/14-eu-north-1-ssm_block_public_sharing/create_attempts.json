@@ -1,0 +1,21 @@
+[
+  {
+    "payload": {
+      "detail": {
+        "detail": "A PR bundle was already created successfully for this exact group. No changes were made since the previous bundle generation.",
+        "error": "PR bundle already created",
+        "existing_group_run_id": "a4545473-5116-4795-b29b-c840c06fde3f",
+        "existing_run_id": "c2b3ea9d-e215-4446-ab84-d0d2090dcfb4",
+        "existing_run_status": "success",
+        "reason": "grouped_bundle_already_created_no_changes"
+      }
+    },
+    "reason": "grouped_bundle_already_created_no_changes",
+    "request_body": {
+      "bucket_creation_acknowledged": false,
+      "risk_acknowledged": true,
+      "strategy_id": "ssm_disable_public_document_sharing"
+    },
+    "status_code": 409
+  }
+]

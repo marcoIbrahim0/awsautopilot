@@ -1,0 +1,7 @@
+{
+  "bucket_name": "security-autopilot-w6-envready-s315-exec-696505809372",
+  "expected_bucket_regional_domain_name": "security-autopilot-w6-envready-s315-exec-696505809372.s3.eu-north-1.amazonaws.com",
+  "expected_distribution_comment": "Security Autopilot migration for security-autopilot-w6-envready-s315-exec-696505809372",
+  "expected_oac_name": "security-autopilot-oac-63ed8be36c04",
+  "expected_origin_id": "s3-security-autopilot-w6-envready-s315-exec-696505809372"
+}

@@ -1,0 +1,308 @@
+{
+  "action_id": "53b7b063-8531-4829-9b23-f03b1796b23d",
+  "action_type": "s3_bucket_require_ssl",
+  "manual_high_risk": false,
+  "mode_options": [
+    "pr_only"
+  ],
+  "pre_execution_notice": null,
+  "recommendation": {
+    "advisory": true,
+    "default_mode": "pr_only",
+    "enforced_by_policy": null,
+    "evidence": {
+      "context_incomplete": true,
+      "data_sensitivity": 0.8,
+      "exploit_signals": 0.0,
+      "internet_exposure": 0.6,
+      "matched_signals": [],
+      "privilege_level": 0.6,
+      "score": 51
+    },
+    "matrix_position": {
+      "business_criticality": "high",
+      "cell": "risk_medium__criticality_high",
+      "risk_tier": "medium"
+    },
+    "mode": "pr_only",
+    "rationale": "Matrix cell risk_medium__criticality_high maps to default recommendation 'pr_only'. Risk is medium and business criticality is high. Criticality evidence: data_sensitivity=0.80, privilege_level=0.60, internet_exposure=0.60, matched_signals=none. Relationship context is incomplete, so the recommendation remains conservative and advisory unless policy overrides it. Current execution surfaces stay PR-only, so this recommendation remains advisory until the reviewed bundle is applied."
+  },
+  "runbook_url": null,
+  "strategies": [
+    {
+      "blast_radius": "resource",
+      "blocked_reasons": [
+        "Current bucket policy is public and S3 Block Public Access prevents public policies, so merge-preserving SSL enforcement would be rejected by PutBucketPolicy."
+      ],
+      "context": {
+        "default_inputs": {
+          "preserve_existing_policy": true
+        }
+      },
+      "decision_rationale": "Family resolver downgraded S3.5 strategy 's3_enforce_ssl_strict_deny' because preserving the current public bucket policy would conflict with S3 Block Public Access. Current bucket policy is public and S3 Block Public Access prevents public policies, so merge-preserving SSL enforcement would be rejected by PutBucketPolicy.",
+      "dependency_checks": [
+        {
+          "code": "s3_non_tls_client_breakage",
+          "message": "Non-TLS clients and legacy integrations will fail after strict SSL policy enforcement.",
+          "status": "warn"
+        },
+        {
+          "code": "s3_policy_merge_risk",
+          "message": "Strict SSL enforcement can conflict with existing bucket policy statements.",
+          "status": "warn"
+        }
+      ],
+      "estimated_resolution_time": "12-24 hours",
+      "exception_only": false,
+      "impact_text": "After applying, all HTTP (non-HTTPS) requests to this bucket will receive a 403 Forbidden response.",
+      "input_schema": {
+        "fields": [
+          {
+            "default_value": true,
+            "description": "Merge with existing bucket policy statements instead of replacing.",
+            "group": "Policy Settings",
+            "impact_text": "After applying, non-HTTPS requests to this bucket will be denied (HTTP requests receive 403).",
+            "key": "preserve_existing_policy",
+            "required": false,
+            "type": "boolean"
+          }
+        ]
+      },
+      "label": "Enforce SSL-only S3 requests (strict deny)",
+      "missing_defaults": [],
+      "mode": "pr_only",
+      "preservation_summary": {
+        "account_block_public_policy_enabled": null,
+        "apply_time_merge": false,
+        "apply_time_merge_reason": null,
+        "block_public_policy_conflict": true,
+        "block_public_policy_reason": "Current bucket policy is public and S3 Block Public Access prevents public policies, so merge-preserving SSL enforcement would be rejected by PutBucketPolicy.",
+        "bucket_block_public_policy_enabled": true,
+        "bucket_policy_analysis_possible": true,
+        "bucket_policy_public": true,
+        "effective_block_public_policy_enabled": true,
+        "executable_policy_merge_allowed": false,
+        "existing_bucket_policy_json_captured": true,
+        "existing_bucket_policy_statement_count": 1,
+        "family": "s3_bucket_require_ssl",
+        "family_strategy": "s3_enforce_ssl_strict_deny",
+        "merge_safe_policy_available": false,
+        "preserve_existing_policy": true,
+        "single_profile_compatible": true,
+        "strategy_only_supported": true,
+        "target_bucket_exists": true,
+        "target_bucket_missing": false,
+        "target_bucket_reason": null,
+        "target_bucket_verification_available": true,
+        "unsafe_overwrite_requested": false
+      },
+      "profiles": [
+        {
+          "exception_only": false,
+          "profile_id": "s3_enforce_ssl_strict_deny",
+          "recommended": true,
+          "requires_inputs": true,
+          "support_tier": "review_required_bundle",
+          "supports_exception_flow": false
+        }
+      ],
+      "recommended": true,
+      "recommended_profile_id": "s3_enforce_ssl_strict_deny",
+      "requires_inputs": true,
+      "risk_level": "high",
+      "rollback_command": "aws s3api put-bucket-policy --bucket <BUCKET_NAME> --policy file://pre-remediation-policy.json",
+      "strategy_id": "s3_enforce_ssl_strict_deny",
+      "supports_exception_flow": false,
+      "supports_immediate_reeval": true,
+      "warnings": [
+        "Non-TLS clients or legacy integrations will fail after apply.",
+        "If the bucket already has a policy, capture it before apply with `aws s3api get-bucket-policy --bucket <BUCKET_NAME> --query Policy --output text > pre-remediation-policy.json`; rollback restores it with `aws s3api put-bucket-policy --bucket <BUCKET_NAME> --policy file://pre-remediation-policy.json`."
+      ]
+    },
+    {
+      "blast_radius": "resource",
+      "blocked_reasons": [
+        "Current bucket policy is public and S3 Block Public Access prevents public policies, so merge-preserving SSL enforcement would be rejected by PutBucketPolicy."
+      ],
+      "context": {
+        "default_inputs": {
+          "preserve_existing_policy": true
+        }
+      },
+      "decision_rationale": "Family resolver downgraded S3.5 strategy 's3_enforce_ssl_with_principal_exemptions' because preserving the current public bucket policy would conflict with S3 Block Public Access. Current bucket policy is public and S3 Block Public Access prevents public policies, so merge-preserving SSL enforcement would be rejected by PutBucketPolicy.",
+      "dependency_checks": [
+        {
+          "code": "s3_policy_merge_risk",
+          "message": "Review principal exemptions carefully to avoid over-broad bypass paths.",
+          "status": "warn"
+        }
+      ],
+      "estimated_resolution_time": "12-24 hours",
+      "exception_only": false,
+      "impact_text": "After applying, all HTTP (non-HTTPS) requests to this bucket will receive a 403 Forbidden response.",
+      "input_schema": {
+        "fields": [
+          {
+            "default_value": true,
+            "description": "Merge with existing bucket policy statements instead of replacing.",
+            "group": "Policy Settings",
+            "impact_text": "After applying, non-HTTPS requests to this bucket will be denied (HTTP requests receive 403).",
+            "key": "preserve_existing_policy",
+            "required": false,
+            "type": "boolean"
+          },
+          {
+            "description": "IAM principal ARNs exempted from the strict deny rule.",
+            "group": "Policy Settings",
+            "key": "exempt_principals",
+            "required": true,
+            "type": "string_array"
+          }
+        ]
+      },
+      "label": "Enforce SSL with principal exemptions",
+      "missing_defaults": [],
+      "mode": "pr_only",
+      "preservation_summary": {
+        "account_block_public_policy_enabled": null,
+        "apply_time_merge": false,
+        "apply_time_merge_reason": null,
+        "block_public_policy_conflict": true,
+        "block_public_policy_reason": "Current bucket policy is public and S3 Block Public Access prevents public policies, so merge-preserving SSL enforcement would be rejected by PutBucketPolicy.",
+        "bucket_block_public_policy_enabled": true,
+        "bucket_policy_analysis_possible": true,
+        "bucket_policy_public": true,
+        "effective_block_public_policy_enabled": true,
+        "executable_policy_merge_allowed": false,
+        "existing_bucket_policy_json_captured": true,
+        "existing_bucket_policy_statement_count": 1,
+        "family": "s3_bucket_require_ssl",
+        "family_strategy": "s3_enforce_ssl_with_principal_exemptions",
+        "merge_safe_policy_available": false,
+        "preserve_existing_policy": true,
+        "single_profile_compatible": true,
+        "strategy_only_supported": true,
+        "target_bucket_exists": true,
+        "target_bucket_missing": false,
+        "target_bucket_reason": null,
+        "target_bucket_verification_available": true,
+        "unsafe_overwrite_requested": false
+      },
+      "profiles": [
+        {
+          "exception_only": false,
+          "profile_id": "s3_enforce_ssl_with_principal_exemptions",
+          "recommended": true,
+          "requires_inputs": true,
+          "support_tier": "review_required_bundle",
+          "supports_exception_flow": false
+        }
+      ],
+      "recommended": false,
+      "recommended_profile_id": "s3_enforce_ssl_with_principal_exemptions",
+      "requires_inputs": true,
+      "risk_level": "high",
+      "rollback_command": "aws s3api put-bucket-policy --bucket <BUCKET_NAME> --policy file://pre-remediation-policy.json",
+      "strategy_id": "s3_enforce_ssl_with_principal_exemptions",
+      "supports_exception_flow": false,
+      "supports_immediate_reeval": true,
+      "warnings": [
+        "Exemptions weaken blanket enforcement and must be tightly scoped.",
+        "If the bucket already has a policy, capture it before apply with `aws s3api get-bucket-policy --bucket <BUCKET_NAME> --query Policy --output text > pre-remediation-policy.json`; rollback restores it with `aws s3api put-bucket-policy --bucket <BUCKET_NAME> --policy file://pre-remediation-policy.json`."
+      ]
+    },
+    {
+      "blast_radius": "resource",
+      "blocked_reasons": [
+        "Downgrade to review_required_bundle when existing bucket policy statements are detected but their JSON was not captured for safe merge."
+      ],
+      "context": {
+        "default_inputs": {
+          "exception_duration_days": "30"
+        }
+      },
+      "decision_rationale": "Compatibility resolver defaulted to the compatible profile 's3_keep_non_ssl_exception' for strategy 's3_keep_non_ssl_exception'. Blocking checks: Downgrade to review_required_bundle when existing bucket policy statements are detected but their JSON was not captured for safe merge..",
+      "dependency_checks": [
+        {
+          "code": "s3_non_tls_allowed",
+          "message": "Keeping non-SSL traffic allows plaintext request channels.",
+          "status": "warn"
+        },
+        {
+          "code": "adjacency_safety_unproven",
+          "message": "Downgrade to review_required_bundle when existing bucket policy statements are detected but their JSON was not captured for safe merge.",
+          "status": "fail"
+        }
+      ],
+      "estimated_resolution_time": "12-24 hours",
+      "exception_only": true,
+      "impact_text": "Non-HTTPS requests remain allowed until the exception is resolved and SSL enforcement is applied.",
+      "input_schema": {
+        "fields": [
+          {
+            "default_value": "30",
+            "description": "How long should this exception remain active?",
+            "group": "Exception",
+            "key": "exception_duration_days",
+            "options": [
+              {
+                "label": "7 days",
+                "value": "7"
+              },
+              {
+                "label": "14 days",
+                "value": "14"
+              },
+              {
+                "label": "30 days",
+                "value": "30"
+              },
+              {
+                "label": "90 days",
+                "value": "90"
+              }
+            ],
+            "required": false,
+            "type": "select"
+          },
+          {
+            "description": "Why can't you apply this fix right now?",
+            "group": "Exception",
+            "key": "exception_reason",
+            "placeholder": "Describe the temporary business or operational constraint.",
+            "required": false,
+            "type": "string"
+          }
+        ]
+      },
+      "label": "Keep non-SSL behavior (exception path)",
+      "missing_defaults": [],
+      "mode": "pr_only",
+      "preservation_summary": {
+        "single_profile_compatible": true,
+        "strategy_only_supported": true
+      },
+      "profiles": [
+        {
+          "exception_only": true,
+          "profile_id": "s3_keep_non_ssl_exception",
+          "recommended": true,
+          "requires_inputs": true,
+          "support_tier": "manual_guidance_only",
+          "supports_exception_flow": true
+        }
+      ],
+      "recommended": false,
+      "recommended_profile_id": "s3_keep_non_ssl_exception",
+      "requires_inputs": true,
+      "risk_level": "high",
+      "rollback_command": "aws s3api put-bucket-policy --bucket <BUCKET_NAME> --policy file://pre-remediation-policy.json",
+      "strategy_id": "s3_keep_non_ssl_exception",
+      "supports_exception_flow": true,
+      "supports_immediate_reeval": false,
+      "warnings": [
+        "Allowing non-SSL requests increases credential and data interception risk."
+      ]
+    }
+  ]
+}

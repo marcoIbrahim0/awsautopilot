@@ -537,7 +537,11 @@ async def query_help_assistant(
         )
     else:
         if live_lookup_state.status == "ready" and live_lookup_account is not None:
-            executed_lookup = await run_live_iam_lookup(account=live_lookup_account, current_user=current_user)
+            executed_lookup = await run_live_iam_lookup(
+                account=live_lookup_account,
+                current_user=current_user,
+                db=db,
+            )
             context["live_iam_snapshot"] = executed_lookup.serialize()
             live_lookup_state = executed_lookup
         elif live_lookup_state.status in {"disabled", "failed"}:

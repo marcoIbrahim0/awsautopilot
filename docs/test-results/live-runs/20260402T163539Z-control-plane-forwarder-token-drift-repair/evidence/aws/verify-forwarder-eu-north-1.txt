@@ -1,0 +1,3 @@
+[PASS Phase 1] Wiring verified
+[PASS Phase 2] Synthetic event injected
+[PASS Phase 3] SaaS received event — forwarder fully connected

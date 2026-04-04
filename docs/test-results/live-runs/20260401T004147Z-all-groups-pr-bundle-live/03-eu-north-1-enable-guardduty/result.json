@@ -1,0 +1,38 @@
+{
+  "account_id": "696505809372",
+  "action_type": "enable_guardduty",
+  "apply_status": "skipped",
+  "folder": "03-eu-north-1-enable-guardduty",
+  "generation_status": "success",
+  "group_id": "c84d5c12-593d-4ab3-b790-ce56e5484f92",
+  "group_run_id": "5fc290b9-b5f2-4db6-8a7c-2dd24e306c24",
+  "manual_guidance_action_count": 0,
+  "non_runnable_reasons": [
+    {
+      "action_id": "30efce6e-bcd7-4583-8400-aaf9569130ef",
+      "blocked_reasons": [],
+      "decision_summary": "Compatibility resolver defaulted to the compatible profile 'guardduty_enable_pr_bundle' for strategy 'guardduty_enable_pr_bundle'. Run creation was accepted after risk_acknowledged=true satisfied review-required checks.",
+      "outcome": "review_required_metadata_only",
+      "support_tier": "review_required_bundle",
+      "tier": "review_required",
+      "title": "GuardDuty should be enabled"
+    }
+  ],
+  "region": "eu-north-1",
+  "remediation_run_id": "79c80b66-ca47-4215-85d1-f9f9a329b66b",
+  "review_required_action_count": 1,
+  "runnable_action_count": 0,
+  "selected_request": {
+    "bucket_creation_acknowledged": false,
+    "repo_target": {
+      "base_branch": "main",
+      "head_branch": "20260401t004147z-all-groups-pr-bundle-live-03-eu-north-1-enable-guardduty-guardduty-enable-pr-bundle",
+      "provider": "github",
+      "repository": "example/security-autopilot-remediations"
+    },
+    "risk_acknowledged": true,
+    "strategy_id": "guardduty_enable_pr_bundle",
+    "strategy_inputs": {}
+  },
+  "summary_status": "Needs review before apply"
+}

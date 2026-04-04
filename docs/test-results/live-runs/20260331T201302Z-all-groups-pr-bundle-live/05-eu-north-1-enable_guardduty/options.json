@@ -1,0 +1,80 @@
+{
+  "action_id": "30efce6e-bcd7-4583-8400-aaf9569130ef",
+  "action_type": "enable_guardduty",
+  "manual_high_risk": false,
+  "mode_options": [
+    "pr_only"
+  ],
+  "pre_execution_notice": null,
+  "recommendation": {
+    "advisory": true,
+    "default_mode": "pr_only",
+    "enforced_by_policy": null,
+    "evidence": {
+      "context_incomplete": true,
+      "data_sensitivity": 0.0,
+      "exploit_signals": 0.0,
+      "internet_exposure": 0.0,
+      "matched_signals": [],
+      "privilege_level": 1.0,
+      "score": 41
+    },
+    "matrix_position": {
+      "business_criticality": "high",
+      "cell": "risk_medium__criticality_high",
+      "risk_tier": "medium"
+    },
+    "mode": "pr_only",
+    "rationale": "Matrix cell risk_medium__criticality_high maps to default recommendation 'pr_only'. Risk is medium and business criticality is high. Criticality evidence: data_sensitivity=0.00, privilege_level=1.00, internet_exposure=0.00, matched_signals=none. Relationship context is incomplete, so the recommendation remains conservative and advisory unless policy overrides it. Current execution surfaces stay PR-only, so this recommendation remains advisory until the reviewed bundle is applied."
+  },
+  "runbook_url": null,
+  "strategies": [
+    {
+      "blast_radius": "account",
+      "blocked_reasons": [],
+      "context": {},
+      "decision_rationale": "Compatibility resolver defaulted to the compatible profile 'guardduty_enable_pr_bundle' for strategy 'guardduty_enable_pr_bundle'.",
+      "dependency_checks": [
+        {
+          "code": "risk_evaluation_not_specialized",
+          "message": "No specialized dependency checks are available for this strategy yet.",
+          "status": "unknown"
+        }
+      ],
+      "estimated_resolution_time": "~1 hour",
+      "exception_only": false,
+      "impact_text": "Amazon GuardDuty will be enabled in this region.",
+      "input_schema": {
+        "fields": []
+      },
+      "label": "Enable GuardDuty (PR bundle)",
+      "missing_defaults": [],
+      "mode": "pr_only",
+      "preservation_summary": {
+        "single_profile_compatible": true,
+        "strategy_only_supported": true
+      },
+      "profiles": [
+        {
+          "exception_only": false,
+          "profile_id": "guardduty_enable_pr_bundle",
+          "recommended": true,
+          "requires_inputs": false,
+          "support_tier": "deterministic_bundle",
+          "supports_exception_flow": false
+        }
+      ],
+      "recommended": false,
+      "recommended_profile_id": "guardduty_enable_pr_bundle",
+      "requires_inputs": false,
+      "risk_level": "low",
+      "rollback_command": "aws guardduty delete-detector --detector-id <DETECTOR_ID>",
+      "strategy_id": "guardduty_enable_pr_bundle",
+      "supports_exception_flow": false,
+      "supports_immediate_reeval": false,
+      "warnings": [
+        "Apply the generated bundle to enable a GuardDuty detector in this region."
+      ]
+    }
+  ]
+}

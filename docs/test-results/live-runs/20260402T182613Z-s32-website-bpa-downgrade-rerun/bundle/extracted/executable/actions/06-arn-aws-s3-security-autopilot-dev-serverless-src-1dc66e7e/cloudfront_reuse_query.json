@@ -1,0 +1,7 @@
+{
+  "bucket_name": "security-autopilot-dev-serverless-src-696505809372-eu-north-1",
+  "expected_bucket_regional_domain_name": "security-autopilot-dev-serverless-src-696505809372-eu-north-1.s3.eu-north-1.amazonaws.com",
+  "expected_distribution_comment": "Security Autopilot migration for security-autopilot-dev-serverless-src-696505809372-eu-north-1",
+  "expected_oac_name": "security-autopilot-oac-49defbfba6b6",
+  "expected_origin_id": "s3-security-autopilot-dev-serverless-src-696505809372-eu-north-1"
+}

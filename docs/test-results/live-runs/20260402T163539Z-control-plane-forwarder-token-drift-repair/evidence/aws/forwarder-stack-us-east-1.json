@@ -1,0 +1,93 @@
+{
+    "Stacks": [
+        {
+            "StackId": "arn:aws:cloudformation:us-east-1:696505809372:stack/SecurityAutopilotControlPlaneForwarder/b39a3ea0-1d77-11f1-9578-12c8af93ad29",
+            "StackName": "SecurityAutopilotControlPlaneForwarder",
+            "ChangeSetId": "arn:aws:cloudformation:us-east-1:696505809372:changeSet/awscli-cloudformation-package-deploy-1775147088/97a721e3-5e69-4304-8e77-55bc5a059cb9",
+            "Description": "Deploys near-real-time control-plane event forwarding for AWS Security Autopilot (Phase 1). Creates an EventBridge rule for allowlisted \"AWS API Call via CloudTrail\" management actions and forwards matching events to the SaaS via EventBridge API Destination.\nIMPORTANT: Deploy this stack in each AWS region you want to monitor (EventBridge rules are regional).\n",
+            "Parameters": [
+                {
+                    "ParameterKey": "FailedInvocationsThreshold",
+                    "ParameterValue": "1"
+                },
+                {
+                    "ParameterKey": "RetryMaximumRetryAttempts",
+                    "ParameterValue": "8"
+                },
+                {
+                    "ParameterKey": "SaaSIngestUrl",
+                    "ParameterValue": "https://api.ocypheris.com/api/control-plane/events"
+                },
+                {
+                    "ParameterKey": "RetryMaximumEventAgeSeconds",
+                    "ParameterValue": "3600"
+                },
+                {
+                    "ParameterKey": "TargetDLQDepthThreshold",
+                    "ParameterValue": "1"
+                },
+                {
+                    "ParameterKey": "ControlPlaneToken",
+                    "ParameterValue": "****"
+                },
+                {
+                    "ParameterKey": "InvocationRateLimitPerSecond",
+                    "ParameterValue": "50"
+                },
+                {
+                    "ParameterKey": "AlarmTopicArn",
+                    "ParameterValue": ""
+                }
+            ],
+            "CreationTime": "2026-03-11T18:25:38.105000+00:00",
+            "LastUpdatedTime": "2026-04-02T16:25:12.829000+00:00",
+            "RollbackConfiguration": {
+                "RollbackTriggers": []
+            },
+            "StackStatus": "UPDATE_COMPLETE",
+            "DisableRollback": false,
+            "NotificationARNs": [],
+            "Capabilities": [
+                "CAPABILITY_IAM"
+            ],
+            "Outputs": [
+                {
+                    "OutputKey": "TargetDLQUrl",
+                    "OutputValue": "https://sqs.us-east-1.amazonaws.com/696505809372/security-autopilot-control-plane-target-dlq-us-east-1",
+                    "Description": "URL of EventBridge target DLQ."
+                },
+                {
+                    "OutputKey": "TargetDLQArn",
+                    "OutputValue": "arn:aws:sqs:us-east-1:696505809372:security-autopilot-control-plane-target-dlq-us-east-1",
+                    "Description": "ARN of EventBridge target DLQ."
+                },
+                {
+                    "OutputKey": "RuleArn",
+                    "OutputValue": "arn:aws:events:us-east-1:696505809372:rule/SecurityAutopilotControlPlaneApiCallsRule-us-east-1",
+                    "Description": "ARN of the EventBridge rule."
+                },
+                {
+                    "OutputKey": "ConnectionArn",
+                    "OutputValue": "arn:aws:events:us-east-1:696505809372:connection/SecurityAutopilotControlPlaneConnection-us-east-1/357b126e-951e-4f81-9183-b06f9b1b00f0",
+                    "Description": "ARN of the EventBridge Connection."
+                },
+                {
+                    "OutputKey": "ApiDestinationArn",
+                    "OutputValue": "arn:aws:events:us-east-1:696505809372:api-destination/SecurityAutopilotControlPlaneApiDestination-us-east-1/747374cf-05ad-4117-8124-61e6021123a7",
+                    "Description": "ARN of the API Destination."
+                }
+            ],
+            "Tags": [],
+            "EnableTerminationProtection": false,
+            "DriftInformation": {
+                "StackDriftStatus": "NOT_CHECKED"
+            },
+            "LastOperations": [
+                {
+                    "OperationType": "UPDATE_STACK",
+                    "OperationId": "aa3f3fa7-1518-4092-bee3-c0784df5f8b6"
+                }
+            ]
+        }
+    ]
+}

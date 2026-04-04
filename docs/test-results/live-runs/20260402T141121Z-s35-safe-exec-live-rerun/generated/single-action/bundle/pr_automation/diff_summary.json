@@ -1,0 +1,65 @@
+{
+  "artifact_type": "generated_diff_summary",
+  "file_count": 6,
+  "files": [
+    {
+      "bundle_path": "providers.tf",
+      "byte_count": 479,
+      "change_type": "create_or_update",
+      "content_sha256": "9a0536e0e9790c63a892e3b288fc6b299b5f7a1ea52e004cf4a0a8833e7227f3",
+      "line_count": 18,
+      "repo_path": "providers.tf"
+    },
+    {
+      "bundle_path": "s3_bucket_require_ssl.tf",
+      "byte_count": 3192,
+      "change_type": "create_or_update",
+      "content_sha256": "60f36e2b8f4c6cff4943bcf3b4701faa3565a00e87d61961dc41acd2e49b8189",
+      "line_count": 114,
+      "repo_path": "s3_bucket_require_ssl.tf"
+    },
+    {
+      "bundle_path": "terraform.auto.tfvars.json",
+      "byte_count": 426,
+      "change_type": "create_or_update",
+      "content_sha256": "31a6bf0bd7f7e6479f1c6528bb1b9ad8cdcf9c1de2f4dd6eca3c1ae581f3477f",
+      "line_count": 3,
+      "repo_path": "terraform.auto.tfvars.json"
+    },
+    {
+      "bundle_path": "scripts/s3_policy_capture.py",
+      "byte_count": 2660,
+      "change_type": "create_or_update",
+      "content_sha256": "950ae50efa81ac7d36ea776c82ec199f45b398c9a33d74149d6ea6ddf9646c2f",
+      "line_count": 94,
+      "repo_path": "scripts/s3_policy_capture.py"
+    },
+    {
+      "bundle_path": "rollback/s3_policy_restore.py",
+      "byte_count": 2971,
+      "change_type": "create_or_update",
+      "content_sha256": "3e55d585d87cddb692cfaca638e74f8673051cf949693c3ac7b00a0be5febaec",
+      "line_count": 96,
+      "repo_path": "rollback/s3_policy_restore.py"
+    },
+    {
+      "bundle_path": "README.txt",
+      "byte_count": 2220,
+      "change_type": "create_or_update",
+      "content_sha256": "df5367504dc17a0c355fffb03a3cd1eef6bd2de942194d8db49bfa985c33bc6c",
+      "line_count": 54,
+      "repo_path": "README.txt"
+    }
+  ],
+  "fingerprint_sha256": "9d122164cc6e4713c778f282c8d7783ac03b1f519e6f9f586f0dccffcd451140",
+  "repo_target_configured": false,
+  "summary_lines": [
+    "`providers.tf` <- `providers.tf` (18 lines, sha256:9a0536e0e979)",
+    "`s3_bucket_require_ssl.tf` <- `s3_bucket_require_ssl.tf` (114 lines, sha256:60f36e2b8f4c)",
+    "`terraform.auto.tfvars.json` <- `terraform.auto.tfvars.json` (3 lines, sha256:31a6bf0bd7f7)",
+    "`scripts/s3_policy_capture.py` <- `scripts/s3_policy_capture.py` (94 lines, sha256:950ae50efa81)",
+    "`rollback/s3_policy_restore.py` <- `rollback/s3_policy_restore.py` (96 lines, sha256:3e55d585d87c)",
+    "`README.txt` <- `README.txt` (54 lines, sha256:df5367504dc1)"
+  ],
+  "version": 1
+}

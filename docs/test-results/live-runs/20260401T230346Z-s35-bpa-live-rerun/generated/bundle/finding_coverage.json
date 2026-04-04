@@ -1,0 +1,130 @@
+{
+  "actions": [
+    {
+      "action_id": "0ca99079-34e6-4c17-b121-b1f1727494eb",
+      "finding_coverage": {},
+      "support_tier": "review_required_bundle"
+    },
+    {
+      "action_id": "129fa65e-11e1-4eb0-bf8f-dff5fec13487",
+      "finding_coverage": {},
+      "support_tier": "review_required_bundle"
+    },
+    {
+      "action_id": "23bf691b-8ec2-4920-80a8-09bca2b8e218",
+      "finding_coverage": {},
+      "support_tier": "review_required_bundle"
+    },
+    {
+      "action_id": "4da3d806-4084-4075-8f3c-221d08ef5c2c",
+      "finding_coverage": {},
+      "support_tier": "review_required_bundle"
+    },
+    {
+      "action_id": "61552073-d604-4ba5-8430-b04485f90a5c",
+      "finding_coverage": {},
+      "support_tier": "review_required_bundle"
+    },
+    {
+      "action_id": "967d71a9-8027-4223-b6c6-aa5578d1d2d5",
+      "finding_coverage": {},
+      "support_tier": "review_required_bundle"
+    },
+    {
+      "action_id": "9e4562df-9922-4f75-b4e4-2d17c2c615f8",
+      "finding_coverage": {},
+      "support_tier": "review_required_bundle"
+    },
+    {
+      "action_id": "b84115cb-a701-48d7-832c-4fbcf80b8724",
+      "finding_coverage": {},
+      "support_tier": "review_required_bundle"
+    },
+    {
+      "action_id": "b8a67bbf-1255-40f1-ab21-569689459a36",
+      "finding_coverage": {},
+      "support_tier": "review_required_bundle"
+    },
+    {
+      "action_id": "c1c2ed6d-408b-4743-86d9-0fedeff97ce6",
+      "finding_coverage": {},
+      "support_tier": "review_required_bundle"
+    },
+    {
+      "action_id": "830944d9-30ad-432f-a84e-e09c0dde3d5d",
+      "finding_coverage": {},
+      "support_tier": "review_required_bundle"
+    },
+    {
+      "action_id": "3970aa2f-edc5-4870-87bd-fa986dad3d98",
+      "finding_coverage": {},
+      "support_tier": "review_required_bundle"
+    },
+    {
+      "action_id": "53b7b063-8531-4829-9b23-f03b1796b23d",
+      "finding_coverage": {},
+      "support_tier": "review_required_bundle"
+    },
+    {
+      "action_id": "6826cb31-57ad-4704-8b2f-3f2387125e8e",
+      "finding_coverage": {},
+      "support_tier": "review_required_bundle"
+    },
+    {
+      "action_id": "2ac461ec-b4c1-4fcd-8ae1-a6d18f53c8d4",
+      "finding_coverage": {},
+      "support_tier": "review_required_bundle"
+    },
+    {
+      "action_id": "0eb4440d-ae39-46c1-80b8-a04d04f7a8bc",
+      "finding_coverage": {},
+      "support_tier": "review_required_bundle"
+    },
+    {
+      "action_id": "205f94f3-d76b-4a08-8082-253013ff9857",
+      "finding_coverage": {},
+      "support_tier": "review_required_bundle"
+    },
+    {
+      "action_id": "3b2f7c5d-00dc-4a60-a146-e66a3427d902",
+      "finding_coverage": {},
+      "support_tier": "review_required_bundle"
+    },
+    {
+      "action_id": "413846db-f9af-4910-9192-d17c79c6153e",
+      "finding_coverage": {},
+      "support_tier": "review_required_bundle"
+    },
+    {
+      "action_id": "44920b7c-8125-4998-bc91-3ad537601670",
+      "finding_coverage": {},
+      "support_tier": "review_required_bundle"
+    },
+    {
+      "action_id": "bd4da43a-91bc-4b0b-84d7-9ca776af9210",
+      "finding_coverage": {},
+      "support_tier": "review_required_bundle"
+    },
+    {
+      "action_id": "ceb048a5-805e-4a13-978b-e8ed9e3c82ea",
+      "finding_coverage": {},
+      "support_tier": "review_required_bundle"
+    },
+    {
+      "action_id": "cfdc868f-5a50-4188-b770-77f7082b3c06",
+      "finding_coverage": {},
+      "support_tier": "review_required_bundle"
+    },
+    {
+      "action_id": "1b7e11a5-3b38-4701-8938-a3986235a53a",
+      "finding_coverage": {},
+      "support_tier": "review_required_bundle"
+    },
+    {
+      "action_id": "9444f510-d008-4009-8a13-ff4ecc8d3ff8",
+      "finding_coverage": {},
+      "support_tier": "review_required_bundle"
+    }
+  ],
+  "layout_version": "grouped_bundle_mixed_tier/v1"
+}

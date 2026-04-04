@@ -18,6 +18,7 @@ from backend.models.aws_account import AwsAccount
 from backend.models.enums import SecretMigrationRunStatus, SecretMigrationTransactionStatus
 from backend.models.secret_migration_run import SecretMigrationRun
 from backend.models.secret_migration_transaction import SecretMigrationTransaction
+from backend.services.account_trust import canonical_tenant_external_id_async
 from backend.services.aws import assume_role
 from backend.services.secret_migration_connectors import (
     AwsSecretsManagerConnector,
@@ -288,7 +289,8 @@ async def _assumed_session_for_connector(
             "Source connector requires role_read_arn for tenant-scoped AWS account.",
         )
     try:
-        return assume_role_fn(role_arn=role_arn, external_id=account.external_id)
+        tenant_external_id = await canonical_tenant_external_id_async(db, tenant_id)
+        return assume_role_fn(role_arn=role_arn, external_id=tenant_external_id or "")
     except (ClientError, ValueError) as error:
         message = type(error).__name__
         raise SecretMigrationUnavailableError(

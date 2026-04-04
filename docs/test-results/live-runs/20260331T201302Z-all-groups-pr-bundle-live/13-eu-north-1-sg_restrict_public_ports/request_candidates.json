@@ -1,0 +1,15 @@
+[
+  {
+    "action_overrides": [
+      {
+        "action_id": "9569aa98-af93-4095-a8f6-695867c1b839",
+        "profile_id": "close_public",
+        "strategy_id": "sg_restrict_public_ports_guided",
+        "strategy_inputs": {}
+      }
+    ],
+    "bucket_creation_acknowledged": false,
+    "risk_acknowledged": true,
+    "strategy_id": "sg_restrict_public_ports_guided"
+  }
+]

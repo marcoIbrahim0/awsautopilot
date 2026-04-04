@@ -1,0 +1,51 @@
+{
+  "account_id": "696505809372",
+  "action_type": "s3_bucket_access_logging",
+  "apply_status": "failed",
+  "folder": "05-eu-north-1-s3-bucket-access-logging",
+  "generation_status": "success",
+  "group_id": "984e6f5e-d1e6-44aa-90e6-1a3ddc152a2c",
+  "group_run_id": "46a7f9d0-a0a0-437a-a305-2923110f6b8b",
+  "manual_guidance_action_count": 0,
+  "non_runnable_reasons": [
+    {
+      "action_id": "0fd42f91-d019-4b8b-a9ae-cdf93b99cdeb",
+      "blocked_reasons": [
+        "Source bucket scope could not be proven for S3 access logging; review the affected bucket relationship manually."
+      ],
+      "decision_summary": "Family resolver downgraded S3.9 to destination-safety review. Source bucket scope could not be proven for S3 access logging; review the affected bucket relationship manually. Run creation did not require additional risk-only acceptance.",
+      "outcome": "review_required_metadata_only",
+      "support_tier": "review_required_bundle",
+      "tier": "review_required",
+      "title": "S3 general purpose buckets should have server access logging enabled"
+    },
+    {
+      "action_id": "bed34478-fc8a-4714-bb40-e52cfbc8bf9b",
+      "blocked_reasons": [
+        "Log destination must be a dedicated bucket and cannot match the source bucket."
+      ],
+      "decision_summary": "Family resolver downgraded S3.9 to destination-safety review. Log destination must be a dedicated bucket and cannot match the source bucket. Run creation did not require additional risk-only acceptance.",
+      "outcome": "review_required_metadata_only",
+      "support_tier": "review_required_bundle",
+      "tier": "review_required",
+      "title": "S3 general purpose buckets should have server access logging enabled"
+    }
+  ],
+  "region": "eu-north-1",
+  "remediation_run_id": "a8d2e440-7218-4366-92a1-7575cc024157",
+  "review_required_action_count": 2,
+  "runnable_action_count": 14,
+  "selected_request": {
+    "bucket_creation_acknowledged": false,
+    "repo_target": {
+      "base_branch": "main",
+      "head_branch": "20260401t004147z-all-groups-pr-bundle-live-05-eu-north-1-s3-bucket-access-logging-s3-enable-access-logging-guided",
+      "provider": "github",
+      "repository": "example/security-autopilot-remediations"
+    },
+    "risk_acknowledged": true,
+    "strategy_id": "s3_enable_access_logging_guided",
+    "strategy_inputs": {}
+  },
+  "summary_status": "APPLY NOT SUCCESSFUL"
+}

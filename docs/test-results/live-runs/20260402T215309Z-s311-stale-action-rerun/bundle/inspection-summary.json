@@ -1,0 +1,15 @@
+{
+  "represented_action_count": 21,
+  "executable_action_count": 0,
+  "manual_guidance_action_count": 8,
+  "review_required_action_count": 13,
+  "stale_deleted_bucket_targets_proved_non_executable": [
+    "phase2-wi1-lifecycle-696505809372-20260329004157",
+    "phase2-wi1-lifecycle-696505809372-20260328224331",
+    "sa-wi7-seed-696505809372-20260328205857",
+    "ocypheris-live-ct-20260328t181200z-eu-north-1",
+    "sa-wi5-site-696505809372-20260328t164043z",
+    "wi1-noncurrent-lifecycle-696505809372-20260330003655"
+  ],
+  "bundle_execution_observation": "Fresh grouped bundle contained no executable Terraform actions; stale/deleted members were retained only as manual_guidance_only or review_required_bundle metadata entries."
+}

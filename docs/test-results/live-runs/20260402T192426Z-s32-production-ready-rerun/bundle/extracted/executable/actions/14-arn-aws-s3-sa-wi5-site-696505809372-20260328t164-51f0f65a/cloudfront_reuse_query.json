@@ -1,0 +1,7 @@
+{
+  "bucket_name": "sa-wi5-site-696505809372-20260328t164043z",
+  "expected_bucket_regional_domain_name": "sa-wi5-site-696505809372-20260328t164043z.s3.eu-north-1.amazonaws.com",
+  "expected_distribution_comment": "Security Autopilot migration for sa-wi5-site-696505809372-20260328t164043z",
+  "expected_oac_name": "security-autopilot-oac-8850bb7eb784",
+  "expected_origin_id": "s3-sa-wi5-site-696505809372-20260328t164043z"
+}

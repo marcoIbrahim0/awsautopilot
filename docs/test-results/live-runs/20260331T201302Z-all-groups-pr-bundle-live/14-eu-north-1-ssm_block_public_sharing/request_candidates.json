@@ -1,0 +1,12 @@
+[
+  {
+    "bucket_creation_acknowledged": false,
+    "risk_acknowledged": true,
+    "strategy_id": "ssm_disable_public_document_sharing"
+  },
+  {
+    "bucket_creation_acknowledged": false,
+    "risk_acknowledged": true,
+    "strategy_id": "ssm_keep_public_sharing_exception"
+  }
+]

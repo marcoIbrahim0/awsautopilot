@@ -15,6 +15,10 @@ Canonical baseline (six attributes):
   5. Log-retention        — optional expiration rule for log-sink buckets
   6. Versioning           — optional, required for CloudTrail/Config delivery buckets
 
+Role-specific runtime hardening:
+  - `aws-config-delivery` also enables EventBridge notifications and Object Lock
+  - `cloudtrail-logs` and `aws-config-delivery` enable bucket versioning
+
 Callers that need to apply additional service-write statements (e.g.
 CloudTrail PutObject) must merge those statements *on top* of the
 baseline — they must not replace it.
@@ -45,6 +49,19 @@ class SupportBucketBaselineProfile(TypedDict):
 # Default KMS alias — AWS-managed S3 key; avoids S3.15 / KMS-key-rotation drift.
 SUPPORT_BUCKET_KMS_MASTER_KEY_ID = "alias/aws/s3"
 SUPPORT_BUCKET_SSE_ALGORITHM = "aws:kms"
+SUPPORT_BUCKET_MANAGED_TAG_KEY = "security-autopilot:managed-support-bucket"
+SUPPORT_BUCKET_MANAGED_TAG_VALUE = "true"
+SUPPORT_BUCKET_ROLE_TAG_KEY = "security-autopilot:support-bucket-role"
+SUPPORT_BUCKET_ROLE_S3_ACCESS_LOGS = "s3-access-logs"
+SUPPORT_BUCKET_ROLE_CLOUDTRAIL_LOGS = "cloudtrail-logs"
+SUPPORT_BUCKET_ROLE_AWS_CONFIG_DELIVERY = "aws-config-delivery"
+SUPPORT_BUCKET_LOG_SINK_ROLES = frozenset(
+    {
+        SUPPORT_BUCKET_ROLE_S3_ACCESS_LOGS,
+        SUPPORT_BUCKET_ROLE_CLOUDTRAIL_LOGS,
+        SUPPORT_BUCKET_ROLE_AWS_CONFIG_DELIVERY,
+    }
+)
 
 SUPPORT_BUCKET_BASELINE_PROFILE: SupportBucketBaselineProfile = {
     "public_access_block": True,
@@ -82,6 +99,35 @@ def _attr(name: str, passed: bool, detail: str) -> SupportBucketAttributeResult:
 
 def _err(exc: ClientError) -> str:
     return str(exc.response.get("Error", {}).get("Code", "")).strip() or "ClientError"
+
+
+def support_bucket_tag_map(*, support_bucket_role: str) -> dict[str, str]:
+    """Return the canonical tag map for a product-managed support bucket."""
+    role = str(support_bucket_role or "").strip()
+    if not role:
+        raise ValueError("support_bucket_role is required")
+    return {
+        SUPPORT_BUCKET_MANAGED_TAG_KEY: SUPPORT_BUCKET_MANAGED_TAG_VALUE,
+        SUPPORT_BUCKET_ROLE_TAG_KEY: role,
+    }
+
+
+def is_product_managed_support_bucket(tag_map: dict[str, str] | None) -> bool:
+    if not isinstance(tag_map, dict):
+        return False
+    return str(tag_map.get(SUPPORT_BUCKET_MANAGED_TAG_KEY) or "").strip().lower() == SUPPORT_BUCKET_MANAGED_TAG_VALUE
+
+
+def support_bucket_role_from_tags(tag_map: dict[str, str] | None) -> str | None:
+    if not is_product_managed_support_bucket(tag_map):
+        return None
+    role = str((tag_map or {}).get(SUPPORT_BUCKET_ROLE_TAG_KEY) or "").strip()
+    return role or None
+
+
+def is_product_managed_support_log_sink(tag_map: dict[str, str] | None) -> bool:
+    role = support_bucket_role_from_tags(tag_map)
+    return role in SUPPORT_BUCKET_LOG_SINK_ROLES
 
 
 # ---------------------------------------------------------------------------
@@ -284,6 +330,7 @@ def terraform_support_bucket_blocks(
     enable_versioning: bool = False,
     log_retention_days: int | None = None,
     service_write_data_source: str | None = None,
+    support_bucket_role: str | None = None,
 ) -> str:
     """
     Return Terraform HCL resource blocks that fully harden a support bucket.
@@ -337,6 +384,29 @@ resource "aws_s3_bucket_versioning" "{resource_suffix}" {{
     source_docs = ""
     if service_write_data_source:
         source_docs = f"  source_policy_documents = [{service_write_data_source}.json]\n"
+
+    tagging_block = ""
+    if support_bucket_role:
+        tag_set_blocks = "\n".join(
+            [
+                "  tag_set {",
+                f'    key   = "{SUPPORT_BUCKET_MANAGED_TAG_KEY}"',
+                f'    value = "{SUPPORT_BUCKET_MANAGED_TAG_VALUE}"',
+                "  }",
+                "  tag_set {",
+                f'    key   = "{SUPPORT_BUCKET_ROLE_TAG_KEY}"',
+                f'    value = "{support_bucket_role}"',
+                "  }",
+            ]
+        )
+        tagging_block = f"""
+
+resource "aws_s3_bucket_tagging" "{resource_suffix}" {{
+{count_line}  bucket = {bucket_id_ref}
+
+{tag_set_blocks}
+{dep_line}}}
+"""
 
     return f"""
 resource "aws_s3_bucket_public_access_block" "{resource_suffix}" {{
@@ -402,7 +472,7 @@ resource "aws_s3_bucket_policy" "{resource_suffix}" {{
 {count_line}  bucket = {bucket_id_ref}
   policy = data.aws_iam_policy_document.ssl_only_{resource_suffix}.json
 {dep_line}}}
-{versioning_block}"""
+{versioning_block}{tagging_block}"""
 
 
 # ---------------------------------------------------------------------------
@@ -410,11 +480,11 @@ resource "aws_s3_bucket_policy" "{resource_suffix}" {{
 # ---------------------------------------------------------------------------
 
 SUPPORT_BUCKET_APPLY_SNIPPET: str = '''
-def apply_support_bucket_baseline(bucket: str, region: str) -> None:
+def apply_support_bucket_baseline(bucket: str, region: str, helper_bucket_role: str | None = None) -> None:
     """Apply the canonical support-bucket baseline via AWS CLI (idempotent).
 
     Applies in order: public-access block → SSE-KMS → lifecycle
-    → SSL-only policy merged with any existing statements.
+    → helper-bucket tags → SSL-only policy merged with any existing statements.
     """
     import json as _json
     import subprocess
@@ -468,7 +538,49 @@ def apply_support_bucket_baseline(bucket: str, region: str) -> None:
         "--lifecycle-configuration", lc,
     ])
 
-    # 4. SSL-only deny policy — merged with any existing statements
+    # 4. Role-specific baseline extensions
+    if helper_bucket_role in ("cloudtrail-logs", "aws-config-delivery"):
+        _run([
+            "aws", "s3api", "put-bucket-versioning",
+            "--bucket", bucket, "--region", region,
+            "--versioning-configuration", "Status=Enabled",
+        ])
+
+    if helper_bucket_role == "aws-config-delivery":
+        notifications = _json.dumps({"EventBridgeConfiguration": {}})
+        _run([
+            "aws", "s3api", "put-bucket-notification-configuration",
+            "--bucket", bucket, "--region", region,
+            "--notification-configuration", notifications,
+        ])
+        object_lock = _json.dumps({"ObjectLockEnabled": "Enabled"})
+        _run([
+            "aws", "s3api", "put-object-lock-configuration",
+            "--bucket", bucket, "--region", region,
+            "--object-lock-configuration", object_lock,
+        ])
+
+    # 5. Product-managed helper tags — only when the caller declares a helper role
+    if helper_bucket_role:
+        tagging = _json.dumps({
+            "TagSet": [
+                {
+                    "Key": "security-autopilot:managed-support-bucket",
+                    "Value": "true",
+                },
+                {
+                    "Key": "security-autopilot:support-bucket-role",
+                    "Value": helper_bucket_role,
+                },
+            ]
+        })
+        _run([
+            "aws", "s3api", "put-bucket-tagging",
+            "--bucket", bucket, "--region", region,
+            "--tagging", tagging,
+        ])
+
+    # 6. SSL-only deny policy — merged with any existing statements
     get_r = subprocess.run(
         ["aws", "s3api", "get-bucket-policy",
          "--bucket", bucket, "--region", region,

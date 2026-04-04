@@ -1,0 +1,500 @@
+{
+  "account_id": "696505809372",
+  "generated_at": "2026-04-01T00:45:26.036301+00:00",
+  "group_count": 14,
+  "results": [
+    {
+      "account_id": "696505809372",
+      "action_type": "aws_config_enabled",
+      "apply_status": "failed",
+      "folder": "01-eu-north-1-aws-config-enabled",
+      "generation_status": "success",
+      "group_id": "02575097-6342-4ee5-a9e2-737eebcfcc29",
+      "group_run_id": "2b2d0792-766b-471d-b2d5-4cf09205a95e",
+      "manual_guidance_action_count": 0,
+      "non_runnable_reasons": [],
+      "region": "eu-north-1",
+      "remediation_run_id": "e862d0fc-1156-48d3-ba4e-4bcba2e1170e",
+      "review_required_action_count": 0,
+      "runnable_action_count": 1,
+      "selected_request": {
+        "bucket_creation_acknowledged": false,
+        "repo_target": {
+          "base_branch": "main",
+          "head_branch": "20260401t004147z-all-groups-pr-bundle-live-01-eu-north-1-aws-config-enabled-config-enable-account-local-delivery",
+          "provider": "github",
+          "repository": "example/security-autopilot-remediations"
+        },
+        "risk_acknowledged": true,
+        "strategy_id": "config_enable_account_local_delivery",
+        "strategy_inputs": {}
+      },
+      "summary_status": "APPLY NOT SUCCESSFUL"
+    },
+    {
+      "account_id": "696505809372",
+      "action_type": "ssm_block_public_sharing",
+      "apply_status": "skipped",
+      "folder": "02-eu-north-1-ssm-block-public-sharing",
+      "generation_status": "success",
+      "group_id": "ed48e583-8b8e-43b4-ad5e-3641b8276909",
+      "group_run_id": "03bf3071-9c86-4a2e-9c76-2daf3085d894",
+      "manual_guidance_action_count": 0,
+      "non_runnable_reasons": [
+        {
+          "action_id": "9444d745-69a6-49f2-9c39-43387ca52af4",
+          "blocked_reasons": [],
+          "decision_summary": "Compatibility resolver defaulted to the compatible profile 'ssm_disable_public_document_sharing' for strategy 'ssm_disable_public_document_sharing'. Run creation was accepted after risk_acknowledged=true satisfied review-required checks.",
+          "outcome": "review_required_metadata_only",
+          "support_tier": "review_required_bundle",
+          "tier": "review_required",
+          "title": "SSM documents should have the block public sharing setting enabled"
+        }
+      ],
+      "region": "eu-north-1",
+      "remediation_run_id": "1e37cf14-5c9f-4b9c-9abd-931b00c1c2e0",
+      "review_required_action_count": 1,
+      "runnable_action_count": 0,
+      "selected_request": {
+        "bucket_creation_acknowledged": false,
+        "repo_target": {
+          "base_branch": "main",
+          "head_branch": "20260401t004147z-all-groups-pr-bundle-live-02-eu-north-1-ssm-block-public-sharing-ssm-disable-public-document-sharing",
+          "provider": "github",
+          "repository": "example/security-autopilot-remediations"
+        },
+        "risk_acknowledged": true,
+        "strategy_id": "ssm_disable_public_document_sharing",
+        "strategy_inputs": {}
+      },
+      "summary_status": "Needs review before apply"
+    },
+    {
+      "account_id": "696505809372",
+      "action_type": "enable_guardduty",
+      "apply_status": "skipped",
+      "folder": "03-eu-north-1-enable-guardduty",
+      "generation_status": "success",
+      "group_id": "c84d5c12-593d-4ab3-b790-ce56e5484f92",
+      "group_run_id": "5fc290b9-b5f2-4db6-8a7c-2dd24e306c24",
+      "manual_guidance_action_count": 0,
+      "non_runnable_reasons": [
+        {
+          "action_id": "30efce6e-bcd7-4583-8400-aaf9569130ef",
+          "blocked_reasons": [],
+          "decision_summary": "Compatibility resolver defaulted to the compatible profile 'guardduty_enable_pr_bundle' for strategy 'guardduty_enable_pr_bundle'. Run creation was accepted after risk_acknowledged=true satisfied review-required checks.",
+          "outcome": "review_required_metadata_only",
+          "support_tier": "review_required_bundle",
+          "tier": "review_required",
+          "title": "GuardDuty should be enabled"
+        }
+      ],
+      "region": "eu-north-1",
+      "remediation_run_id": "79c80b66-ca47-4215-85d1-f9f9a329b66b",
+      "review_required_action_count": 1,
+      "runnable_action_count": 0,
+      "selected_request": {
+        "bucket_creation_acknowledged": false,
+        "repo_target": {
+          "base_branch": "main",
+          "head_branch": "20260401t004147z-all-groups-pr-bundle-live-03-eu-north-1-enable-guardduty-guardduty-enable-pr-bundle",
+          "provider": "github",
+          "repository": "example/security-autopilot-remediations"
+        },
+        "risk_acknowledged": true,
+        "strategy_id": "guardduty_enable_pr_bundle",
+        "strategy_inputs": {}
+      },
+      "summary_status": "Needs review before apply"
+    },
+    {
+      "account_id": "696505809372",
+      "action_type": "s3_bucket_lifecycle_configuration",
+      "apply_status": "failed",
+      "folder": "04-eu-north-1-s3-bucket-lifecycle-configuration",
+      "generation_status": "success",
+      "group_id": "9a904e6a-3ab8-4eca-be92-b727b0aacf67",
+      "group_run_id": "4f565434-eeb2-42b6-97f9-3cee16fb9535",
+      "manual_guidance_action_count": 1,
+      "non_runnable_reasons": [
+        {
+          "action_id": "cbe0d2c3-c609-4aa2-a12f-6afb336cd507",
+          "blocked_reasons": [
+            "Lifecycle preservation evidence is missing for additive merge review."
+          ],
+          "decision_summary": "Family resolver downgraded S3.11 strategy 's3_enable_abort_incomplete_uploads' because additive lifecycle preservation is under-proven. Lifecycle preservation evidence is missing for additive merge review. Run creation did not require additional risk-only acceptance.",
+          "outcome": "manual_guidance_metadata_only",
+          "support_tier": "manual_guidance_only",
+          "tier": "manual_guidance",
+          "title": "S3 general purpose buckets should have Lifecycle configurations"
+        }
+      ],
+      "region": "eu-north-1",
+      "remediation_run_id": "f6b84600-f8b2-4db8-a727-972afba3dd34",
+      "review_required_action_count": 0,
+      "runnable_action_count": 23,
+      "selected_request": {
+        "bucket_creation_acknowledged": false,
+        "repo_target": {
+          "base_branch": "main",
+          "head_branch": "20260401t004147z-all-groups-pr-bundle-live-04-eu-north-1-s3-bucket-lifecycle-configuration-s3-enable-abort-incomplete-up",
+          "provider": "github",
+          "repository": "example/security-autopilot-remediations"
+        },
+        "risk_acknowledged": true,
+        "strategy_id": "s3_enable_abort_incomplete_uploads",
+        "strategy_inputs": {}
+      },
+      "summary_status": "APPLY NOT SUCCESSFUL"
+    },
+    {
+      "account_id": "696505809372",
+      "action_type": "s3_bucket_access_logging",
+      "apply_status": "failed",
+      "folder": "05-eu-north-1-s3-bucket-access-logging",
+      "generation_status": "success",
+      "group_id": "984e6f5e-d1e6-44aa-90e6-1a3ddc152a2c",
+      "group_run_id": "46a7f9d0-a0a0-437a-a305-2923110f6b8b",
+      "manual_guidance_action_count": 0,
+      "non_runnable_reasons": [
+        {
+          "action_id": "0fd42f91-d019-4b8b-a9ae-cdf93b99cdeb",
+          "blocked_reasons": [
+            "Source bucket scope could not be proven for S3 access logging; review the affected bucket relationship manually."
+          ],
+          "decision_summary": "Family resolver downgraded S3.9 to destination-safety review. Source bucket scope could not be proven for S3 access logging; review the affected bucket relationship manually. Run creation did not require additional risk-only acceptance.",
+          "outcome": "review_required_metadata_only",
+          "support_tier": "review_required_bundle",
+          "tier": "review_required",
+          "title": "S3 general purpose buckets should have server access logging enabled"
+        },
+        {
+          "action_id": "bed34478-fc8a-4714-bb40-e52cfbc8bf9b",
+          "blocked_reasons": [
+            "Log destination must be a dedicated bucket and cannot match the source bucket."
+          ],
+          "decision_summary": "Family resolver downgraded S3.9 to destination-safety review. Log destination must be a dedicated bucket and cannot match the source bucket. Run creation did not require additional risk-only acceptance.",
+          "outcome": "review_required_metadata_only",
+          "support_tier": "review_required_bundle",
+          "tier": "review_required",
+          "title": "S3 general purpose buckets should have server access logging enabled"
+        }
+      ],
+      "region": "eu-north-1",
+      "remediation_run_id": "a8d2e440-7218-4366-92a1-7575cc024157",
+      "review_required_action_count": 2,
+      "runnable_action_count": 14,
+      "selected_request": {
+        "bucket_creation_acknowledged": false,
+        "repo_target": {
+          "base_branch": "main",
+          "head_branch": "20260401t004147z-all-groups-pr-bundle-live-05-eu-north-1-s3-bucket-access-logging-s3-enable-access-logging-guided",
+          "provider": "github",
+          "repository": "example/security-autopilot-remediations"
+        },
+        "risk_acknowledged": true,
+        "strategy_id": "s3_enable_access_logging_guided",
+        "strategy_inputs": {}
+      },
+      "summary_status": "APPLY NOT SUCCESSFUL"
+    },
+    {
+      "account_id": "696505809372",
+      "action_type": "s3_bucket_encryption_kms",
+      "apply_status": "failed",
+      "folder": "06-eu-north-1-s3-bucket-encryption-kms",
+      "generation_status": "success",
+      "group_id": "97e52204-f7f6-40c1-b2ac-acb99308e241",
+      "group_run_id": "be367b61-af64-4b17-ae0a-79fa81f1f3de",
+      "manual_guidance_action_count": 0,
+      "non_runnable_reasons": [],
+      "region": "eu-north-1",
+      "remediation_run_id": "97865f8a-92aa-4d50-99f5-3a4353187e63",
+      "review_required_action_count": 0,
+      "runnable_action_count": 15,
+      "selected_request": {
+        "bucket_creation_acknowledged": false,
+        "repo_target": {
+          "base_branch": "main",
+          "head_branch": "20260401t004147z-all-groups-pr-bundle-live-06-eu-north-1-s3-bucket-encryption-kms-s3-enable-sse-kms-guided",
+          "provider": "github",
+          "repository": "example/security-autopilot-remediations"
+        },
+        "risk_acknowledged": true,
+        "strategy_id": "s3_enable_sse_kms_guided",
+        "strategy_inputs": {}
+      },
+      "summary_status": "APPLY NOT SUCCESSFUL"
+    },
+    {
+      "account_id": "696505809372",
+      "action_type": "ebs_snapshot_block_public_access",
+      "apply_status": "failed",
+      "folder": "07-eu-north-1-ebs-snapshot-block-public-access",
+      "generation_status": "success",
+      "group_id": "957c3871-cad3-4530-aa29-386f6bda5cc6",
+      "group_run_id": "2448bb81-b5d1-444b-90c3-78e5139a4bf6",
+      "manual_guidance_action_count": 0,
+      "non_runnable_reasons": [],
+      "region": "eu-north-1",
+      "remediation_run_id": "64ffd317-94a9-493a-95f2-a8656154910e",
+      "review_required_action_count": 0,
+      "runnable_action_count": 2,
+      "selected_request": {
+        "bucket_creation_acknowledged": false,
+        "repo_target": {
+          "base_branch": "main",
+          "head_branch": "20260401t004147z-all-groups-pr-bundle-live-07-eu-north-1-ebs-snapshot-block-public-access-snapshot-block-all-sharing",
+          "provider": "github",
+          "repository": "example/security-autopilot-remediations"
+        },
+        "risk_acknowledged": true,
+        "strategy_id": "snapshot_block_all_sharing",
+        "strategy_inputs": {}
+      },
+      "summary_status": "APPLY NOT SUCCESSFUL"
+    },
+    {
+      "account_id": "696505809372",
+      "action_type": "s3_block_public_access",
+      "apply_status": "failed",
+      "folder": "08-eu-north-1-s3-block-public-access",
+      "generation_status": "success",
+      "group_id": "8b81c1a8-a2c7-4250-aaf2-d5ae62f08dda",
+      "group_run_id": "828038a5-d3a9-4c02-8575-c91d981e4948",
+      "manual_guidance_action_count": 0,
+      "non_runnable_reasons": [],
+      "region": "eu-north-1",
+      "remediation_run_id": "bc7f8fcd-7226-480a-87a6-1f03055455c7",
+      "review_required_action_count": 0,
+      "runnable_action_count": 1,
+      "selected_request": {
+        "bucket_creation_acknowledged": false,
+        "repo_target": {
+          "base_branch": "main",
+          "head_branch": "20260401t004147z-all-groups-pr-bundle-live-08-eu-north-1-s3-block-public-access-s3-account-block-public-access-pr-bundle",
+          "provider": "github",
+          "repository": "example/security-autopilot-remediations"
+        },
+        "risk_acknowledged": true,
+        "strategy_id": "s3_account_block_public_access_pr_bundle",
+        "strategy_inputs": {}
+      },
+      "summary_status": "APPLY NOT SUCCESSFUL"
+    },
+    {
+      "account_id": "696505809372",
+      "action_type": "sg_restrict_public_ports",
+      "apply_status": "failed",
+      "folder": "09-eu-north-1-sg-restrict-public-ports",
+      "generation_status": "success",
+      "group_id": "595cb7e3-5f4f-49a4-9c48-9388f139f012",
+      "group_run_id": "fe667235-6149-4813-8959-8a1c8ae077da",
+      "manual_guidance_action_count": 0,
+      "non_runnable_reasons": [],
+      "region": "eu-north-1",
+      "remediation_run_id": "39d1ad76-c49d-4db7-92c4-225a4600ac23",
+      "review_required_action_count": 0,
+      "runnable_action_count": 7,
+      "selected_request": {
+        "bucket_creation_acknowledged": false,
+        "repo_target": {
+          "base_branch": "main",
+          "head_branch": "20260401t004147z-all-groups-pr-bundle-live-09-eu-north-1-sg-restrict-public-ports-sg-restrict-public-ports-guided",
+          "provider": "github",
+          "repository": "example/security-autopilot-remediations"
+        },
+        "risk_acknowledged": true,
+        "strategy_id": "sg_restrict_public_ports_guided",
+        "strategy_inputs": {}
+      },
+      "summary_status": "APPLY NOT SUCCESSFUL"
+    },
+    {
+      "account_id": "696505809372",
+      "action_type": "iam_root_access_key_absent",
+      "apply_status": "not_started",
+      "failure_reason": {
+        "existing_run_id": null,
+        "payload": {
+          "detail": {
+            "detail": "IAM.4 execution is handled exclusively by /api/root-key-remediation-runs. Generic remediation-run routes expose IAM.4 guidance only.",
+            "error": "Dedicated root-key route required",
+            "execution_authority": "/api/root-key-remediation-runs",
+            "reason": "root_key_execution_authority",
+            "runbook_url": "docs/prod-readiness/root-credentials-required-iam-root-access-key-absent.md",
+            "strategy_id": "iam_root_key_disable"
+          }
+        },
+        "reason": "root_key_execution_authority",
+        "request_body": {
+          "bucket_creation_acknowledged": false,
+          "repo_target": {
+            "base_branch": "main",
+            "head_branch": "20260401t004147z-all-groups-pr-bundle-live-10-eu-north-1-iam-root-access-key-absent-iam-root-key-disable",
+            "provider": "github",
+            "repository": "example/security-autopilot-remediations"
+          },
+          "risk_acknowledged": true,
+          "strategy_id": "iam_root_key_disable",
+          "strategy_inputs": {}
+        },
+        "status_code": 400
+      },
+      "folder": "10-eu-north-1-iam-root-access-key-absent",
+      "generation_status": "failed",
+      "group_id": "549cd627-4bab-4e34-a15a-d9d50d11b3d9",
+      "region": "eu-north-1",
+      "summary_status": "GENERATION NOT SUCCESSFUL"
+    },
+    {
+      "account_id": "696505809372",
+      "action_type": "ebs_default_encryption",
+      "apply_status": "failed",
+      "folder": "11-eu-north-1-ebs-default-encryption",
+      "generation_status": "success",
+      "group_id": "3ff809df-3a5b-4012-b60d-5ffa124b0035",
+      "group_run_id": "95b83a1b-5843-47c1-8d5d-7280cce436dd",
+      "manual_guidance_action_count": 0,
+      "non_runnable_reasons": [],
+      "region": "eu-north-1",
+      "remediation_run_id": "f1ec8c94-63ec-4539-8c2e-3e67dd1101ed",
+      "review_required_action_count": 0,
+      "runnable_action_count": 1,
+      "selected_request": {
+        "bucket_creation_acknowledged": false,
+        "repo_target": {
+          "base_branch": "main",
+          "head_branch": "20260401t004147z-all-groups-pr-bundle-live-11-eu-north-1-ebs-default-encryption-ebs-enable-default-encryption-aws-manage",
+          "provider": "github",
+          "repository": "example/security-autopilot-remediations"
+        },
+        "risk_acknowledged": true,
+        "strategy_id": "ebs_enable_default_encryption_aws_managed_kms_pr_bundle",
+        "strategy_inputs": {}
+      },
+      "summary_status": "APPLY NOT SUCCESSFUL"
+    },
+    {
+      "account_id": "696505809372",
+      "action_type": "s3_bucket_require_ssl",
+      "apply_status": "failed",
+      "folder": "12-eu-north-1-s3-bucket-require-ssl",
+      "generation_status": "success",
+      "group_id": "3cf29e81-7d1b-414a-ab78-d2e1c3abad27",
+      "group_run_id": "50a03134-1191-426f-8428-bfeefd00cef0",
+      "manual_guidance_action_count": 0,
+      "non_runnable_reasons": [
+        {
+          "action_id": "2904172f-0491-4248-afca-af30be896885",
+          "blocked_reasons": [
+            "Bucket policy preservation evidence is missing for merge-safe SSL enforcement."
+          ],
+          "decision_summary": "Family resolver downgraded S3.5 strategy 's3_enforce_ssl_strict_deny' because merge-safe bucket policy preservation evidence is incomplete. Bucket policy preservation evidence is missing for merge-safe SSL enforcement. Run creation did not require additional risk-only acceptance.",
+          "outcome": "review_required_metadata_only",
+          "support_tier": "review_required_bundle",
+          "tier": "review_required",
+          "title": "S3 general purpose buckets should require requests to use SSL"
+        }
+      ],
+      "region": "eu-north-1",
+      "remediation_run_id": "38bddb1d-d90c-42d8-95fe-1acd3f71dfa7",
+      "review_required_action_count": 1,
+      "runnable_action_count": 15,
+      "selected_request": {
+        "bucket_creation_acknowledged": false,
+        "repo_target": {
+          "base_branch": "main",
+          "head_branch": "20260401t004147z-all-groups-pr-bundle-live-12-eu-north-1-s3-bucket-require-ssl-s3-enforce-ssl-strict-deny",
+          "provider": "github",
+          "repository": "example/security-autopilot-remediations"
+        },
+        "risk_acknowledged": true,
+        "strategy_id": "s3_enforce_ssl_strict_deny",
+        "strategy_inputs": {}
+      },
+      "summary_status": "APPLY NOT SUCCESSFUL"
+    },
+    {
+      "account_id": "696505809372",
+      "action_type": "cloudtrail_enabled",
+      "apply_status": "not_started",
+      "failure_reason": {
+        "existing_run_id": null,
+        "payload": {
+          "detail": {
+            "detail": "CloudTrail log bucket could not be verified from this account context.",
+            "error": "Invalid grouped remediation request",
+            "reason": "invalid_strategy_inputs"
+          }
+        },
+        "reason": "invalid_strategy_inputs",
+        "request_body": {
+          "bucket_creation_acknowledged": true,
+          "repo_target": {
+            "base_branch": "main",
+            "head_branch": "20260401t004147z-all-groups-pr-bundle-live-13-eu-north-1-cloudtrail-enabled-cloudtrail-enable-guided",
+            "provider": "github",
+            "repository": "example/security-autopilot-remediations"
+          },
+          "risk_acknowledged": true,
+          "strategy_id": "cloudtrail_enable_guided",
+          "strategy_inputs": {}
+        },
+        "status_code": 400
+      },
+      "folder": "13-eu-north-1-cloudtrail-enabled",
+      "generation_status": "failed",
+      "group_id": "2efa04dd-8768-4668-a8a7-666ac895ba6b",
+      "region": "eu-north-1",
+      "summary_status": "GENERATION NOT SUCCESSFUL"
+    },
+    {
+      "account_id": "696505809372",
+      "action_type": "s3_bucket_block_public_access",
+      "apply_status": "failed",
+      "folder": "14-eu-north-1-s3-bucket-block-public-access",
+      "generation_status": "success",
+      "group_id": "2990907c-b6bb-4821-9825-a523cb380bf5",
+      "group_run_id": "bc628ace-83bf-4709-b013-c042bb3f8798",
+      "manual_guidance_action_count": 1,
+      "non_runnable_reasons": [
+        {
+          "action_id": "08a9f629-3bfa-46a1-bd88-e22027f7e133",
+          "blocked_reasons": [
+            "Existing bucket policy preservation evidence is missing for CloudFront + OAC migration.",
+            "Missing bucket identifier for access-path validation."
+          ],
+          "decision_summary": "Family resolver downgraded strategy 's3_migrate_cloudfront_oac_private' to manual S3.2 preservation profile 's3_migrate_cloudfront_oac_private_manual_preservation'. Existing bucket policy preservation evidence is missing for CloudFront + OAC migration. Missing bucket identifier for access-path validation. Run creation did not require additional risk-only acceptance.",
+          "outcome": "manual_guidance_metadata_only",
+          "support_tier": "manual_guidance_only",
+          "tier": "manual_guidance",
+          "title": "S3 general purpose buckets should block public write access"
+        }
+      ],
+      "region": "eu-north-1",
+      "remediation_run_id": "64281514-ade2-4081-86ff-cadef9955eb5",
+      "review_required_action_count": 0,
+      "runnable_action_count": 14,
+      "selected_request": {
+        "bucket_creation_acknowledged": false,
+        "repo_target": {
+          "base_branch": "main",
+          "head_branch": "20260401t004147z-all-groups-pr-bundle-live-14-eu-north-1-s3-bucket-block-public-access-s3-migrate-cloudfront-oac-private",
+          "provider": "github",
+          "repository": "example/security-autopilot-remediations"
+        },
+        "risk_acknowledged": true,
+        "strategy_id": "s3_migrate_cloudfront_oac_private",
+        "strategy_inputs": {}
+      },
+      "summary_status": "APPLY NOT SUCCESSFUL"
+    }
+  ],
+  "run_id": "20260401T004147Z-all-groups-pr-bundle-live",
+  "status_counts": {
+    "APPLY NOT SUCCESSFUL": 10,
+    "GENERATION NOT SUCCESSFUL": 2,
+    "Needs review before apply": 2
+  }
+}

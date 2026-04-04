@@ -1,0 +1,881 @@
+{
+  "has_run_all": true,
+  "manifest": {
+    "action_count": 14,
+    "actions": [
+      {
+        "action_id": "4c8c904a-1683-4b29-ab97-3b6eb1b50260",
+        "action_type": "s3_bucket_access_logging",
+        "blocked_reasons": [
+          "An error occurred (AccessDenied) when calling the AssumeRole operation: Access denied. Check role ARN and trust policy."
+        ],
+        "control_id": "S3.9",
+        "decision_rationale": "Family resolver downgraded S3.9 to destination-safety review. An error occurred (AccessDenied) when calling the AssumeRole operation: Access denied. Check role ARN and trust policy. Run creation did not require additional risk-only acceptance.",
+        "decision_summary": "Family resolver downgraded S3.9 to destination-safety review. An error occurred (AccessDenied) when calling the AssumeRole operation: Access denied. Check role ARN and trust policy. Run creation did not require additional risk-only acceptance.",
+        "decision_version": "resolver/v1",
+        "finding_coverage": {},
+        "folder": "review_required/actions/01-arn-aws-s3-security-autopilot-config-69650580937-4c8c904a",
+        "has_runnable_terraform": false,
+        "index": 1,
+        "missing_defaults": [],
+        "missing_inputs": [],
+        "outcome": "review_required_metadata_only",
+        "preservation_summary": {
+          "ambiguous_source_destination_relationship": true,
+          "destination_bucket_name": "security-autopilot-config-696505809372-eu-north-1-access-logs",
+          "destination_bucket_reachable": false,
+          "destination_safety_proven": false,
+          "executable_destination_allowed": false,
+          "family": "s3_bucket_access_logging",
+          "family_strategy": "s3_enable_access_logging_guided",
+          "selected_branch": "s3_enable_access_logging_review_destination_safety",
+          "single_profile_compatible": false,
+          "source_bucket_name": "security-autopilot-config-696505809372-eu-north-1",
+          "source_bucket_scope_proven": true,
+          "strategy_only_supported": true
+        },
+        "profile_id": "s3_enable_access_logging_review_destination_safety",
+        "rejected_profiles": [
+          {
+            "detail": "An error occurred (AccessDenied) when calling the AssumeRole operation: Access denied. Check role ARN and trust policy.",
+            "profile_id": "s3_enable_access_logging_guided",
+            "reason": "branch_unavailable"
+          }
+        ],
+        "strategy_id": "s3_enable_access_logging_guided",
+        "strategy_inputs": {
+          "log_bucket_name": "security-autopilot-config-696505809372-eu-north-1-access-logs"
+        },
+        "support_tier": "review_required_bundle",
+        "target_id": "696505809372|eu-north-1|arn:aws:s3:::security-autopilot-config-696505809372-eu-north-1|S3.9",
+        "tier": "review_required",
+        "tier_root": "review_required/actions",
+        "title": "S3 general purpose buckets should have server access logging enabled"
+      },
+      {
+        "action_id": "e57d1452-509c-42cb-996d-1752c967cefe",
+        "action_type": "s3_bucket_access_logging",
+        "blocked_reasons": [
+          "An error occurred (AccessDenied) when calling the AssumeRole operation: Access denied. Check role ARN and trust policy."
+        ],
+        "control_id": "S3.9",
+        "decision_rationale": "Family resolver downgraded S3.9 to destination-safety review. An error occurred (AccessDenied) when calling the AssumeRole operation: Access denied. Check role ARN and trust policy. Run creation did not require additional risk-only acceptance.",
+        "decision_summary": "Family resolver downgraded S3.9 to destination-safety review. An error occurred (AccessDenied) when calling the AssumeRole operation: Access denied. Check role ARN and trust policy. Run creation did not require additional risk-only acceptance.",
+        "decision_version": "resolver/v1",
+        "finding_coverage": {},
+        "folder": "review_required/actions/02-arn-aws-s3-ocypheris-live-ct-20260323162333-eu-n-e57d1452",
+        "has_runnable_terraform": false,
+        "index": 2,
+        "missing_defaults": [],
+        "missing_inputs": [],
+        "outcome": "review_required_metadata_only",
+        "preservation_summary": {
+          "ambiguous_source_destination_relationship": true,
+          "destination_bucket_name": "ocypheris-live-ct-20260323162333-eu-north-1-access-logs",
+          "destination_bucket_reachable": false,
+          "destination_safety_proven": false,
+          "executable_destination_allowed": false,
+          "family": "s3_bucket_access_logging",
+          "family_strategy": "s3_enable_access_logging_guided",
+          "selected_branch": "s3_enable_access_logging_review_destination_safety",
+          "single_profile_compatible": false,
+          "source_bucket_name": "ocypheris-live-ct-20260323162333-eu-north-1",
+          "source_bucket_scope_proven": true,
+          "strategy_only_supported": true
+        },
+        "profile_id": "s3_enable_access_logging_review_destination_safety",
+        "rejected_profiles": [
+          {
+            "detail": "An error occurred (AccessDenied) when calling the AssumeRole operation: Access denied. Check role ARN and trust policy.",
+            "profile_id": "s3_enable_access_logging_guided",
+            "reason": "branch_unavailable"
+          }
+        ],
+        "strategy_id": "s3_enable_access_logging_guided",
+        "strategy_inputs": {
+          "log_bucket_name": "ocypheris-live-ct-20260323162333-eu-north-1-access-logs"
+        },
+        "support_tier": "review_required_bundle",
+        "target_id": "696505809372|eu-north-1|arn:aws:s3:::ocypheris-live-ct-20260323162333-eu-north-1|S3.9",
+        "tier": "review_required",
+        "tier_root": "review_required/actions",
+        "title": "S3 general purpose buckets should have server access logging enabled"
+      },
+      {
+        "action_id": "6ba6522c-a1d9-48bd-ab96-b6129f4363b8",
+        "action_type": "s3_bucket_access_logging",
+        "blocked_reasons": [
+          "An error occurred (AccessDenied) when calling the AssumeRole operation: Access denied. Check role ARN and trust policy."
+        ],
+        "control_id": "S3.9",
+        "decision_rationale": "Family resolver downgraded S3.9 to destination-safety review. An error occurred (AccessDenied) when calling the AssumeRole operation: Access denied. Check role ARN and trust policy. Run creation did not require additional risk-only acceptance.",
+        "decision_summary": "Family resolver downgraded S3.9 to destination-safety review. An error occurred (AccessDenied) when calling the AssumeRole operation: Access denied. Check role ARN and trust policy. Run creation did not require additional risk-only acceptance.",
+        "decision_version": "resolver/v1",
+        "finding_coverage": {},
+        "folder": "review_required/actions/03-arn-aws-s3-security-autopilot-w6-envready-s311-r-6ba6522c",
+        "has_runnable_terraform": false,
+        "index": 3,
+        "missing_defaults": [],
+        "missing_inputs": [],
+        "outcome": "review_required_metadata_only",
+        "preservation_summary": {
+          "ambiguous_source_destination_relationship": true,
+          "destination_bucket_name": "security-autopilot-w6-envready-s311-review-69650580-access-logs",
+          "destination_bucket_reachable": false,
+          "destination_safety_proven": false,
+          "executable_destination_allowed": false,
+          "family": "s3_bucket_access_logging",
+          "family_strategy": "s3_enable_access_logging_guided",
+          "selected_branch": "s3_enable_access_logging_review_destination_safety",
+          "single_profile_compatible": false,
+          "source_bucket_name": "security-autopilot-w6-envready-s311-review-696505809372",
+          "source_bucket_scope_proven": true,
+          "strategy_only_supported": true
+        },
+        "profile_id": "s3_enable_access_logging_review_destination_safety",
+        "rejected_profiles": [
+          {
+            "detail": "An error occurred (AccessDenied) when calling the AssumeRole operation: Access denied. Check role ARN and trust policy.",
+            "profile_id": "s3_enable_access_logging_guided",
+            "reason": "branch_unavailable"
+          }
+        ],
+        "strategy_id": "s3_enable_access_logging_guided",
+        "strategy_inputs": {
+          "log_bucket_name": "security-autopilot-w6-envready-s311-review-69650580-access-logs"
+        },
+        "support_tier": "review_required_bundle",
+        "target_id": "696505809372|eu-north-1|arn:aws:s3:::security-autopilot-w6-envready-s311-review-696505809372|S3.9",
+        "tier": "review_required",
+        "tier_root": "review_required/actions",
+        "title": "S3 general purpose buckets should have server access logging enabled"
+      },
+      {
+        "action_id": "770a4f18-3858-4efd-8973-a39d154fa919",
+        "action_type": "s3_bucket_access_logging",
+        "blocked_reasons": [
+          "An error occurred (AccessDenied) when calling the AssumeRole operation: Access denied. Check role ARN and trust policy."
+        ],
+        "control_id": "S3.9",
+        "decision_rationale": "Family resolver downgraded S3.9 to destination-safety review. An error occurred (AccessDenied) when calling the AssumeRole operation: Access denied. Check role ARN and trust policy. Run creation did not require additional risk-only acceptance.",
+        "decision_summary": "Family resolver downgraded S3.9 to destination-safety review. An error occurred (AccessDenied) when calling the AssumeRole operation: Access denied. Check role ARN and trust policy. Run creation did not require additional risk-only acceptance.",
+        "decision_version": "resolver/v1",
+        "finding_coverage": {},
+        "folder": "review_required/actions/04-arn-aws-s3-security-autopilot-w6-envready-s315-e-770a4f18",
+        "has_runnable_terraform": false,
+        "index": 4,
+        "missing_defaults": [],
+        "missing_inputs": [],
+        "outcome": "review_required_metadata_only",
+        "preservation_summary": {
+          "ambiguous_source_destination_relationship": true,
+          "destination_bucket_name": "security-autopilot-w6-envready-s315-exec-6965058093-access-logs",
+          "destination_bucket_reachable": false,
+          "destination_safety_proven": false,
+          "executable_destination_allowed": false,
+          "family": "s3_bucket_access_logging",
+          "family_strategy": "s3_enable_access_logging_guided",
+          "selected_branch": "s3_enable_access_logging_review_destination_safety",
+          "single_profile_compatible": false,
+          "source_bucket_name": "security-autopilot-w6-envready-s315-exec-696505809372",
+          "source_bucket_scope_proven": true,
+          "strategy_only_supported": true
+        },
+        "profile_id": "s3_enable_access_logging_review_destination_safety",
+        "rejected_profiles": [
+          {
+            "detail": "An error occurred (AccessDenied) when calling the AssumeRole operation: Access denied. Check role ARN and trust policy.",
+            "profile_id": "s3_enable_access_logging_guided",
+            "reason": "branch_unavailable"
+          }
+        ],
+        "strategy_id": "s3_enable_access_logging_guided",
+        "strategy_inputs": {
+          "log_bucket_name": "security-autopilot-w6-envready-s315-exec-6965058093-access-logs"
+        },
+        "support_tier": "review_required_bundle",
+        "target_id": "696505809372|eu-north-1|arn:aws:s3:::security-autopilot-w6-envready-s315-exec-696505809372|S3.9",
+        "tier": "review_required",
+        "tier_root": "review_required/actions",
+        "title": "S3 general purpose buckets should have server access logging enabled"
+      },
+      {
+        "action_id": "82072bfa-7707-411b-ab5a-4b8a75bef104",
+        "action_type": "s3_bucket_access_logging",
+        "blocked_reasons": [
+          "An error occurred (AccessDenied) when calling the AssumeRole operation: Access denied. Check role ARN and trust policy."
+        ],
+        "control_id": "S3.9",
+        "decision_rationale": "Family resolver downgraded S3.9 to destination-safety review. An error occurred (AccessDenied) when calling the AssumeRole operation: Access denied. Check role ARN and trust policy. Run creation did not require additional risk-only acceptance.",
+        "decision_summary": "Family resolver downgraded S3.9 to destination-safety review. An error occurred (AccessDenied) when calling the AssumeRole operation: Access denied. Check role ARN and trust policy. Run creation did not require additional risk-only acceptance.",
+        "decision_version": "resolver/v1",
+        "finding_coverage": {},
+        "folder": "review_required/actions/05-arn-aws-s3-security-autopilot-w6-envready-access-82072bfa",
+        "has_runnable_terraform": false,
+        "index": 5,
+        "missing_defaults": [],
+        "missing_inputs": [],
+        "outcome": "review_required_metadata_only",
+        "preservation_summary": {
+          "ambiguous_source_destination_relationship": true,
+          "destination_bucket_name": "security-autopilot-w6-envready-accesslogs-696505809-access-logs",
+          "destination_bucket_reachable": false,
+          "destination_safety_proven": false,
+          "executable_destination_allowed": false,
+          "family": "s3_bucket_access_logging",
+          "family_strategy": "s3_enable_access_logging_guided",
+          "selected_branch": "s3_enable_access_logging_review_destination_safety",
+          "single_profile_compatible": false,
+          "source_bucket_name": "security-autopilot-w6-envready-accesslogs-696505809372",
+          "source_bucket_scope_proven": true,
+          "strategy_only_supported": true
+        },
+        "profile_id": "s3_enable_access_logging_review_destination_safety",
+        "rejected_profiles": [
+          {
+            "detail": "An error occurred (AccessDenied) when calling the AssumeRole operation: Access denied. Check role ARN and trust policy.",
+            "profile_id": "s3_enable_access_logging_guided",
+            "reason": "branch_unavailable"
+          }
+        ],
+        "strategy_id": "s3_enable_access_logging_guided",
+        "strategy_inputs": {
+          "log_bucket_name": "security-autopilot-w6-envready-accesslogs-696505809-access-logs"
+        },
+        "support_tier": "review_required_bundle",
+        "target_id": "696505809372|eu-north-1|arn:aws:s3:::security-autopilot-w6-envready-accesslogs-696505809372|S3.9",
+        "tier": "review_required",
+        "tier_root": "review_required/actions",
+        "title": "S3 general purpose buckets should have server access logging enabled"
+      },
+      {
+        "action_id": "e97ffef8-f6f9-4417-ac99-0e83305df718",
+        "action_type": "s3_bucket_access_logging",
+        "blocked_reasons": [
+          "An error occurred (AccessDenied) when calling the AssumeRole operation: Access denied. Check role ARN and trust policy."
+        ],
+        "control_id": "S3.9",
+        "decision_rationale": "Family resolver downgraded S3.9 to destination-safety review. An error occurred (AccessDenied) when calling the AssumeRole operation: Access denied. Check role ARN and trust policy. Run creation did not require additional risk-only acceptance.",
+        "decision_summary": "Family resolver downgraded S3.9 to destination-safety review. An error occurred (AccessDenied) when calling the AssumeRole operation: Access denied. Check role ARN and trust policy. Run creation did not require additional risk-only acceptance.",
+        "decision_version": "resolver/v1",
+        "finding_coverage": {},
+        "folder": "review_required/actions/06-arn-aws-s3-security-autopilot-w6-envready-s311-e-e97ffef8",
+        "has_runnable_terraform": false,
+        "index": 6,
+        "missing_defaults": [],
+        "missing_inputs": [],
+        "outcome": "review_required_metadata_only",
+        "preservation_summary": {
+          "ambiguous_source_destination_relationship": true,
+          "destination_bucket_name": "security-autopilot-w6-envready-s311-exec-6965058093-access-logs",
+          "destination_bucket_reachable": false,
+          "destination_safety_proven": false,
+          "executable_destination_allowed": false,
+          "family": "s3_bucket_access_logging",
+          "family_strategy": "s3_enable_access_logging_guided",
+          "selected_branch": "s3_enable_access_logging_review_destination_safety",
+          "single_profile_compatible": false,
+          "source_bucket_name": "security-autopilot-w6-envready-s311-exec-696505809372",
+          "source_bucket_scope_proven": true,
+          "strategy_only_supported": true
+        },
+        "profile_id": "s3_enable_access_logging_review_destination_safety",
+        "rejected_profiles": [
+          {
+            "detail": "An error occurred (AccessDenied) when calling the AssumeRole operation: Access denied. Check role ARN and trust policy.",
+            "profile_id": "s3_enable_access_logging_guided",
+            "reason": "branch_unavailable"
+          }
+        ],
+        "strategy_id": "s3_enable_access_logging_guided",
+        "strategy_inputs": {
+          "log_bucket_name": "security-autopilot-w6-envready-s311-exec-6965058093-access-logs"
+        },
+        "support_tier": "review_required_bundle",
+        "target_id": "696505809372|eu-north-1|arn:aws:s3:::security-autopilot-w6-envready-s311-exec-696505809372|S3.9",
+        "tier": "review_required",
+        "tier_root": "review_required/actions",
+        "title": "S3 general purpose buckets should have server access logging enabled"
+      },
+      {
+        "action_id": "f67a9064-2a5f-47fd-820c-15797f354c7c",
+        "action_type": "s3_bucket_access_logging",
+        "blocked_reasons": [
+          "An error occurred (AccessDenied) when calling the AssumeRole operation: Access denied. Check role ARN and trust policy."
+        ],
+        "control_id": "S3.9",
+        "decision_rationale": "Family resolver downgraded S3.9 to destination-safety review. An error occurred (AccessDenied) when calling the AssumeRole operation: Access denied. Check role ARN and trust policy. Run creation did not require additional risk-only acceptance.",
+        "decision_summary": "Family resolver downgraded S3.9 to destination-safety review. An error occurred (AccessDenied) when calling the AssumeRole operation: Access denied. Check role ARN and trust policy. Run creation did not require additional risk-only acceptance.",
+        "decision_version": "resolver/v1",
+        "finding_coverage": {},
+        "folder": "review_required/actions/07-arn-aws-s3-security-autopilot-w6-envready-config-f67a9064",
+        "has_runnable_terraform": false,
+        "index": 7,
+        "missing_defaults": [],
+        "missing_inputs": [],
+        "outcome": "review_required_metadata_only",
+        "preservation_summary": {
+          "ambiguous_source_destination_relationship": true,
+          "destination_bucket_name": "security-autopilot-w6-envready-config-696505809372-access-logs",
+          "destination_bucket_reachable": false,
+          "destination_safety_proven": false,
+          "executable_destination_allowed": false,
+          "family": "s3_bucket_access_logging",
+          "family_strategy": "s3_enable_access_logging_guided",
+          "selected_branch": "s3_enable_access_logging_review_destination_safety",
+          "single_profile_compatible": false,
+          "source_bucket_name": "security-autopilot-w6-envready-config-696505809372",
+          "source_bucket_scope_proven": true,
+          "strategy_only_supported": true
+        },
+        "profile_id": "s3_enable_access_logging_review_destination_safety",
+        "rejected_profiles": [
+          {
+            "detail": "An error occurred (AccessDenied) when calling the AssumeRole operation: Access denied. Check role ARN and trust policy.",
+            "profile_id": "s3_enable_access_logging_guided",
+            "reason": "branch_unavailable"
+          }
+        ],
+        "strategy_id": "s3_enable_access_logging_guided",
+        "strategy_inputs": {
+          "log_bucket_name": "security-autopilot-w6-envready-config-696505809372-access-logs"
+        },
+        "support_tier": "review_required_bundle",
+        "target_id": "696505809372|eu-north-1|arn:aws:s3:::security-autopilot-w6-envready-config-696505809372|S3.9",
+        "tier": "review_required",
+        "tier_root": "review_required/actions",
+        "title": "S3 general purpose buckets should have server access logging enabled"
+      },
+      {
+        "action_id": "8f64dd84-763c-4081-ad1e-9a36757b5c87",
+        "action_type": "s3_bucket_access_logging",
+        "blocked_reasons": [
+          "An error occurred (AccessDenied) when calling the AssumeRole operation: Access denied. Check role ARN and trust policy."
+        ],
+        "control_id": "S3.9",
+        "decision_rationale": "Family resolver downgraded S3.9 to destination-safety review. An error occurred (AccessDenied) when calling the AssumeRole operation: Access denied. Check role ARN and trust policy. Run creation did not require additional risk-only acceptance.",
+        "decision_summary": "Family resolver downgraded S3.9 to destination-safety review. An error occurred (AccessDenied) when calling the AssumeRole operation: Access denied. Check role ARN and trust policy. Run creation did not require additional risk-only acceptance.",
+        "decision_version": "resolver/v1",
+        "finding_coverage": {},
+        "folder": "review_required/actions/08-arn-aws-s3-config-bucket-696505809372-8f64dd84",
+        "has_runnable_terraform": false,
+        "index": 8,
+        "missing_defaults": [],
+        "missing_inputs": [],
+        "outcome": "review_required_metadata_only",
+        "preservation_summary": {
+          "ambiguous_source_destination_relationship": true,
+          "destination_bucket_name": "config-bucket-696505809372-access-logs",
+          "destination_bucket_reachable": false,
+          "destination_safety_proven": false,
+          "executable_destination_allowed": false,
+          "family": "s3_bucket_access_logging",
+          "family_strategy": "s3_enable_access_logging_guided",
+          "selected_branch": "s3_enable_access_logging_review_destination_safety",
+          "single_profile_compatible": false,
+          "source_bucket_name": "config-bucket-696505809372",
+          "source_bucket_scope_proven": true,
+          "strategy_only_supported": true
+        },
+        "profile_id": "s3_enable_access_logging_review_destination_safety",
+        "rejected_profiles": [
+          {
+            "detail": "An error occurred (AccessDenied) when calling the AssumeRole operation: Access denied. Check role ARN and trust policy.",
+            "profile_id": "s3_enable_access_logging_guided",
+            "reason": "branch_unavailable"
+          }
+        ],
+        "strategy_id": "s3_enable_access_logging_guided",
+        "strategy_inputs": {
+          "log_bucket_name": "config-bucket-696505809372-access-logs"
+        },
+        "support_tier": "review_required_bundle",
+        "target_id": "696505809372|eu-north-1|arn:aws:s3:::config-bucket-696505809372|S3.9",
+        "tier": "review_required",
+        "tier_root": "review_required/actions",
+        "title": "S3 general purpose buckets should have server access logging enabled"
+      },
+      {
+        "action_id": "318c8b1d-0a93-43f0-9b32-24014b6dbf15",
+        "action_type": "s3_bucket_access_logging",
+        "blocked_reasons": [
+          "An error occurred (AccessDenied) when calling the AssumeRole operation: Access denied. Check role ARN and trust policy."
+        ],
+        "control_id": "S3.9",
+        "decision_rationale": "Family resolver downgraded S3.9 to destination-safety review. An error occurred (AccessDenied) when calling the AssumeRole operation: Access denied. Check role ARN and trust policy. Run creation did not require additional risk-only acceptance.",
+        "decision_summary": "Family resolver downgraded S3.9 to destination-safety review. An error occurred (AccessDenied) when calling the AssumeRole operation: Access denied. Check role ARN and trust policy. Run creation did not require additional risk-only acceptance.",
+        "decision_version": "resolver/v1",
+        "finding_coverage": {},
+        "folder": "review_required/actions/09-arn-aws-s3-security-autopilot-w6-envready-cloudt-318c8b1d",
+        "has_runnable_terraform": false,
+        "index": 9,
+        "missing_defaults": [],
+        "missing_inputs": [],
+        "outcome": "review_required_metadata_only",
+        "preservation_summary": {
+          "ambiguous_source_destination_relationship": true,
+          "destination_bucket_name": "security-autopilot-w6-envready-cloudtrail-696505809-access-logs",
+          "destination_bucket_reachable": false,
+          "destination_safety_proven": false,
+          "executable_destination_allowed": false,
+          "family": "s3_bucket_access_logging",
+          "family_strategy": "s3_enable_access_logging_guided",
+          "selected_branch": "s3_enable_access_logging_review_destination_safety",
+          "single_profile_compatible": false,
+          "source_bucket_name": "security-autopilot-w6-envready-cloudtrail-696505809372",
+          "source_bucket_scope_proven": true,
+          "strategy_only_supported": true
+        },
+        "profile_id": "s3_enable_access_logging_review_destination_safety",
+        "rejected_profiles": [
+          {
+            "detail": "An error occurred (AccessDenied) when calling the AssumeRole operation: Access denied. Check role ARN and trust policy.",
+            "profile_id": "s3_enable_access_logging_guided",
+            "reason": "branch_unavailable"
+          }
+        ],
+        "strategy_id": "s3_enable_access_logging_guided",
+        "strategy_inputs": {
+          "log_bucket_name": "security-autopilot-w6-envready-cloudtrail-696505809-access-logs"
+        },
+        "support_tier": "review_required_bundle",
+        "target_id": "696505809372|eu-north-1|arn:aws:s3:::security-autopilot-w6-envready-cloudtrail-696505809372|S3.9",
+        "tier": "review_required",
+        "tier_root": "review_required/actions",
+        "title": "S3 general purpose buckets should have server access logging enabled"
+      },
+      {
+        "action_id": "8499e226-d3e8-4031-b225-9f905160ef5f",
+        "action_type": "s3_bucket_access_logging",
+        "blocked_reasons": [
+          "An error occurred (AccessDenied) when calling the AssumeRole operation: Access denied. Check role ARN and trust policy."
+        ],
+        "control_id": "S3.9",
+        "decision_rationale": "Family resolver downgraded S3.9 to destination-safety review. An error occurred (AccessDenied) when calling the AssumeRole operation: Access denied. Check role ARN and trust policy. Run creation did not require additional risk-only acceptance.",
+        "decision_summary": "Family resolver downgraded S3.9 to destination-safety review. An error occurred (AccessDenied) when calling the AssumeRole operation: Access denied. Check role ARN and trust policy. Run creation did not require additional risk-only acceptance.",
+        "decision_version": "resolver/v1",
+        "finding_coverage": {},
+        "folder": "review_required/actions/10-arn-aws-s3-security-autopilot-w6-strict-s311-man-8499e226",
+        "has_runnable_terraform": false,
+        "index": 10,
+        "missing_defaults": [],
+        "missing_inputs": [],
+        "outcome": "review_required_metadata_only",
+        "preservation_summary": {
+          "ambiguous_source_destination_relationship": true,
+          "destination_bucket_name": "security-autopilot-w6-strict-s311-manual-6965058093-access-logs",
+          "destination_bucket_reachable": false,
+          "destination_safety_proven": false,
+          "executable_destination_allowed": false,
+          "family": "s3_bucket_access_logging",
+          "family_strategy": "s3_enable_access_logging_guided",
+          "selected_branch": "s3_enable_access_logging_review_destination_safety",
+          "single_profile_compatible": false,
+          "source_bucket_name": "security-autopilot-w6-strict-s311-manual-696505809372",
+          "source_bucket_scope_proven": true,
+          "strategy_only_supported": true
+        },
+        "profile_id": "s3_enable_access_logging_review_destination_safety",
+        "rejected_profiles": [
+          {
+            "detail": "An error occurred (AccessDenied) when calling the AssumeRole operation: Access denied. Check role ARN and trust policy.",
+            "profile_id": "s3_enable_access_logging_guided",
+            "reason": "branch_unavailable"
+          }
+        ],
+        "strategy_id": "s3_enable_access_logging_guided",
+        "strategy_inputs": {
+          "log_bucket_name": "security-autopilot-w6-strict-s311-manual-6965058093-access-logs"
+        },
+        "support_tier": "review_required_bundle",
+        "target_id": "696505809372|eu-north-1|arn:aws:s3:::security-autopilot-w6-strict-s311-manual-696505809372|S3.9",
+        "tier": "review_required",
+        "tier_root": "review_required/actions",
+        "title": "S3 general purpose buckets should have server access logging enabled"
+      },
+      {
+        "action_id": "a8a06ade-67b9-4b5b-89df-1f4f430036a5",
+        "action_type": "s3_bucket_access_logging",
+        "blocked_reasons": [
+          "An error occurred (AccessDenied) when calling the AssumeRole operation: Access denied. Check role ARN and trust policy."
+        ],
+        "control_id": "S3.9",
+        "decision_rationale": "Family resolver downgraded S3.9 to destination-safety review. An error occurred (AccessDenied) when calling the AssumeRole operation: Access denied. Check role ARN and trust policy. Run creation did not require additional risk-only acceptance.",
+        "decision_summary": "Family resolver downgraded S3.9 to destination-safety review. An error occurred (AccessDenied) when calling the AssumeRole operation: Access denied. Check role ARN and trust policy. Run creation did not require additional risk-only acceptance.",
+        "decision_version": "resolver/v1",
+        "finding_coverage": {},
+        "folder": "review_required/actions/11-arn-aws-s3-security-autopilot-w6-strict-s315-exe-a8a06ade",
+        "has_runnable_terraform": false,
+        "index": 11,
+        "missing_defaults": [],
+        "missing_inputs": [],
+        "outcome": "review_required_metadata_only",
+        "preservation_summary": {
+          "ambiguous_source_destination_relationship": true,
+          "destination_bucket_name": "security-autopilot-w6-strict-s315-exec-696505809372-access-logs",
+          "destination_bucket_reachable": false,
+          "destination_safety_proven": false,
+          "executable_destination_allowed": false,
+          "family": "s3_bucket_access_logging",
+          "family_strategy": "s3_enable_access_logging_guided",
+          "selected_branch": "s3_enable_access_logging_review_destination_safety",
+          "single_profile_compatible": false,
+          "source_bucket_name": "security-autopilot-w6-strict-s315-exec-696505809372",
+          "source_bucket_scope_proven": true,
+          "strategy_only_supported": true
+        },
+        "profile_id": "s3_enable_access_logging_review_destination_safety",
+        "rejected_profiles": [
+          {
+            "detail": "An error occurred (AccessDenied) when calling the AssumeRole operation: Access denied. Check role ARN and trust policy.",
+            "profile_id": "s3_enable_access_logging_guided",
+            "reason": "branch_unavailable"
+          }
+        ],
+        "strategy_id": "s3_enable_access_logging_guided",
+        "strategy_inputs": {
+          "log_bucket_name": "security-autopilot-w6-strict-s315-exec-696505809372-access-logs"
+        },
+        "support_tier": "review_required_bundle",
+        "target_id": "696505809372|eu-north-1|arn:aws:s3:::security-autopilot-w6-strict-s315-exec-696505809372|S3.9",
+        "tier": "review_required",
+        "tier_root": "review_required/actions",
+        "title": "S3 general purpose buckets should have server access logging enabled"
+      },
+      {
+        "action_id": "ece8a96e-8e9c-44de-a715-d0b7caa061c1",
+        "action_type": "s3_bucket_access_logging",
+        "blocked_reasons": [
+          "An error occurred (AccessDenied) when calling the AssumeRole operation: Access denied. Check role ARN and trust policy."
+        ],
+        "control_id": "S3.9",
+        "decision_rationale": "Family resolver downgraded S3.9 to destination-safety review. An error occurred (AccessDenied) when calling the AssumeRole operation: Access denied. Check role ARN and trust policy. Run creation did not require additional risk-only acceptance.",
+        "decision_summary": "Family resolver downgraded S3.9 to destination-safety review. An error occurred (AccessDenied) when calling the AssumeRole operation: Access denied. Check role ARN and trust policy. Run creation did not require additional risk-only acceptance.",
+        "decision_version": "resolver/v1",
+        "finding_coverage": {},
+        "folder": "review_required/actions/12-arn-aws-s3-security-autopilot-w6-strict-s311-exe-ece8a96e",
+        "has_runnable_terraform": false,
+        "index": 12,
+        "missing_defaults": [],
+        "missing_inputs": [],
+        "outcome": "review_required_metadata_only",
+        "preservation_summary": {
+          "ambiguous_source_destination_relationship": true,
+          "destination_bucket_name": "security-autopilot-w6-strict-s311-exec-696505809372-access-logs",
+          "destination_bucket_reachable": false,
+          "destination_safety_proven": false,
+          "executable_destination_allowed": false,
+          "family": "s3_bucket_access_logging",
+          "family_strategy": "s3_enable_access_logging_guided",
+          "selected_branch": "s3_enable_access_logging_review_destination_safety",
+          "single_profile_compatible": false,
+          "source_bucket_name": "security-autopilot-w6-strict-s311-exec-696505809372",
+          "source_bucket_scope_proven": true,
+          "strategy_only_supported": true
+        },
+        "profile_id": "s3_enable_access_logging_review_destination_safety",
+        "rejected_profiles": [
+          {
+            "detail": "An error occurred (AccessDenied) when calling the AssumeRole operation: Access denied. Check role ARN and trust policy.",
+            "profile_id": "s3_enable_access_logging_guided",
+            "reason": "branch_unavailable"
+          }
+        ],
+        "strategy_id": "s3_enable_access_logging_guided",
+        "strategy_inputs": {
+          "log_bucket_name": "security-autopilot-w6-strict-s311-exec-696505809372-access-logs"
+        },
+        "support_tier": "review_required_bundle",
+        "target_id": "696505809372|eu-north-1|arn:aws:s3:::security-autopilot-w6-strict-s311-exec-696505809372|S3.9",
+        "tier": "review_required",
+        "tier_root": "review_required/actions",
+        "title": "S3 general purpose buckets should have server access logging enabled"
+      },
+      {
+        "action_id": "f9535173-3de1-44d0-8583-ee937e1ad811",
+        "action_type": "s3_bucket_access_logging",
+        "blocked_reasons": [
+          "An error occurred (AccessDenied) when calling the AssumeRole operation: Access denied. Check role ARN and trust policy."
+        ],
+        "control_id": "S3.9",
+        "decision_rationale": "Family resolver downgraded S3.9 to destination-safety review. An error occurred (AccessDenied) when calling the AssumeRole operation: Access denied. Check role ARN and trust policy. Run creation did not require additional risk-only acceptance.",
+        "decision_summary": "Family resolver downgraded S3.9 to destination-safety review. An error occurred (AccessDenied) when calling the AssumeRole operation: Access denied. Check role ARN and trust policy. Run creation did not require additional risk-only acceptance.",
+        "decision_version": "resolver/v1",
+        "finding_coverage": {},
+        "folder": "review_required/actions/13-arn-aws-s3-security-autopilot-w6-strict-s315-man-f9535173",
+        "has_runnable_terraform": false,
+        "index": 13,
+        "missing_defaults": [],
+        "missing_inputs": [],
+        "outcome": "review_required_metadata_only",
+        "preservation_summary": {
+          "ambiguous_source_destination_relationship": true,
+          "destination_bucket_name": "security-autopilot-w6-strict-s315-manual-6965058093-access-logs",
+          "destination_bucket_reachable": false,
+          "destination_safety_proven": false,
+          "executable_destination_allowed": false,
+          "family": "s3_bucket_access_logging",
+          "family_strategy": "s3_enable_access_logging_guided",
+          "selected_branch": "s3_enable_access_logging_review_destination_safety",
+          "single_profile_compatible": false,
+          "source_bucket_name": "security-autopilot-w6-strict-s315-manual-696505809372",
+          "source_bucket_scope_proven": true,
+          "strategy_only_supported": true
+        },
+        "profile_id": "s3_enable_access_logging_review_destination_safety",
+        "rejected_profiles": [
+          {
+            "detail": "An error occurred (AccessDenied) when calling the AssumeRole operation: Access denied. Check role ARN and trust policy.",
+            "profile_id": "s3_enable_access_logging_guided",
+            "reason": "branch_unavailable"
+          }
+        ],
+        "strategy_id": "s3_enable_access_logging_guided",
+        "strategy_inputs": {
+          "log_bucket_name": "security-autopilot-w6-strict-s315-manual-6965058093-access-logs"
+        },
+        "support_tier": "review_required_bundle",
+        "target_id": "696505809372|eu-north-1|arn:aws:s3:::security-autopilot-w6-strict-s315-manual-696505809372|S3.9",
+        "tier": "review_required",
+        "tier_root": "review_required/actions",
+        "title": "S3 general purpose buckets should have server access logging enabled"
+      },
+      {
+        "action_id": "257bc11e-c522-4419-8af5-be24ae406691",
+        "action_type": "s3_bucket_access_logging",
+        "blocked_reasons": [
+          "Source bucket scope could not be proven for S3 access logging; review the affected bucket relationship manually."
+        ],
+        "control_id": "S3.9",
+        "decision_rationale": "Family resolver downgraded S3.9 to destination-safety review. Source bucket scope could not be proven for S3 access logging; review the affected bucket relationship manually. Run creation did not require additional risk-only acceptance.",
+        "decision_summary": "Family resolver downgraded S3.9 to destination-safety review. Source bucket scope could not be proven for S3 access logging; review the affected bucket relationship manually. Run creation did not require additional risk-only acceptance.",
+        "decision_version": "resolver/v1",
+        "finding_coverage": {},
+        "folder": "review_required/actions/14-aws-account-696505809372-257bc11e",
+        "has_runnable_terraform": false,
+        "index": 14,
+        "missing_defaults": [
+          "s3_access_logs.default_target_bucket_name"
+        ],
+        "missing_inputs": [
+          "log_bucket_name"
+        ],
+        "outcome": "review_required_metadata_only",
+        "preservation_summary": {
+          "ambiguous_source_destination_relationship": true,
+          "destination_bucket_name": null,
+          "destination_bucket_reachable": null,
+          "destination_safety_proven": false,
+          "executable_destination_allowed": false,
+          "family": "s3_bucket_access_logging",
+          "family_strategy": "s3_enable_access_logging_guided",
+          "selected_branch": "s3_enable_access_logging_review_destination_safety",
+          "single_profile_compatible": false,
+          "source_bucket_name": null,
+          "source_bucket_scope_proven": false,
+          "strategy_only_supported": true
+        },
+        "profile_id": "s3_enable_access_logging_review_destination_safety",
+        "rejected_profiles": [
+          {
+            "detail": "Source bucket scope could not be proven for S3 access logging; review the affected bucket relationship manually.",
+            "profile_id": "s3_enable_access_logging_guided",
+            "reason": "branch_unavailable"
+          }
+        ],
+        "strategy_id": "s3_enable_access_logging_guided",
+        "strategy_inputs": {},
+        "support_tier": "review_required_bundle",
+        "target_id": "696505809372|eu-north-1|AWS::::Account:696505809372|S3.9",
+        "tier": "review_required",
+        "tier_root": "review_required/actions",
+        "title": "S3 general purpose buckets should have server access logging enabled"
+      }
+    ],
+    "execution_root": "executable/actions",
+    "grouped_actions": [
+      "4c8c904a-1683-4b29-ab97-3b6eb1b50260",
+      "e57d1452-509c-42cb-996d-1752c967cefe",
+      "6ba6522c-a1d9-48bd-ab96-b6129f4363b8",
+      "770a4f18-3858-4efd-8973-a39d154fa919",
+      "82072bfa-7707-411b-ab5a-4b8a75bef104",
+      "e97ffef8-f6f9-4417-ac99-0e83305df718",
+      "f67a9064-2a5f-47fd-820c-15797f354c7c",
+      "8f64dd84-763c-4081-ad1e-9a36757b5c87",
+      "318c8b1d-0a93-43f0-9b32-24014b6dbf15",
+      "8499e226-d3e8-4031-b225-9f905160ef5f",
+      "a8a06ade-67b9-4b5b-89df-1f4f430036a5",
+      "ece8a96e-8e9c-44de-a715-d0b7caa061c1",
+      "f9535173-3de1-44d0-8583-ee937e1ad811",
+      "257bc11e-c522-4419-8af5-be24ae406691"
+    ],
+    "layout_version": "grouped_bundle_mixed_tier/v1",
+    "runnable_action_count": 0,
+    "runner_template_source": "embedded_mixed_tier",
+    "runner_template_version": "grouped_bundle_mixed_tier/v1",
+    "tier_counts": {
+      "executable": 0,
+      "manual_guidance": 0,
+      "review_required": 14
+    }
+  },
+  "manual_guidance_action_count": 0,
+  "non_runnable_reasons": [
+    {
+      "action_id": "4c8c904a-1683-4b29-ab97-3b6eb1b50260",
+      "blocked_reasons": [
+        "An error occurred (AccessDenied) when calling the AssumeRole operation: Access denied. Check role ARN and trust policy."
+      ],
+      "decision_summary": "Family resolver downgraded S3.9 to destination-safety review. An error occurred (AccessDenied) when calling the AssumeRole operation: Access denied. Check role ARN and trust policy. Run creation did not require additional risk-only acceptance.",
+      "outcome": "review_required_metadata_only",
+      "support_tier": "review_required_bundle",
+      "tier": "review_required",
+      "title": "S3 general purpose buckets should have server access logging enabled"
+    },
+    {
+      "action_id": "e57d1452-509c-42cb-996d-1752c967cefe",
+      "blocked_reasons": [
+        "An error occurred (AccessDenied) when calling the AssumeRole operation: Access denied. Check role ARN and trust policy."
+      ],
+      "decision_summary": "Family resolver downgraded S3.9 to destination-safety review. An error occurred (AccessDenied) when calling the AssumeRole operation: Access denied. Check role ARN and trust policy. Run creation did not require additional risk-only acceptance.",
+      "outcome": "review_required_metadata_only",
+      "support_tier": "review_required_bundle",
+      "tier": "review_required",
+      "title": "S3 general purpose buckets should have server access logging enabled"
+    },
+    {
+      "action_id": "6ba6522c-a1d9-48bd-ab96-b6129f4363b8",
+      "blocked_reasons": [
+        "An error occurred (AccessDenied) when calling the AssumeRole operation: Access denied. Check role ARN and trust policy."
+      ],
+      "decision_summary": "Family resolver downgraded S3.9 to destination-safety review. An error occurred (AccessDenied) when calling the AssumeRole operation: Access denied. Check role ARN and trust policy. Run creation did not require additional risk-only acceptance.",
+      "outcome": "review_required_metadata_only",
+      "support_tier": "review_required_bundle",
+      "tier": "review_required",
+      "title": "S3 general purpose buckets should have server access logging enabled"
+    },
+    {
+      "action_id": "770a4f18-3858-4efd-8973-a39d154fa919",
+      "blocked_reasons": [
+        "An error occurred (AccessDenied) when calling the AssumeRole operation: Access denied. Check role ARN and trust policy."
+      ],
+      "decision_summary": "Family resolver downgraded S3.9 to destination-safety review. An error occurred (AccessDenied) when calling the AssumeRole operation: Access denied. Check role ARN and trust policy. Run creation did not require additional risk-only acceptance.",
+      "outcome": "review_required_metadata_only",
+      "support_tier": "review_required_bundle",
+      "tier": "review_required",
+      "title": "S3 general purpose buckets should have server access logging enabled"
+    },
+    {
+      "action_id": "82072bfa-7707-411b-ab5a-4b8a75bef104",
+      "blocked_reasons": [
+        "An error occurred (AccessDenied) when calling the AssumeRole operation: Access denied. Check role ARN and trust policy."
+      ],
+      "decision_summary": "Family resolver downgraded S3.9 to destination-safety review. An error occurred (AccessDenied) when calling the AssumeRole operation: Access denied. Check role ARN and trust policy. Run creation did not require additional risk-only acceptance.",
+      "outcome": "review_required_metadata_only",
+      "support_tier": "review_required_bundle",
+      "tier": "review_required",
+      "title": "S3 general purpose buckets should have server access logging enabled"
+    },
+    {
+      "action_id": "e97ffef8-f6f9-4417-ac99-0e83305df718",
+      "blocked_reasons": [
+        "An error occurred (AccessDenied) when calling the AssumeRole operation: Access denied. Check role ARN and trust policy."
+      ],
+      "decision_summary": "Family resolver downgraded S3.9 to destination-safety review. An error occurred (AccessDenied) when calling the AssumeRole operation: Access denied. Check role ARN and trust policy. Run creation did not require additional risk-only acceptance.",
+      "outcome": "review_required_metadata_only",
+      "support_tier": "review_required_bundle",
+      "tier": "review_required",
+      "title": "S3 general purpose buckets should have server access logging enabled"
+    },
+    {
+      "action_id": "f67a9064-2a5f-47fd-820c-15797f354c7c",
+      "blocked_reasons": [
+        "An error occurred (AccessDenied) when calling the AssumeRole operation: Access denied. Check role ARN and trust policy."
+      ],
+      "decision_summary": "Family resolver downgraded S3.9 to destination-safety review. An error occurred (AccessDenied) when calling the AssumeRole operation: Access denied. Check role ARN and trust policy. Run creation did not require additional risk-only acceptance.",
+      "outcome": "review_required_metadata_only",
+      "support_tier": "review_required_bundle",
+      "tier": "review_required",
+      "title": "S3 general purpose buckets should have server access logging enabled"
+    },
+    {
+      "action_id": "8f64dd84-763c-4081-ad1e-9a36757b5c87",
+      "blocked_reasons": [
+        "An error occurred (AccessDenied) when calling the AssumeRole operation: Access denied. Check role ARN and trust policy."
+      ],
+      "decision_summary": "Family resolver downgraded S3.9 to destination-safety review. An error occurred (AccessDenied) when calling the AssumeRole operation: Access denied. Check role ARN and trust policy. Run creation did not require additional risk-only acceptance.",
+      "outcome": "review_required_metadata_only",
+      "support_tier": "review_required_bundle",
+      "tier": "review_required",
+      "title": "S3 general purpose buckets should have server access logging enabled"
+    },
+    {
+      "action_id": "318c8b1d-0a93-43f0-9b32-24014b6dbf15",
+      "blocked_reasons": [
+        "An error occurred (AccessDenied) when calling the AssumeRole operation: Access denied. Check role ARN and trust policy."
+      ],
+      "decision_summary": "Family resolver downgraded S3.9 to destination-safety review. An error occurred (AccessDenied) when calling the AssumeRole operation: Access denied. Check role ARN and trust policy. Run creation did not require additional risk-only acceptance.",
+      "outcome": "review_required_metadata_only",
+      "support_tier": "review_required_bundle",
+      "tier": "review_required",
+      "title": "S3 general purpose buckets should have server access logging enabled"
+    },
+    {
+      "action_id": "8499e226-d3e8-4031-b225-9f905160ef5f",
+      "blocked_reasons": [
+        "An error occurred (AccessDenied) when calling the AssumeRole operation: Access denied. Check role ARN and trust policy."
+      ],
+      "decision_summary": "Family resolver downgraded S3.9 to destination-safety review. An error occurred (AccessDenied) when calling the AssumeRole operation: Access denied. Check role ARN and trust policy. Run creation did not require additional risk-only acceptance.",
+      "outcome": "review_required_metadata_only",
+      "support_tier": "review_required_bundle",
+      "tier": "review_required",
+      "title": "S3 general purpose buckets should have server access logging enabled"
+    },
+    {
+      "action_id": "a8a06ade-67b9-4b5b-89df-1f4f430036a5",
+      "blocked_reasons": [
+        "An error occurred (AccessDenied) when calling the AssumeRole operation: Access denied. Check role ARN and trust policy."
+      ],
+      "decision_summary": "Family resolver downgraded S3.9 to destination-safety review. An error occurred (AccessDenied) when calling the AssumeRole operation: Access denied. Check role ARN and trust policy. Run creation did not require additional risk-only acceptance.",
+      "outcome": "review_required_metadata_only",
+      "support_tier": "review_required_bundle",
+      "tier": "review_required",
+      "title": "S3 general purpose buckets should have server access logging enabled"
+    },
+    {
+      "action_id": "ece8a96e-8e9c-44de-a715-d0b7caa061c1",
+      "blocked_reasons": [
+        "An error occurred (AccessDenied) when calling the AssumeRole operation: Access denied. Check role ARN and trust policy."
+      ],
+      "decision_summary": "Family resolver downgraded S3.9 to destination-safety review. An error occurred (AccessDenied) when calling the AssumeRole operation: Access denied. Check role ARN and trust policy. Run creation did not require additional risk-only acceptance.",
+      "outcome": "review_required_metadata_only",
+      "support_tier": "review_required_bundle",
+      "tier": "review_required",
+      "title": "S3 general purpose buckets should have server access logging enabled"
+    },
+    {
+      "action_id": "f9535173-3de1-44d0-8583-ee937e1ad811",
+      "blocked_reasons": [
+        "An error occurred (AccessDenied) when calling the AssumeRole operation: Access denied. Check role ARN and trust policy."
+      ],
+      "decision_summary": "Family resolver downgraded S3.9 to destination-safety review. An error occurred (AccessDenied) when calling the AssumeRole operation: Access denied. Check role ARN and trust policy. Run creation did not require additional risk-only acceptance.",
+      "outcome": "review_required_metadata_only",
+      "support_tier": "review_required_bundle",
+      "tier": "review_required",
+      "title": "S3 general purpose buckets should have server access logging enabled"
+    },
+    {
+      "action_id": "257bc11e-c522-4419-8af5-be24ae406691",
+      "blocked_reasons": [
+        "Source bucket scope could not be proven for S3 access logging; review the affected bucket relationship manually."
+      ],
+      "decision_summary": "Family resolver downgraded S3.9 to destination-safety review. Source bucket scope could not be proven for S3 access logging; review the affected bucket relationship manually. Run creation did not require additional risk-only acceptance.",
+      "outcome": "review_required_metadata_only",
+      "support_tier": "review_required_bundle",
+      "tier": "review_required",
+      "title": "S3 general purpose buckets should have server access logging enabled"
+    }
+  ],
+  "review_required_action_count": 14,
+  "runnable_action_count": 0
+}

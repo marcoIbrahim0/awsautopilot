@@ -1,0 +1,38 @@
+[
+  {
+    "bucket_creation_acknowledged": false,
+    "repo_target": {
+      "base_branch": "main",
+      "head_branch": "20260401t230346z-s35-s3_enforce_ssl_strict_deny",
+      "provider": "github",
+      "repository": "example/security-autopilot-remediations"
+    },
+    "risk_acknowledged": true,
+    "strategy_id": "s3_enforce_ssl_strict_deny",
+    "strategy_inputs": {}
+  },
+  {
+    "bucket_creation_acknowledged": false,
+    "repo_target": {
+      "base_branch": "main",
+      "head_branch": "20260401t230346z-s35-s3_enforce_ssl_with_principal_exemptions",
+      "provider": "github",
+      "repository": "example/security-autopilot-remediations"
+    },
+    "risk_acknowledged": true,
+    "strategy_id": "s3_enforce_ssl_with_principal_exemptions",
+    "strategy_inputs": {}
+  },
+  {
+    "bucket_creation_acknowledged": false,
+    "repo_target": {
+      "base_branch": "main",
+      "head_branch": "20260401t230346z-s35-s3_keep_non_ssl_exception",
+      "provider": "github",
+      "repository": "example/security-autopilot-remediations"
+    },
+    "risk_acknowledged": true,
+    "strategy_id": "s3_keep_non_ssl_exception",
+    "strategy_inputs": {}
+  }
+]

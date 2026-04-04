@@ -1,0 +1,10 @@
+{
+  "strategy_id": "s3_enable_access_logging_guided",
+  "risk_acknowledged": true,
+  "repo_target": {
+    "repository": "live-validation/postdeploy-s39",
+    "base_branch": "main",
+    "head_branch": "postdeploy-s39-20260401",
+    "root_path": "evidence/postdeploy"
+  }
+}

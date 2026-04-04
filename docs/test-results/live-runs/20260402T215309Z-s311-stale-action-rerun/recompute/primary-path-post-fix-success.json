@@ -1,0 +1,23 @@
+{
+  "status": "success",
+  "database_source": "primary",
+  "elapsed_sec": 71.41,
+  "returncode": 0,
+  "result": {
+    "action_findings_linked": 139,
+    "actions_created": 0,
+    "actions_updated": 69,
+    "actions_resolved": 0,
+    "actions_reopened_with_open_findings": 0,
+    "graph_nodes_updated": 513,
+    "graph_edges_updated": 953,
+    "phase_timings_ms": {
+      "grouping": 23981,
+      "upsert": 27721,
+      "group_projection": 531,
+      "resolve_reopen": 365,
+      "security_graph": 13099,
+      "total": 65711
+    }
+  }
+}

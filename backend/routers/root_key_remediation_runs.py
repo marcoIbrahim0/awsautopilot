@@ -21,6 +21,7 @@ from backend.database import get_db
 from backend.models.action import Action
 from backend.models.aws_account import AwsAccount
 from backend.models.finding import Finding
+from backend.models.tenant import Tenant
 from backend.models.root_key_dependency_fingerprint import RootKeyDependencyFingerprint
 from backend.models.root_key_external_task import RootKeyExternalTask
 from backend.models.root_key_remediation_event import RootKeyRemediationEvent
@@ -651,8 +652,9 @@ async def _load_root_key_observer_role_context(
                 "account_id": run.account_id,
             },
         )
+    tenant_result = await db.execute(select(Tenant.external_id).where(Tenant.id == tenant_id))
     role_read_arn = _normalized_text(getattr(account, "role_read_arn", ""))
-    external_id = _normalized_text(getattr(account, "external_id", ""))
+    external_id = _normalized_text(tenant_result.scalar_one_or_none())
     if not role_read_arn or not external_id:
         return None, _error_response(
             correlation_id=correlation_id,

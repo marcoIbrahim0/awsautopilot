@@ -1,0 +1,14 @@
+[
+  {
+    "bucket_creation_acknowledged": false,
+    "repo_target": {
+      "base_branch": "main",
+      "head_branch": "20260401t004147z-all-groups-pr-bundle-live-04-eu-north-1-s3-bucket-lifecycle-configuration-s3-enable-abort-incomplete-up",
+      "provider": "github",
+      "repository": "example/security-autopilot-remediations"
+    },
+    "risk_acknowledged": true,
+    "strategy_id": "s3_enable_abort_incomplete_uploads",
+    "strategy_inputs": {}
+  }
+]

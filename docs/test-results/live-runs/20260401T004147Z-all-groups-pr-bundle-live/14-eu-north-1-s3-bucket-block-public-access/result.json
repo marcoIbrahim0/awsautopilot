@@ -1,0 +1,41 @@
+{
+  "account_id": "696505809372",
+  "action_type": "s3_bucket_block_public_access",
+  "apply_status": "failed",
+  "folder": "14-eu-north-1-s3-bucket-block-public-access",
+  "generation_status": "success",
+  "group_id": "2990907c-b6bb-4821-9825-a523cb380bf5",
+  "group_run_id": "bc628ace-83bf-4709-b013-c042bb3f8798",
+  "manual_guidance_action_count": 1,
+  "non_runnable_reasons": [
+    {
+      "action_id": "08a9f629-3bfa-46a1-bd88-e22027f7e133",
+      "blocked_reasons": [
+        "Existing bucket policy preservation evidence is missing for CloudFront + OAC migration.",
+        "Missing bucket identifier for access-path validation."
+      ],
+      "decision_summary": "Family resolver downgraded strategy 's3_migrate_cloudfront_oac_private' to manual S3.2 preservation profile 's3_migrate_cloudfront_oac_private_manual_preservation'. Existing bucket policy preservation evidence is missing for CloudFront + OAC migration. Missing bucket identifier for access-path validation. Run creation did not require additional risk-only acceptance.",
+      "outcome": "manual_guidance_metadata_only",
+      "support_tier": "manual_guidance_only",
+      "tier": "manual_guidance",
+      "title": "S3 general purpose buckets should block public write access"
+    }
+  ],
+  "region": "eu-north-1",
+  "remediation_run_id": "64281514-ade2-4081-86ff-cadef9955eb5",
+  "review_required_action_count": 0,
+  "runnable_action_count": 14,
+  "selected_request": {
+    "bucket_creation_acknowledged": false,
+    "repo_target": {
+      "base_branch": "main",
+      "head_branch": "20260401t004147z-all-groups-pr-bundle-live-14-eu-north-1-s3-bucket-block-public-access-s3-migrate-cloudfront-oac-private",
+      "provider": "github",
+      "repository": "example/security-autopilot-remediations"
+    },
+    "risk_acknowledged": true,
+    "strategy_id": "s3_migrate_cloudfront_oac_private",
+    "strategy_inputs": {}
+  },
+  "summary_status": "APPLY NOT SUCCESSFUL"
+}

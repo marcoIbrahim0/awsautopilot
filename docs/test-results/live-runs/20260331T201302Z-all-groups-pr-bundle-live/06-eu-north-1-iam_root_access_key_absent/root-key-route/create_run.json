@@ -1,0 +1,14 @@
+{
+  "ok": false,
+  "status_code": 404,
+  "body": {
+    "correlation_id": "a910d278a9e74c49bb0f8058255c5d4c",
+    "contract_version": "2026-03-02",
+    "error": {
+      "code": "feature_disabled",
+      "message": "Root-key remediation API is disabled.",
+      "retryable": false,
+      "details": null
+    }
+  }
+}

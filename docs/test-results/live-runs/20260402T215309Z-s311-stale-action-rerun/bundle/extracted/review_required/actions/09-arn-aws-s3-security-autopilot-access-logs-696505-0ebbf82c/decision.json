@@ -1,0 +1,53 @@
+{
+  "action_id": "0ebbf82c-ff48-45a1-8fd7-3a4688788ced",
+  "action_type": "s3_bucket_lifecycle_configuration",
+  "blocked_reasons": [
+    "Target bucket 'security-autopilot-access-logs-696505809372-r221001-access-logs' existence could not be verified from this account context (403). Do not keep the existing-bucket remediation path executable until bucket existence is proven."
+  ],
+  "control_id": "S3.11",
+  "decision_rationale": "Family resolver downgraded S3.11 strategy 's3_enable_abort_incomplete_uploads' because additive lifecycle preservation is under-proven. Target bucket 'security-autopilot-access-logs-696505809372-r221001-access-logs' existence could not be verified from this account context (403). Do not keep the existing-bucket remediation path executable until bucket existence is proven. Run creation did not require additional risk-only acceptance.",
+  "decision_summary": "Family resolver downgraded S3.11 strategy 's3_enable_abort_incomplete_uploads' because additive lifecycle preservation is under-proven. Target bucket 'security-autopilot-access-logs-696505809372-r221001-access-logs' existence could not be verified from this account context (403). Do not keep the existing-bucket remediation path executable until bucket existence is proven. Run creation did not require additional risk-only acceptance.",
+  "decision_version": "resolver/v1",
+  "finding_coverage": {},
+  "folder": "review_required/actions/09-arn-aws-s3-security-autopilot-access-logs-696505-0ebbf82c",
+  "has_runnable_terraform": false,
+  "index": 9,
+  "missing_defaults": [],
+  "missing_inputs": [],
+  "outcome": "review_required_metadata_only",
+  "preservation_summary": {
+    "abort_days": 7,
+    "additive_merge_safe": false,
+    "apply_time_merge": false,
+    "apply_time_merge_reason": null,
+    "create_bucket_if_missing": false,
+    "executable_lifecycle_merge_allowed": false,
+    "existing_equivalent_abort_rule_present": true,
+    "existing_lifecycle_configuration_captured": true,
+    "existing_lifecycle_configuration_equivalent": true,
+    "existing_lifecycle_merge_renderable": true,
+    "existing_lifecycle_render_failure_reason": null,
+    "existing_lifecycle_rule_count": 1,
+    "family": "s3_bucket_lifecycle_configuration",
+    "family_strategy": "s3_enable_abort_incomplete_uploads",
+    "selected_branch": "s3_enable_abort_incomplete_uploads",
+    "single_profile_compatible": true,
+    "strategy_only_supported": true,
+    "target_bucket_creation_possible": false,
+    "target_bucket_exists": false,
+    "target_bucket_missing": false,
+    "target_bucket_reason": "Target bucket 'security-autopilot-access-logs-696505809372-r221001-access-logs' existence could not be verified from this account context (403). Do not keep the existing-bucket remediation path executable until bucket existence is proven.",
+    "target_bucket_verification_available": false
+  },
+  "profile_id": "s3_enable_abort_incomplete_uploads",
+  "rejected_profiles": [],
+  "strategy_id": "s3_enable_abort_incomplete_uploads",
+  "strategy_inputs": {
+    "abort_days": 7
+  },
+  "support_tier": "review_required_bundle",
+  "target_id": "696505809372|eu-north-1|arn:aws:s3:::security-autopilot-access-logs-696505809372-r221001-access-logs|S3.11",
+  "tier": "review_required",
+  "tier_root": "review_required/actions",
+  "title": "S3 general purpose buckets should have Lifecycle configurations"
+}

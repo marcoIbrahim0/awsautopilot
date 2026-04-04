@@ -105,6 +105,30 @@ def _resolve_affected_actions(session: Session, run: RemediationRun) -> list[Act
     return [action] if action is not None else []
 
 
+def _helper_bucket_resource_ids(run: RemediationRun) -> list[str]:
+    artifacts = run.artifacts if isinstance(run.artifacts, dict) else {}
+    bucket_names: list[str] = []
+    seen: set[str] = set()
+    for container in (
+        ((artifacts.get("pr_bundle") or {}).get("metadata") if isinstance(artifacts.get("pr_bundle"), dict) else None),
+        artifacts.get("group_bundle"),
+    ):
+        if not isinstance(container, dict):
+            continue
+        raw_items = container.get("helper_bucket_inventory")
+        if not isinstance(raw_items, list):
+            continue
+        for item in raw_items:
+            if not isinstance(item, dict):
+                continue
+            bucket_name = str(item.get("bucket_name") or "").strip()
+            if not bucket_name or bucket_name in seen:
+                continue
+            seen.add(bucket_name)
+            bucket_names.append(bucket_name)
+    return bucket_names
+
+
 def _service_for_action(action_type: object) -> str | None:
     token = str(action_type or "").strip().lower()
     if not token:
@@ -216,6 +240,7 @@ def enqueue_post_apply_reconcile(
     targeted_resources: dict[str, set[str]] = defaultdict(set)
     unresolved_services = 0
     missing_resource_ids = 0
+    helper_bucket_ids = _helper_bucket_resource_ids(run)
 
     for action in actions:
         service = _service_for_action(getattr(action, "action_type", None))
@@ -228,6 +253,11 @@ def enqueue_post_apply_reconcile(
             targeted_resources[service].add(resource_id)
         else:
             missing_resource_ids += 1
+
+    if helper_bucket_ids:
+        affected_services.add("s3")
+        for bucket_name in helper_bucket_ids:
+            targeted_resources["s3"].add(bucket_name)
 
     mode = _normalize_mode()
     default_services = list(getattr(settings, "control_plane_inventory_services_list", []) or [])
@@ -337,7 +367,23 @@ def enqueue_post_apply_reconcile(
         "global_enqueued": len(global_services),
         "enqueue_error_codes": sorted(set(enqueue_errors)),
         "mode": mode,
+        "helper_bucket_count": len(helper_bucket_ids),
     }
 
 
-__all__ = ["enqueue_post_apply_reconcile"]
+def enqueue_post_apply_reconcile_for_run_id(
+    session: Session,
+    *,
+    run_id: uuid.UUID,
+    tenant_id: uuid.UUID | None = None,
+) -> dict[str, Any]:
+    stmt = select(RemediationRun).where(RemediationRun.id == run_id)
+    if tenant_id is not None:
+        stmt = stmt.where(RemediationRun.tenant_id == tenant_id)
+    run = session.execute(stmt).scalar_one_or_none()
+    if run is None:
+        return {"status": "run_not_found", "enqueued": 0}
+    return enqueue_post_apply_reconcile(session, run)
+
+
+__all__ = ["enqueue_post_apply_reconcile", "enqueue_post_apply_reconcile_for_run_id"]

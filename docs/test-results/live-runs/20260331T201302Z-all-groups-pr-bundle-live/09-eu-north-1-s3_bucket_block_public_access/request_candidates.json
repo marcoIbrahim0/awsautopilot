@@ -1,0 +1,30 @@
+[
+  {
+    "bucket_creation_acknowledged": false,
+    "risk_acknowledged": true,
+    "strategy_id": "s3_migrate_cloudfront_oac_private"
+  },
+  {
+    "bucket_creation_acknowledged": false,
+    "risk_acknowledged": true,
+    "strategy_id": "s3_bucket_block_public_access_standard"
+  },
+  {
+    "bucket_creation_acknowledged": false,
+    "risk_acknowledged": true,
+    "strategy_id": "s3_keep_public_exception"
+  },
+  {
+    "action_overrides": [
+      {
+        "action_id": "0960aba7-eddd-48d7-aafc-5379d1e482d9",
+        "profile_id": "s3_migrate_website_cloudfront_private_review_required",
+        "strategy_id": "s3_migrate_website_cloudfront_private",
+        "strategy_inputs": {}
+      }
+    ],
+    "bucket_creation_acknowledged": false,
+    "risk_acknowledged": true,
+    "strategy_id": "s3_migrate_website_cloudfront_private"
+  }
+]

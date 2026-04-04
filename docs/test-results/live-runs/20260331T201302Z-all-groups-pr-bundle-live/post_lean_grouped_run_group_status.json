@@ -1,0 +1,249 @@
+[
+  {
+    "folder": "01-eu-north-1-aws_config_enabled",
+    "action_type": "aws_config_enabled",
+    "action_status": "open",
+    "status_bucket": "run_not_successful",
+    "latest_run": {
+      "id": "6a01cee9-78c8-4ac5-b718-e1f1bdac6da8",
+      "status": "failed",
+      "started_at": "2026-03-31T20:11:43.885810+00:00",
+      "finished_at": "2026-03-31T20:30:37+00:00"
+    },
+    "counters": {
+      "run_successful": 0,
+      "run_not_successful": 1,
+      "metadata_only": 0,
+      "not_run_yet": 0,
+      "total_actions": 1
+    }
+  },
+  {
+    "folder": "02-eu-north-1-cloudtrail_enabled",
+    "action_type": "cloudtrail_enabled",
+    "action_status": "resolved",
+    "status_bucket": "run_not_successful",
+    "latest_run": {
+      "id": "78cb0346-f171-4e9e-a9eb-c2f107bd0f70",
+      "status": "failed",
+      "started_at": "2026-03-31T20:25:01.639217+00:00",
+      "finished_at": "2026-03-31T20:38:37+00:00"
+    },
+    "counters": {
+      "run_successful": 0,
+      "run_not_successful": 1,
+      "metadata_only": 0,
+      "not_run_yet": 0,
+      "total_actions": 1
+    }
+  },
+  {
+    "folder": "03-eu-north-1-ebs_default_encryption",
+    "action_type": "ebs_default_encryption",
+    "action_status": "resolved",
+    "status_bucket": "run_not_successful",
+    "latest_run": {
+      "id": "b162a58b-62bf-4d1f-9402-35c21bb1d14f",
+      "status": "failed",
+      "started_at": "2026-03-31T20:11:59.826904+00:00",
+      "finished_at": "2026-03-31T20:38:43+00:00"
+    },
+    "counters": {
+      "run_successful": 0,
+      "run_not_successful": 1,
+      "metadata_only": 0,
+      "not_run_yet": 0,
+      "total_actions": 1
+    }
+  },
+  {
+    "folder": "04-eu-north-1-ebs_snapshot_block_public_access",
+    "action_type": "ebs_snapshot_block_public_access",
+    "action_status": "resolved",
+    "status_bucket": "run_not_successful",
+    "latest_run": {
+      "id": "fd264ce2-53be-470f-aa8d-7193d53afcad",
+      "status": "failed",
+      "started_at": "2026-03-31T20:12:07.533390+00:00",
+      "finished_at": "2026-03-31T20:38:49+00:00"
+    },
+    "counters": {
+      "run_successful": 0,
+      "run_not_successful": 2,
+      "metadata_only": 0,
+      "not_run_yet": 0,
+      "total_actions": 2
+    }
+  },
+  {
+    "folder": "05-eu-north-1-enable_guardduty",
+    "action_type": "enable_guardduty",
+    "action_status": "resolved",
+    "status_bucket": "run_finished_metadata_only",
+    "latest_run": {
+      "id": "d6755aaf-6562-43bb-81f9-da8dabbf3f0d",
+      "status": "finished",
+      "started_at": "2026-03-31T20:12:23.461569+00:00",
+      "finished_at": "2026-03-31T20:38:54+00:00"
+    },
+    "counters": {
+      "run_successful": 0,
+      "run_not_successful": 0,
+      "metadata_only": 1,
+      "not_run_yet": 0,
+      "total_actions": 1
+    }
+  },
+  {
+    "folder": "07-eu-north-1-s3_block_public_access",
+    "action_type": "s3_block_public_access",
+    "action_status": "resolved",
+    "status_bucket": "run_not_successful",
+    "latest_run": {
+      "id": "cf740ab8-22dc-4ef2-8b23-49b21ad3548f",
+      "status": "failed",
+      "started_at": "2026-03-31T20:12:41.841985+00:00",
+      "finished_at": "2026-03-31T20:39:00+00:00"
+    },
+    "counters": {
+      "run_successful": 0,
+      "run_not_successful": 1,
+      "metadata_only": 0,
+      "not_run_yet": 0,
+      "total_actions": 1
+    }
+  },
+  {
+    "folder": "08-eu-north-1-s3_bucket_access_logging",
+    "action_type": "s3_bucket_access_logging",
+    "action_status": "open",
+    "status_bucket": "run_finished_metadata_only",
+    "latest_run": {
+      "id": "ce2db687-5fba-4e85-a8cd-56386f9dfda3",
+      "status": "finished",
+      "started_at": "2026-03-31T20:12:52.552762+00:00",
+      "finished_at": "2026-03-31T20:39:07+00:00"
+    },
+    "counters": {
+      "run_successful": 0,
+      "run_not_successful": 0,
+      "metadata_only": 16,
+      "not_run_yet": 0,
+      "total_actions": 16
+    }
+  },
+  {
+    "folder": "09-eu-north-1-s3_bucket_block_public_access",
+    "action_type": "s3_bucket_block_public_access",
+    "action_status": "open",
+    "status_bucket": "run_not_successful",
+    "latest_run": {
+      "id": "9ac5be0e-eb2f-4ded-9315-11f2235c04a6",
+      "status": "failed",
+      "started_at": "2026-03-31T20:13:16.290406+00:00",
+      "finished_at": "2026-03-31T20:39:17+00:00"
+    },
+    "counters": {
+      "run_successful": 0,
+      "run_not_successful": 14,
+      "metadata_only": 1,
+      "not_run_yet": 0,
+      "total_actions": 15
+    }
+  },
+  {
+    "folder": "10-eu-north-1-s3_bucket_encryption_kms",
+    "action_type": "s3_bucket_encryption_kms",
+    "action_status": "open",
+    "status_bucket": "run_not_successful",
+    "latest_run": {
+      "id": "00053734-176f-4e96-b1ba-7946d8a9bb0b",
+      "status": "failed",
+      "started_at": "2026-03-31T20:13:42.425203+00:00",
+      "finished_at": "2026-03-31T20:39:27+00:00"
+    },
+    "counters": {
+      "run_successful": 0,
+      "run_not_successful": 15,
+      "metadata_only": 0,
+      "not_run_yet": 0,
+      "total_actions": 15
+    }
+  },
+  {
+    "folder": "11-eu-north-1-s3_bucket_lifecycle_configuration",
+    "action_type": "s3_bucket_lifecycle_configuration",
+    "action_status": "open",
+    "status_bucket": "run_not_successful",
+    "latest_run": {
+      "id": "93603d29-5910-4366-a11c-cd5c7144289c",
+      "status": "failed",
+      "started_at": "2026-03-31T20:14:10.346433+00:00",
+      "finished_at": "2026-03-31T20:39:38+00:00"
+    },
+    "counters": {
+      "run_successful": 0,
+      "run_not_successful": 23,
+      "metadata_only": 1,
+      "not_run_yet": 0,
+      "total_actions": 24
+    }
+  },
+  {
+    "folder": "12-eu-north-1-s3_bucket_require_ssl",
+    "action_type": "s3_bucket_require_ssl",
+    "action_status": "open",
+    "status_bucket": "run_not_successful",
+    "latest_run": {
+      "id": "0d42d05c-ae20-444f-be96-7e4e9b9dce61",
+      "status": "failed",
+      "started_at": "2026-03-31T20:14:33.138997+00:00",
+      "finished_at": "2026-03-31T20:39:55+00:00"
+    },
+    "counters": {
+      "run_successful": 0,
+      "run_not_successful": 15,
+      "metadata_only": 1,
+      "not_run_yet": 0,
+      "total_actions": 16
+    }
+  },
+  {
+    "folder": "13-eu-north-1-sg_restrict_public_ports",
+    "action_type": "sg_restrict_public_ports",
+    "action_status": "open",
+    "status_bucket": "run_not_successful",
+    "latest_run": {
+      "id": "daa46d35-1762-4cac-bc69-e4930aae06aa",
+      "status": "failed",
+      "started_at": "2026-03-31T20:14:52.507209+00:00",
+      "finished_at": "2026-03-31T20:40:05+00:00"
+    },
+    "counters": {
+      "run_successful": 0,
+      "run_not_successful": 7,
+      "metadata_only": 0,
+      "not_run_yet": 0,
+      "total_actions": 7
+    }
+  },
+  {
+    "folder": "14-eu-north-1-ssm_block_public_sharing",
+    "action_type": "ssm_block_public_sharing",
+    "action_status": "resolved",
+    "status_bucket": "run_finished_metadata_only",
+    "latest_run": {
+      "id": "a4545473-5116-4795-b29b-c840c06fde3f",
+      "status": "finished",
+      "started_at": "2026-03-31T20:15:05.556219+00:00",
+      "finished_at": "2026-03-31T20:40:12+00:00"
+    },
+    "counters": {
+      "run_successful": 0,
+      "run_not_successful": 0,
+      "metadata_only": 1,
+      "not_run_yet": 0,
+      "total_actions": 1
+    }
+  }
+]

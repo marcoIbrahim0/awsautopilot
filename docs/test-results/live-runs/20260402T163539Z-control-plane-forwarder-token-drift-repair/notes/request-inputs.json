@@ -1,0 +1,14 @@
+{
+  "api_base": "https://api.ocypheris.com",
+  "tenant_id": "9f7616d8-af04-43ca-99cd-713625357b70",
+  "account_id": "696505809372",
+  "regions": [
+    "eu-north-1",
+    "us-east-1"
+  ],
+  "user_id": "7c43e0b3-6e98-43af-826f-f4eeaa5af674",
+  "action_id": "3970aa2f-edc5-4870-87bd-fa986dad3d98",
+  "finding_id": "69507c08-bbb8-491d-9ec0-543278d96a2b",
+  "forwarder_stack_name": "SecurityAutopilotControlPlaneForwarder",
+  "started_at_utc": "2026-04-02T16:24:29.116479+00:00"
+}

@@ -19,6 +19,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from backend.models import AwsAccount, Finding
+from backend.services.account_trust import canonical_tenant_external_id
 from backend.utils.sqs import build_compute_actions_job_payload, parse_queue_region
 from backend.workers.config import settings
 from backend.workers.database import session_scope
@@ -131,7 +132,7 @@ def execute_ingest_access_analyzer_job(job: dict) -> None:
             )
 
         role_arn = acc.role_read_arn
-        external_id = acc.external_id
+        external_id = canonical_tenant_external_id(session, tenant_id) or ""
 
         logger.info(
             "Assuming role for Access Analyzer account_id=%s region=%s",

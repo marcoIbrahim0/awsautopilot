@@ -1,0 +1,166 @@
+{
+  "action_id": "9444d745-69a6-49f2-9c39-43387ca52af4",
+  "action_type": "ssm_block_public_sharing",
+  "manual_high_risk": false,
+  "mode_options": [
+    "pr_only"
+  ],
+  "pre_execution_notice": null,
+  "recommendation": {
+    "advisory": true,
+    "default_mode": "exception_review",
+    "enforced_by_policy": null,
+    "evidence": {
+      "context_incomplete": true,
+      "data_sensitivity": 0.0,
+      "exploit_signals": 0.6667,
+      "internet_exposure": 0.8,
+      "matched_signals": [],
+      "privilege_level": 1.0,
+      "score": 76
+    },
+    "matrix_position": {
+      "business_criticality": "high",
+      "cell": "risk_high__criticality_high",
+      "risk_tier": "high"
+    },
+    "mode": "exception_review",
+    "rationale": "Matrix cell risk_high__criticality_high maps to default recommendation 'exception_review'. Risk is high and business criticality is high. Criticality evidence: data_sensitivity=0.00, privilege_level=1.00, internet_exposure=0.80, matched_signals=none. Relationship context is incomplete, so the recommendation remains conservative and advisory unless policy overrides it."
+  },
+  "runbook_url": null,
+  "strategies": [
+    {
+      "blast_radius": "account",
+      "blocked_reasons": [],
+      "context": {},
+      "decision_rationale": "Compatibility resolver defaulted to the compatible profile 'ssm_disable_public_document_sharing' for strategy 'ssm_disable_public_document_sharing'.",
+      "dependency_checks": [
+        {
+          "code": "ssm_document_sharing_breakage",
+          "message": "Publicly shared SSM document consumers may lose access after enforcement.",
+          "status": "warn"
+        }
+      ],
+      "estimated_resolution_time": "12-24 hours",
+      "exception_only": false,
+      "impact_text": "Public sharing of SSM documents will be blocked.",
+      "input_schema": {
+        "fields": []
+      },
+      "label": "Disable public SSM document sharing",
+      "missing_defaults": [],
+      "mode": "pr_only",
+      "preservation_summary": {
+        "single_profile_compatible": true,
+        "strategy_only_supported": true
+      },
+      "profiles": [
+        {
+          "exception_only": false,
+          "profile_id": "ssm_disable_public_document_sharing",
+          "recommended": true,
+          "requires_inputs": false,
+          "support_tier": "deterministic_bundle",
+          "supports_exception_flow": false
+        }
+      ],
+      "recommended": true,
+      "recommended_profile_id": "ssm_disable_public_document_sharing",
+      "requires_inputs": false,
+      "risk_level": "medium",
+      "rollback_command": "aws ssm update-service-setting --setting-id /ssm/documents/console/public-sharing-permission --setting-value Enable",
+      "strategy_id": "ssm_disable_public_document_sharing",
+      "supports_exception_flow": false,
+      "supports_immediate_reeval": true,
+      "warnings": [
+        "Shared public documents will no longer be publicly available."
+      ]
+    },
+    {
+      "blast_radius": "account",
+      "blocked_reasons": [],
+      "context": {
+        "default_inputs": {
+          "exception_duration_days": "30"
+        }
+      },
+      "decision_rationale": "Compatibility resolver defaulted to the compatible profile 'ssm_keep_public_sharing_exception' for strategy 'ssm_keep_public_sharing_exception'.",
+      "dependency_checks": [
+        {
+          "code": "ssm_public_sharing_exposure",
+          "message": "Public document sharing remains enabled and may expose sensitive runbooks.",
+          "status": "warn"
+        }
+      ],
+      "estimated_resolution_time": "12-24 hours",
+      "exception_only": true,
+      "impact_text": "Public sharing of SSM documents will remain enabled while the exception path is active.",
+      "input_schema": {
+        "fields": [
+          {
+            "default_value": "30",
+            "description": "How long should this exception remain active?",
+            "group": "Exception",
+            "key": "exception_duration_days",
+            "options": [
+              {
+                "label": "7 days",
+                "value": "7"
+              },
+              {
+                "label": "14 days",
+                "value": "14"
+              },
+              {
+                "label": "30 days",
+                "value": "30"
+              },
+              {
+                "label": "90 days",
+                "value": "90"
+              }
+            ],
+            "required": false,
+            "type": "select"
+          },
+          {
+            "description": "Why can't you apply this fix right now?",
+            "group": "Exception",
+            "key": "exception_reason",
+            "placeholder": "Describe the temporary business or operational constraint.",
+            "required": false,
+            "type": "string"
+          }
+        ]
+      },
+      "label": "Keep public sharing (exception path)",
+      "missing_defaults": [],
+      "mode": "pr_only",
+      "preservation_summary": {
+        "single_profile_compatible": true,
+        "strategy_only_supported": true
+      },
+      "profiles": [
+        {
+          "exception_only": true,
+          "profile_id": "ssm_keep_public_sharing_exception",
+          "recommended": true,
+          "requires_inputs": true,
+          "support_tier": "manual_guidance_only",
+          "supports_exception_flow": true
+        }
+      ],
+      "recommended": false,
+      "recommended_profile_id": "ssm_keep_public_sharing_exception",
+      "requires_inputs": true,
+      "risk_level": "high",
+      "rollback_command": "aws ssm update-service-setting --setting-id /ssm/documents/console/public-sharing-permission --setting-value Enable",
+      "strategy_id": "ssm_keep_public_sharing_exception",
+      "supports_exception_flow": true,
+      "supports_immediate_reeval": false,
+      "warnings": [
+        "Publicly shareable SSM documents can expose sensitive operational content."
+      ]
+    }
+  ]
+}

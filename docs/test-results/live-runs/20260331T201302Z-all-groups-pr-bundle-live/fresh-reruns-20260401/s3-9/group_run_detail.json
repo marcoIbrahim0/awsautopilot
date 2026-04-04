@@ -1,0 +1,17 @@
+{
+  "ok": true,
+  "status_code": 200,
+  "body": {
+    "id": "d7f5db9e-68dd-4df8-8efc-bfa8c1901413",
+    "remediation_run_id": "a5dd16fc-5628-42b5-b858-2a49dadcfe33",
+    "initiated_by_user_id": "a5fab489-9b8e-4656-b2f4-8accfbed6142",
+    "mode": "download_bundle",
+    "status": "started",
+    "started_at": "2026-04-01T00:24:14.567057+00:00",
+    "finished_at": null,
+    "reporting_source": "system",
+    "created_at": "2026-04-01T00:24:02.069676+00:00",
+    "updated_at": "2026-04-01T00:24:14.390590+00:00",
+    "results": []
+  }
+}

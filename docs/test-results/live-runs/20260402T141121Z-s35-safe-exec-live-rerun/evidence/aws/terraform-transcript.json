@@ -1,0 +1,20 @@
+[
+  {
+    "command": "TF_CLI_CONFIG_FILE=/tmp/s35-safe-exec.tfrc AWS_PROFILE=test28-root AWS_REGION=eu-north-1 terraform init -input=false",
+    "exit_code": 0,
+    "stdout": "Initializing the backend...\nInitializing provider plugins...\n- Finding hashicorp/aws versions matching \"5.100.0\"...\n- Installing hashicorp/aws v5.100.0...\n- Installed hashicorp/aws v5.100.0 (unauthenticated)\nTerraform has been successfully initialized!",
+    "stderr": "Warning: Incomplete lock file information for providers. The current .terraform.lock.hcl file only includes checksums for darwin_arm64."
+  },
+  {
+    "command": "TF_CLI_CONFIG_FILE=/tmp/s35-safe-exec.tfrc AWS_PROFILE=test28-root AWS_REGION=eu-north-1 terraform plan -input=false -out=tfplan",
+    "exit_code": 0,
+    "stdout": "Plan: 1 to add, 0 to change, 0 to destroy. Saved the plan to: tfplan",
+    "stderr": ""
+  },
+  {
+    "command": "TF_CLI_CONFIG_FILE=/tmp/s35-safe-exec.tfrc AWS_PROFILE=test28-root AWS_REGION=eu-north-1 terraform apply -input=false -auto-approve tfplan",
+    "exit_code": 0,
+    "stdout": "aws_s3_bucket_policy.security_autopilot: Creating...\naws_s3_bucket_policy.security_autopilot: Creation complete after 5s [id=arch1-bucket-evidence-b1-696505809372-eu-north-1]\nApply complete! Resources: 1 added, 0 changed, 0 destroyed.",
+    "stderr": ""
+  }
+]

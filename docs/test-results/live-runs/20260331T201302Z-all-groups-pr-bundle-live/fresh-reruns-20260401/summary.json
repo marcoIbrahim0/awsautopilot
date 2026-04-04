@@ -1,0 +1,48 @@
+[
+  {
+    "slug": "s3-9",
+    "group_id": "984e6f5e-d1e6-44aa-90e6-1a3ddc152a2c",
+    "action_type": "s3_bucket_access_logging",
+    "request_body": {
+      "strategy_id": "s3_enable_access_logging_guided",
+      "risk_acknowledged": true,
+      "repo_target": {
+        "provider": "github",
+        "repository": "ocypheris/aws-security-autopilot",
+        "base_branch": "main",
+        "head_branch": "codex-s3-9-4449be25",
+        "root_path": "fresh-group-reruns/s3-9"
+      }
+    },
+    "create_ok": true,
+    "create_status": 201,
+    "group_run_id": "d7f5db9e-68dd-4df8-8efc-bfa8c1901413",
+    "remediation_run_id": "a5dd16fc-5628-42b5-b858-2a49dadcfe33",
+    "group_run_status": "started",
+    "group_run_results": [],
+    "downloaded_zip": true
+  },
+  {
+    "slug": "ssm-7",
+    "group_id": "ed48e583-8b8e-43b4-ad5e-3641b8276909",
+    "action_type": "ssm_block_public_sharing",
+    "request_body": {
+      "strategy_id": "ssm_disable_public_document_sharing",
+      "risk_acknowledged": true,
+      "repo_target": {
+        "provider": "github",
+        "repository": "ocypheris/aws-security-autopilot",
+        "base_branch": "main",
+        "head_branch": "codex-ssm-7-f37b25e0",
+        "root_path": "fresh-group-reruns/ssm-7"
+      }
+    },
+    "create_ok": true,
+    "create_status": 201,
+    "group_run_id": "fd7b8ba5-f5e6-4bdb-a42c-64ce2ede59c9",
+    "remediation_run_id": "f5eb6579-6901-4374-b4ff-3bd466d29958",
+    "group_run_status": "started",
+    "group_run_results": [],
+    "downloaded_zip": true
+  }
+]

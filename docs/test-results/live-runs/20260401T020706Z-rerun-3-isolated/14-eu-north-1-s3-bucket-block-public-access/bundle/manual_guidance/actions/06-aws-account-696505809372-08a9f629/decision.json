@@ -1,0 +1,56 @@
+{
+  "action_id": "08a9f629-3bfa-46a1-bd88-e22027f7e133",
+  "action_type": "s3_bucket_block_public_access",
+  "blocked_reasons": [
+    "Existing bucket policy preservation evidence is missing for CloudFront + OAC migration.",
+    "Missing bucket identifier for access-path validation."
+  ],
+  "control_id": "S3.2",
+  "decision_rationale": "Family resolver downgraded strategy 's3_migrate_cloudfront_oac_private' to manual S3.2 preservation profile 's3_migrate_cloudfront_oac_private_manual_preservation'. Existing bucket policy preservation evidence is missing for CloudFront + OAC migration. Missing bucket identifier for access-path validation. Run creation did not require additional risk-only acceptance.",
+  "decision_summary": "Family resolver downgraded strategy 's3_migrate_cloudfront_oac_private' to manual S3.2 preservation profile 's3_migrate_cloudfront_oac_private_manual_preservation'. Existing bucket policy preservation evidence is missing for CloudFront + OAC migration. Missing bucket identifier for access-path validation. Run creation did not require additional risk-only acceptance.",
+  "decision_version": "resolver/v1",
+  "finding_coverage": {},
+  "folder": "manual_guidance/actions/06-aws-account-696505809372-08a9f629",
+  "has_runnable_terraform": false,
+  "index": 6,
+  "missing_defaults": [],
+  "missing_inputs": [],
+  "outcome": "manual_guidance_metadata_only",
+  "preservation_summary": {
+    "access_path_evidence_available": false,
+    "apply_time_merge": false,
+    "apply_time_merge_reason": null,
+    "bucket_policy_public": null,
+    "dns_inputs_complete": false,
+    "executable_preservation_allowed": false,
+    "existing_bucket_policy_json_captured": false,
+    "existing_bucket_policy_statement_count": null,
+    "family": "s3_bucket_block_public_access",
+    "family_strategy": "s3_migrate_cloudfront_oac_private",
+    "manual_preservation_required": true,
+    "public_policy_scrub_available": false,
+    "public_policy_scrub_reason": null,
+    "selected_branch": "s3_migrate_cloudfront_oac_private_manual_preservation",
+    "single_profile_compatible": false,
+    "strategy_only_supported": true,
+    "website_configuration_captured": false,
+    "website_configured": null,
+    "website_translation_reason": null,
+    "website_translation_supported": null
+  },
+  "profile_id": "s3_migrate_cloudfront_oac_private_manual_preservation",
+  "rejected_profiles": [
+    {
+      "detail": "Existing bucket policy preservation evidence is missing for CloudFront + OAC migration.",
+      "profile_id": "s3_migrate_cloudfront_oac_private",
+      "reason": "branch_unavailable"
+    }
+  ],
+  "strategy_id": "s3_migrate_cloudfront_oac_private",
+  "strategy_inputs": {},
+  "support_tier": "manual_guidance_only",
+  "target_id": "696505809372|eu-north-1|AWS::::Account:696505809372|S3.2",
+  "tier": "manual_guidance",
+  "tier_root": "manual_guidance/actions",
+  "title": "S3 general purpose buckets should block public write access"
+}

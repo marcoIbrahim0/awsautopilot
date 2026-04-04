@@ -1,0 +1,53 @@
+{
+  "account_id": "696505809372",
+  "action_type": "ssm_block_public_sharing",
+  "blocked_by_run_id": null,
+  "blocked_detail": null,
+  "blocked_reason": null,
+  "can_generate_bundle": true,
+  "counters": {
+    "metadata_only": 0,
+    "not_run_yet": 1,
+    "run_not_successful": 0,
+    "run_successful": 0,
+    "total_actions": 1
+  },
+  "created_at": "2026-03-28T02:18:19.470676+00:00",
+  "group_key": "e4e07aa8-b8ea-4c1d-9fd7-4362a2fc1195|ssm_block_public_sharing|696505809372|eu-north-1",
+  "id": "ed48e583-8b8e-43b4-ad5e-3641b8276909",
+  "members": [
+    {
+      "action_id": "9444d745-69a6-49f2-9c39-43387ca52af4",
+      "action_status": "resolved",
+      "assigned_at": "2026-03-28T02:18:19.470676+00:00",
+      "control_id": "SSM.7",
+      "followup_kind": null,
+      "last_attempt_at": null,
+      "last_confirmation_source": null,
+      "last_confirmed_at": null,
+      "latest_run": {
+        "finished_at": null,
+        "id": null,
+        "started_at": null,
+        "status": null
+      },
+      "pending_confirmation": false,
+      "pending_confirmation_deadline_at": null,
+      "pending_confirmation_message": null,
+      "pending_confirmation_severity": null,
+      "pending_confirmation_started_at": null,
+      "priority": 76,
+      "resource_id": "AWS::::Account:696505809372",
+      "status_bucket": "not_run_yet",
+      "status_message": null,
+      "status_severity": null,
+      "title": "SSM documents should have the block public sharing setting enabled"
+    }
+  ],
+  "metadata": {
+    "source": "auto_assign"
+  },
+  "region": "eu-north-1",
+  "tenant_id": "e4e07aa8-b8ea-4c1d-9fd7-4362a2fc1195",
+  "updated_at": "2026-03-28T02:18:19.470676+00:00"
+}

@@ -1,0 +1,37 @@
+{
+  "account_id": "696505809372",
+  "action_type": "iam_root_access_key_absent",
+  "apply_status": "not_started",
+  "failure_reason": {
+    "existing_run_id": null,
+    "payload": {
+      "detail": {
+        "detail": "IAM.4 execution is handled exclusively by /api/root-key-remediation-runs. Generic remediation-run routes expose IAM.4 guidance only.",
+        "error": "Dedicated root-key route required",
+        "execution_authority": "/api/root-key-remediation-runs",
+        "reason": "root_key_execution_authority",
+        "runbook_url": "docs/prod-readiness/root-credentials-required-iam-root-access-key-absent.md",
+        "strategy_id": "iam_root_key_disable"
+      }
+    },
+    "reason": "root_key_execution_authority",
+    "request_body": {
+      "bucket_creation_acknowledged": false,
+      "repo_target": {
+        "base_branch": "main",
+        "head_branch": "20260401t004147z-all-groups-pr-bundle-live-10-eu-north-1-iam-root-access-key-absent-iam-root-key-disable",
+        "provider": "github",
+        "repository": "example/security-autopilot-remediations"
+      },
+      "risk_acknowledged": true,
+      "strategy_id": "iam_root_key_disable",
+      "strategy_inputs": {}
+    },
+    "status_code": 400
+  },
+  "folder": "10-eu-north-1-iam-root-access-key-absent",
+  "generation_status": "failed",
+  "group_id": "549cd627-4bab-4e34-a15a-d9d50d11b3d9",
+  "region": "eu-north-1",
+  "summary_status": "GENERATION NOT SUCCESSFUL"
+}

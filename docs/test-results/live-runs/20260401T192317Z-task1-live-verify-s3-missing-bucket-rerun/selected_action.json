@@ -1,0 +1,11 @@
+{
+  "account_id": "696505809372",
+  "action_type": "s3_bucket_encryption_kms",
+  "control_id": "S3.15",
+  "id": "3822dff9-3ae6-4f5b-a0fa-e9c0d143a5b8",
+  "region": "eu-north-1",
+  "resource_id": "arn:aws:s3:::phase2-wi1-lifecycle-696505809372-20260329004157",
+  "source": "synthetic_replay_target",
+  "target_id": "696505809372|eu-north-1|arn:aws:s3:::phase2-wi1-lifecycle-696505809372-20260329004157|S3.15",
+  "title": "Replay missing S3.15 bucket remediation target"
+}

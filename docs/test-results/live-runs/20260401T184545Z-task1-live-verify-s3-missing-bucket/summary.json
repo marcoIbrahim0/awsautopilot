@@ -1,0 +1,28 @@
+{
+  "run_id": "20260401T184545Z-task1-live-verify-s3-missing-bucket",
+  "date_utc": "2026-04-01",
+  "tenant_id": "9f7616d8-af04-43ca-99cd-713625357b70",
+  "account_id": "696505809372",
+  "region": "eu-north-1",
+  "control_id": "S3.15",
+  "action_type": "s3_bucket_encryption_kms",
+  "strategy_id": "s3_enable_sse_kms_guided",
+  "bucket": "phase2-wi1-lifecycle-696505809372-20260329004157",
+  "selected_profile_id": "s3_enable_sse_kms_guided",
+  "resolved_inputs": {
+    "create_bucket_if_missing": false,
+    "kms_key_mode": "aws_managed"
+  },
+  "runtime_signals": {
+    "s3_target_bucket_name": "phase2-wi1-lifecycle-696505809372-20260329004157",
+    "s3_target_bucket_probe_error": "Target bucket existence could not be verified because ReadRole runtime probe is unavailable."
+  },
+  "pre_head_bucket_exit_code": 255,
+  "result": "FAIL",
+  "verdict": "Current head did not prove the Task 1 fix on the live path. The runtime probe failed closed before it could classify the bucket as missing, the resolver kept create_bucket_if_missing=false, and the generated bundle therefore did not take the new create-if-missing branch.",
+  "follow_up": [
+    "Treat ReadRole-unavailable missing-bucket targets as a distinct blocked state instead of silently leaving existing-bucket execution executable.",
+    "Fix the generated Terraform create-if-missing dependency wiring for S3.15 before re-running live apply.",
+    "Re-run the same deleted-bucket live replay after those fixes and retain post-apply plus destroy evidence."
+  ]
+}

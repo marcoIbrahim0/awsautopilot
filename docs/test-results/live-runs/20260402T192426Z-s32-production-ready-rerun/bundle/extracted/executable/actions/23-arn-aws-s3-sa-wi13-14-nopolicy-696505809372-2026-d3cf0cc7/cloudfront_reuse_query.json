@@ -1,0 +1,7 @@
+{
+  "bucket_name": "sa-wi13-14-nopolicy-696505809372-20260328201935",
+  "expected_bucket_regional_domain_name": "sa-wi13-14-nopolicy-696505809372-20260328201935.s3.eu-north-1.amazonaws.com",
+  "expected_distribution_comment": "Security Autopilot migration for sa-wi13-14-nopolicy-696505809372-20260328201935",
+  "expected_oac_name": "security-autopilot-oac-4632133387fa",
+  "expected_origin_id": "s3-sa-wi13-14-nopolicy-696505809372-20260328201935"
+}

@@ -1,0 +1,8 @@
+{
+  "region": "eu-north-1",
+  "connection_name": "SecurityAutopilotControlPlaneConnection-eu-north-1",
+  "secret_arn": "arn:aws:secretsmanager:eu-north-1:696505809372:secret:events!connection/SecurityAutopilotControlPlaneConnection-eu-north-1/26a4e7bb-543d-493c-a98f-43f768c03ab2-UYokxH",
+  "expected_fingerprint": "cptok-OA...hkhc",
+  "connection_secret_fingerprint": "cptok-OA...hkhc",
+  "matches_current_token": true
+}

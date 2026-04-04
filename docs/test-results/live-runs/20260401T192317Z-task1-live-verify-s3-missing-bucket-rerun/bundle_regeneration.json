@@ -1,0 +1,16 @@
+{
+  "backup_bundle_dir": "notes/initial-bundle-missing-strategy-inputs",
+  "backup_zip": "notes/initial-pr-bundle-missing-strategy-inputs.zip",
+  "generated_files": [
+    "README.txt",
+    "providers.tf",
+    "s3_bucket_encryption_kms.tf"
+  ],
+  "resolution_profile_id": "s3_enable_sse_kms_guided_create_missing_bucket",
+  "resolution_support_tier": "deterministic_bundle",
+  "strategy_id": "s3_enable_sse_kms_guided",
+  "strategy_inputs": {
+    "create_bucket_if_missing": true,
+    "kms_key_mode": "aws_managed"
+  }
+}

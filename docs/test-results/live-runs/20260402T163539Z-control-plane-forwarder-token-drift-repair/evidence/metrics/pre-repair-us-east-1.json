@@ -1,0 +1,59 @@
+{
+  "region": "us-east-1",
+  "rule_name": "SecurityAutopilotControlPlaneApiCallsRule-us-east-1",
+  "start_time": "2026-03-24T00:00:00Z",
+  "end_time": "2026-03-25T00:00:00Z",
+  "period_seconds": 300,
+  "metrics": {
+    "MatchedEvents": {
+      "sum": 3.0,
+      "datapoints": [
+        {
+          "Timestamp": "2026-03-24T19:15:00+02:00",
+          "Sum": 1.0,
+          "Unit": "Count"
+        },
+        {
+          "Timestamp": "2026-03-24T22:20:00+02:00",
+          "Sum": 1.0,
+          "Unit": "Count"
+        },
+        {
+          "Timestamp": "2026-03-25T01:20:00+02:00",
+          "Sum": 1.0,
+          "Unit": "Count"
+        }
+      ]
+    },
+    "Invocations": {
+      "sum": 3.0,
+      "datapoints": [
+        {
+          "Timestamp": "2026-03-24T19:15:00+02:00",
+          "Sum": 1.0,
+          "Unit": "Count"
+        },
+        {
+          "Timestamp": "2026-03-24T22:50:00+02:00",
+          "Sum": 1.0,
+          "Unit": "Count"
+        },
+        {
+          "Timestamp": "2026-03-25T01:20:00+02:00",
+          "Sum": 1.0,
+          "Unit": "Count"
+        }
+      ]
+    },
+    "FailedInvocations": {
+      "sum": 1.0,
+      "datapoints": [
+        {
+          "Timestamp": "2026-03-24T22:50:00+02:00",
+          "Sum": 1.0,
+          "Unit": "Count"
+        }
+      ]
+    }
+  }
+}

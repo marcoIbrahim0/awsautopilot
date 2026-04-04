@@ -1,0 +1,7 @@
+[
+  {
+    "bucket_creation_acknowledged": false,
+    "risk_acknowledged": true,
+    "strategy_id": "guardduty_enable_pr_bundle"
+  }
+]

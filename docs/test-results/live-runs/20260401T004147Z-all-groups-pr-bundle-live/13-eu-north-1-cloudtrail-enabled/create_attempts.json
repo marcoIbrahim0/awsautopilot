@@ -1,0 +1,26 @@
+[
+  {
+    "existing_run_id": null,
+    "payload": {
+      "detail": {
+        "detail": "CloudTrail log bucket could not be verified from this account context.",
+        "error": "Invalid grouped remediation request",
+        "reason": "invalid_strategy_inputs"
+      }
+    },
+    "reason": "invalid_strategy_inputs",
+    "request_body": {
+      "bucket_creation_acknowledged": true,
+      "repo_target": {
+        "base_branch": "main",
+        "head_branch": "20260401t004147z-all-groups-pr-bundle-live-13-eu-north-1-cloudtrail-enabled-cloudtrail-enable-guided",
+        "provider": "github",
+        "repository": "example/security-autopilot-remediations"
+      },
+      "risk_acknowledged": true,
+      "strategy_id": "cloudtrail_enable_guided",
+      "strategy_inputs": {}
+    },
+    "status_code": 400
+  }
+]

@@ -1,0 +1,4 @@
+{
+  "create_bucket_if_missing": true,
+  "kms_key_mode": "aws_managed"
+}

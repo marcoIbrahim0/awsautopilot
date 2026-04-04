@@ -1,0 +1,40 @@
+{
+  "actions": [
+    {
+      "action_id": "9569aa98-af93-4095-a8f6-695867c1b839",
+      "finding_coverage": {},
+      "support_tier": "deterministic_bundle"
+    },
+    {
+      "action_id": "4a1e56fe-ba65-4082-a72b-b39a28d70945",
+      "finding_coverage": {},
+      "support_tier": "deterministic_bundle"
+    },
+    {
+      "action_id": "58a22607-666e-4016-8fe3-4ce62a235a6e",
+      "finding_coverage": {},
+      "support_tier": "deterministic_bundle"
+    },
+    {
+      "action_id": "d56365fe-16be-4239-9b2f-d6ca7e246d35",
+      "finding_coverage": {},
+      "support_tier": "deterministic_bundle"
+    },
+    {
+      "action_id": "4694e0cc-99a6-4533-8506-19a7a4710d95",
+      "finding_coverage": {},
+      "support_tier": "deterministic_bundle"
+    },
+    {
+      "action_id": "6470a99a-ea73-48a0-ba1d-75c1ebd8ba59",
+      "finding_coverage": {},
+      "support_tier": "deterministic_bundle"
+    },
+    {
+      "action_id": "dfa0a526-87b8-4670-92d7-401a611f58f5",
+      "finding_coverage": {},
+      "support_tier": "deterministic_bundle"
+    }
+  ],
+  "layout_version": "grouped_bundle_mixed_tier/v1"
+}

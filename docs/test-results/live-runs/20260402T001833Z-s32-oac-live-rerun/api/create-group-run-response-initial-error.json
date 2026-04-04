@@ -1,0 +1,6 @@
+{
+  "detail": {
+    "error": "Bucket creation acknowledgement required",
+    "detail": "This grouped remediation may create one or more private S3 buckets before applying the selected controls. Set bucket_creation_acknowledged=true after review."
+  }
+}

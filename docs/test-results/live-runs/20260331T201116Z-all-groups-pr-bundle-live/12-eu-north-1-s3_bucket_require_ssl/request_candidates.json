@@ -1,0 +1,17 @@
+[
+  {
+    "bucket_creation_acknowledged": false,
+    "risk_acknowledged": true,
+    "strategy_id": "s3_enforce_ssl_strict_deny"
+  },
+  {
+    "bucket_creation_acknowledged": false,
+    "risk_acknowledged": true,
+    "strategy_id": "s3_enforce_ssl_with_principal_exemptions"
+  },
+  {
+    "bucket_creation_acknowledged": false,
+    "risk_acknowledged": true,
+    "strategy_id": "s3_keep_non_ssl_exception"
+  }
+]

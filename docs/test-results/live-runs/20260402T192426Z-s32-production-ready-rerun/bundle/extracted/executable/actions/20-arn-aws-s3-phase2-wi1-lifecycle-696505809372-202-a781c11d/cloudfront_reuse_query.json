@@ -1,0 +1,7 @@
+{
+  "bucket_name": "phase2-wi1-lifecycle-696505809372-20260328224331-access-logs",
+  "expected_bucket_regional_domain_name": "phase2-wi1-lifecycle-696505809372-20260328224331-access-logs.s3.eu-north-1.amazonaws.com",
+  "expected_distribution_comment": "Security Autopilot migration for phase2-wi1-lifecycle-696505809372-20260328224331-access-logs",
+  "expected_oac_name": "security-autopilot-oac-8118d0cd9bd1",
+  "expected_origin_id": "s3-phase2-wi1-lifecycle-696505809372-20260328224331-access-logs"
+}

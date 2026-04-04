@@ -1,0 +1,7 @@
+[
+  {
+    "bucket_creation_acknowledged": true,
+    "risk_acknowledged": true,
+    "strategy_id": "cloudtrail_enable_guided"
+  }
+]

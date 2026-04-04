@@ -1,0 +1,370 @@
+{
+  "action_id": "80499866-2447-4d0d-bcb4-88e903797ca1",
+  "action_type": "aws_config_enabled",
+  "manual_high_risk": false,
+  "mode_options": [
+    "pr_only"
+  ],
+  "pre_execution_notice": null,
+  "recommendation": {
+    "advisory": true,
+    "default_mode": "exception_review",
+    "enforced_by_policy": null,
+    "evidence": {
+      "context_incomplete": true,
+      "data_sensitivity": 1.0,
+      "exploit_signals": 0.6,
+      "internet_exposure": 0.6,
+      "matched_signals": [],
+      "privilege_level": 1.0,
+      "score": 86
+    },
+    "matrix_position": {
+      "business_criticality": "high",
+      "cell": "risk_high__criticality_high",
+      "risk_tier": "high"
+    },
+    "mode": "exception_review",
+    "rationale": "Matrix cell risk_high__criticality_high maps to default recommendation 'exception_review'. Risk is high and business criticality is high. Criticality evidence: data_sensitivity=1.00, privilege_level=1.00, internet_exposure=0.60, matched_signals=none. Relationship context is incomplete, so the recommendation remains conservative and advisory unless policy overrides it."
+  },
+  "runbook_url": null,
+  "strategies": [
+    {
+      "blast_radius": "account",
+      "blocked_reasons": [
+        "Downgrade to review_required_bundle when the delivery bucket is missing public-access block, SSL-only policy, or default encryption; or when cross-account bucket policies cannot be read."
+      ],
+      "context": {
+        "default_inputs": {
+          "delivery_bucket": "security-autopilot-config-696505809372-eu-north-1",
+          "delivery_bucket_mode": "create_new",
+          "recording_scope": "keep_existing"
+        }
+      },
+      "decision_rationale": "Family resolver kept compatibility profile 'config_enable_account_local_delivery' executable for strategy 'config_enable_account_local_delivery'. Runtime AWS Config recorder evidence showed a selective/custom scope, so the resolver auto-promoted recording_scope to 'all_resources' for Config.1 compliance. Blocking checks: Downgrade to review_required_bundle when the delivery bucket is missing public-access block, SSL-only policy, or default encryption; or when cross-account bucket policies cannot be read..",
+      "dependency_checks": [
+        {
+          "code": "config_cost_impact",
+          "message": "Enabling AWS Config may increase logging and storage costs.",
+          "status": "warn"
+        },
+        {
+          "code": "adjacency_safety_unproven",
+          "message": "Downgrade to review_required_bundle when the delivery bucket is missing public-access block, SSL-only policy, or default encryption; or when cross-account bucket policies cannot be read.",
+          "status": "fail"
+        }
+      ],
+      "estimated_resolution_time": "1-6 hours",
+      "exception_only": false,
+      "impact_text": null,
+      "input_schema": {
+        "fields": [
+          {
+            "default_value": "keep_existing",
+            "description": "How should AWS Config recording scope be set?",
+            "group": "Recorder Settings",
+            "key": "recording_scope",
+            "options": [
+              {
+                "label": "All resources",
+                "value": "all_resources"
+              },
+              {
+                "label": "Keep existing scope",
+                "value": "keep_existing"
+              }
+            ],
+            "required": false,
+            "type": "select"
+          }
+        ]
+      },
+      "label": "Enable AWS Config with account-local delivery",
+      "missing_defaults": [],
+      "mode": "pr_only",
+      "preservation_summary": {
+        "delivery_bucket_reachable": false,
+        "delivery_bucket_resolved": true,
+        "delivery_mode": "account_local_delivery",
+        "delivery_policy_proven": false,
+        "existing_bucket_path": false,
+        "existing_recorder_scope": "custom",
+        "kms_delivery_requested": false,
+        "recording_scope": "all_resources",
+        "recording_scope_auto_promoted": true,
+        "selective_recorder_requires_review": false,
+        "single_profile_compatible": true,
+        "strategy_only_supported": true
+      },
+      "profiles": [
+        {
+          "exception_only": false,
+          "profile_id": "config_enable_account_local_delivery",
+          "recommended": true,
+          "requires_inputs": false,
+          "support_tier": "deterministic_bundle",
+          "supports_exception_flow": false
+        }
+      ],
+      "recommended": true,
+      "recommended_profile_id": "config_enable_account_local_delivery",
+      "requires_inputs": false,
+      "risk_level": "medium",
+      "rollback_command": "aws configservice stop-configuration-recorder --configuration-recorder-name <RECORDER_NAME>",
+      "strategy_id": "config_enable_account_local_delivery",
+      "supports_exception_flow": false,
+      "supports_immediate_reeval": true,
+      "warnings": [
+        "Enabling Config can increase logging/storage costs."
+      ]
+    },
+    {
+      "blast_radius": "account",
+      "blocked_reasons": [
+        "403",
+        "AWS Config delivery bucket policy compatibility has not been proven from this account context.",
+        "Downgrade to review_required_bundle when the delivery bucket is missing public-access block, SSL-only policy, or default encryption; or when cross-account bucket policies cannot be read."
+      ],
+      "context": {
+        "default_inputs": {
+          "delivery_bucket": "security-autopilot-config-696505809372-eu-north-1",
+          "delivery_bucket_mode": "use_existing",
+          "encrypt_with_kms": false,
+          "existing_bucket_name": "security-autopilot-config-696505809372-eu-north-1",
+          "recording_scope": "keep_existing"
+        }
+      },
+      "decision_rationale": "Family resolver kept compatibility profile 'config_enable_centralized_delivery' for strategy 'config_enable_centralized_delivery' but downgraded executability. 403 AWS Config delivery bucket policy compatibility has not been proven from this account context. Runtime AWS Config recorder evidence showed a selective/custom scope, so the resolver auto-promoted recording_scope to 'all_resources' for Config.1 compliance. Blocking checks: Downgrade to review_required_bundle when the delivery bucket is missing public-access block, SSL-only policy, or default encryption; or when cross-account bucket policies cannot be read..",
+      "dependency_checks": [
+        {
+          "code": "config_central_bucket_policy",
+          "message": "Verify centralized delivery bucket policy allows AWS Config in this account/region.",
+          "status": "unknown"
+        },
+        {
+          "code": "config_delivery_bucket_unreachable",
+          "message": "403",
+          "status": "fail"
+        },
+        {
+          "code": "adjacency_safety_unproven",
+          "message": "Downgrade to review_required_bundle when the delivery bucket is missing public-access block, SSL-only policy, or default encryption; or when cross-account bucket policies cannot be read.",
+          "status": "fail"
+        }
+      ],
+      "estimated_resolution_time": "1-6 hours",
+      "exception_only": false,
+      "impact_text": null,
+      "input_schema": {
+        "fields": [
+          {
+            "default_value": "keep_existing",
+            "description": "How should AWS Config recording scope be set?",
+            "group": "Recorder Settings",
+            "key": "recording_scope",
+            "options": [
+              {
+                "label": "All resources",
+                "value": "all_resources"
+              },
+              {
+                "label": "Keep existing scope",
+                "value": "keep_existing"
+              }
+            ],
+            "required": false,
+            "type": "select"
+          },
+          {
+            "default_value": "use_existing",
+            "description": "Where should AWS Config deliver snapshots and history?",
+            "group": "Delivery Settings",
+            "key": "delivery_bucket_mode",
+            "options": [
+              {
+                "label": "Create new dedicated bucket",
+                "value": "create_new"
+              },
+              {
+                "label": "Use existing bucket",
+                "value": "use_existing"
+              }
+            ],
+            "required": false,
+            "type": "select"
+          },
+          {
+            "description": "Existing S3 bucket name for AWS Config delivery.",
+            "group": "Delivery Settings",
+            "key": "existing_bucket_name",
+            "placeholder": "security-autopilot-config-123456789012",
+            "required": false,
+            "type": "string",
+            "visible_when": {
+              "equals": "use_existing",
+              "field": "delivery_bucket_mode"
+            }
+          },
+          {
+            "description": "Centralized S3 bucket for Config delivery.",
+            "key": "delivery_bucket",
+            "required": true,
+            "safe_default_label": "Use a dedicated Config bucket",
+            "safe_default_value": "security-autopilot-config-{{account_id}}-{{region}}",
+            "type": "string"
+          },
+          {
+            "default_value": false,
+            "description": "Encrypt AWS Config delivery channel with a KMS key.",
+            "group": "Encryption Settings",
+            "key": "encrypt_with_kms",
+            "required": false,
+            "type": "boolean"
+          },
+          {
+            "description": "Optional KMS key ARN for encrypting Config delivery.",
+            "group": "Encryption Settings",
+            "key": "kms_key_arn",
+            "required": false,
+            "type": "string",
+            "visible_when": {
+              "equals": true,
+              "field": "encrypt_with_kms"
+            }
+          }
+        ]
+      },
+      "label": "Enable AWS Config with centralized delivery bucket",
+      "missing_defaults": [],
+      "mode": "pr_only",
+      "preservation_summary": {
+        "delivery_bucket_reachable": false,
+        "delivery_bucket_resolved": true,
+        "delivery_mode": "centralized_delivery",
+        "delivery_policy_proven": false,
+        "existing_bucket_path": true,
+        "existing_recorder_scope": "custom",
+        "kms_delivery_requested": false,
+        "recording_scope": "all_resources",
+        "recording_scope_auto_promoted": true,
+        "selective_recorder_requires_review": false,
+        "single_profile_compatible": true,
+        "strategy_only_supported": true
+      },
+      "profiles": [
+        {
+          "exception_only": false,
+          "profile_id": "config_enable_centralized_delivery",
+          "recommended": true,
+          "requires_inputs": true,
+          "support_tier": "review_required_bundle",
+          "supports_exception_flow": false
+        }
+      ],
+      "recommended": false,
+      "recommended_profile_id": "config_enable_centralized_delivery",
+      "requires_inputs": true,
+      "risk_level": "high",
+      "rollback_command": "aws configservice stop-configuration-recorder --configuration-recorder-name <RECORDER_NAME>",
+      "strategy_id": "config_enable_centralized_delivery",
+      "supports_exception_flow": false,
+      "supports_immediate_reeval": true,
+      "warnings": [
+        "Cross-account bucket and key policies must be reviewed before apply."
+      ]
+    },
+    {
+      "blast_radius": "account",
+      "blocked_reasons": [
+        "Downgrade to review_required_bundle when the delivery bucket is missing public-access block, SSL-only policy, or default encryption; or when cross-account bucket policies cannot be read."
+      ],
+      "context": {
+        "default_inputs": {
+          "exception_duration_days": "30"
+        }
+      },
+      "decision_rationale": "Compatibility resolver defaulted to the compatible profile 'config_keep_exception' for strategy 'config_keep_exception'. Blocking checks: Downgrade to review_required_bundle when the delivery bucket is missing public-access block, SSL-only policy, or default encryption; or when cross-account bucket policies cannot be read..",
+      "dependency_checks": [
+        {
+          "code": "config_visibility_gap",
+          "message": "Keeping AWS Config disabled reduces asset/configuration change visibility.",
+          "status": "warn"
+        },
+        {
+          "code": "adjacency_safety_unproven",
+          "message": "Downgrade to review_required_bundle when the delivery bucket is missing public-access block, SSL-only policy, or default encryption; or when cross-account bucket policies cannot be read.",
+          "status": "fail"
+        }
+      ],
+      "estimated_resolution_time": "1-6 hours",
+      "exception_only": true,
+      "impact_text": null,
+      "input_schema": {
+        "fields": [
+          {
+            "default_value": "30",
+            "description": "How long should this exception remain active?",
+            "group": "Exception",
+            "key": "exception_duration_days",
+            "options": [
+              {
+                "label": "7 days",
+                "value": "7"
+              },
+              {
+                "label": "14 days",
+                "value": "14"
+              },
+              {
+                "label": "30 days",
+                "value": "30"
+              },
+              {
+                "label": "90 days",
+                "value": "90"
+              }
+            ],
+            "required": false,
+            "type": "select"
+          },
+          {
+            "description": "Why can't you apply this fix right now?",
+            "group": "Exception",
+            "key": "exception_reason",
+            "placeholder": "Describe the temporary business or operational constraint.",
+            "required": false,
+            "type": "string"
+          }
+        ]
+      },
+      "label": "Keep current state (exception path)",
+      "missing_defaults": [],
+      "mode": "pr_only",
+      "preservation_summary": {
+        "single_profile_compatible": true,
+        "strategy_only_supported": true
+      },
+      "profiles": [
+        {
+          "exception_only": true,
+          "profile_id": "config_keep_exception",
+          "recommended": true,
+          "requires_inputs": true,
+          "support_tier": "manual_guidance_only",
+          "supports_exception_flow": true
+        }
+      ],
+      "recommended": false,
+      "recommended_profile_id": "config_keep_exception",
+      "requires_inputs": true,
+      "risk_level": "high",
+      "rollback_command": "aws configservice stop-configuration-recorder --configuration-recorder-name <RECORDER_NAME>",
+      "strategy_id": "config_keep_exception",
+      "supports_exception_flow": true,
+      "supports_immediate_reeval": false,
+      "warnings": [
+        "Skipping Config reduces change visibility and audit evidence quality."
+      ]
+    }
+  ]
+}

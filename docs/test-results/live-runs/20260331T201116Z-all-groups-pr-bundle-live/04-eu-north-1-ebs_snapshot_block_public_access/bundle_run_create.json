@@ -1,0 +1,7 @@
+{
+  "group_run_id": "fd264ce2-53be-470f-aa8d-7193d53afcad",
+  "remediation_run_id": "80604a9c-8db6-43fa-bf8f-6ef99762c611",
+  "reporting_callback_url": "https://api.ocypheris.com/api/internal/group-runs/report",
+  "reporting_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0ZW5hbnRfaWQiOiJlNGUwN2FhOC1iOGVhLTRjMWQtOWZkNy00MzYyYTJmYzExOTUiLCJncm91cF9ydW5faWQiOiJmZDI2NGNlMi01M2JlLTQ3MGYtYWE4ZC03MTkzZDUzYWZjYWQiLCJncm91cF9pZCI6Ijk1N2MzODcxLWNhZDMtNDUzMC1hYTI5LTM4NmY2YmRhNWNjNiIsImFsbG93ZWRfYWN0aW9uX2lkcyI6WyIwODdlYWE1ZC00ZmRmLTQxMzktOWI0Yy0xMDRkZTI2MDhmYmIiLCI0YzM4NzZlNC04MjYwLTQ4OTctYThhNC00ZmI3ZjY4M2QzNTciXSwianRpIjoiOWQ4ZGE5ZmQtMDFkZS00ZmM4LWJjN2YtZjE2NDhhM2Q5ZmFiIiwiaWF0IjoxNzc0OTg3OTI1LCJleHAiOjE3NzUwNzQzMjV9.3HrW0La4-ie0M3DH6mpYIz6e15Huu5sKg_4c6f0JTeY",
+  "status": "queued"
+}

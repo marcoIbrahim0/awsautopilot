@@ -1,0 +1,642 @@
+{
+  "artifact_type": "provider_agnostic_pr_payload",
+  "body_markdown": "## Summary\n\n- Repository: `example/security-autopilot-remediations`\n- Base branch: `main`\n- Head branch: `20260402t215309z-s311-stale-action-rerun`\n- Action: `S3.11` \u00b7 `696505809372` \u00b7 `696505809372|eu-north-1|arn:aws:s3:::phase2-wi1-lifecycle-696505809372-20260329004157|S3.11`\n- Action: `S3.11` \u00b7 `696505809372` \u00b7 `696505809372|eu-north-1|arn:aws:s3:::sa-wi7-seed-696505809372-20260328205857|S3.11`\n- Action: `S3.11` \u00b7 `696505809372` \u00b7 `696505809372|eu-north-1|arn:aws:s3:::ocypheris-live-ct-20260328t181200z-eu-north-1|S3.11`\n- Action: `S3.11` \u00b7 `696505809372` \u00b7 `696505809372|eu-north-1|arn:aws:s3:::phase2-wi1-lifecycle-696505809372-20260329002042|S3.11`\n- Action: `S3.11` \u00b7 `696505809372` \u00b7 `696505809372|eu-north-1|arn:aws:s3:::wi1-noncurrent-lifecycle-696505809372-20260330003655|S3.11`\n- Action: `S3.11` \u00b7 `696505809372` \u00b7 `696505809372|eu-north-1|arn:aws:s3:::sa-wi5-site-696505809372-20260328t164043z|S3.11`\n- Action: `S3.11` \u00b7 `696505809372` \u00b7 `696505809372|eu-north-1|arn:aws:s3:::phase2-wi1-lifecycle-696505809372-20260328224331|S3.11`\n- Action: `S3.11` \u00b7 `696505809372` \u00b7 `696505809372|eu-north-1|AWS::::Account:696505809372|S3.11`\n- Action: `S3.11` \u00b7 `696505809372` \u00b7 `696505809372|eu-north-1|arn:aws:s3:::security-autopilot-access-logs-696505809372-r221001-access-logs|S3.11`\n- Action: `S3.11` \u00b7 `696505809372` \u00b7 `696505809372|eu-north-1|arn:aws:s3:::security-autopilot-w6-strict-s311-exec-696505809372|S3.11`\n\n## Generated diff\n\n- Fingerprint: `850cf75033d85606b92b156c16307b41db9558faf4f869fc4915466bd1f4abdf`\n- File count: `49`\n- `run_all.sh` <- `run_all.sh` (137 lines, sha256:c13ace59edd9)\n- `replay_group_run_reports.sh` <- `replay_group_run_reports.sh` (54 lines, sha256:722cb6d7017b)\n- `run_actions.sh` <- `run_actions.sh` (1079 lines, sha256:7fcc09d11d3c)\n- `README_GROUP.txt` <- `README_GROUP.txt` (40 lines, sha256:e7ab333092bf)\n- `bundle_manifest.json` <- `bundle_manifest.json` (1152 lines, sha256:7ceb68b178e4)\n- `decision_log.md` <- `decision_log.md` (149 lines, sha256:3643831dd028)\n- `finding_coverage.json` <- `finding_coverage.json` (110 lines, sha256:3a94e5dae1bd)\n- `manual_guidance/actions/01-arn-aws-s3-phase2-wi1-lifecycle-696505809372-202-06464919/README_ACTION.txt` <- `manual_guidance/actions/01-arn-aws-s3-phase2-wi1-lifecycle-696505809372-202-06464919/README_ACTION.txt` (12 lines, sha256:b686d3fa38ea)\n- `manual_guidance/actions/01-arn-aws-s3-phase2-wi1-lifecycle-696505809372-202-06464919/decision.json` <- `manual_guidance/actions/01-arn-aws-s3-phase2-wi1-lifecycle-696505809372-202-06464919/decision.json` (53 lines, sha256:6991a0dae003)\n- `manual_guidance/actions/02-arn-aws-s3-sa-wi7-seed-696505809372-202603282058-14ffeb41/README_ACTION.txt` <- `manual_guidance/actions/02-arn-aws-s3-sa-wi7-seed-696505809372-202603282058-14ffeb41/README_ACTION.txt` (12 lines, sha256:0300441ff4b4)\n\n## Rollback\n\n- Recommended path: Prefer reverting through version control and the same reviewed deployment workflow.\n- S3 general purpose buckets should have Lifecycle configurations: `aws s3api delete-bucket-lifecycle --bucket phase2-wi1-lifecycle-696505809372-20260329004157`\n- S3 general purpose buckets should have Lifecycle configurations: `aws s3api delete-bucket-lifecycle --bucket sa-wi7-seed-696505809372-20260328205857`\n- S3 general purpose buckets should have Lifecycle configurations: `aws s3api delete-bucket-lifecycle --bucket ocypheris-live-ct-20260328t181200z-eu-north-1`\n- S3 general purpose buckets should have Lifecycle configurations: `aws s3api delete-bucket-lifecycle --bucket phase2-wi1-lifecycle-696505809372-20260329002042`\n- S3 general purpose buckets should have Lifecycle configurations: `aws s3api delete-bucket-lifecycle --bucket wi1-noncurrent-lifecycle-696505809372-20260330003655`\n- S3 general purpose buckets should have Lifecycle configurations: `aws s3api delete-bucket-lifecycle --bucket sa-wi5-site-696505809372-20260328t164043z`\n- S3 general purpose buckets should have Lifecycle configurations: `aws s3api delete-bucket-lifecycle --bucket phase2-wi1-lifecycle-696505809372-20260328224331`\n- S3 general purpose buckets should have Lifecycle configurations: `aws s3api delete-bucket-lifecycle --bucket 696505809372|eu-north-1|AWS::::Account:696505809372|S3.11`\n- S3 general purpose buckets should have Lifecycle configurations: `aws s3api delete-bucket-lifecycle --bucket security-autopilot-access-logs-696505809372-r221001-access-logs`\n- S3 general purpose buckets should have Lifecycle configurations: `aws s3api delete-bucket-lifecycle --bucket security-autopilot-w6-strict-s311-exec-696505809372`\n\n## Control mapping context\n\n- Control IDs: `S3.11`",
+  "commit_message": "Apply AWS Security Autopilot remediation bundle (21 actions)",
+  "diff_metadata": {
+    "artifact_type": "generated_diff_summary",
+    "file_count": 49,
+    "files": [
+      {
+        "bundle_path": "run_all.sh",
+        "byte_count": 30035,
+        "change_type": "create_or_update",
+        "content_sha256": "c13ace59edd98e56e9b88cb67868eeaa2631bff60d75dedcd883f349532cf78d",
+        "line_count": 137,
+        "repo_path": "run_all.sh"
+      },
+      {
+        "bundle_path": "replay_group_run_reports.sh",
+        "byte_count": 1521,
+        "change_type": "create_or_update",
+        "content_sha256": "722cb6d7017b682c0f4c44153d15e7e4a9918cfc102cf87fa92fef591f5dbd4f",
+        "line_count": 54,
+        "repo_path": "replay_group_run_reports.sh"
+      },
+      {
+        "bundle_path": "run_actions.sh",
+        "byte_count": 31751,
+        "change_type": "create_or_update",
+        "content_sha256": "7fcc09d11d3ccd6a1367eaccebe1a614fa9d31e9aad44b345b73bcc6ac9c16b4",
+        "line_count": 1079,
+        "repo_path": "run_actions.sh"
+      },
+      {
+        "bundle_path": "README_GROUP.txt",
+        "byte_count": 4480,
+        "change_type": "create_or_update",
+        "content_sha256": "e7ab333092bf20dc49e57b362cfcddd9bc83add06421c67f260ecc1f8c38e7a4",
+        "line_count": 40,
+        "repo_path": "README_GROUP.txt"
+      },
+      {
+        "bundle_path": "bundle_manifest.json",
+        "byte_count": 74666,
+        "change_type": "create_or_update",
+        "content_sha256": "7ceb68b178e471463f3f51652d4c451a1ab54ff4a2997105d0b21949de3cfa4f",
+        "line_count": 1152,
+        "repo_path": "bundle_manifest.json"
+      },
+      {
+        "bundle_path": "decision_log.md",
+        "byte_count": 14987,
+        "change_type": "create_or_update",
+        "content_sha256": "3643831dd02856234085b42ac9422629fdcb15c33f4ff553aa98fbf306351d04",
+        "line_count": 149,
+        "repo_path": "decision_log.md"
+      },
+      {
+        "bundle_path": "finding_coverage.json",
+        "byte_count": 3187,
+        "change_type": "create_or_update",
+        "content_sha256": "3a94e5dae1bda16efe1cbbd2d3d3f4bb9c401063a0342dfd3d54dcb43f50a974",
+        "line_count": 110,
+        "repo_path": "finding_coverage.json"
+      },
+      {
+        "bundle_path": "manual_guidance/actions/01-arn-aws-s3-phase2-wi1-lifecycle-696505809372-202-06464919/README_ACTION.txt",
+        "byte_count": 866,
+        "change_type": "create_or_update",
+        "content_sha256": "b686d3fa38ea7c173d2ed64fff2fbd87863ebfb203a3f3b23b5eb67250dbcbe4",
+        "line_count": 12,
+        "repo_path": "manual_guidance/actions/01-arn-aws-s3-phase2-wi1-lifecycle-696505809372-202-06464919/README_ACTION.txt"
+      },
+      {
+        "bundle_path": "manual_guidance/actions/01-arn-aws-s3-phase2-wi1-lifecycle-696505809372-202-06464919/decision.json",
+        "byte_count": 3310,
+        "change_type": "create_or_update",
+        "content_sha256": "6991a0dae003b1427201ca81ea591062caf474300c64efde898646c75b575ca1",
+        "line_count": 53,
+        "repo_path": "manual_guidance/actions/01-arn-aws-s3-phase2-wi1-lifecycle-696505809372-202-06464919/decision.json"
+      },
+      {
+        "bundle_path": "manual_guidance/actions/02-arn-aws-s3-sa-wi7-seed-696505809372-202603282058-14ffeb41/README_ACTION.txt",
+        "byte_count": 857,
+        "change_type": "create_or_update",
+        "content_sha256": "0300441ff4b4c8742cad6cee2d8664cf5e2993071b0e91a343de7e84118ad7a2",
+        "line_count": 12,
+        "repo_path": "manual_guidance/actions/02-arn-aws-s3-sa-wi7-seed-696505809372-202603282058-14ffeb41/README_ACTION.txt"
+      },
+      {
+        "bundle_path": "manual_guidance/actions/02-arn-aws-s3-sa-wi7-seed-696505809372-202603282058-14ffeb41/decision.json",
+        "byte_count": 3265,
+        "change_type": "create_or_update",
+        "content_sha256": "c8657755dd71bef716a67b0fe5476a4f883997fd2fe3461aac81955439045d89",
+        "line_count": 53,
+        "repo_path": "manual_guidance/actions/02-arn-aws-s3-sa-wi7-seed-696505809372-202603282058-14ffeb41/decision.json"
+      },
+      {
+        "bundle_path": "manual_guidance/actions/03-arn-aws-s3-ocypheris-live-ct-20260328t181200z-eu-3bab593b/README_ACTION.txt",
+        "byte_count": 863,
+        "change_type": "create_or_update",
+        "content_sha256": "c3a27497f88aca85aab35b4d417254a0c8e7785095453bfa339d6dea4d2b6e40",
+        "line_count": 12,
+        "repo_path": "manual_guidance/actions/03-arn-aws-s3-ocypheris-live-ct-20260328t181200z-eu-3bab593b/README_ACTION.txt"
+      },
+      {
+        "bundle_path": "manual_guidance/actions/03-arn-aws-s3-ocypheris-live-ct-20260328t181200z-eu-3bab593b/decision.json",
+        "byte_count": 3295,
+        "change_type": "create_or_update",
+        "content_sha256": "d505eb7c0dae228180f5cd4325a2c5bcebc683b5076d3d4eb813512dd8daedc7",
+        "line_count": 53,
+        "repo_path": "manual_guidance/actions/03-arn-aws-s3-ocypheris-live-ct-20260328t181200z-eu-3bab593b/decision.json"
+      },
+      {
+        "bundle_path": "manual_guidance/actions/04-arn-aws-s3-phase2-wi1-lifecycle-696505809372-202-63f91a78/README_ACTION.txt",
+        "byte_count": 866,
+        "change_type": "create_or_update",
+        "content_sha256": "8981ea8e97ec156d213be7a1d05bb2775a577b61b10eacfdc2a43381f5845003",
+        "line_count": 12,
+        "repo_path": "manual_guidance/actions/04-arn-aws-s3-phase2-wi1-lifecycle-696505809372-202-63f91a78/README_ACTION.txt"
+      },
+      {
+        "bundle_path": "manual_guidance/actions/04-arn-aws-s3-phase2-wi1-lifecycle-696505809372-202-63f91a78/decision.json",
+        "byte_count": 3310,
+        "change_type": "create_or_update",
+        "content_sha256": "1aaf01a1c4b53cc4176cc561f3e6e41a964f8376042ac5aff757e1ce3e99b2c8",
+        "line_count": 53,
+        "repo_path": "manual_guidance/actions/04-arn-aws-s3-phase2-wi1-lifecycle-696505809372-202-63f91a78/decision.json"
+      },
+      {
+        "bundle_path": "manual_guidance/actions/05-arn-aws-s3-wi1-noncurrent-lifecycle-696505809372-d8b98d62/README_ACTION.txt",
+        "byte_count": 870,
+        "change_type": "create_or_update",
+        "content_sha256": "964108048f1de219e63fc52280869637c34d9ee6d58446e9085498bb88bb06f6",
+        "line_count": 12,
+        "repo_path": "manual_guidance/actions/05-arn-aws-s3-wi1-noncurrent-lifecycle-696505809372-d8b98d62/README_ACTION.txt"
+      },
+      {
+        "bundle_path": "manual_guidance/actions/05-arn-aws-s3-wi1-noncurrent-lifecycle-696505809372-d8b98d62/decision.json",
+        "byte_count": 3330,
+        "change_type": "create_or_update",
+        "content_sha256": "a14f188ee92daf8e7c0d1e0314766687e886e68a54e96419037ade260350631c",
+        "line_count": 53,
+        "repo_path": "manual_guidance/actions/05-arn-aws-s3-wi1-noncurrent-lifecycle-696505809372-d8b98d62/decision.json"
+      },
+      {
+        "bundle_path": "manual_guidance/actions/06-arn-aws-s3-sa-wi5-site-696505809372-20260328t164-e4bf59d8/README_ACTION.txt",
+        "byte_count": 859,
+        "change_type": "create_or_update",
+        "content_sha256": "e3cdf20b29bc8dd44cbbb684a252c48cbe716f52d697e2006b2c86fdb8f1d1c2",
+        "line_count": 12,
+        "repo_path": "manual_guidance/actions/06-arn-aws-s3-sa-wi5-site-696505809372-20260328t164-e4bf59d8/README_ACTION.txt"
+      },
+      {
+        "bundle_path": "manual_guidance/actions/06-arn-aws-s3-sa-wi5-site-696505809372-20260328t164-e4bf59d8/decision.json",
+        "byte_count": 3275,
+        "change_type": "create_or_update",
+        "content_sha256": "5f892178373fd017839fb841b556e51f3d85e704b4d502eda239272e9ba42b14",
+        "line_count": 53,
+        "repo_path": "manual_guidance/actions/06-arn-aws-s3-sa-wi5-site-696505809372-20260328t164-e4bf59d8/decision.json"
+      },
+      {
+        "bundle_path": "manual_guidance/actions/07-arn-aws-s3-phase2-wi1-lifecycle-696505809372-202-e65afccb/README_ACTION.txt",
+        "byte_count": 866,
+        "change_type": "create_or_update",
+        "content_sha256": "d253a97729e884f8af25a4a03426020622ea57e78e557e545990b218a110a532",
+        "line_count": 12,
+        "repo_path": "manual_guidance/actions/07-arn-aws-s3-phase2-wi1-lifecycle-696505809372-202-e65afccb/README_ACTION.txt"
+      },
+      {
+        "bundle_path": "manual_guidance/actions/07-arn-aws-s3-phase2-wi1-lifecycle-696505809372-202-e65afccb/decision.json",
+        "byte_count": 3310,
+        "change_type": "create_or_update",
+        "content_sha256": "4572a6265cb33b8c795fa00548752e83f6af49d2c76619c2d8bf7f68cbc4da41",
+        "line_count": 53,
+        "repo_path": "manual_guidance/actions/07-arn-aws-s3-phase2-wi1-lifecycle-696505809372-202-e65afccb/decision.json"
+      },
+      {
+        "bundle_path": "manual_guidance/actions/08-aws-account-696505809372-4a5a765e/README_ACTION.txt",
+        "byte_count": 712,
+        "change_type": "create_or_update",
+        "content_sha256": "4b40f67be0e22d70bbad3e52417e2bdfa9b688db15fd87a45ee30d0900a1f061",
+        "line_count": 12,
+        "repo_path": "manual_guidance/actions/08-aws-account-696505809372-4a5a765e/README_ACTION.txt"
+      },
+      {
+        "bundle_path": "manual_guidance/actions/08-aws-account-696505809372-4a5a765e/decision.json",
+        "byte_count": 2571,
+        "change_type": "create_or_update",
+        "content_sha256": "acdd7e27d7918203b271d348d77209108cc5a0e45e3e9aa5047736c77cf6fbc1",
+        "line_count": 53,
+        "repo_path": "manual_guidance/actions/08-aws-account-696505809372-4a5a765e/decision.json"
+      },
+      {
+        "bundle_path": "review_required/actions/09-arn-aws-s3-security-autopilot-access-logs-696505-0ebbf82c/README_ACTION.txt",
+        "byte_count": 881,
+        "change_type": "create_or_update",
+        "content_sha256": "77fdcbbf5ad0967d69b076d14e94cf56d8695d94e3f49b4850d594fd582c7c92",
+        "line_count": 12,
+        "repo_path": "review_required/actions/09-arn-aws-s3-security-autopilot-access-logs-696505-0ebbf82c/README_ACTION.txt"
+      },
+      {
+        "bundle_path": "review_required/actions/09-arn-aws-s3-security-autopilot-access-logs-696505-0ebbf82c/decision.json",
+        "byte_count": 3383,
+        "change_type": "create_or_update",
+        "content_sha256": "5a4a0b8bf47f1dfc334ead9c91fbfd58a41bd4bcf451a766edd07174c5d1823b",
+        "line_count": 53,
+        "repo_path": "review_required/actions/09-arn-aws-s3-security-autopilot-access-logs-696505-0ebbf82c/decision.json"
+      },
+      {
+        "bundle_path": "review_required/actions/10-arn-aws-s3-security-autopilot-w6-strict-s311-exe-3b58320d/README_ACTION.txt",
+        "byte_count": 869,
+        "change_type": "create_or_update",
+        "content_sha256": "ef1bdbdf58138691116f1e94553278ffa66b2a00897dc6492331c8a3f4fd44c3",
+        "line_count": 12,
+        "repo_path": "review_required/actions/10-arn-aws-s3-security-autopilot-w6-strict-s311-exe-3b58320d/README_ACTION.txt"
+      },
+      {
+        "bundle_path": "review_required/actions/10-arn-aws-s3-security-autopilot-w6-strict-s311-exe-3b58320d/decision.json",
+        "byte_count": 3324,
+        "change_type": "create_or_update",
+        "content_sha256": "b10d9ab73408326abc5df544b45433405da41509d3b07b94d0a5f7b6c4149a5f",
+        "line_count": 53,
+        "repo_path": "review_required/actions/10-arn-aws-s3-security-autopilot-w6-strict-s311-exe-3b58320d/decision.json"
+      },
+      {
+        "bundle_path": "review_required/actions/11-arn-aws-s3-security-autopilot-w6-envready-s315-e-46d8436f/README_ACTION.txt",
+        "byte_count": 871,
+        "change_type": "create_or_update",
+        "content_sha256": "e61dc1e9e97b83b20bd22c1a73ed55143bb7bba996ef65ffa277fdf641c037c4",
+        "line_count": 12,
+        "repo_path": "review_required/actions/11-arn-aws-s3-security-autopilot-w6-envready-s315-e-46d8436f/README_ACTION.txt"
+      },
+      {
+        "bundle_path": "review_required/actions/11-arn-aws-s3-security-autopilot-w6-envready-s315-e-46d8436f/decision.json",
+        "byte_count": 3334,
+        "change_type": "create_or_update",
+        "content_sha256": "19ad32cfc415024187812c26bffa9cdd270d1261e92fdb6b7dbfa8cbe7817e10",
+        "line_count": 53,
+        "repo_path": "review_required/actions/11-arn-aws-s3-security-autopilot-w6-envready-s315-e-46d8436f/decision.json"
+      },
+      {
+        "bundle_path": "review_required/actions/12-arn-aws-s3-security-autopilot-w6-envready-config-7c75dd09/README_ACTION.txt",
+        "byte_count": 868,
+        "change_type": "create_or_update",
+        "content_sha256": "0a47eed6ce93d92f02b9cbef4773ba4fa9c73fd2dc8e3c7ae7bc286e93567e51",
+        "line_count": 12,
+        "repo_path": "review_required/actions/12-arn-aws-s3-security-autopilot-w6-envready-config-7c75dd09/README_ACTION.txt"
+      },
+      {
+        "bundle_path": "review_required/actions/12-arn-aws-s3-security-autopilot-w6-envready-config-7c75dd09/decision.json",
+        "byte_count": 3319,
+        "change_type": "create_or_update",
+        "content_sha256": "dd89384cbbcdc3140ab1b2b3a869c987214431bc77b1ee5511752a27a696779e",
+        "line_count": 53,
+        "repo_path": "review_required/actions/12-arn-aws-s3-security-autopilot-w6-envready-config-7c75dd09/decision.json"
+      },
+      {
+        "bundle_path": "review_required/actions/13-arn-aws-s3-security-autopilot-w6-envready-cloudt-838f4503/README_ACTION.txt",
+        "byte_count": 872,
+        "change_type": "create_or_update",
+        "content_sha256": "88ac9a2787a7463d4cf6e96f03f43423886f09a8150f5428f909113b0b9c04d8",
+        "line_count": 12,
+        "repo_path": "review_required/actions/13-arn-aws-s3-security-autopilot-w6-envready-cloudt-838f4503/README_ACTION.txt"
+      },
+      {
+        "bundle_path": "review_required/actions/13-arn-aws-s3-security-autopilot-w6-envready-cloudt-838f4503/decision.json",
+        "byte_count": 3339,
+        "change_type": "create_or_update",
+        "content_sha256": "f1cd2f132455127de094c90646fdd6f58f56dc4f5e613abf06a5087443641a21",
+        "line_count": 53,
+        "repo_path": "review_required/actions/13-arn-aws-s3-security-autopilot-w6-envready-cloudt-838f4503/decision.json"
+      },
+      {
+        "bundle_path": "review_required/actions/14-arn-aws-s3-security-autopilot-w6-envready-access-b8506dba/README_ACTION.txt",
+        "byte_count": 872,
+        "change_type": "create_or_update",
+        "content_sha256": "8c3efae642ee48a3c2520569098e58a35c5b24756831d2f0fe686f14e674ca64",
+        "line_count": 12,
+        "repo_path": "review_required/actions/14-arn-aws-s3-security-autopilot-w6-envready-access-b8506dba/README_ACTION.txt"
+      },
+      {
+        "bundle_path": "review_required/actions/14-arn-aws-s3-security-autopilot-w6-envready-access-b8506dba/decision.json",
+        "byte_count": 3339,
+        "change_type": "create_or_update",
+        "content_sha256": "e0d71106412d9d647c869a22c7fffdcbb2893b89ebb6b453858c0455bc14a5a3",
+        "line_count": 53,
+        "repo_path": "review_required/actions/14-arn-aws-s3-security-autopilot-w6-envready-access-b8506dba/decision.json"
+      },
+      {
+        "bundle_path": "review_required/actions/15-arn-aws-s3-security-autopilot-w6-envready-s311-e-ea2b71a1/README_ACTION.txt",
+        "byte_count": 871,
+        "change_type": "create_or_update",
+        "content_sha256": "f5aed08803cbff77e59f81180fcb9efbe8be8fcfaca33a85facfb4618b26f6f0",
+        "line_count": 12,
+        "repo_path": "review_required/actions/15-arn-aws-s3-security-autopilot-w6-envready-s311-e-ea2b71a1/README_ACTION.txt"
+      },
+      {
+        "bundle_path": "review_required/actions/15-arn-aws-s3-security-autopilot-w6-envready-s311-e-ea2b71a1/decision.json",
+        "byte_count": 3334,
+        "change_type": "create_or_update",
+        "content_sha256": "dcea919b91a61a2c989bbac64aedbb84649b6e0d3e4258f5f9f312581f1e3b0f",
+        "line_count": 53,
+        "repo_path": "review_required/actions/15-arn-aws-s3-security-autopilot-w6-envready-s311-e-ea2b71a1/decision.json"
+      },
+      {
+        "bundle_path": "review_required/actions/16-arn-aws-s3-ocypheris-live-ct-20260323162333-eu-n-03bbb5fd/README_ACTION.txt",
+        "byte_count": 861,
+        "change_type": "create_or_update",
+        "content_sha256": "212df78e1cfda5a18c55020263f7a86a012f7537050980b8eda3ca96e61bf88f",
+        "line_count": 12,
+        "repo_path": "review_required/actions/16-arn-aws-s3-ocypheris-live-ct-20260323162333-eu-n-03bbb5fd/README_ACTION.txt"
+      },
+      {
+        "bundle_path": "review_required/actions/16-arn-aws-s3-ocypheris-live-ct-20260323162333-eu-n-03bbb5fd/decision.json",
+        "byte_count": 3284,
+        "change_type": "create_or_update",
+        "content_sha256": "c44ba7ce10a5045f34578ba3d44bd24ec6665539b32d3a8df084bf10d79a9927",
+        "line_count": 53,
+        "repo_path": "review_required/actions/16-arn-aws-s3-ocypheris-live-ct-20260323162333-eu-n-03bbb5fd/decision.json"
+      },
+      {
+        "bundle_path": "review_required/actions/17-arn-aws-s3-security-autopilot-config-69650580937-bc116f71/README_ACTION.txt",
+        "byte_count": 867,
+        "change_type": "create_or_update",
+        "content_sha256": "62d0ed858fd2102429542de7d1725e2ea535277503cb5bfe2fd525fabc5ccab4",
+        "line_count": 12,
+        "repo_path": "review_required/actions/17-arn-aws-s3-security-autopilot-config-69650580937-bc116f71/README_ACTION.txt"
+      },
+      {
+        "bundle_path": "review_required/actions/17-arn-aws-s3-security-autopilot-config-69650580937-bc116f71/decision.json",
+        "byte_count": 3314,
+        "change_type": "create_or_update",
+        "content_sha256": "2946079aab4e9635ca4c6194b24f2cf6dc24f1edc13e4a0ae3232e3579a3a4f2",
+        "line_count": 53,
+        "repo_path": "review_required/actions/17-arn-aws-s3-security-autopilot-config-69650580937-bc116f71/decision.json"
+      },
+      {
+        "bundle_path": "review_required/actions/18-arn-aws-s3-security-autopilot-w6-strict-s311-man-82ed26b1/README_ACTION.txt",
+        "byte_count": 871,
+        "change_type": "create_or_update",
+        "content_sha256": "49ea06794e73c6c4e1fa462cb4160dc67eaa79dbd2f35d4f1bec21253fb26ae1",
+        "line_count": 12,
+        "repo_path": "review_required/actions/18-arn-aws-s3-security-autopilot-w6-strict-s311-man-82ed26b1/README_ACTION.txt"
+      },
+      {
+        "bundle_path": "review_required/actions/18-arn-aws-s3-security-autopilot-w6-strict-s311-man-82ed26b1/decision.json",
+        "byte_count": 3334,
+        "change_type": "create_or_update",
+        "content_sha256": "b9e4b0de7c3b1041e88f2192708ece7a5be45e1d1d08928c61c576fa7a67cc5a",
+        "line_count": 53,
+        "repo_path": "review_required/actions/18-arn-aws-s3-security-autopilot-w6-strict-s311-man-82ed26b1/decision.json"
+      },
+      {
+        "bundle_path": "review_required/actions/19-arn-aws-s3-security-autopilot-w6-strict-s315-man-a1d8f3bf/README_ACTION.txt",
+        "byte_count": 871,
+        "change_type": "create_or_update",
+        "content_sha256": "5875bf57208dd9de35fb2194f4db0007cc7142f9486ec94ca17bdfaea69b4764",
+        "line_count": 12,
+        "repo_path": "review_required/actions/19-arn-aws-s3-security-autopilot-w6-strict-s315-man-a1d8f3bf/README_ACTION.txt"
+      },
+      {
+        "bundle_path": "review_required/actions/19-arn-aws-s3-security-autopilot-w6-strict-s315-man-a1d8f3bf/decision.json",
+        "byte_count": 3334,
+        "change_type": "create_or_update",
+        "content_sha256": "48218af56ce7bc37767aaf5b16da1e7afa9cf25e6d18960aff9d6cff16b0128b",
+        "line_count": 53,
+        "repo_path": "review_required/actions/19-arn-aws-s3-security-autopilot-w6-strict-s315-man-a1d8f3bf/decision.json"
+      },
+      {
+        "bundle_path": "review_required/actions/20-arn-aws-s3-security-autopilot-w6-strict-s315-exe-c533dff3/README_ACTION.txt",
+        "byte_count": 869,
+        "change_type": "create_or_update",
+        "content_sha256": "cf569faf5ad32d4423f08063922a260f1f5dc5d22cf3663b72063c0ed5433d06",
+        "line_count": 12,
+        "repo_path": "review_required/actions/20-arn-aws-s3-security-autopilot-w6-strict-s315-exe-c533dff3/README_ACTION.txt"
+      },
+      {
+        "bundle_path": "review_required/actions/20-arn-aws-s3-security-autopilot-w6-strict-s315-exe-c533dff3/decision.json",
+        "byte_count": 3324,
+        "change_type": "create_or_update",
+        "content_sha256": "630c2dee246d336c44898970e0ad686a5bc1865bcca5f6914a0a2bd01868aaae",
+        "line_count": 53,
+        "repo_path": "review_required/actions/20-arn-aws-s3-security-autopilot-w6-strict-s315-exe-c533dff3/decision.json"
+      },
+      {
+        "bundle_path": "review_required/actions/21-arn-aws-s3-config-bucket-696505809372-e55dca93/README_ACTION.txt",
+        "byte_count": 844,
+        "change_type": "create_or_update",
+        "content_sha256": "28ca919af302cb6b8f8a26da21d0778b6358e05c0c08b0e49ae7625de284468d",
+        "line_count": 12,
+        "repo_path": "review_required/actions/21-arn-aws-s3-config-bucket-696505809372-e55dca93/README_ACTION.txt"
+      },
+      {
+        "bundle_path": "review_required/actions/21-arn-aws-s3-config-bucket-696505809372-e55dca93/decision.json",
+        "byte_count": 3188,
+        "change_type": "create_or_update",
+        "content_sha256": "e532534d346cc97ed299e773365d1e05eebe24f700c7903d65c7db2fbbbdd927",
+        "line_count": 53,
+        "repo_path": "review_required/actions/21-arn-aws-s3-config-bucket-696505809372-e55dca93/decision.json"
+      }
+    ],
+    "fingerprint_sha256": "850cf75033d85606b92b156c16307b41db9558faf4f869fc4915466bd1f4abdf",
+    "repo_target_configured": true,
+    "summary_lines": [
+      "`run_all.sh` <- `run_all.sh` (137 lines, sha256:c13ace59edd9)",
+      "`replay_group_run_reports.sh` <- `replay_group_run_reports.sh` (54 lines, sha256:722cb6d7017b)",
+      "`run_actions.sh` <- `run_actions.sh` (1079 lines, sha256:7fcc09d11d3c)",
+      "`README_GROUP.txt` <- `README_GROUP.txt` (40 lines, sha256:e7ab333092bf)",
+      "`bundle_manifest.json` <- `bundle_manifest.json` (1152 lines, sha256:7ceb68b178e4)",
+      "`decision_log.md` <- `decision_log.md` (149 lines, sha256:3643831dd028)",
+      "`finding_coverage.json` <- `finding_coverage.json` (110 lines, sha256:3a94e5dae1bd)",
+      "`manual_guidance/actions/01-arn-aws-s3-phase2-wi1-lifecycle-696505809372-202-06464919/README_ACTION.txt` <- `manual_guidance/actions/01-arn-aws-s3-phase2-wi1-lifecycle-696505809372-202-06464919/README_ACTION.txt` (12 lines, sha256:b686d3fa38ea)",
+      "`manual_guidance/actions/01-arn-aws-s3-phase2-wi1-lifecycle-696505809372-202-06464919/decision.json` <- `manual_guidance/actions/01-arn-aws-s3-phase2-wi1-lifecycle-696505809372-202-06464919/decision.json` (53 lines, sha256:6991a0dae003)",
+      "`manual_guidance/actions/02-arn-aws-s3-sa-wi7-seed-696505809372-202603282058-14ffeb41/README_ACTION.txt` <- `manual_guidance/actions/02-arn-aws-s3-sa-wi7-seed-696505809372-202603282058-14ffeb41/README_ACTION.txt` (12 lines, sha256:0300441ff4b4)",
+      "`manual_guidance/actions/02-arn-aws-s3-sa-wi7-seed-696505809372-202603282058-14ffeb41/decision.json` <- `manual_guidance/actions/02-arn-aws-s3-sa-wi7-seed-696505809372-202603282058-14ffeb41/decision.json` (53 lines, sha256:c8657755dd71)",
+      "`manual_guidance/actions/03-arn-aws-s3-ocypheris-live-ct-20260328t181200z-eu-3bab593b/README_ACTION.txt` <- `manual_guidance/actions/03-arn-aws-s3-ocypheris-live-ct-20260328t181200z-eu-3bab593b/README_ACTION.txt` (12 lines, sha256:c3a27497f88a)",
+      "`manual_guidance/actions/03-arn-aws-s3-ocypheris-live-ct-20260328t181200z-eu-3bab593b/decision.json` <- `manual_guidance/actions/03-arn-aws-s3-ocypheris-live-ct-20260328t181200z-eu-3bab593b/decision.json` (53 lines, sha256:d505eb7c0dae)",
+      "`manual_guidance/actions/04-arn-aws-s3-phase2-wi1-lifecycle-696505809372-202-63f91a78/README_ACTION.txt` <- `manual_guidance/actions/04-arn-aws-s3-phase2-wi1-lifecycle-696505809372-202-63f91a78/README_ACTION.txt` (12 lines, sha256:8981ea8e97ec)",
+      "`manual_guidance/actions/04-arn-aws-s3-phase2-wi1-lifecycle-696505809372-202-63f91a78/decision.json` <- `manual_guidance/actions/04-arn-aws-s3-phase2-wi1-lifecycle-696505809372-202-63f91a78/decision.json` (53 lines, sha256:1aaf01a1c4b5)",
+      "`manual_guidance/actions/05-arn-aws-s3-wi1-noncurrent-lifecycle-696505809372-d8b98d62/README_ACTION.txt` <- `manual_guidance/actions/05-arn-aws-s3-wi1-noncurrent-lifecycle-696505809372-d8b98d62/README_ACTION.txt` (12 lines, sha256:964108048f1d)",
+      "`manual_guidance/actions/05-arn-aws-s3-wi1-noncurrent-lifecycle-696505809372-d8b98d62/decision.json` <- `manual_guidance/actions/05-arn-aws-s3-wi1-noncurrent-lifecycle-696505809372-d8b98d62/decision.json` (53 lines, sha256:a14f188ee92d)",
+      "`manual_guidance/actions/06-arn-aws-s3-sa-wi5-site-696505809372-20260328t164-e4bf59d8/README_ACTION.txt` <- `manual_guidance/actions/06-arn-aws-s3-sa-wi5-site-696505809372-20260328t164-e4bf59d8/README_ACTION.txt` (12 lines, sha256:e3cdf20b29bc)",
+      "`manual_guidance/actions/06-arn-aws-s3-sa-wi5-site-696505809372-20260328t164-e4bf59d8/decision.json` <- `manual_guidance/actions/06-arn-aws-s3-sa-wi5-site-696505809372-20260328t164-e4bf59d8/decision.json` (53 lines, sha256:5f892178373f)",
+      "`manual_guidance/actions/07-arn-aws-s3-phase2-wi1-lifecycle-696505809372-202-e65afccb/README_ACTION.txt` <- `manual_guidance/actions/07-arn-aws-s3-phase2-wi1-lifecycle-696505809372-202-e65afccb/README_ACTION.txt` (12 lines, sha256:d253a97729e8)",
+      "`manual_guidance/actions/07-arn-aws-s3-phase2-wi1-lifecycle-696505809372-202-e65afccb/decision.json` <- `manual_guidance/actions/07-arn-aws-s3-phase2-wi1-lifecycle-696505809372-202-e65afccb/decision.json` (53 lines, sha256:4572a6265cb3)",
+      "`manual_guidance/actions/08-aws-account-696505809372-4a5a765e/README_ACTION.txt` <- `manual_guidance/actions/08-aws-account-696505809372-4a5a765e/README_ACTION.txt` (12 lines, sha256:4b40f67be0e2)",
+      "`manual_guidance/actions/08-aws-account-696505809372-4a5a765e/decision.json` <- `manual_guidance/actions/08-aws-account-696505809372-4a5a765e/decision.json` (53 lines, sha256:acdd7e27d791)",
+      "`review_required/actions/09-arn-aws-s3-security-autopilot-access-logs-696505-0ebbf82c/README_ACTION.txt` <- `review_required/actions/09-arn-aws-s3-security-autopilot-access-logs-696505-0ebbf82c/README_ACTION.txt` (12 lines, sha256:77fdcbbf5ad0)",
+      "`review_required/actions/09-arn-aws-s3-security-autopilot-access-logs-696505-0ebbf82c/decision.json` <- `review_required/actions/09-arn-aws-s3-security-autopilot-access-logs-696505-0ebbf82c/decision.json` (53 lines, sha256:5a4a0b8bf47f)",
+      "`review_required/actions/10-arn-aws-s3-security-autopilot-w6-strict-s311-exe-3b58320d/README_ACTION.txt` <- `review_required/actions/10-arn-aws-s3-security-autopilot-w6-strict-s311-exe-3b58320d/README_ACTION.txt` (12 lines, sha256:ef1bdbdf5813)",
+      "`review_required/actions/10-arn-aws-s3-security-autopilot-w6-strict-s311-exe-3b58320d/decision.json` <- `review_required/actions/10-arn-aws-s3-security-autopilot-w6-strict-s311-exe-3b58320d/decision.json` (53 lines, sha256:b10d9ab73408)",
+      "`review_required/actions/11-arn-aws-s3-security-autopilot-w6-envready-s315-e-46d8436f/README_ACTION.txt` <- `review_required/actions/11-arn-aws-s3-security-autopilot-w6-envready-s315-e-46d8436f/README_ACTION.txt` (12 lines, sha256:e61dc1e9e97b)",
+      "`review_required/actions/11-arn-aws-s3-security-autopilot-w6-envready-s315-e-46d8436f/decision.json` <- `review_required/actions/11-arn-aws-s3-security-autopilot-w6-envready-s315-e-46d8436f/decision.json` (53 lines, sha256:19ad32cfc415)",
+      "`review_required/actions/12-arn-aws-s3-security-autopilot-w6-envready-config-7c75dd09/README_ACTION.txt` <- `review_required/actions/12-arn-aws-s3-security-autopilot-w6-envready-config-7c75dd09/README_ACTION.txt` (12 lines, sha256:0a47eed6ce93)",
+      "`review_required/actions/12-arn-aws-s3-security-autopilot-w6-envready-config-7c75dd09/decision.json` <- `review_required/actions/12-arn-aws-s3-security-autopilot-w6-envready-config-7c75dd09/decision.json` (53 lines, sha256:dd89384cbbcd)",
+      "`review_required/actions/13-arn-aws-s3-security-autopilot-w6-envready-cloudt-838f4503/README_ACTION.txt` <- `review_required/actions/13-arn-aws-s3-security-autopilot-w6-envready-cloudt-838f4503/README_ACTION.txt` (12 lines, sha256:88ac9a2787a7)",
+      "`review_required/actions/13-arn-aws-s3-security-autopilot-w6-envready-cloudt-838f4503/decision.json` <- `review_required/actions/13-arn-aws-s3-security-autopilot-w6-envready-cloudt-838f4503/decision.json` (53 lines, sha256:f1cd2f132455)",
+      "`review_required/actions/14-arn-aws-s3-security-autopilot-w6-envready-access-b8506dba/README_ACTION.txt` <- `review_required/actions/14-arn-aws-s3-security-autopilot-w6-envready-access-b8506dba/README_ACTION.txt` (12 lines, sha256:8c3efae642ee)",
+      "`review_required/actions/14-arn-aws-s3-security-autopilot-w6-envready-access-b8506dba/decision.json` <- `review_required/actions/14-arn-aws-s3-security-autopilot-w6-envready-access-b8506dba/decision.json` (53 lines, sha256:e0d71106412d)",
+      "`review_required/actions/15-arn-aws-s3-security-autopilot-w6-envready-s311-e-ea2b71a1/README_ACTION.txt` <- `review_required/actions/15-arn-aws-s3-security-autopilot-w6-envready-s311-e-ea2b71a1/README_ACTION.txt` (12 lines, sha256:f5aed08803cb)",
+      "`review_required/actions/15-arn-aws-s3-security-autopilot-w6-envready-s311-e-ea2b71a1/decision.json` <- `review_required/actions/15-arn-aws-s3-security-autopilot-w6-envready-s311-e-ea2b71a1/decision.json` (53 lines, sha256:dcea919b91a6)",
+      "`review_required/actions/16-arn-aws-s3-ocypheris-live-ct-20260323162333-eu-n-03bbb5fd/README_ACTION.txt` <- `review_required/actions/16-arn-aws-s3-ocypheris-live-ct-20260323162333-eu-n-03bbb5fd/README_ACTION.txt` (12 lines, sha256:212df78e1cfd)",
+      "`review_required/actions/16-arn-aws-s3-ocypheris-live-ct-20260323162333-eu-n-03bbb5fd/decision.json` <- `review_required/actions/16-arn-aws-s3-ocypheris-live-ct-20260323162333-eu-n-03bbb5fd/decision.json` (53 lines, sha256:c44ba7ce10a5)",
+      "`review_required/actions/17-arn-aws-s3-security-autopilot-config-69650580937-bc116f71/README_ACTION.txt` <- `review_required/actions/17-arn-aws-s3-security-autopilot-config-69650580937-bc116f71/README_ACTION.txt` (12 lines, sha256:62d0ed858fd2)",
+      "`review_required/actions/17-arn-aws-s3-security-autopilot-config-69650580937-bc116f71/decision.json` <- `review_required/actions/17-arn-aws-s3-security-autopilot-config-69650580937-bc116f71/decision.json` (53 lines, sha256:2946079aab4e)",
+      "`review_required/actions/18-arn-aws-s3-security-autopilot-w6-strict-s311-man-82ed26b1/README_ACTION.txt` <- `review_required/actions/18-arn-aws-s3-security-autopilot-w6-strict-s311-man-82ed26b1/README_ACTION.txt` (12 lines, sha256:49ea06794e73)",
+      "`review_required/actions/18-arn-aws-s3-security-autopilot-w6-strict-s311-man-82ed26b1/decision.json` <- `review_required/actions/18-arn-aws-s3-security-autopilot-w6-strict-s311-man-82ed26b1/decision.json` (53 lines, sha256:b9e4b0de7c3b)",
+      "`review_required/actions/19-arn-aws-s3-security-autopilot-w6-strict-s315-man-a1d8f3bf/README_ACTION.txt` <- `review_required/actions/19-arn-aws-s3-security-autopilot-w6-strict-s315-man-a1d8f3bf/README_ACTION.txt` (12 lines, sha256:5875bf57208d)",
+      "`review_required/actions/19-arn-aws-s3-security-autopilot-w6-strict-s315-man-a1d8f3bf/decision.json` <- `review_required/actions/19-arn-aws-s3-security-autopilot-w6-strict-s315-man-a1d8f3bf/decision.json` (53 lines, sha256:48218af56ce7)",
+      "`review_required/actions/20-arn-aws-s3-security-autopilot-w6-strict-s315-exe-c533dff3/README_ACTION.txt` <- `review_required/actions/20-arn-aws-s3-security-autopilot-w6-strict-s315-exe-c533dff3/README_ACTION.txt` (12 lines, sha256:cf569faf5ad3)",
+      "`review_required/actions/20-arn-aws-s3-security-autopilot-w6-strict-s315-exe-c533dff3/decision.json` <- `review_required/actions/20-arn-aws-s3-security-autopilot-w6-strict-s315-exe-c533dff3/decision.json` (53 lines, sha256:630c2dee246d)",
+      "`review_required/actions/21-arn-aws-s3-config-bucket-696505809372-e55dca93/README_ACTION.txt` <- `review_required/actions/21-arn-aws-s3-config-bucket-696505809372-e55dca93/README_ACTION.txt` (12 lines, sha256:28ca919af302)",
+      "`review_required/actions/21-arn-aws-s3-config-bucket-696505809372-e55dca93/decision.json` <- `review_required/actions/21-arn-aws-s3-config-bucket-696505809372-e55dca93/decision.json` (53 lines, sha256:e532534d346c)"
+    ],
+    "version": 1
+  },
+  "provider_agnostic": true,
+  "repo_target": {
+    "base_branch": "main",
+    "head_branch": "20260402t215309z-s311-stale-action-rerun",
+    "provider": "github",
+    "repository": "example/security-autopilot-remediations"
+  },
+  "rollback_notes": {
+    "artifact_type": "rollback_notes",
+    "entries": [
+      {
+        "action_id": "06464919-c27d-4ade-9a70-3569e87706a6",
+        "action_type": "s3_bucket_lifecycle_configuration",
+        "control_id": "S3.11",
+        "rollback_command": "aws s3api delete-bucket-lifecycle --bucket phase2-wi1-lifecycle-696505809372-20260329004157",
+        "target_id": "696505809372|eu-north-1|arn:aws:s3:::phase2-wi1-lifecycle-696505809372-20260329004157|S3.11",
+        "title": "S3 general purpose buckets should have Lifecycle configurations"
+      },
+      {
+        "action_id": "14ffeb41-201d-4c56-b29e-1d6fabb53ef9",
+        "action_type": "s3_bucket_lifecycle_configuration",
+        "control_id": "S3.11",
+        "rollback_command": "aws s3api delete-bucket-lifecycle --bucket sa-wi7-seed-696505809372-20260328205857",
+        "target_id": "696505809372|eu-north-1|arn:aws:s3:::sa-wi7-seed-696505809372-20260328205857|S3.11",
+        "title": "S3 general purpose buckets should have Lifecycle configurations"
+      },
+      {
+        "action_id": "3bab593b-c8b3-449b-9f85-209831976292",
+        "action_type": "s3_bucket_lifecycle_configuration",
+        "control_id": "S3.11",
+        "rollback_command": "aws s3api delete-bucket-lifecycle --bucket ocypheris-live-ct-20260328t181200z-eu-north-1",
+        "target_id": "696505809372|eu-north-1|arn:aws:s3:::ocypheris-live-ct-20260328t181200z-eu-north-1|S3.11",
+        "title": "S3 general purpose buckets should have Lifecycle configurations"
+      },
+      {
+        "action_id": "63f91a78-96e9-49be-b4d7-d05e69730fdf",
+        "action_type": "s3_bucket_lifecycle_configuration",
+        "control_id": "S3.11",
+        "rollback_command": "aws s3api delete-bucket-lifecycle --bucket phase2-wi1-lifecycle-696505809372-20260329002042",
+        "target_id": "696505809372|eu-north-1|arn:aws:s3:::phase2-wi1-lifecycle-696505809372-20260329002042|S3.11",
+        "title": "S3 general purpose buckets should have Lifecycle configurations"
+      },
+      {
+        "action_id": "d8b98d62-2940-4504-a750-f0f50c11a75c",
+        "action_type": "s3_bucket_lifecycle_configuration",
+        "control_id": "S3.11",
+        "rollback_command": "aws s3api delete-bucket-lifecycle --bucket wi1-noncurrent-lifecycle-696505809372-20260330003655",
+        "target_id": "696505809372|eu-north-1|arn:aws:s3:::wi1-noncurrent-lifecycle-696505809372-20260330003655|S3.11",
+        "title": "S3 general purpose buckets should have Lifecycle configurations"
+      },
+      {
+        "action_id": "e4bf59d8-72fd-48b8-a4dc-47cccbfd7fed",
+        "action_type": "s3_bucket_lifecycle_configuration",
+        "control_id": "S3.11",
+        "rollback_command": "aws s3api delete-bucket-lifecycle --bucket sa-wi5-site-696505809372-20260328t164043z",
+        "target_id": "696505809372|eu-north-1|arn:aws:s3:::sa-wi5-site-696505809372-20260328t164043z|S3.11",
+        "title": "S3 general purpose buckets should have Lifecycle configurations"
+      },
+      {
+        "action_id": "e65afccb-8104-471c-88a4-fab226a07413",
+        "action_type": "s3_bucket_lifecycle_configuration",
+        "control_id": "S3.11",
+        "rollback_command": "aws s3api delete-bucket-lifecycle --bucket phase2-wi1-lifecycle-696505809372-20260328224331",
+        "target_id": "696505809372|eu-north-1|arn:aws:s3:::phase2-wi1-lifecycle-696505809372-20260328224331|S3.11",
+        "title": "S3 general purpose buckets should have Lifecycle configurations"
+      },
+      {
+        "action_id": "4a5a765e-cf7d-40bf-91c2-19a361d242ae",
+        "action_type": "s3_bucket_lifecycle_configuration",
+        "control_id": "S3.11",
+        "rollback_command": "aws s3api delete-bucket-lifecycle --bucket 696505809372|eu-north-1|AWS::::Account:696505809372|S3.11",
+        "target_id": "696505809372|eu-north-1|AWS::::Account:696505809372|S3.11",
+        "title": "S3 general purpose buckets should have Lifecycle configurations"
+      },
+      {
+        "action_id": "0ebbf82c-ff48-45a1-8fd7-3a4688788ced",
+        "action_type": "s3_bucket_lifecycle_configuration",
+        "control_id": "S3.11",
+        "rollback_command": "aws s3api delete-bucket-lifecycle --bucket security-autopilot-access-logs-696505809372-r221001-access-logs",
+        "target_id": "696505809372|eu-north-1|arn:aws:s3:::security-autopilot-access-logs-696505809372-r221001-access-logs|S3.11",
+        "title": "S3 general purpose buckets should have Lifecycle configurations"
+      },
+      {
+        "action_id": "3b58320d-f3a4-4ccc-b1ff-474f6b822aa8",
+        "action_type": "s3_bucket_lifecycle_configuration",
+        "control_id": "S3.11",
+        "rollback_command": "aws s3api delete-bucket-lifecycle --bucket security-autopilot-w6-strict-s311-exec-696505809372",
+        "target_id": "696505809372|eu-north-1|arn:aws:s3:::security-autopilot-w6-strict-s311-exec-696505809372|S3.11",
+        "title": "S3 general purpose buckets should have Lifecycle configurations"
+      },
+      {
+        "action_id": "46d8436f-47e7-4518-9c40-dc187c73a567",
+        "action_type": "s3_bucket_lifecycle_configuration",
+        "control_id": "S3.11",
+        "rollback_command": "aws s3api delete-bucket-lifecycle --bucket security-autopilot-w6-envready-s315-exec-696505809372",
+        "target_id": "696505809372|eu-north-1|arn:aws:s3:::security-autopilot-w6-envready-s315-exec-696505809372|S3.11",
+        "title": "S3 general purpose buckets should have Lifecycle configurations"
+      },
+      {
+        "action_id": "7c75dd09-67b0-4e58-9000-6e570fea8369",
+        "action_type": "s3_bucket_lifecycle_configuration",
+        "control_id": "S3.11",
+        "rollback_command": "aws s3api delete-bucket-lifecycle --bucket security-autopilot-w6-envready-config-696505809372",
+        "target_id": "696505809372|eu-north-1|arn:aws:s3:::security-autopilot-w6-envready-config-696505809372|S3.11",
+        "title": "S3 general purpose buckets should have Lifecycle configurations"
+      },
+      {
+        "action_id": "838f4503-7869-438b-a52a-88548b0ed727",
+        "action_type": "s3_bucket_lifecycle_configuration",
+        "control_id": "S3.11",
+        "rollback_command": "aws s3api delete-bucket-lifecycle --bucket security-autopilot-w6-envready-cloudtrail-696505809372",
+        "target_id": "696505809372|eu-north-1|arn:aws:s3:::security-autopilot-w6-envready-cloudtrail-696505809372|S3.11",
+        "title": "S3 general purpose buckets should have Lifecycle configurations"
+      },
+      {
+        "action_id": "b8506dba-9edb-4774-8446-4baedc8fa189",
+        "action_type": "s3_bucket_lifecycle_configuration",
+        "control_id": "S3.11",
+        "rollback_command": "aws s3api delete-bucket-lifecycle --bucket security-autopilot-w6-envready-accesslogs-696505809372",
+        "target_id": "696505809372|eu-north-1|arn:aws:s3:::security-autopilot-w6-envready-accesslogs-696505809372|S3.11",
+        "title": "S3 general purpose buckets should have Lifecycle configurations"
+      },
+      {
+        "action_id": "ea2b71a1-80df-4dd7-8510-a300fec9dfec",
+        "action_type": "s3_bucket_lifecycle_configuration",
+        "control_id": "S3.11",
+        "rollback_command": "aws s3api delete-bucket-lifecycle --bucket security-autopilot-w6-envready-s311-exec-696505809372",
+        "target_id": "696505809372|eu-north-1|arn:aws:s3:::security-autopilot-w6-envready-s311-exec-696505809372|S3.11",
+        "title": "S3 general purpose buckets should have Lifecycle configurations"
+      },
+      {
+        "action_id": "03bbb5fd-0d45-472e-91f7-b0dc98d8091f",
+        "action_type": "s3_bucket_lifecycle_configuration",
+        "control_id": "S3.11",
+        "rollback_command": "aws s3api delete-bucket-lifecycle --bucket ocypheris-live-ct-20260323162333-eu-north-1",
+        "target_id": "696505809372|eu-north-1|arn:aws:s3:::ocypheris-live-ct-20260323162333-eu-north-1|S3.11",
+        "title": "S3 general purpose buckets should have Lifecycle configurations"
+      },
+      {
+        "action_id": "bc116f71-a480-40ab-8b97-b1217eec9a65",
+        "action_type": "s3_bucket_lifecycle_configuration",
+        "control_id": "S3.11",
+        "rollback_command": "aws s3api delete-bucket-lifecycle --bucket security-autopilot-config-696505809372-eu-north-1",
+        "target_id": "696505809372|eu-north-1|arn:aws:s3:::security-autopilot-config-696505809372-eu-north-1|S3.11",
+        "title": "S3 general purpose buckets should have Lifecycle configurations"
+      },
+      {
+        "action_id": "82ed26b1-d9ac-469b-8008-a2acdc89bd38",
+        "action_type": "s3_bucket_lifecycle_configuration",
+        "control_id": "S3.11",
+        "rollback_command": "aws s3api delete-bucket-lifecycle --bucket security-autopilot-w6-strict-s311-manual-696505809372",
+        "target_id": "696505809372|eu-north-1|arn:aws:s3:::security-autopilot-w6-strict-s311-manual-696505809372|S3.11",
+        "title": "S3 general purpose buckets should have Lifecycle configurations"
+      },
+      {
+        "action_id": "a1d8f3bf-e381-47d6-9818-1a3096292381",
+        "action_type": "s3_bucket_lifecycle_configuration",
+        "control_id": "S3.11",
+        "rollback_command": "aws s3api delete-bucket-lifecycle --bucket security-autopilot-w6-strict-s315-manual-696505809372",
+        "target_id": "696505809372|eu-north-1|arn:aws:s3:::security-autopilot-w6-strict-s315-manual-696505809372|S3.11",
+        "title": "S3 general purpose buckets should have Lifecycle configurations"
+      },
+      {
+        "action_id": "c533dff3-a0f0-4d76-8dd3-19315fb3e47d",
+        "action_type": "s3_bucket_lifecycle_configuration",
+        "control_id": "S3.11",
+        "rollback_command": "aws s3api delete-bucket-lifecycle --bucket security-autopilot-w6-strict-s315-exec-696505809372",
+        "target_id": "696505809372|eu-north-1|arn:aws:s3:::security-autopilot-w6-strict-s315-exec-696505809372|S3.11",
+        "title": "S3 general purpose buckets should have Lifecycle configurations"
+      },
+      {
+        "action_id": "e55dca93-6467-4dce-ba6c-16444f259760",
+        "action_type": "s3_bucket_lifecycle_configuration",
+        "control_id": "S3.11",
+        "rollback_command": "aws s3api delete-bucket-lifecycle --bucket config-bucket-696505809372",
+        "target_id": "696505809372|eu-north-1|arn:aws:s3:::config-bucket-696505809372|S3.11",
+        "title": "S3 general purpose buckets should have Lifecycle configurations"
+      }
+    ],
+    "entry_count": 21,
+    "recommended_path": "Prefer reverting through version control and the same reviewed deployment workflow.",
+    "version": 1
+  },
+  "title": "Apply AWS Security Autopilot remediation bundle (21 actions)",
+  "version": 1
+}

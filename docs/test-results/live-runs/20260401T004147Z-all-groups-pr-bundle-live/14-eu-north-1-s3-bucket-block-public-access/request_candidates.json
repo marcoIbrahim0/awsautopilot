@@ -1,0 +1,50 @@
+[
+  {
+    "bucket_creation_acknowledged": false,
+    "repo_target": {
+      "base_branch": "main",
+      "head_branch": "20260401t004147z-all-groups-pr-bundle-live-14-eu-north-1-s3-bucket-block-public-access-s3-migrate-cloudfront-oac-private",
+      "provider": "github",
+      "repository": "example/security-autopilot-remediations"
+    },
+    "risk_acknowledged": true,
+    "strategy_id": "s3_migrate_cloudfront_oac_private",
+    "strategy_inputs": {}
+  },
+  {
+    "bucket_creation_acknowledged": false,
+    "repo_target": {
+      "base_branch": "main",
+      "head_branch": "20260401t004147z-all-groups-pr-bundle-live-14-eu-north-1-s3-bucket-block-public-access-s3-bucket-block-public-access-sta",
+      "provider": "github",
+      "repository": "example/security-autopilot-remediations"
+    },
+    "risk_acknowledged": true,
+    "strategy_id": "s3_bucket_block_public_access_standard",
+    "strategy_inputs": {}
+  },
+  {
+    "bucket_creation_acknowledged": false,
+    "repo_target": {
+      "base_branch": "main",
+      "head_branch": "20260401t004147z-all-groups-pr-bundle-live-14-eu-north-1-s3-bucket-block-public-access-s3-keep-public-exception",
+      "provider": "github",
+      "repository": "example/security-autopilot-remediations"
+    },
+    "risk_acknowledged": true,
+    "strategy_id": "s3_keep_public_exception",
+    "strategy_inputs": {}
+  },
+  {
+    "bucket_creation_acknowledged": false,
+    "repo_target": {
+      "base_branch": "main",
+      "head_branch": "20260401t004147z-all-groups-pr-bundle-live-14-eu-north-1-s3-bucket-block-public-access-s3-migrate-website-cloudfront-pri",
+      "provider": "github",
+      "repository": "example/security-autopilot-remediations"
+    },
+    "risk_acknowledged": true,
+    "strategy_id": "s3_migrate_website_cloudfront_private",
+    "strategy_inputs": {}
+  }
+]

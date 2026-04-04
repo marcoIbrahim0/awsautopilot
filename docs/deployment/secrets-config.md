@@ -30,6 +30,18 @@ For the current serverless production path on `ocypheris.com`:
 | `DATABASE_URL` | PostgreSQL connection string (asyncpg) | `postgresql+asyncpg://user:pass@host:5432/db` | Secrets Manager |
 | `DATABASE_URL_SYNC` | PostgreSQL connection string (psycopg2, for Alembic) | `postgresql://user:pass@host:5432/db` | Secrets Manager (optional, auto-derived if unset) |
 
+For the current serverless production path in this repository:
+- the live Lambda runtime receives real `DatabaseUrl` / `DatabaseUrlFallback` CloudFormation parameter values, and
+- the checked-in `/Users/marcomaher/AWS Security Autopilot/config/.env.ops` plus `/Users/marcomaher/AWS Security Autopilot/backend/.env` are intentionally sanitized with placeholder `DATABASE_URL*` values.
+
+That means operator-run Alembic commands from this checkout must inject real values for all four DB variables before running:
+- `DATABASE_URL`
+- `DATABASE_URL_SYNC`
+- `DATABASE_URL_FALLBACK`
+- `DATABASE_URL_SYNC_FALLBACK`
+
+If you only override `DATABASE_URL` and leave `DATABASE_URL_SYNC` at the placeholder from `backend/.env`, Alembic will still fail before it can reach the production database.
+
 #### Authentication & Security
 
 | Variable | Description | Example | Where Set |

@@ -1,0 +1,360 @@
+[
+  {
+    "payload": {
+      "action": {
+        "account_id": "696505809372",
+        "id": "53b7b063-8531-4829-9b23-f03b1796b23d",
+        "region": "eu-north-1",
+        "status": "open",
+        "title": "S3 general purpose buckets should require requests to use SSL"
+      },
+      "action_id": "53b7b063-8531-4829-9b23-f03b1796b23d",
+      "approved_by_user_id": "7c43e0b3-6e98-43af-826f-f4eeaa5af674",
+      "artifact_metadata": {
+        "closure_checklist": [
+          {
+            "detail": "Implementation artifact linked for engineering handoff.",
+            "evidence_keys": [
+              "pr_bundle"
+            ],
+            "id": "artifact_recorded",
+            "status": "complete",
+            "title": "Implementation artifact recorded"
+          },
+          {
+            "detail": "Evidence pointers are attached to this run.",
+            "evidence_keys": [
+              "pr_bundle",
+              "risk_snapshot",
+              "diff_summary",
+              "rollback_notes",
+              "control_mapping_context",
+              "activity_log"
+            ],
+            "id": "evidence_attached",
+            "status": "complete",
+            "title": "Evidence pointers attached"
+          },
+          {
+            "detail": "Refresh or recompute the parent action to confirm closure.",
+            "evidence_keys": [],
+            "id": "action_closure_verified",
+            "status": "pending",
+            "title": "Action closure verified"
+          }
+        ],
+        "evidence_pointers": [
+          {
+            "description": "Terraform remediation bundle with 5 files.",
+            "href": "/remediation-runs/b926c7bc-0080-4a0e-832b-321b144b2b46#run-generated-files",
+            "key": "pr_bundle",
+            "kind": "bundle",
+            "label": "Engineering PR bundle",
+            "metadata": {
+              "file_count": 5,
+              "format": "terraform",
+              "generated_action_count": null,
+              "has_readme": true,
+              "skipped_action_count": null,
+              "step_count": 3
+            }
+          },
+          {
+            "description": "2 dependency checks captured for this run.",
+            "href": "/remediation-runs/b926c7bc-0080-4a0e-832b-321b144b2b46#run-generated-files",
+            "key": "risk_snapshot",
+            "kind": "risk_snapshot",
+            "label": "Dependency review snapshot",
+            "metadata": {
+              "check_count": 2,
+              "recommendation": "review_and_acknowledge"
+            }
+          },
+          {
+            "description": "2 mapped file(s) captured with reproducible hashes.",
+            "href": "/remediation-runs/b926c7bc-0080-4a0e-832b-321b144b2b46#run-generated-files",
+            "key": "diff_summary",
+            "kind": "diff_summary",
+            "label": "Generated diff summary",
+            "metadata": {
+              "file_count": 2,
+              "fingerprint_sha256": "de11641ea5cf407dcc14b0de8b9e9228edae66263e41edc98a4ee973933dbce7"
+            }
+          },
+          {
+            "description": "1 rollback note(s) prepared for this run.",
+            "href": "/remediation-runs/b926c7bc-0080-4a0e-832b-321b144b2b46#run-generated-files",
+            "key": "rollback_notes",
+            "kind": "rollback_notes",
+            "label": "Rollback notes",
+            "metadata": {
+              "entry_count": 1
+            }
+          },
+          {
+            "description": "1 control ID(s) and 0 framework mapping row(s) attached.",
+            "href": "/remediation-runs/b926c7bc-0080-4a0e-832b-321b144b2b46#run-generated-files",
+            "key": "control_mapping_context",
+            "kind": "control_mapping_context",
+            "label": "Control mapping context",
+            "metadata": {
+              "control_count": 1,
+              "mapping_count": 0
+            }
+          },
+          {
+            "description": "3 execution log lines recorded for this run.",
+            "href": "/remediation-runs/b926c7bc-0080-4a0e-832b-321b144b2b46#run-activity",
+            "key": "activity_log",
+            "kind": "activity_log",
+            "label": "Run activity log",
+            "metadata": {
+              "line_count": 3
+            }
+          }
+        ],
+        "implementation_artifacts": [
+          {
+            "description": "Terraform remediation bundle with 5 files.",
+            "executable": true,
+            "href": "/remediation-runs/b926c7bc-0080-4a0e-832b-321b144b2b46#run-generated-files",
+            "key": "pr_bundle",
+            "kind": "bundle",
+            "label": "Engineering PR bundle",
+            "metadata": {
+              "file_count": 5,
+              "format": "terraform",
+              "generated_action_count": null,
+              "has_readme": true,
+              "skipped_action_count": null,
+              "step_count": 3
+            }
+          }
+        ]
+      },
+      "artifacts": {
+        "control_mapping_context": {
+          "artifact_type": "control_mapping_context",
+          "control_ids": [
+            "S3.5"
+          ],
+          "mapped_control_ids": [],
+          "mappings": [],
+          "unmapped_control_ids": [
+            "S3.5"
+          ],
+          "version": 1
+        },
+        "diff_summary": {
+          "artifact_type": "generated_diff_summary",
+          "file_count": 2,
+          "files": [
+            {
+              "bundle_path": "decision.json",
+              "byte_count": 2105,
+              "change_type": "create_or_update",
+              "content_sha256": "f9d1cfa18f9138c8d00977c8357bbf5539bf11e1747304eef383cab204c46345",
+              "line_count": 42,
+              "repo_path": "decision.json"
+            },
+            {
+              "bundle_path": "README.txt",
+              "byte_count": 1073,
+              "change_type": "create_or_update",
+              "content_sha256": "c036de0bdd3628c0ff445be4da097ac59f58a463d82d032174a23d48d7a44b5f",
+              "line_count": 20,
+              "repo_path": "README.txt"
+            }
+          ],
+          "fingerprint_sha256": "de11641ea5cf407dcc14b0de8b9e9228edae66263e41edc98a4ee973933dbce7",
+          "repo_target_configured": false,
+          "summary_lines": [
+            "`decision.json` <- `decision.json` (42 lines, sha256:f9d1cfa18f91)",
+            "`README.txt` <- `README.txt` (20 lines, sha256:c036de0bdd36)"
+          ],
+          "version": 1
+        },
+        "pr_bundle": {
+          "files": [
+            {
+              "content": "{\n  \"blocked_reasons\": [\n    \"Current bucket policy is public and S3 Block Public Access prevents public policies, so merge-preserving SSL enforcement would be rejected by PutBucketPolicy.\"\n  ],\n  \"decision_rationale\": \"Family resolver downgraded S3.5 strategy 's3_enforce_ssl_strict_deny' because preserving the current public bucket policy would conflict with S3 Block Public Access. Current bucket policy is public and S3 Block Public Access prevents public policies, so merge-preserving SSL enforcement would be rejected by PutBucketPolicy. Run creation did not require additional risk-only acceptance.\",\n  \"decision_version\": \"resolver/v1\",\n  \"finding_coverage\": {},\n  \"missing_defaults\": [],\n  \"missing_inputs\": [],\n  \"preservation_summary\": {\n    \"account_block_public_policy_enabled\": null,\n    \"apply_time_merge\": false,\n    \"apply_time_merge_reason\": null,\n    \"block_public_policy_conflict\": true,\n    \"block_public_policy_reason\": \"Current bucket policy is public and S3 Block Public Access prevents public policies, so merge-preserving SSL enforcement would be rejected by PutBucketPolicy.\",\n    \"bucket_block_public_policy_enabled\": true,\n    \"bucket_policy_analysis_possible\": true,\n    \"bucket_policy_public\": true,\n    \"effective_block_public_policy_enabled\": true,\n    \"executable_policy_merge_allowed\": false,\n    \"existing_bucket_policy_json_captured\": true,\n    \"existing_bucket_policy_statement_count\": 1,\n    \"family\": \"s3_bucket_require_ssl\",\n    \"family_strategy\": \"s3_enforce_ssl_strict_deny\",\n    \"merge_safe_policy_available\": false,\n    \"preserve_existing_policy\": true,\n    \"single_profile_compatible\": true,\n    \"strategy_only_supported\": true,\n    \"target_bucket_exists\": true,\n    \"target_bucket_missing\": false,\n    \"target_bucket_reason\": null,\n    \"target_bucket_verification_available\": true,\n    \"unsafe_overwrite_requested\": false\n  },\n  \"profile_id\": \"s3_enforce_ssl_strict_deny\",\n  \"rejected_profiles\": [],\n  \"resolved_inputs\": {\n    \"preserve_existing_policy\": true\n  },\n  \"strategy_id\": \"s3_enforce_ssl_strict_deny\",\n  \"support_tier\": \"review_required_bundle\"\n}\n",
+              "path": "decision.json"
+            },
+            {
+              "content": "AWS Security Autopilot \u2014 Non-executable remediation guidance\n\nAction\n------\n- action_type: s3_bucket_require_ssl\n- strategy_id: s3_enforce_ssl_strict_deny\n- support_tier: review_required_bundle\n\nWhy this bundle is non-executable\n---------------------------------\n- Current bucket policy is public and S3 Block Public Access prevents public policies, so merge-preserving SSL enforcement would be rejected by PutBucketPolicy.\n\nDecision rationale\n------------------\nFamily resolver downgraded S3.5 strategy 's3_enforce_ssl_strict_deny' because preserving the current public bucket policy would conflict with S3 Block Public Access. Current bucket policy is public and S3 Block Public Access prevents public policies, so merge-preserving SSL enforcement would be rejected by PutBucketPolicy. Run creation did not require additional risk-only acceptance.\n\nContents\n--------\n- decision.json contains the canonical resolver decision, blocked reasons, and preservation summary.\n- No Terraform or CloudFormation files were emitted because this branch is downgrade-only in Wave 6.\n",
+              "path": "README.txt"
+            },
+            {
+              "content": "{\n  \"artifact_type\": \"generated_diff_summary\",\n  \"file_count\": 2,\n  \"files\": [\n    {\n      \"bundle_path\": \"decision.json\",\n      \"byte_count\": 2105,\n      \"change_type\": \"create_or_update\",\n      \"content_sha256\": \"f9d1cfa18f9138c8d00977c8357bbf5539bf11e1747304eef383cab204c46345\",\n      \"line_count\": 42,\n      \"repo_path\": \"decision.json\"\n    },\n    {\n      \"bundle_path\": \"README.txt\",\n      \"byte_count\": 1073,\n      \"change_type\": \"create_or_update\",\n      \"content_sha256\": \"c036de0bdd3628c0ff445be4da097ac59f58a463d82d032174a23d48d7a44b5f\",\n      \"line_count\": 20,\n      \"repo_path\": \"README.txt\"\n    }\n  ],\n  \"fingerprint_sha256\": \"de11641ea5cf407dcc14b0de8b9e9228edae66263e41edc98a4ee973933dbce7\",\n  \"repo_target_configured\": false,\n  \"summary_lines\": [\n    \"`decision.json` <- `decision.json` (42 lines, sha256:f9d1cfa18f91)\",\n    \"`README.txt` <- `README.txt` (20 lines, sha256:c036de0bdd36)\"\n  ],\n  \"version\": 1\n}\n",
+              "path": "pr_automation/diff_summary.json"
+            },
+            {
+              "content": "# Rollback notes\n\nPrefer reverting through version control and the same reviewed deployment workflow.\n\n## S3 general purpose buckets should require requests to use SSL\n- Action ID: `53b7b063-8531-4829-9b23-f03b1796b23d`\n- Control ID: `S3.5`\n- Target: `696505809372|eu-north-1|arn:aws:s3:::arch1-bucket-website-a1-696505809372-eu-north-1|S3.5`\n- Rollback command: `aws s3api put-bucket-policy --bucket arch1-bucket-website-a1-696505809372-eu-north-1 --policy file://pre-remediation-policy.json`\n",
+              "path": "pr_automation/rollback_notes.md"
+            },
+            {
+              "content": "{\n  \"artifact_type\": \"control_mapping_context\",\n  \"control_ids\": [\n    \"S3.5\"\n  ],\n  \"mapped_control_ids\": [],\n  \"mappings\": [],\n  \"unmapped_control_ids\": [\n    \"S3.5\"\n  ],\n  \"version\": 1\n}\n",
+              "path": "pr_automation/control_mapping_context.json"
+            }
+          ],
+          "format": "terraform",
+          "metadata": {
+            "automation_file_count": 3,
+            "diff_fingerprint_sha256": "de11641ea5cf407dcc14b0de8b9e9228edae66263e41edc98a4ee973933dbce7",
+            "non_executable_bundle": true,
+            "repo_target_configured": false
+          },
+          "steps": [
+            "Review decision.json for the canonical review_required_bundle resolver decision for s3_bucket_require_ssl.",
+            "Preserve the existing configuration manually or update the target bucket configuration until an executable branch becomes safe.",
+            "Recompute actions after the reviewed change is applied."
+          ]
+        },
+        "resolution": {
+          "blocked_reasons": [
+            "Current bucket policy is public and S3 Block Public Access prevents public policies, so merge-preserving SSL enforcement would be rejected by PutBucketPolicy."
+          ],
+          "decision_rationale": "Family resolver downgraded S3.5 strategy 's3_enforce_ssl_strict_deny' because preserving the current public bucket policy would conflict with S3 Block Public Access. Current bucket policy is public and S3 Block Public Access prevents public policies, so merge-preserving SSL enforcement would be rejected by PutBucketPolicy. Run creation did not require additional risk-only acceptance.",
+          "decision_version": "resolver/v1",
+          "finding_coverage": {},
+          "missing_defaults": [],
+          "missing_inputs": [],
+          "preservation_summary": {
+            "account_block_public_policy_enabled": null,
+            "apply_time_merge": false,
+            "apply_time_merge_reason": null,
+            "block_public_policy_conflict": true,
+            "block_public_policy_reason": "Current bucket policy is public and S3 Block Public Access prevents public policies, so merge-preserving SSL enforcement would be rejected by PutBucketPolicy.",
+            "bucket_block_public_policy_enabled": true,
+            "bucket_policy_analysis_possible": true,
+            "bucket_policy_public": true,
+            "effective_block_public_policy_enabled": true,
+            "executable_policy_merge_allowed": false,
+            "existing_bucket_policy_json_captured": true,
+            "existing_bucket_policy_statement_count": 1,
+            "family": "s3_bucket_require_ssl",
+            "family_strategy": "s3_enforce_ssl_strict_deny",
+            "merge_safe_policy_available": false,
+            "preserve_existing_policy": true,
+            "single_profile_compatible": true,
+            "strategy_only_supported": true,
+            "target_bucket_exists": true,
+            "target_bucket_missing": false,
+            "target_bucket_reason": null,
+            "target_bucket_verification_available": true,
+            "unsafe_overwrite_requested": false
+          },
+          "profile_id": "s3_enforce_ssl_strict_deny",
+          "rejected_profiles": [],
+          "resolved_inputs": {
+            "preserve_existing_policy": true
+          },
+          "strategy_id": "s3_enforce_ssl_strict_deny",
+          "support_tier": "review_required_bundle"
+        },
+        "risk_acknowledged": true,
+        "risk_snapshot": {
+          "checks": [
+            {
+              "code": "s3_non_tls_client_breakage",
+              "message": "Non-TLS clients and legacy integrations will fail after strict SSL policy enforcement.",
+              "status": "warn"
+            },
+            {
+              "code": "s3_policy_merge_risk",
+              "message": "Strict SSL enforcement can conflict with existing bucket policy statements.",
+              "status": "warn"
+            }
+          ],
+          "evidence": {
+            "access_path_evidence_available": true,
+            "collected_at": "2026-04-01T23:31:06.890444+00:00",
+            "existing_bucket_policy_json": "{\"Statement\":[{\"Action\":\"s3:GetObject\",\"Effect\":\"Allow\",\"Principal\":\"*\",\"Resource\":\"arn:aws:s3:::arch1-bucket-website-a1-696505809372-eu-north-1/*\",\"Sid\":\"PublicReadWebsiteObjects\"}],\"Version\":\"2012-10-17\"}",
+            "existing_bucket_policy_statement_count": 1,
+            "s3_ssl_deny_present": false,
+            "strategy_id": "s3_enforce_ssl_strict_deny",
+            "target_bucket": "arch1-bucket-website-a1-696505809372-eu-north-1"
+          },
+          "recommendation": "review_and_acknowledge",
+          "warnings": [
+            "Non-TLS clients or legacy integrations will fail after apply.",
+            "If the bucket already has a policy, capture it before apply with `aws s3api get-bucket-policy --bucket <BUCKET_NAME> --query Policy --output text > pre-remediation-policy.json`; rollback restores it with `aws s3api put-bucket-policy --bucket <BUCKET_NAME> --policy file://pre-remediation-policy.json`."
+          ]
+        },
+        "rollback_notes": {
+          "artifact_type": "rollback_notes",
+          "entries": [
+            {
+              "action_id": "53b7b063-8531-4829-9b23-f03b1796b23d",
+              "action_type": "s3_bucket_require_ssl",
+              "control_id": "S3.5",
+              "rollback_command": "aws s3api put-bucket-policy --bucket arch1-bucket-website-a1-696505809372-eu-north-1 --policy file://pre-remediation-policy.json",
+              "target_id": "696505809372|eu-north-1|arn:aws:s3:::arch1-bucket-website-a1-696505809372-eu-north-1|S3.5",
+              "title": "S3 general purpose buckets should require requests to use SSL"
+            }
+          ],
+          "entry_count": 1,
+          "recommended_path": "Prefer reverting through version control and the same reviewed deployment workflow.",
+          "version": 1
+        },
+        "selected_strategy": "s3_enforce_ssl_strict_deny",
+        "strategy_inputs": {
+          "existing_bucket_policy_json": "{\"Statement\":[{\"Action\":\"s3:GetObject\",\"Effect\":\"Allow\",\"Principal\":\"*\",\"Resource\":\"arn:aws:s3:::arch1-bucket-website-a1-696505809372-eu-north-1/*\",\"Sid\":\"PublicReadWebsiteObjects\"}],\"Version\":\"2012-10-17\"}",
+          "existing_bucket_policy_statement_count": 1
+        }
+      },
+      "completed_at": "2026-04-01T23:31:08.153469+00:00",
+      "created_at": "2026-04-01T23:31:06.704286+00:00",
+      "id": "b926c7bc-0080-4a0e-832b-321b144b2b46",
+      "logs": "Run started at 2026-04-01T23:31:08.072004+00:00.\nNon-executable remediation guidance bundle generated for action_type=s3_bucket_require_ssl.\nRun completed at 2026-04-01T23:31:08.153469+00:00.",
+      "mode": "pr_only",
+      "outcome": "Non-executable remediation guidance bundle generated",
+      "resolution": {
+        "blocked_reasons": [
+          "Current bucket policy is public and S3 Block Public Access prevents public policies, so merge-preserving SSL enforcement would be rejected by PutBucketPolicy."
+        ],
+        "decision_rationale": "Family resolver downgraded S3.5 strategy 's3_enforce_ssl_strict_deny' because preserving the current public bucket policy would conflict with S3 Block Public Access. Current bucket policy is public and S3 Block Public Access prevents public policies, so merge-preserving SSL enforcement would be rejected by PutBucketPolicy. Run creation did not require additional risk-only acceptance.",
+        "decision_version": "resolver/v1",
+        "finding_coverage": {},
+        "missing_defaults": [],
+        "missing_inputs": [],
+        "preservation_summary": {
+          "account_block_public_policy_enabled": null,
+          "apply_time_merge": false,
+          "apply_time_merge_reason": null,
+          "block_public_policy_conflict": true,
+          "block_public_policy_reason": "Current bucket policy is public and S3 Block Public Access prevents public policies, so merge-preserving SSL enforcement would be rejected by PutBucketPolicy.",
+          "bucket_block_public_policy_enabled": true,
+          "bucket_policy_analysis_possible": true,
+          "bucket_policy_public": true,
+          "effective_block_public_policy_enabled": true,
+          "executable_policy_merge_allowed": false,
+          "existing_bucket_policy_json_captured": true,
+          "existing_bucket_policy_statement_count": 1,
+          "family": "s3_bucket_require_ssl",
+          "family_strategy": "s3_enforce_ssl_strict_deny",
+          "merge_safe_policy_available": false,
+          "preserve_existing_policy": true,
+          "single_profile_compatible": true,
+          "strategy_only_supported": true,
+          "target_bucket_exists": true,
+          "target_bucket_missing": false,
+          "target_bucket_reason": null,
+          "target_bucket_verification_available": true,
+          "unsafe_overwrite_requested": false
+        },
+        "profile_id": "s3_enforce_ssl_strict_deny",
+        "rejected_profiles": [],
+        "resolved_inputs": {
+          "preserve_existing_policy": true
+        },
+        "strategy_id": "s3_enforce_ssl_strict_deny",
+        "support_tier": "review_required_bundle"
+      },
+      "started_at": "2026-04-01T23:31:08.072004+00:00",
+      "status": "success",
+      "updated_at": "2026-04-01T23:31:07.926184+00:00"
+    },
+    "polled_at": "2026-04-01T23:31:56.452064+00:00"
+  }
+]

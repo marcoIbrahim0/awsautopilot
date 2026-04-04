@@ -1,0 +1,28 @@
+{
+  "account_id": "696505809372",
+  "action_type": "ebs_snapshot_block_public_access",
+  "apply_status": "failed",
+  "folder": "07-eu-north-1-ebs-snapshot-block-public-access",
+  "generation_status": "success",
+  "group_id": "957c3871-cad3-4530-aa29-386f6bda5cc6",
+  "group_run_id": "2448bb81-b5d1-444b-90c3-78e5139a4bf6",
+  "manual_guidance_action_count": 0,
+  "non_runnable_reasons": [],
+  "region": "eu-north-1",
+  "remediation_run_id": "64ffd317-94a9-493a-95f2-a8656154910e",
+  "review_required_action_count": 0,
+  "runnable_action_count": 2,
+  "selected_request": {
+    "bucket_creation_acknowledged": false,
+    "repo_target": {
+      "base_branch": "main",
+      "head_branch": "20260401t004147z-all-groups-pr-bundle-live-07-eu-north-1-ebs-snapshot-block-public-access-snapshot-block-all-sharing",
+      "provider": "github",
+      "repository": "example/security-autopilot-remediations"
+    },
+    "risk_acknowledged": true,
+    "strategy_id": "snapshot_block_all_sharing",
+    "strategy_inputs": {}
+  },
+  "summary_status": "APPLY NOT SUCCESSFUL"
+}

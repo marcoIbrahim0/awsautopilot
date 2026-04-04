@@ -1,0 +1,40 @@
+{
+  "account_id": "696505809372",
+  "action_type": "s3_bucket_lifecycle_configuration",
+  "apply_status": "failed",
+  "folder": "04-eu-north-1-s3-bucket-lifecycle-configuration",
+  "generation_status": "success",
+  "group_id": "9a904e6a-3ab8-4eca-be92-b727b0aacf67",
+  "group_run_id": "4f565434-eeb2-42b6-97f9-3cee16fb9535",
+  "manual_guidance_action_count": 1,
+  "non_runnable_reasons": [
+    {
+      "action_id": "cbe0d2c3-c609-4aa2-a12f-6afb336cd507",
+      "blocked_reasons": [
+        "Lifecycle preservation evidence is missing for additive merge review."
+      ],
+      "decision_summary": "Family resolver downgraded S3.11 strategy 's3_enable_abort_incomplete_uploads' because additive lifecycle preservation is under-proven. Lifecycle preservation evidence is missing for additive merge review. Run creation did not require additional risk-only acceptance.",
+      "outcome": "manual_guidance_metadata_only",
+      "support_tier": "manual_guidance_only",
+      "tier": "manual_guidance",
+      "title": "S3 general purpose buckets should have Lifecycle configurations"
+    }
+  ],
+  "region": "eu-north-1",
+  "remediation_run_id": "f6b84600-f8b2-4db8-a727-972afba3dd34",
+  "review_required_action_count": 0,
+  "runnable_action_count": 23,
+  "selected_request": {
+    "bucket_creation_acknowledged": false,
+    "repo_target": {
+      "base_branch": "main",
+      "head_branch": "20260401t004147z-all-groups-pr-bundle-live-04-eu-north-1-s3-bucket-lifecycle-configuration-s3-enable-abort-incomplete-up",
+      "provider": "github",
+      "repository": "example/security-autopilot-remediations"
+    },
+    "risk_acknowledged": true,
+    "strategy_id": "s3_enable_abort_incomplete_uploads",
+    "strategy_inputs": {}
+  },
+  "summary_status": "APPLY NOT SUCCESSFUL"
+}

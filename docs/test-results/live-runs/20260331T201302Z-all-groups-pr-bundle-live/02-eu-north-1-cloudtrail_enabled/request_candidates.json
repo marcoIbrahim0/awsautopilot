@@ -1,0 +1,14 @@
+[
+  {
+    "strategy_id": "cloudtrail_enable_guided",
+    "risk_acknowledged": true,
+    "bucket_creation_acknowledged": true,
+    "strategy_inputs": {
+      "trail_name": "security-autopilot-trail",
+      "trail_bucket_name": "security-autopilot-trail-logs-696505809372-eu-north-1",
+      "create_bucket_if_missing": true,
+      "create_bucket_policy": true,
+      "multi_region": true
+    }
+  }
+]

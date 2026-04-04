@@ -1,0 +1,11 @@
+{
+  "payload": {
+    "detail": {
+      "detail": "CloudTrail log bucket could not be verified from this account context.",
+      "error": "Invalid grouped remediation request",
+      "reason": "invalid_strategy_inputs"
+    }
+  },
+  "reason": "invalid_strategy_inputs",
+  "status_code": 400
+}

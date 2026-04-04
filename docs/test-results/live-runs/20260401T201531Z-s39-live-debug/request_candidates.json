@@ -1,0 +1,14 @@
+[
+  {
+    "bucket_creation_acknowledged": false,
+    "repo_target": {
+      "base_branch": "main",
+      "head_branch": "20260401t201531z-s39-live-debug-01-eu-north-1-s3-bucket-access-logging-s3-enable-access-logging-guided",
+      "provider": "github",
+      "repository": "example/security-autopilot-remediations"
+    },
+    "risk_acknowledged": true,
+    "strategy_id": "s3_enable_access_logging_guided",
+    "strategy_inputs": {}
+  }
+]

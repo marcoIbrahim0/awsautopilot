@@ -1,0 +1,19 @@
+{
+  "account_id": "696505809372",
+  "action_type": "s3_bucket_require_ssl",
+  "counters": {
+    "metadata_only": 1,
+    "not_run_yet": 13,
+    "run_not_successful": 0,
+    "run_successful": 11,
+    "total_actions": 25
+  },
+  "created_at": "2026-03-12T16:37:00.364615+00:00",
+  "group_key": "9f7616d8-af04-43ca-99cd-713625357b70|s3_bucket_require_ssl|696505809372|eu-north-1",
+  "id": "c5920987-fba3-4ea5-8363-8ccae8f39c08",
+  "metadata": {
+    "source": "auto_assign"
+  },
+  "region": "eu-north-1",
+  "updated_at": "2026-03-12T16:37:00.364615+00:00"
+}

@@ -1,0 +1,51 @@
+{
+  "action_id": "0fd42f91-d019-4b8b-a9ae-cdf93b99cdeb",
+  "action_type": "s3_bucket_access_logging",
+  "blocked_reasons": [
+    "Source bucket scope could not be proven for S3 access logging; review the affected bucket relationship manually."
+  ],
+  "control_id": "S3.9",
+  "decision_rationale": "Family resolver downgraded S3.9 to destination-safety review. Source bucket scope could not be proven for S3 access logging; review the affected bucket relationship manually. Run creation did not require additional risk-only acceptance.",
+  "decision_summary": "Family resolver downgraded S3.9 to destination-safety review. Source bucket scope could not be proven for S3 access logging; review the affected bucket relationship manually. Run creation did not require additional risk-only acceptance.",
+  "decision_version": "resolver/v1",
+  "finding_coverage": {},
+  "folder": "review_required/actions/10-aws-account-696505809372-0fd42f91",
+  "has_runnable_terraform": false,
+  "index": 10,
+  "missing_defaults": [
+    "s3_access_logs.default_target_bucket_name"
+  ],
+  "missing_inputs": [
+    "log_bucket_name"
+  ],
+  "outcome": "review_required_metadata_only",
+  "preservation_summary": {
+    "ambiguous_source_destination_relationship": true,
+    "destination_bucket_name": null,
+    "destination_bucket_reachable": null,
+    "destination_safety_proven": false,
+    "executable_destination_allowed": false,
+    "family": "s3_bucket_access_logging",
+    "family_strategy": "s3_enable_access_logging_guided",
+    "selected_branch": "s3_enable_access_logging_review_destination_safety",
+    "single_profile_compatible": false,
+    "source_bucket_name": null,
+    "source_bucket_scope_proven": false,
+    "strategy_only_supported": true
+  },
+  "profile_id": "s3_enable_access_logging_review_destination_safety",
+  "rejected_profiles": [
+    {
+      "detail": "Source bucket scope could not be proven for S3 access logging; review the affected bucket relationship manually.",
+      "profile_id": "s3_enable_access_logging_guided",
+      "reason": "branch_unavailable"
+    }
+  ],
+  "strategy_id": "s3_enable_access_logging_guided",
+  "strategy_inputs": {},
+  "support_tier": "review_required_bundle",
+  "target_id": "696505809372|eu-north-1|AWS::::Account:696505809372|S3.9",
+  "tier": "review_required",
+  "tier_root": "review_required/actions",
+  "title": "S3 general purpose buckets should have server access logging enabled"
+}

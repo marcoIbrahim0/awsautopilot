@@ -230,6 +230,7 @@ require_cmd date
 require_cmd awk
 require_cmd sed
 require_cmd grep
+require_cmd python3
 
 # Phase 1 - Structural wiring verification
 STACK_JSON=""
@@ -276,6 +277,55 @@ if ! CONNECTION_JSON="$(aws events describe-connection --name "${CONNECTION_NAME
 fi
 AUTH_TYPE="$(jq -r '.AuthorizationType // empty' <<<"${CONNECTION_JSON}")"
 [[ "${AUTH_TYPE}" == "API_KEY" ]] || fail_phase 1 "Connection '${CONNECTION_NAME}' AuthorizationType is '${AUTH_TYPE:-unknown}', expected API_KEY"
+CONNECTION_STATE="$(jq -r '.ConnectionState // empty' <<<"${CONNECTION_JSON}")"
+[[ "${CONNECTION_STATE}" == "AUTHORIZED" ]] || fail_phase 1 "Connection '${CONNECTION_NAME}' state is '${CONNECTION_STATE:-unknown}', expected AUTHORIZED"
+CONNECTION_SECRET_ARN="$(jq -r '.SecretArn // empty' <<<"${CONNECTION_JSON}")"
+[[ -n "${CONNECTION_SECRET_ARN}" ]] || fail_phase 1 "Connection '${CONNECTION_NAME}' SecretArn is missing"
+
+AUTH_ME_RESULT=""
+if ! AUTH_ME_RESULT="$(
+  curl -sS --max-time 20 \
+    -H "Authorization: Bearer ${SAAS_TOKEN}" \
+    -H "Accept: application/json" \
+    -w $'\n%{http_code}' \
+    "${SAAS_API_URL%/}/api/auth/me" 2>&1
+)"; then
+  fail_phase 1 "Unable to call /api/auth/me - ${AUTH_ME_RESULT}"
+fi
+
+AUTH_ME_HTTP_CODE="${AUTH_ME_RESULT##*$'\n'}"
+AUTH_ME_BODY="${AUTH_ME_RESULT%$'\n'*}"
+[[ "${AUTH_ME_HTTP_CODE}" == "200" ]] || fail_phase 1 "/api/auth/me returned HTTP ${AUTH_ME_HTTP_CODE}"
+
+CURRENT_TOKEN_FINGERPRINT="$(jq -r '.control_plane_token_fingerprint // empty' <<<"${AUTH_ME_BODY}")"
+[[ -n "${CURRENT_TOKEN_FINGERPRINT}" ]] || fail_phase 1 "/api/auth/me did not return control_plane_token_fingerprint"
+
+CONNECTION_SECRET_STRING=""
+if ! CONNECTION_SECRET_STRING="$(
+  aws secretsmanager get-secret-value \
+    --secret-id "${CONNECTION_SECRET_ARN}" \
+    --region "${REGION}" \
+    --query SecretString \
+    --output text 2>&1
+)"; then
+  fail_phase 1 "Unable to read EventBridge connection secret '${CONNECTION_SECRET_ARN}' - ${CONNECTION_SECRET_STRING}"
+fi
+
+CONNECTION_SECRET_FINGERPRINT=""
+if ! CONNECTION_SECRET_FINGERPRINT="$(
+  PYTHONPATH="${REPO_ROOT}" python3 - "${CONNECTION_SECRET_STRING}" <<'PY'
+import sys
+
+from scripts.lib.control_plane_forwarder_audit import extract_connection_api_key_fingerprint
+
+print(extract_connection_api_key_fingerprint(sys.argv[1]))
+PY
+)"; then
+  fail_phase 1 "Unable to parse EventBridge connection secret for '${CONNECTION_NAME}'"
+fi
+
+[[ "${CONNECTION_SECRET_FINGERPRINT}" == "${CURRENT_TOKEN_FINGERPRINT}" ]] || fail_phase 1 \
+  "Connection '${CONNECTION_NAME}' token fingerprint '${CONNECTION_SECRET_FINGERPRINT}' does not match current SaaS tenant fingerprint '${CURRENT_TOKEN_FINGERPRINT}'"
 
 TARGET_DLQ_URL="$(resolve_dlq_url "${STACK_JSON}" "${RULE_NAME}" "${REGION}" || true)"
 [[ -n "${TARGET_DLQ_URL}" ]] || fail_phase 1 "Unable to resolve target DLQ URL from stack outputs or rule target"

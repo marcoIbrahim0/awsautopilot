@@ -1,0 +1,294 @@
+{
+  "action_id": "a3a48276-ee2e-4625-a42d-dadfdf5e0ea4",
+  "action_type": "iam_root_access_key_absent",
+  "manual_high_risk": true,
+  "mode_options": [
+    "pr_only"
+  ],
+  "pre_execution_notice": "Root credentials required. This remediation is manual/high-risk and must follow the runbook.",
+  "recommendation": {
+    "advisory": false,
+    "default_mode": "exception_review",
+    "enforced_by_policy": "manual_high_risk_root_credentials_required",
+    "evidence": {
+      "context_incomplete": true,
+      "data_sensitivity": 0.6,
+      "exploit_signals": 0.8667,
+      "internet_exposure": 0.0,
+      "matched_signals": [],
+      "privilege_level": 1.0,
+      "score": 72
+    },
+    "matrix_position": {
+      "business_criticality": "high",
+      "cell": "risk_high__criticality_high",
+      "risk_tier": "high"
+    },
+    "mode": "exception_review",
+    "rationale": "Matrix cell risk_high__criticality_high maps to default recommendation 'exception_review'. Risk is high and business criticality is high. Criticality evidence: data_sensitivity=0.60, privilege_level=1.00, internet_exposure=0.00, matched_signals=none. Relationship context is incomplete, so the recommendation remains conservative and advisory unless policy overrides it. Policy override applied: this action is marked manual/high-risk and requires explicit exception-style review before execution."
+  },
+  "runbook_url": "docs/prod-readiness/root-credentials-required-iam-root-access-key-absent.md",
+  "strategies": [
+    {
+      "blast_radius": "access_changing",
+      "blocked_reasons": [
+        "IAM.4 execution is handled exclusively by /api/root-key-remediation-runs."
+      ],
+      "context": {
+        "default_inputs": {
+          "action_mode": "disable_key"
+        }
+      },
+      "decision_rationale": "IAM.4 strategy 'iam_root_key_disable' is exposed here as metadata only. Use /api/root-key-remediation-runs for root-key lifecycle execution.",
+      "dependency_checks": [
+        {
+          "code": "iam_root_break_glass_review",
+          "message": "Confirm break-glass and emergency automation does not depend on root access keys.",
+          "status": "warn"
+        }
+      ],
+      "estimated_resolution_time": "12-24 hours",
+      "exception_only": false,
+      "impact_text": null,
+      "input_schema": {
+        "fields": [
+          {
+            "default_value": "disable_key",
+            "description": "How would you like to handle the active root access key?",
+            "group": "Root Access Key",
+            "key": "action_mode",
+            "options": [
+              {
+                "impact_text": "The root access key will be set to Inactive. You can re-enable it later if needed. This is the safest first step.",
+                "label": "Disable key (recommended)",
+                "value": "disable_key"
+              },
+              {
+                "impact_text": "The root access key will be permanently deleted. This cannot be undone. Root MFA must be active.",
+                "label": "Delete key permanently",
+                "value": "delete_key"
+              }
+            ],
+            "required": false,
+            "type": "select"
+          }
+        ]
+      },
+      "label": "Disable root access key",
+      "missing_defaults": [],
+      "mode": "pr_only",
+      "preservation_summary": {
+        "execution_authority": "/api/root-key-remediation-runs",
+        "generic_execution_allowed": false,
+        "guidance_only": true,
+        "runbook_url": "docs/prod-readiness/root-credentials-required-iam-root-access-key-absent.md",
+        "single_profile_compatible": true,
+        "strategy_only_supported": true
+      },
+      "profiles": [
+        {
+          "exception_only": false,
+          "profile_id": "iam_root_key_disable",
+          "recommended": true,
+          "requires_inputs": false,
+          "support_tier": "manual_guidance_only",
+          "supports_exception_flow": false
+        }
+      ],
+      "recommended": true,
+      "recommended_profile_id": "iam_root_key_disable",
+      "requires_inputs": false,
+      "risk_level": "high",
+      "rollback_command": "aws iam update-access-key --access-key-id <ROOT_ACCESS_KEY_ID> --status Active",
+      "strategy_id": "iam_root_key_disable",
+      "supports_exception_flow": false,
+      "supports_immediate_reeval": true,
+      "warnings": [
+        "Root credentials required. This remediation is manual/high-risk and must follow the runbook. Runbook: docs/prod-readiness/root-credentials-required-iam-root-access-key-absent.md.",
+        "Disabling root keys can impact break-glass automations that still use root credentials."
+      ]
+    },
+    {
+      "blast_radius": "access_changing",
+      "blocked_reasons": [
+        "IAM.4 execution is handled exclusively by /api/root-key-remediation-runs."
+      ],
+      "context": {
+        "default_inputs": {
+          "action_mode": "delete_key"
+        }
+      },
+      "decision_rationale": "IAM.4 strategy 'iam_root_key_delete' is exposed here as metadata only. Use /api/root-key-remediation-runs for root-key lifecycle execution.",
+      "dependency_checks": [
+        {
+          "code": "iam_root_break_glass_review",
+          "message": "Confirm break-glass and emergency automation does not depend on root access keys.",
+          "status": "warn"
+        },
+        {
+          "code": "iam_root_delete_irreversible",
+          "message": "Root key deletion is irreversible; ensure fallback access is validated.",
+          "status": "warn"
+        },
+        {
+          "code": "iam_root_mfa_enrollment_gate",
+          "message": "Root MFA enrollment is active (AccountMFAEnabled=1).",
+          "status": "pass"
+        }
+      ],
+      "estimated_resolution_time": "12-24 hours",
+      "exception_only": false,
+      "impact_text": null,
+      "input_schema": {
+        "fields": [
+          {
+            "default_value": "delete_key",
+            "description": "How would you like to handle the active root access key?",
+            "group": "Root Access Key",
+            "key": "action_mode",
+            "options": [
+              {
+                "impact_text": "The root access key will be set to Inactive. You can re-enable it later if needed. This is the safest first step.",
+                "label": "Disable key (recommended)",
+                "value": "disable_key"
+              },
+              {
+                "impact_text": "The root access key will be permanently deleted. This cannot be undone. Root MFA must be active.",
+                "label": "Delete key permanently",
+                "value": "delete_key"
+              }
+            ],
+            "required": false,
+            "type": "select"
+          }
+        ]
+      },
+      "label": "Delete root access key",
+      "missing_defaults": [],
+      "mode": "pr_only",
+      "preservation_summary": {
+        "execution_authority": "/api/root-key-remediation-runs",
+        "generic_execution_allowed": false,
+        "guidance_only": true,
+        "runbook_url": "docs/prod-readiness/root-credentials-required-iam-root-access-key-absent.md",
+        "single_profile_compatible": true,
+        "strategy_only_supported": true
+      },
+      "profiles": [
+        {
+          "exception_only": false,
+          "profile_id": "iam_root_key_delete",
+          "recommended": true,
+          "requires_inputs": false,
+          "support_tier": "manual_guidance_only",
+          "supports_exception_flow": false
+        }
+      ],
+      "recommended": false,
+      "recommended_profile_id": "iam_root_key_delete",
+      "requires_inputs": false,
+      "risk_level": "high",
+      "rollback_command": "aws iam create-access-key",
+      "strategy_id": "iam_root_key_delete",
+      "supports_exception_flow": false,
+      "supports_immediate_reeval": true,
+      "warnings": [
+        "Root credentials required. This remediation is manual/high-risk and must follow the runbook. Runbook: docs/prod-readiness/root-credentials-required-iam-root-access-key-absent.md.",
+        "Gate: Root MFA must be active before this delete path is selectable. If AccountMFAEnabled=0, strategy selection is blocked.",
+        "Deleting root keys is irreversible and requires validated fallback access."
+      ]
+    },
+    {
+      "blast_radius": "access_changing",
+      "blocked_reasons": [
+        "IAM.4 execution is handled exclusively by /api/root-key-remediation-runs."
+      ],
+      "context": {
+        "default_inputs": {
+          "exception_duration_days": "30"
+        }
+      },
+      "decision_rationale": "IAM.4 strategy 'iam_root_key_keep_exception' is exposed here as metadata only. Use /api/root-key-remediation-runs for root-key lifecycle execution.",
+      "dependency_checks": [
+        {
+          "code": "iam_root_key_exposure",
+          "message": "Root access keys remain a high-severity compromise path.",
+          "status": "warn"
+        }
+      ],
+      "estimated_resolution_time": "12-24 hours",
+      "exception_only": true,
+      "impact_text": null,
+      "input_schema": {
+        "fields": [
+          {
+            "default_value": "30",
+            "description": "How long should this exception remain active?",
+            "group": "Exception",
+            "key": "exception_duration_days",
+            "options": [
+              {
+                "label": "7 days",
+                "value": "7"
+              },
+              {
+                "label": "14 days",
+                "value": "14"
+              },
+              {
+                "label": "30 days",
+                "value": "30"
+              },
+              {
+                "label": "90 days",
+                "value": "90"
+              }
+            ],
+            "required": false,
+            "type": "select"
+          },
+          {
+            "description": "Why can't you apply this fix right now?",
+            "group": "Exception",
+            "key": "exception_reason",
+            "placeholder": "Describe the temporary business or operational constraint.",
+            "required": false,
+            "type": "string"
+          }
+        ]
+      },
+      "label": "Keep root key (exception path)",
+      "missing_defaults": [],
+      "mode": "pr_only",
+      "preservation_summary": {
+        "execution_authority": "/api/root-key-remediation-runs",
+        "generic_execution_allowed": false,
+        "guidance_only": true,
+        "runbook_url": "docs/prod-readiness/root-credentials-required-iam-root-access-key-absent.md",
+        "single_profile_compatible": true,
+        "strategy_only_supported": true
+      },
+      "profiles": [
+        {
+          "exception_only": true,
+          "profile_id": "iam_root_key_keep_exception",
+          "recommended": true,
+          "requires_inputs": true,
+          "support_tier": "manual_guidance_only",
+          "supports_exception_flow": true
+        }
+      ],
+      "recommended": false,
+      "recommended_profile_id": "iam_root_key_keep_exception",
+      "requires_inputs": true,
+      "risk_level": "high",
+      "rollback_command": "aws iam update-access-key --access-key-id <ROOT_ACCESS_KEY_ID> --status Active",
+      "strategy_id": "iam_root_key_keep_exception",
+      "supports_exception_flow": true,
+      "supports_immediate_reeval": false,
+      "warnings": [
+        "Root access keys are a critical compromise path and should be time-bounded exceptions only."
+      ]
+    }
+  ]
+}

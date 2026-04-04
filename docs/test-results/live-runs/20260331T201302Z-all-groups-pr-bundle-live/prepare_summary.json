@@ -1,0 +1,303 @@
+{
+  "account_id": "696505809372",
+  "date_utc": "2026-03-31T20:15:25.446976+00:00",
+  "groups_prepared": 13,
+  "groups_skipped": 1,
+  "groups_total": 14,
+  "manifest": [
+    {
+      "account_id": "696505809372",
+      "action_type": "aws_config_enabled",
+      "bundle_create": {
+        "reason": "grouped_bundle_already_created_no_changes",
+        "reused_existing_run_id": "f799b6d4-b6b9-452f-85cd-e2a54fb265a0"
+      },
+      "folder": "01-eu-north-1-aws_config_enabled",
+      "group_id": "02575097-6342-4ee5-a9e2-737eebcfcc29",
+      "group_run_id": null,
+      "region": "eu-north-1",
+      "remediation_run_id": "f799b6d4-b6b9-452f-85cd-e2a54fb265a0",
+      "representative_action_id": "80499866-2447-4d0d-bcb4-88e903797ca1",
+      "request_body": {
+        "bucket_creation_acknowledged": false,
+        "risk_acknowledged": true,
+        "strategy_id": "config_enable_account_local_delivery"
+      },
+      "skipped_reason": null
+    },
+    {
+      "account_id": "696505809372",
+      "action_type": "cloudtrail_enabled",
+      "bundle_create": {
+        "group_run_id": "78cb0346-f171-4e9e-a9eb-c2f107bd0f70",
+        "remediation_run_id": "b971e542-e5c2-474b-91da-71141a467ffa",
+        "status": "queued",
+        "reason": "grouped_bundle_already_created_no_changes"
+      },
+      "folder": "02-eu-north-1-cloudtrail_enabled",
+      "group_id": "2efa04dd-8768-4668-a8a7-666ac895ba6b",
+      "group_run_id": "78cb0346-f171-4e9e-a9eb-c2f107bd0f70",
+      "region": "eu-north-1",
+      "remediation_run_id": "b971e542-e5c2-474b-91da-71141a467ffa",
+      "representative_action_id": "456f845e-da64-43cf-8dc2-d738c3a770df",
+      "request_body": {
+        "strategy_id": "cloudtrail_enable_guided",
+        "risk_acknowledged": true,
+        "bucket_creation_acknowledged": true,
+        "strategy_inputs": {
+          "trail_name": "security-autopilot-trail",
+          "trail_bucket_name": "security-autopilot-trail-logs-696505809372-eu-north-1",
+          "create_bucket_if_missing": true,
+          "create_bucket_policy": true,
+          "multi_region": true
+        }
+      },
+      "skipped_reason": null
+    },
+    {
+      "account_id": "696505809372",
+      "action_type": "ebs_default_encryption",
+      "bundle_create": {
+        "reason": "grouped_bundle_already_created_no_changes",
+        "reused_existing_run_id": "25a33c5c-5f4e-402c-936f-59a64963ec8d"
+      },
+      "folder": "03-eu-north-1-ebs_default_encryption",
+      "group_id": "3ff809df-3a5b-4012-b60d-5ffa124b0035",
+      "group_run_id": null,
+      "region": "eu-north-1",
+      "remediation_run_id": "25a33c5c-5f4e-402c-936f-59a64963ec8d",
+      "representative_action_id": "c400ae42-865c-4808-8aa0-11450b717714",
+      "request_body": {
+        "bucket_creation_acknowledged": false,
+        "risk_acknowledged": true,
+        "strategy_id": "ebs_enable_default_encryption_aws_managed_kms_pr_bundle"
+      },
+      "skipped_reason": null
+    },
+    {
+      "account_id": "696505809372",
+      "action_type": "ebs_snapshot_block_public_access",
+      "bundle_create": {
+        "reason": "grouped_bundle_already_created_no_changes",
+        "reused_existing_run_id": "80604a9c-8db6-43fa-bf8f-6ef99762c611"
+      },
+      "folder": "04-eu-north-1-ebs_snapshot_block_public_access",
+      "group_id": "957c3871-cad3-4530-aa29-386f6bda5cc6",
+      "group_run_id": null,
+      "region": "eu-north-1",
+      "remediation_run_id": "80604a9c-8db6-43fa-bf8f-6ef99762c611",
+      "representative_action_id": "087eaa5d-4fdf-4139-9b4c-104de2608fbb",
+      "request_body": {
+        "bucket_creation_acknowledged": false,
+        "risk_acknowledged": true,
+        "strategy_id": "snapshot_block_all_sharing"
+      },
+      "skipped_reason": null
+    },
+    {
+      "account_id": "696505809372",
+      "action_type": "enable_guardduty",
+      "bundle_create": {
+        "reason": "grouped_bundle_already_created_no_changes",
+        "reused_existing_run_id": "980bfde1-cf8f-4f64-917e-1f0ed3a1b900"
+      },
+      "folder": "05-eu-north-1-enable_guardduty",
+      "group_id": "c84d5c12-593d-4ab3-b790-ce56e5484f92",
+      "group_run_id": null,
+      "region": "eu-north-1",
+      "remediation_run_id": "980bfde1-cf8f-4f64-917e-1f0ed3a1b900",
+      "representative_action_id": "30efce6e-bcd7-4583-8400-aaf9569130ef",
+      "request_body": {
+        "bucket_creation_acknowledged": false,
+        "risk_acknowledged": true,
+        "strategy_id": "guardduty_enable_pr_bundle"
+      },
+      "skipped_reason": null
+    },
+    {
+      "account_id": "696505809372",
+      "action_type": "iam_root_access_key_absent",
+      "bundle_create": null,
+      "folder": "06-eu-north-1-iam_root_access_key_absent",
+      "group_id": "549cd627-4bab-4e34-a15a-d9d50d11b3d9",
+      "group_run_id": null,
+      "region": "eu-north-1",
+      "remediation_run_id": null,
+      "representative_action_id": "a3a48276-ee2e-4625-a42d-dadfdf5e0ea4",
+      "request_body": null,
+      "skipped_reason": "dedicated_root_key_route_required"
+    },
+    {
+      "account_id": "696505809372",
+      "action_type": "s3_block_public_access",
+      "bundle_create": {
+        "reason": "grouped_bundle_already_created_no_changes",
+        "reused_existing_run_id": "a15b76d4-c577-42fe-8d93-561266140f00"
+      },
+      "folder": "07-eu-north-1-s3_block_public_access",
+      "group_id": "8b81c1a8-a2c7-4250-aaf2-d5ae62f08dda",
+      "group_run_id": null,
+      "region": "eu-north-1",
+      "remediation_run_id": "a15b76d4-c577-42fe-8d93-561266140f00",
+      "representative_action_id": "18e459b1-3bc2-47b4-a520-c955e921c75f",
+      "request_body": {
+        "bucket_creation_acknowledged": false,
+        "risk_acknowledged": true,
+        "strategy_id": "s3_account_block_public_access_pr_bundle"
+      },
+      "skipped_reason": null
+    },
+    {
+      "account_id": "696505809372",
+      "action_type": "s3_bucket_access_logging",
+      "bundle_create": {
+        "reason": "grouped_bundle_already_created_no_changes",
+        "reused_existing_run_id": "716aad69-72aa-455c-8d95-bd1701198a25"
+      },
+      "folder": "08-eu-north-1-s3_bucket_access_logging",
+      "group_id": "984e6f5e-d1e6-44aa-90e6-1a3ddc152a2c",
+      "group_run_id": null,
+      "region": "eu-north-1",
+      "remediation_run_id": "716aad69-72aa-455c-8d95-bd1701198a25",
+      "representative_action_id": "60a49649-3cfc-4565-9b93-0aa58590a308",
+      "request_body": {
+        "bucket_creation_acknowledged": false,
+        "risk_acknowledged": true,
+        "strategy_id": "s3_enable_access_logging_guided",
+        "strategy_inputs": {
+          "log_bucket_name": "{{source_bucket}}-access-logs"
+        }
+      },
+      "skipped_reason": null
+    },
+    {
+      "account_id": "696505809372",
+      "action_type": "s3_bucket_block_public_access",
+      "bundle_create": {
+        "reason": "grouped_bundle_already_created_no_changes",
+        "reused_existing_run_id": "ff6c285d-2584-4d1b-903d-618d2fcf3567"
+      },
+      "folder": "09-eu-north-1-s3_bucket_block_public_access",
+      "group_id": "2990907c-b6bb-4821-9825-a523cb380bf5",
+      "group_run_id": null,
+      "region": "eu-north-1",
+      "remediation_run_id": "ff6c285d-2584-4d1b-903d-618d2fcf3567",
+      "representative_action_id": "0960aba7-eddd-48d7-aafc-5379d1e482d9",
+      "request_body": {
+        "bucket_creation_acknowledged": false,
+        "risk_acknowledged": true,
+        "strategy_id": "s3_migrate_cloudfront_oac_private"
+      },
+      "skipped_reason": null
+    },
+    {
+      "account_id": "696505809372",
+      "action_type": "s3_bucket_encryption_kms",
+      "bundle_create": {
+        "reason": "grouped_bundle_already_created_no_changes",
+        "reused_existing_run_id": "c5673554-bdfc-4f6e-8ce4-6a6d3e05c01d"
+      },
+      "folder": "10-eu-north-1-s3_bucket_encryption_kms",
+      "group_id": "97e52204-f7f6-40c1-b2ac-acb99308e241",
+      "group_run_id": null,
+      "region": "eu-north-1",
+      "remediation_run_id": "c5673554-bdfc-4f6e-8ce4-6a6d3e05c01d",
+      "representative_action_id": "f47a11cd-8055-4b52-81c3-2838e9696f80",
+      "request_body": {
+        "bucket_creation_acknowledged": false,
+        "risk_acknowledged": true,
+        "strategy_id": "s3_enable_sse_kms_guided"
+      },
+      "skipped_reason": null
+    },
+    {
+      "account_id": "696505809372",
+      "action_type": "s3_bucket_lifecycle_configuration",
+      "bundle_create": {
+        "reason": "grouped_bundle_already_created_no_changes",
+        "reused_existing_run_id": "a9bce1f0-80b9-486f-affe-17e449aa030b"
+      },
+      "folder": "11-eu-north-1-s3_bucket_lifecycle_configuration",
+      "group_id": "9a904e6a-3ab8-4eca-be92-b727b0aacf67",
+      "group_run_id": null,
+      "region": "eu-north-1",
+      "remediation_run_id": "a9bce1f0-80b9-486f-affe-17e449aa030b",
+      "representative_action_id": "c8d496fe-3431-4a44-bc08-74646b5f2572",
+      "request_body": {
+        "bucket_creation_acknowledged": false,
+        "risk_acknowledged": true,
+        "strategy_id": "s3_enable_abort_incomplete_uploads"
+      },
+      "skipped_reason": null
+    },
+    {
+      "account_id": "696505809372",
+      "action_type": "s3_bucket_require_ssl",
+      "bundle_create": {
+        "reason": "grouped_bundle_already_created_no_changes",
+        "reused_existing_run_id": "137a42b9-c2d5-4099-9272-0608be02c682"
+      },
+      "folder": "12-eu-north-1-s3_bucket_require_ssl",
+      "group_id": "3cf29e81-7d1b-414a-ab78-d2e1c3abad27",
+      "group_run_id": null,
+      "region": "eu-north-1",
+      "remediation_run_id": "137a42b9-c2d5-4099-9272-0608be02c682",
+      "representative_action_id": "7451c997-3ebc-48cc-a67e-c35b3dbb76b1",
+      "request_body": {
+        "bucket_creation_acknowledged": false,
+        "risk_acknowledged": true,
+        "strategy_id": "s3_enforce_ssl_strict_deny"
+      },
+      "skipped_reason": null
+    },
+    {
+      "account_id": "696505809372",
+      "action_type": "sg_restrict_public_ports",
+      "bundle_create": {
+        "reason": "grouped_bundle_already_created_no_changes",
+        "reused_existing_run_id": "90f51295-d36b-46ff-9b57-44c7fdd18250"
+      },
+      "folder": "13-eu-north-1-sg_restrict_public_ports",
+      "group_id": "595cb7e3-5f4f-49a4-9c48-9388f139f012",
+      "group_run_id": null,
+      "region": "eu-north-1",
+      "remediation_run_id": "90f51295-d36b-46ff-9b57-44c7fdd18250",
+      "representative_action_id": "9569aa98-af93-4095-a8f6-695867c1b839",
+      "request_body": {
+        "action_overrides": [
+          {
+            "action_id": "9569aa98-af93-4095-a8f6-695867c1b839",
+            "profile_id": "close_public",
+            "strategy_id": "sg_restrict_public_ports_guided",
+            "strategy_inputs": {}
+          }
+        ],
+        "bucket_creation_acknowledged": false,
+        "risk_acknowledged": true,
+        "strategy_id": "sg_restrict_public_ports_guided"
+      },
+      "skipped_reason": null
+    },
+    {
+      "account_id": "696505809372",
+      "action_type": "ssm_block_public_sharing",
+      "bundle_create": {
+        "reason": "grouped_bundle_already_created_no_changes",
+        "reused_existing_run_id": "c2b3ea9d-e215-4446-ab84-d0d2090dcfb4"
+      },
+      "folder": "14-eu-north-1-ssm_block_public_sharing",
+      "group_id": "ed48e583-8b8e-43b4-ad5e-3641b8276909",
+      "group_run_id": null,
+      "region": "eu-north-1",
+      "remediation_run_id": "c2b3ea9d-e215-4446-ab84-d0d2090dcfb4",
+      "representative_action_id": "9444d745-69a6-49f2-9c39-43387ca52af4",
+      "request_body": {
+        "bucket_creation_acknowledged": false,
+        "risk_acknowledged": true,
+        "strategy_id": "ssm_disable_public_document_sharing"
+      },
+      "skipped_reason": null
+    }
+  ],
+  "run_id": "20260331T201302Z-all-groups-pr-bundle-live"
+}

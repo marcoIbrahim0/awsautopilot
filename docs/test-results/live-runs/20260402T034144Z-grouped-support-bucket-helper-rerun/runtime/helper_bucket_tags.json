@@ -1,0 +1,12 @@
+{
+    "TagSet": [
+        {
+            "Key": "security-autopilot:managed-support-bucket",
+            "Value": "true"
+        },
+        {
+            "Key": "security-autopilot:support-bucket-role",
+            "Value": "aws-config-delivery"
+        }
+    ]
+}

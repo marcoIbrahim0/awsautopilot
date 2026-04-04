@@ -1,0 +1,11 @@
+{
+  "strategy_id": "s3_migrate_cloudfront_oac_private",
+  "risk_acknowledged": true,
+  "bucket_creation_acknowledged": true,
+  "repo_target": {
+    "provider": "github",
+    "repository": "example/security-autopilot-remediations",
+    "base_branch": "main",
+    "head_branch": "20260402t003400z-s32-oac-live-rerun-s3-migrate-cloudfront-oac-private-retry"
+  }
+}

@@ -1,0 +1,363 @@
+{
+  "request": {
+    "method": "GET",
+    "url": "https://api.ocypheris.com/api/actions",
+    "params": {
+      "account_id": "696505809372",
+      "region": "eu-north-1",
+      "ids": "3970aa2f-edc5-4870-87bd-fa986dad3d98",
+      "action_type": "s3_bucket_require_ssl"
+    },
+    "json": null
+  },
+  "status_code": 200,
+  "headers": {
+    "Date": "Thu, 02 Apr 2026 14:38:45 GMT",
+    "Content-Type": "application/json",
+    "Transfer-Encoding": "chunked",
+    "Connection": "keep-alive",
+    "CF-Ray": "9e6094393d5e0115-MRS",
+    "CF-Cache-Status": "DYNAMIC",
+    "Nel": "{\"report_to\":\"cf-nel\",\"success_fraction\":0.0,\"max_age\":604800}",
+    "Server": "cloudflare",
+    "apigw-requestid": "bMjaTjXhgi0ENmw=",
+    "Report-To": "{\"group\":\"cf-nel\",\"max_age\":604800,\"endpoints\":[{\"url\":\"https://a.nel.cloudflare.com/report/v4?s=daGik6sA4YYD5GmqFzo3VAfYfqzA35QxptCloSSnC1NBhlE91Yy9inN81Hh%2BmJ9cJ7va5WwHSbMSXnSd7YLpufRxpt3vmwPPi0riNX3X%2BV6iODSaBfRtum%2BtK6rsgzNkB8F%2BjQ%3D%3D\"}]}",
+    "Content-Encoding": "gzip",
+    "alt-svc": "h3=\":443\"; ma=86400"
+  },
+  "body": {
+    "items": [
+      {
+        "id": "3970aa2f-edc5-4870-87bd-fa986dad3d98",
+        "action_type": "s3_bucket_require_ssl",
+        "target_id": "696505809372|eu-north-1|arn:aws:s3:::arch1-bucket-evidence-b1-696505809372-eu-north-1|S3.5",
+        "account_id": "696505809372",
+        "region": "eu-north-1",
+        "score": 51,
+        "score_components": {
+          "score": 51,
+          "version": 1,
+          "severity": {
+            "points": 18,
+            "signals": [
+              "severity:MEDIUM"
+            ],
+            "normalized": 0.5
+          },
+          "business_impact": {
+            "summary": "Medium technical risk intersects with explicit unknown criticality in matrix cell medium:unknown.",
+            "criticality": {
+              "tier": "unknown",
+              "score": 0,
+              "status": "unknown",
+              "weight": 1,
+              "dimensions": [
+                {
+                  "label": "Customer-facing",
+                  "weight": 25,
+                  "matched": false,
+                  "signals": [],
+                  "dimension": "customer_facing",
+                  "explanation": "Customer-facing is explicit unknown for this action.",
+                  "contribution": 0
+                },
+                {
+                  "label": "Revenue-path",
+                  "weight": 25,
+                  "matched": false,
+                  "signals": [],
+                  "dimension": "revenue_path",
+                  "explanation": "Revenue-path is explicit unknown for this action.",
+                  "contribution": 0
+                },
+                {
+                  "label": "Regulated-data",
+                  "weight": 25,
+                  "matched": false,
+                  "signals": [],
+                  "dimension": "regulated_data",
+                  "explanation": "Regulated-data is explicit unknown for this action.",
+                  "contribution": 0
+                },
+                {
+                  "label": "Identity-boundary",
+                  "weight": 15,
+                  "matched": false,
+                  "signals": [],
+                  "dimension": "identity_boundary",
+                  "explanation": "Identity-boundary is explicit unknown for this action.",
+                  "contribution": 0
+                },
+                {
+                  "label": "Production-environment",
+                  "weight": 10,
+                  "matched": false,
+                  "signals": [],
+                  "dimension": "production_environment",
+                  "explanation": "Production-environment is explicit unknown for this action.",
+                  "contribution": 0
+                }
+              ],
+              "explanation": "Criticality remains explicit unknown because no customer-facing, revenue-path, regulated-data, identity-boundary, or production-environment signals were detected."
+            },
+            "matrix_position": {
+              "row": "medium",
+              "cell": "medium:unknown",
+              "rank": 20151,
+              "column": "unknown",
+              "explanation": "Matrix row uses technical risk tier medium from score 51; matrix column uses business criticality tier unknown.",
+              "risk_weight": 2,
+              "criticality_weight": 1
+            },
+            "technical_risk_tier": "medium",
+            "technical_risk_score": 51
+          },
+          "exploit_signals": {
+            "points": 0,
+            "signals": [],
+            "normalized": 0.0,
+            "evidence_source": "finding.title + finding.description + selected raw_json exploit metadata + threat intel adapter output",
+            "heuristic_points": 0,
+            "factor_max_points": 15,
+            "applied_threat_signals": [],
+            "threat_intel_max_points": 10,
+            "threat_intel_points_applied": 0,
+            "threat_intel_points_requested": 0
+          },
+          "privilege_level": {
+            "points": 9,
+            "signals": [
+              "keyword:policy"
+            ],
+            "normalized": 0.6
+          },
+          "data_sensitivity": {
+            "points": 12,
+            "signals": [
+              "action_type:s3_bucket_require_ssl",
+              "keyword:bucket"
+            ],
+            "normalized": 0.8
+          },
+          "internet_exposure": {
+            "points": 12,
+            "signals": [
+              "action_type:s3_bucket_require_ssl"
+            ],
+            "normalized": 0.6
+          },
+          "context_incomplete": true,
+          "toxic_combinations": {
+            "points": 0,
+            "signals": [
+              "status:context_incomplete",
+              "rule:public_exposure_privilege_sensitive_data"
+            ],
+            "max_boost": 15,
+            "explanation": "Related context is incomplete for toxic-combination evaluation (Public exposure plus privilege weakness plus sensitive data); no boost was applied.",
+            "evidence_source": "related action neighborhoods (same resource plus account-scoped context)",
+            "missing_signals": [
+              "internet_exposure",
+              "privilege_weakness",
+              "sensitive_data"
+            ],
+            "matched_rule_ids": [],
+            "context_incomplete": true,
+            "context_incomplete_rule_ids": [
+              "public_exposure_privilege_sensitive_data"
+            ]
+          },
+          "compensating_controls": {
+            "points": 0,
+            "signals": [],
+            "normalized": 0.0
+          },
+          "total_positive_points": 51,
+          "representative_finding_id": "arn:aws:securityhub:eu-north-1:696505809372:security-control/S3.5/finding/b567c713-4b0e-43e6-a11e-404691c7a35e",
+          "total_compensating_points": 0,
+          "representative_finding_db_id": "69507c08-bbb8-491d-9ec0-543278d96a2b",
+          "score_before_toxic_combinations": 51
+        },
+        "score_factors": [
+          {
+            "factor_name": "severity",
+            "weight": 35,
+            "contribution": 18,
+            "evidence_source": "finding.severity_label + finding.severity_normalized",
+            "signals": [
+              "severity:MEDIUM"
+            ],
+            "explanation": "Severity contributed 18 points using: severity:MEDIUM.",
+            "provenance": []
+          },
+          {
+            "factor_name": "internet_exposure",
+            "weight": 20,
+            "contribution": 12,
+            "evidence_source": "finding.title + finding.description + selected raw_json exposure metadata",
+            "signals": [
+              "action_type:s3_bucket_require_ssl"
+            ],
+            "explanation": "Internet exposure contributed 12 points using: action_type:s3_bucket_require_ssl.",
+            "provenance": []
+          },
+          {
+            "factor_name": "privilege_level",
+            "weight": 15,
+            "contribution": 9,
+            "evidence_source": "finding.title + finding.description + selected raw_json identity metadata",
+            "signals": [
+              "keyword:policy"
+            ],
+            "explanation": "Privilege level contributed 9 points using: keyword:policy.",
+            "provenance": []
+          },
+          {
+            "factor_name": "data_sensitivity",
+            "weight": 15,
+            "contribution": 12,
+            "evidence_source": "finding.title + finding.description + selected raw_json data-impact metadata",
+            "signals": [
+              "action_type:s3_bucket_require_ssl",
+              "keyword:bucket"
+            ],
+            "explanation": "Data sensitivity contributed 12 points using: action_type:s3_bucket_require_ssl, keyword:bucket.",
+            "provenance": []
+          },
+          {
+            "factor_name": "exploit_signals",
+            "weight": 15,
+            "contribution": 0,
+            "evidence_source": "finding.title + finding.description + selected raw_json exploit metadata + threat intel adapter output",
+            "signals": [],
+            "explanation": "Exploit signals contributed 0 points using: no matched signals.",
+            "provenance": []
+          },
+          {
+            "factor_name": "compensating_controls",
+            "weight": 15,
+            "contribution": 0,
+            "evidence_source": "finding.title + finding.description + selected raw_json mitigating-control metadata",
+            "signals": [],
+            "explanation": "Compensating controls contributed 0 points using: no matched signals.",
+            "provenance": []
+          },
+          {
+            "factor_name": "toxic_combinations",
+            "weight": 15,
+            "contribution": 0,
+            "evidence_source": "related action neighborhoods (same resource plus account-scoped context)",
+            "signals": [
+              "status:context_incomplete",
+              "rule:public_exposure_privilege_sensitive_data"
+            ],
+            "explanation": "Related context is incomplete for toxic-combination evaluation (Public exposure plus privilege weakness plus sensitive data); no boost was applied.",
+            "provenance": []
+          }
+        ],
+        "business_impact": {
+          "technical_risk_score": 51,
+          "technical_risk_tier": "medium",
+          "criticality": {
+            "status": "unknown",
+            "score": 0,
+            "tier": "unknown",
+            "weight": 1,
+            "dimensions": [
+              {
+                "dimension": "customer_facing",
+                "label": "Customer-facing",
+                "weight": 25,
+                "matched": false,
+                "contribution": 0,
+                "signals": [],
+                "explanation": "Customer-facing is explicit unknown for this action."
+              },
+              {
+                "dimension": "revenue_path",
+                "label": "Revenue-path",
+                "weight": 25,
+                "matched": false,
+                "contribution": 0,
+                "signals": [],
+                "explanation": "Revenue-path is explicit unknown for this action."
+              },
+              {
+                "dimension": "regulated_data",
+                "label": "Regulated-data",
+                "weight": 25,
+                "matched": false,
+                "contribution": 0,
+                "signals": [],
+                "explanation": "Regulated-data is explicit unknown for this action."
+              },
+              {
+                "dimension": "identity_boundary",
+                "label": "Identity-boundary",
+                "weight": 15,
+                "matched": false,
+                "contribution": 0,
+                "signals": [],
+                "explanation": "Identity-boundary is explicit unknown for this action."
+              },
+              {
+                "dimension": "production_environment",
+                "label": "Production-environment",
+                "weight": 10,
+                "matched": false,
+                "contribution": 0,
+                "signals": [],
+                "explanation": "Production-environment is explicit unknown for this action."
+              }
+            ],
+            "explanation": "Criticality remains explicit unknown because no customer-facing, revenue-path, regulated-data, identity-boundary, or production-environment signals were detected."
+          },
+          "matrix_position": {
+            "row": "medium",
+            "column": "unknown",
+            "cell": "medium:unknown",
+            "risk_weight": 2,
+            "criticality_weight": 1,
+            "rank": 20151,
+            "explanation": "Matrix row uses technical risk tier medium from score 51; matrix column uses business criticality tier unknown."
+          },
+          "summary": "Medium technical risk intersects with explicit unknown criticality in matrix cell medium:unknown."
+        },
+        "priority": 51,
+        "status": "open",
+        "title": "S3 general purpose buckets should require requests to use SSL",
+        "control_id": "S3.5",
+        "resource_id": "arn:aws:s3:::arch1-bucket-evidence-b1-696505809372-eu-north-1",
+        "owner_type": "service",
+        "owner_key": "s3",
+        "owner_label": "Amazon S3",
+        "updated_at": "2026-04-02T03:51:41.691786+00:00",
+        "finding_count": 1,
+        "exception_id": null,
+        "exception_expires_at": null,
+        "exception_expired": null,
+        "sla": {
+          "risk_tier": "medium",
+          "due_in_hours": 168,
+          "expiring_in_hours": 56,
+          "due_at": "2026-04-08T22:22:18.196384+00:00",
+          "expiring_at": "2026-04-06T14:22:18.196384+00:00",
+          "state": "on_track",
+          "is_expiring": false,
+          "is_overdue": false,
+          "hours_until_due": 152,
+          "hours_overdue": null,
+          "escalation_level": null,
+          "escalation_eligible": false,
+          "escalation_reason": null,
+          "has_active_exception": false
+        },
+        "is_batch": false,
+        "batch_action_count": null,
+        "batch_finding_count": null
+      }
+    ],
+    "total": 1,
+    "owner_queue_counters": null
+  }
+}

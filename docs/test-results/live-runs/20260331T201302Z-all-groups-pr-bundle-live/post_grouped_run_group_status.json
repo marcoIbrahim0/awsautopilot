@@ -1,0 +1,236 @@
+[
+  {
+    "folder": "01-eu-north-1-aws_config_enabled",
+    "action_type": "aws_config_enabled",
+    "status_bucket": "run_not_successful",
+    "latest_run": {
+      "id": "6a01cee9-78c8-4ac5-b718-e1f1bdac6da8",
+      "status": "failed",
+      "started_at": "2026-03-31T20:11:43.885810+00:00",
+      "finished_at": "2026-03-31T20:30:37+00:00"
+    },
+    "counters": {
+      "run_successful": 0,
+      "run_not_successful": 1,
+      "metadata_only": 0,
+      "not_run_yet": 0,
+      "total_actions": 1
+    }
+  },
+  {
+    "folder": "02-eu-north-1-cloudtrail_enabled",
+    "action_type": "cloudtrail_enabled",
+    "status_bucket": "not_run_yet",
+    "latest_run": {
+      "id": null,
+      "status": null,
+      "started_at": null,
+      "finished_at": null
+    },
+    "counters": {
+      "run_successful": 0,
+      "run_not_successful": 0,
+      "metadata_only": 0,
+      "not_run_yet": 1,
+      "total_actions": 1
+    }
+  },
+  {
+    "folder": "03-eu-north-1-ebs_default_encryption",
+    "action_type": "ebs_default_encryption",
+    "status_bucket": "not_run_yet",
+    "latest_run": {
+      "id": null,
+      "status": null,
+      "started_at": null,
+      "finished_at": null
+    },
+    "counters": {
+      "run_successful": 0,
+      "run_not_successful": 0,
+      "metadata_only": 0,
+      "not_run_yet": 1,
+      "total_actions": 1
+    }
+  },
+  {
+    "folder": "04-eu-north-1-ebs_snapshot_block_public_access",
+    "action_type": "ebs_snapshot_block_public_access",
+    "status_bucket": "not_run_yet",
+    "latest_run": {
+      "id": null,
+      "status": null,
+      "started_at": null,
+      "finished_at": null
+    },
+    "counters": {
+      "run_successful": 0,
+      "run_not_successful": 0,
+      "metadata_only": 0,
+      "not_run_yet": 2,
+      "total_actions": 2
+    }
+  },
+  {
+    "folder": "05-eu-north-1-enable_guardduty",
+    "action_type": "enable_guardduty",
+    "status_bucket": "not_run_yet",
+    "latest_run": {
+      "id": null,
+      "status": null,
+      "started_at": null,
+      "finished_at": null
+    },
+    "counters": {
+      "run_successful": 0,
+      "run_not_successful": 0,
+      "metadata_only": 0,
+      "not_run_yet": 1,
+      "total_actions": 1
+    }
+  },
+  {
+    "folder": "07-eu-north-1-s3_block_public_access",
+    "action_type": "s3_block_public_access",
+    "status_bucket": "not_run_yet",
+    "latest_run": {
+      "id": null,
+      "status": null,
+      "started_at": null,
+      "finished_at": null
+    },
+    "counters": {
+      "run_successful": 0,
+      "run_not_successful": 0,
+      "metadata_only": 0,
+      "not_run_yet": 1,
+      "total_actions": 1
+    }
+  },
+  {
+    "folder": "08-eu-north-1-s3_bucket_access_logging",
+    "action_type": "s3_bucket_access_logging",
+    "status_bucket": "not_run_yet",
+    "latest_run": {
+      "id": null,
+      "status": null,
+      "started_at": null,
+      "finished_at": null
+    },
+    "counters": {
+      "run_successful": 0,
+      "run_not_successful": 0,
+      "metadata_only": 0,
+      "not_run_yet": 16,
+      "total_actions": 16
+    }
+  },
+  {
+    "folder": "09-eu-north-1-s3_bucket_block_public_access",
+    "action_type": "s3_bucket_block_public_access",
+    "status_bucket": "not_run_yet",
+    "latest_run": {
+      "id": null,
+      "status": null,
+      "started_at": null,
+      "finished_at": null
+    },
+    "counters": {
+      "run_successful": 3,
+      "run_not_successful": 0,
+      "metadata_only": 7,
+      "not_run_yet": 5,
+      "total_actions": 15
+    }
+  },
+  {
+    "folder": "10-eu-north-1-s3_bucket_encryption_kms",
+    "action_type": "s3_bucket_encryption_kms",
+    "status_bucket": "not_run_yet",
+    "latest_run": {
+      "id": null,
+      "status": null,
+      "started_at": null,
+      "finished_at": null
+    },
+    "counters": {
+      "run_successful": 0,
+      "run_not_successful": 0,
+      "metadata_only": 0,
+      "not_run_yet": 15,
+      "total_actions": 15
+    }
+  },
+  {
+    "folder": "11-eu-north-1-s3_bucket_lifecycle_configuration",
+    "action_type": "s3_bucket_lifecycle_configuration",
+    "status_bucket": "not_run_yet",
+    "latest_run": {
+      "id": null,
+      "status": null,
+      "started_at": null,
+      "finished_at": null
+    },
+    "counters": {
+      "run_successful": 1,
+      "run_not_successful": 18,
+      "metadata_only": 1,
+      "not_run_yet": 4,
+      "total_actions": 24
+    }
+  },
+  {
+    "folder": "12-eu-north-1-s3_bucket_require_ssl",
+    "action_type": "s3_bucket_require_ssl",
+    "status_bucket": "not_run_yet",
+    "latest_run": {
+      "id": null,
+      "status": null,
+      "started_at": null,
+      "finished_at": null
+    },
+    "counters": {
+      "run_successful": 0,
+      "run_not_successful": 0,
+      "metadata_only": 0,
+      "not_run_yet": 16,
+      "total_actions": 16
+    }
+  },
+  {
+    "folder": "13-eu-north-1-sg_restrict_public_ports",
+    "action_type": "sg_restrict_public_ports",
+    "status_bucket": "not_run_yet",
+    "latest_run": {
+      "id": null,
+      "status": null,
+      "started_at": null,
+      "finished_at": null
+    },
+    "counters": {
+      "run_successful": 0,
+      "run_not_successful": 0,
+      "metadata_only": 0,
+      "not_run_yet": 7,
+      "total_actions": 7
+    }
+  },
+  {
+    "folder": "14-eu-north-1-ssm_block_public_sharing",
+    "action_type": "ssm_block_public_sharing",
+    "status_bucket": "not_run_yet",
+    "latest_run": {
+      "id": null,
+      "status": null,
+      "started_at": null,
+      "finished_at": null
+    },
+    "counters": {
+      "run_successful": 0,
+      "run_not_successful": 0,
+      "metadata_only": 0,
+      "not_run_yet": 1,
+      "total_actions": 1
+    }
+  }
+]

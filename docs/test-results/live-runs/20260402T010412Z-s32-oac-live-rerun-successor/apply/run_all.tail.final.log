@@ -1,0 +1,64 @@
+Running 32 bundle folder(s) with parallel executions=1 (max=5) cloudfront_oac_bundles=1
+
+=== Running terraform in executable/actions/02-arn-aws-s3-security-autopilot-access-logs-696505-0ca962a2 ===
+[0m[1mInitializing the backend...[0m
+[0m[1mInitializing provider plugins...[0m
+- Finding hashicorp/external versions matching "2.3.5"...
+- Reusing previous version of hashicorp/aws from the dependency lock file
+- Installing hashicorp/external v2.3.5...
+- Installed hashicorp/external v2.3.5 (signed by HashiCorp)
+- Using hashicorp/aws v5.100.0 from the shared cache directory
+[31m╷[0m[0m
+[31m│[0m [0m[1m[31mError: [0m[0m[1mProvider dependency changes detected[0m
+[31m│[0m [0m
+[31m│[0m [0m[0mChanges to the required provider dependencies were detected, but the lock
+[31m│[0m [0mfile is read-only. To use and record these requirements, run "terraform
+[31m│[0m [0minit" without the "-lockfile=readonly" flag.
+[31m╵[0m[0m
+WARNING: terraform init detected additional providers for /var/folders/xb/8sp19fms4h5gvptlrvnqdzyr0000gn/T//aws-security-autopilot-tf-eqhQjz/action; refreshing lockfile.
+[0m[1mInitializing the backend...[0m
+[0m[1mInitializing provider plugins...[0m
+- Finding hashicorp/external versions matching "2.3.5"...
+- Reusing previous version of hashicorp/aws from the dependency lock file
+- Installing hashicorp/external v2.3.5...
+- Installed hashicorp/external v2.3.5 (signed by HashiCorp)
+- Using previously-installed hashicorp/aws v5.100.0
+Terraform has made some changes to the provider dependency selections recorded
+in the .terraform.lock.hcl file. Review those changes and commit them to your
+version control system if they represent changes you intended to make.
+
+[0m[1m[32mTerraform has been successfully initialized![0m[32m[0m
+[0m[32m
+You may now begin working with Terraform. Try running "terraform plan" to see
+any changes that are required for your infrastructure. All Terraform commands
+should now work.
+
+If you ever set or change modules or backend configuration for Terraform,
+rerun this command to reinitialize your working directory. If you forget, other
+commands will detect it and remind you to do so if necessary.[0m
+[31m╷[0m[0m
+[31m│[0m [0m[1m[31mError: [0m[0m[1mFailed to load plugin schemas[0m
+[31m│[0m [0m
+[31m│[0m [0m[0mError while loading schemas for plugin components: Failed to obtain
+[31m│[0m [0mprovider schema: Could not load the schema for provider
+[31m│[0m [0mregistry.terraform.io/hashicorp/external: failed to instantiate provider
+[31m│[0m [0m"registry.terraform.io/hashicorp/external" to obtain schema: timeout while
+[31m│[0m [0mwaiting for plugin to start..
+[31m╵[0m[0m
+Traceback (most recent call last):
+  File "<stdin>", line 7, in <module>
+  File "/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/subprocess.py", line 550, in run
+    stdout, stderr = process.communicate(input, timeout=timeout)
+                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/subprocess.py", line 1209, in communicate
+    stdout, stderr = self._communicate(input, endtime, timeout)
+                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/subprocess.py", line 2141, in _communicate
+    self.wait(timeout=self._remaining_time(endtime))
+  File "/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/subprocess.py", line 1264, in wait
+    return self._wait(timeout=timeout)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/subprocess.py", line 2047, in _wait
+    time.sleep(delay)
+KeyboardInterrupt
+ERROR: terraform plan failed for executable/actions/02-arn-aws-s3-security-autopilot-access-logs-696505-0ca962a2. Skipping apply for this action folder.

@@ -1,0 +1,47 @@
+{
+  "action_count": 1,
+  "actions": [
+    {
+      "action_id": "18e459b1-3bc2-47b4-a520-c955e921c75f",
+      "action_type": "s3_block_public_access",
+      "blocked_reasons": [],
+      "control_id": "S3.1",
+      "decision_rationale": "Compatibility resolver defaulted to the compatible profile 's3_account_block_public_access_pr_bundle' for strategy 's3_account_block_public_access_pr_bundle'. Run creation did not require additional risk-only acceptance.",
+      "decision_summary": "Compatibility resolver defaulted to the compatible profile 's3_account_block_public_access_pr_bundle' for strategy 's3_account_block_public_access_pr_bundle'. Run creation did not require additional risk-only acceptance.",
+      "decision_version": "resolver/v1",
+      "finding_coverage": {},
+      "folder": "executable/actions/01-aws-account-696505809372-18e459b1",
+      "has_runnable_terraform": true,
+      "index": 1,
+      "missing_defaults": [],
+      "missing_inputs": [],
+      "outcome": "executable_bundle_generated",
+      "preservation_summary": {
+        "single_profile_compatible": true,
+        "strategy_only_supported": true
+      },
+      "profile_id": "s3_account_block_public_access_pr_bundle",
+      "rejected_profiles": [],
+      "strategy_id": "s3_account_block_public_access_pr_bundle",
+      "strategy_inputs": {},
+      "support_tier": "deterministic_bundle",
+      "target_id": "696505809372|eu-north-1|AWS::::Account:696505809372|S3.1",
+      "tier": "executable",
+      "tier_root": "executable/actions",
+      "title": "S3 general purpose buckets should have block public access settings enabled"
+    }
+  ],
+  "execution_root": "executable/actions",
+  "grouped_actions": [
+    "18e459b1-3bc2-47b4-a520-c955e921c75f"
+  ],
+  "layout_version": "grouped_bundle_mixed_tier/v1",
+  "runnable_action_count": 1,
+  "runner_template_source": "embedded_mixed_tier",
+  "runner_template_version": "grouped_bundle_mixed_tier/v1",
+  "tier_counts": {
+    "executable": 1,
+    "manual_guidance": 0,
+    "review_required": 0
+  }
+}

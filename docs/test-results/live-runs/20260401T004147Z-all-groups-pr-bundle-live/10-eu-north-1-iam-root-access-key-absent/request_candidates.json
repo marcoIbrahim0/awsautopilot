@@ -1,0 +1,38 @@
+[
+  {
+    "bucket_creation_acknowledged": false,
+    "repo_target": {
+      "base_branch": "main",
+      "head_branch": "20260401t004147z-all-groups-pr-bundle-live-10-eu-north-1-iam-root-access-key-absent-iam-root-key-disable",
+      "provider": "github",
+      "repository": "example/security-autopilot-remediations"
+    },
+    "risk_acknowledged": true,
+    "strategy_id": "iam_root_key_disable",
+    "strategy_inputs": {}
+  },
+  {
+    "bucket_creation_acknowledged": false,
+    "repo_target": {
+      "base_branch": "main",
+      "head_branch": "20260401t004147z-all-groups-pr-bundle-live-10-eu-north-1-iam-root-access-key-absent-iam-root-key-delete",
+      "provider": "github",
+      "repository": "example/security-autopilot-remediations"
+    },
+    "risk_acknowledged": true,
+    "strategy_id": "iam_root_key_delete",
+    "strategy_inputs": {}
+  },
+  {
+    "bucket_creation_acknowledged": false,
+    "repo_target": {
+      "base_branch": "main",
+      "head_branch": "20260401t004147z-all-groups-pr-bundle-live-10-eu-north-1-iam-root-access-key-absent-iam-root-key-keep-exception",
+      "provider": "github",
+      "repository": "example/security-autopilot-remediations"
+    },
+    "risk_acknowledged": true,
+    "strategy_id": "iam_root_key_keep_exception",
+    "strategy_inputs": {}
+  }
+]

@@ -1,0 +1,78 @@
+{
+  "collected_at": "2026-04-01T19:29:08.972884+00:00",
+  "context": {
+    "default_inputs": {
+      "create_bucket_if_missing": true
+    },
+    "kms_key_options": [
+      {
+        "label": "alias/aws/s3",
+        "value": "arn:aws:kms:eu-north-1:696505809372:alias/aws/s3"
+      },
+      {
+        "label": "alias/aws/dynamodb",
+        "value": "arn:aws:kms:eu-north-1:696505809372:alias/aws/dynamodb"
+      },
+      {
+        "label": "alias/aws/ebs (2481ff50-64e2-40bb-8f5d-c59745db5b93)",
+        "value": "arn:aws:kms:eu-north-1:696505809372:alias/aws/ebs"
+      },
+      {
+        "label": "alias/aws/elasticfilesystem",
+        "value": "arn:aws:kms:eu-north-1:696505809372:alias/aws/elasticfilesystem"
+      },
+      {
+        "label": "alias/aws/es",
+        "value": "arn:aws:kms:eu-north-1:696505809372:alias/aws/es"
+      },
+      {
+        "label": "alias/aws/glue",
+        "value": "arn:aws:kms:eu-north-1:696505809372:alias/aws/glue"
+      },
+      {
+        "label": "alias/aws/kinesisvideo",
+        "value": "arn:aws:kms:eu-north-1:696505809372:alias/aws/kinesisvideo"
+      },
+      {
+        "label": "alias/aws/rds",
+        "value": "arn:aws:kms:eu-north-1:696505809372:alias/aws/rds"
+      },
+      {
+        "label": "alias/aws/redshift",
+        "value": "arn:aws:kms:eu-north-1:696505809372:alias/aws/redshift"
+      },
+      {
+        "label": "alias/aws/redshifttest",
+        "value": "arn:aws:kms:eu-north-1:696505809372:alias/aws/redshifttest"
+      },
+      {
+        "label": "alias/aws/secretsmanager (8ab7ef02-492a-4582-8940-821fa7123955)",
+        "value": "arn:aws:kms:eu-north-1:696505809372:alias/aws/secretsmanager"
+      },
+      {
+        "label": "alias/aws/ssm",
+        "value": "arn:aws:kms:eu-north-1:696505809372:alias/aws/ssm"
+      },
+      {
+        "label": "alias/aws/xray",
+        "value": "arn:aws:kms:eu-north-1:696505809372:alias/aws/xray"
+      },
+      {
+        "label": "alias/security-autopilot-w6-strict-s315-manual (ef0cca31-8328-41e6-ab28-64cbedc1a44c)",
+        "value": "arn:aws:kms:eu-north-1:696505809372:alias/security-autopilot-w6-strict-s315-manual"
+      }
+    ]
+  },
+  "evidence": {
+    "target_bucket": "phase2-wi1-lifecycle-696505809372-20260329004157"
+  },
+  "s3_policy_size_limit_bytes": 20480,
+  "s3_target_bucket_creation_possible": true,
+  "s3_target_bucket_exists": false,
+  "s3_target_bucket_missing": true,
+  "s3_target_bucket_name": "phase2-wi1-lifecycle-696505809372-20260329004157",
+  "s3_target_bucket_probe_error": "404",
+  "s3_target_bucket_reason": "Target bucket 'phase2-wi1-lifecycle-696505809372-20260329004157' no longer exists. Select the create-missing-bucket path or refresh action state before generating a bundle.",
+  "s3_target_bucket_verification_available": true,
+  "strategy_id": "s3_enable_sse_kms_guided"
+}

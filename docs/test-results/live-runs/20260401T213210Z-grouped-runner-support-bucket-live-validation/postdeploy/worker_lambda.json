@@ -1,0 +1,6 @@
+{
+    "Function": "security-autopilot-dev-worker",
+    "ImageUri": "029037611564.dkr.ecr.eu-north-1.amazonaws.com/security-autopilot-dev-saas-worker:20260401T213536Z",
+    "Role": "arn:aws:iam::029037611564:role/security-autopilot-dev-lambda-worker",
+    "LastModified": "2026-04-01T21:40:56.000+0000"
+}

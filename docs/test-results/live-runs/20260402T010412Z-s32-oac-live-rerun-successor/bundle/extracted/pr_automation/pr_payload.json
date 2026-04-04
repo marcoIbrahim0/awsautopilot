@@ -1,0 +1,2322 @@
+{
+  "artifact_type": "provider_agnostic_pr_payload",
+  "body_markdown": "## Summary\n\n- Repository: `example/security-autopilot-remediations`\n- Base branch: `main`\n- Head branch: `20260402t010412z-s32-oac-live-rerun-successor`\n- Action: `S3.2` \u00b7 `696505809372` \u00b7 `696505809372|eu-north-1|AWS::::Account:696505809372|S3.2`\n- Action: `S3.2` \u00b7 `696505809372` \u00b7 `696505809372|eu-north-1|arn:aws:s3:::security-autopilot-access-logs-696505809372-r222018|S3.2`\n- Action: `S3.2` \u00b7 `696505809372` \u00b7 `696505809372|eu-north-1|arn:aws:s3:::security-autopilot-access-logs-696505809372-r222018-access-logs|S3.2`\n- Action: `S3.2` \u00b7 `696505809372` \u00b7 `696505809372|eu-north-1|arn:aws:s3:::security-autopilot-access-logs-696505809372|S3.2`\n- Action: `S3.2` \u00b7 `696505809372` \u00b7 `696505809372|eu-north-1|arn:aws:s3:::security-autopilot-dev-serverless-src-696505809372-eu-north-1|S3.2`\n- Action: `S3.2` \u00b7 `696505809372` \u00b7 `696505809372|eu-north-1|arn:aws:s3:::sa-wi7-seed-696505809372-20260328205857-access-logs|S3.2`\n- Action: `S3.2` \u00b7 `696505809372` \u00b7 `696505809372|eu-north-1|arn:aws:s3:::ocypheris-live-ct-20260328t181200z-eu-north-1-access-logs|S3.2`\n- Action: `S3.2` \u00b7 `696505809372` \u00b7 `696505809372|eu-north-1|arn:aws:s3:::sa-wi7-seed-696505809372-20260328205857|S3.2`\n- Action: `S3.2` \u00b7 `696505809372` \u00b7 `696505809372|eu-north-1|arn:aws:s3:::wi1-noncurrent-lifecycle-696505809372-2026033000365-access-logs|S3.2`\n- Action: `S3.2` \u00b7 `696505809372` \u00b7 `696505809372|eu-north-1|arn:aws:s3:::security-autopilot-access-logs-696505809372-r94854|S3.2`\n\n## Generated diff\n\n- Fingerprint: `73689f3ffdceb99ef334808b61ac461d106261061450b345aeee94a9a0d75a91`\n- File count: `225`\n- `run_all.sh` <- `run_all.sh` (103 lines, sha256:27adde456fc1)\n- `replay_group_run_reports.sh` <- `replay_group_run_reports.sh` (54 lines, sha256:722cb6d7017b)\n- `run_actions.sh` <- `run_actions.sh` (663 lines, sha256:5f3a9a96fd5b)\n- `README_GROUP.txt` <- `README_GROUP.txt` (52 lines, sha256:a6ebcb515b7c)\n- `bundle_manifest.json` <- `bundle_manifest.json` (1897 lines, sha256:839dd89d0198)\n- `decision_log.md` <- `decision_log.md` (233 lines, sha256:f11f25f45977)\n- `finding_coverage.json` <- `finding_coverage.json` (170 lines, sha256:9fec97bad821)\n- `manual_guidance/actions/01-aws-account-696505809372-19337c80/README_ACTION.txt` <- `manual_guidance/actions/01-aws-account-696505809372-19337c80/README_ACTION.txt` (12 lines, sha256:19efa1c7912a)\n- `manual_guidance/actions/01-aws-account-696505809372-19337c80/decision.json` <- `manual_guidance/actions/01-aws-account-696505809372-19337c80/decision.json` (62 lines, sha256:a4792eee6d07)\n- `executable/actions/02-arn-aws-s3-security-autopilot-access-logs-696505-0ca962a2/providers.tf` <- `executable/actions/02-arn-aws-s3-security-autopilot-access-logs-696505-0ca962a2/providers.tf` (22 lines, sha256:54c07a5e1e99)\n\n## Rollback\n\n- Recommended path: Prefer reverting through version control and the same reviewed deployment workflow.\n- S3 general purpose buckets should block public write access: `aws s3api delete-public-access-block --bucket 696505809372|eu-north-1|AWS::::Account:696505809372|S3.2`\n- S3 general purpose buckets should block public write access: `aws s3api delete-public-access-block --bucket security-autopilot-access-logs-696505809372-r222018`\n- S3 general purpose buckets should block public read access: `aws s3api delete-public-access-block --bucket security-autopilot-access-logs-696505809372-r222018-access-logs`\n- S3 general purpose buckets should block public write access: `aws s3api delete-public-access-block --bucket security-autopilot-access-logs-696505809372`\n- S3 general purpose buckets should block public write access: `aws s3api delete-public-access-block --bucket security-autopilot-dev-serverless-src-696505809372-eu-north-1`\n- S3 general purpose buckets should block public write access: `aws s3api delete-public-access-block --bucket sa-wi7-seed-696505809372-20260328205857-access-logs`\n- S3 general purpose buckets should block public write access: `aws s3api delete-public-access-block --bucket ocypheris-live-ct-20260328t181200z-eu-north-1-access-logs`\n- S3 general purpose buckets should block public access: `aws s3api delete-public-access-block --bucket sa-wi7-seed-696505809372-20260328205857`\n- S3 general purpose buckets should block public write access: `aws s3api delete-public-access-block --bucket wi1-noncurrent-lifecycle-696505809372-2026033000365-access-logs`\n- S3 general purpose buckets should block public write access: `aws s3api delete-public-access-block --bucket security-autopilot-access-logs-696505809372-r94854`\n\n## Control mapping context\n\n- Control IDs: `S3.2`",
+  "commit_message": "Apply AWS Security Autopilot remediation bundle (33 actions)",
+  "diff_metadata": {
+    "artifact_type": "generated_diff_summary",
+    "file_count": 225,
+    "files": [
+      {
+        "bundle_path": "run_all.sh",
+        "byte_count": 20723,
+        "change_type": "create_or_update",
+        "content_sha256": "27adde456fc1b88c197e2b417e33654c69c8d40f90e2f8923478152739298655",
+        "line_count": 103,
+        "repo_path": "run_all.sh"
+      },
+      {
+        "bundle_path": "replay_group_run_reports.sh",
+        "byte_count": 1521,
+        "change_type": "create_or_update",
+        "content_sha256": "722cb6d7017b682c0f4c44153d15e7e4a9918cfc102cf87fa92fef591f5dbd4f",
+        "line_count": 54,
+        "repo_path": "replay_group_run_reports.sh"
+      },
+      {
+        "bundle_path": "run_actions.sh",
+        "byte_count": 19263,
+        "change_type": "create_or_update",
+        "content_sha256": "5f3a9a96fd5bcfc7ab15b1b3da214731932958c636b16a49d4d6c94beffc2852",
+        "line_count": 663,
+        "repo_path": "run_actions.sh"
+      },
+      {
+        "bundle_path": "README_GROUP.txt",
+        "byte_count": 6385,
+        "change_type": "create_or_update",
+        "content_sha256": "a6ebcb515b7c5078c1fe699b651347ae5c84a770f8fe5648993a0228d35b1031",
+        "line_count": 52,
+        "repo_path": "README_GROUP.txt"
+      },
+      {
+        "bundle_path": "bundle_manifest.json",
+        "byte_count": 113164,
+        "change_type": "create_or_update",
+        "content_sha256": "839dd89d0198a6a92f831da21b4d2e155014806f71a35b1d9d3a624fba0c0189",
+        "line_count": 1897,
+        "repo_path": "bundle_manifest.json"
+      },
+      {
+        "bundle_path": "decision_log.md",
+        "byte_count": 16449,
+        "change_type": "create_or_update",
+        "content_sha256": "f11f25f459779107dc761633208b9e85a5807ebedb6813a2e7c5d49c07bd3e69",
+        "line_count": 233,
+        "repo_path": "decision_log.md"
+      },
+      {
+        "bundle_path": "finding_coverage.json",
+        "byte_count": 4925,
+        "change_type": "create_or_update",
+        "content_sha256": "9fec97bad821dc41408d319821734b33ec4d66a0aaa3a248a46bbed7624ecf5a",
+        "line_count": 170,
+        "repo_path": "finding_coverage.json"
+      },
+      {
+        "bundle_path": "manual_guidance/actions/01-aws-account-696505809372-19337c80/README_ACTION.txt",
+        "byte_count": 827,
+        "change_type": "create_or_update",
+        "content_sha256": "19efa1c7912a0ac9d7fa37e7ede318e13d8ae2bf2ee367bb532eb539c8bd7feb",
+        "line_count": 12,
+        "repo_path": "manual_guidance/actions/01-aws-account-696505809372-19337c80/README_ACTION.txt"
+      },
+      {
+        "bundle_path": "manual_guidance/actions/01-aws-account-696505809372-19337c80/decision.json",
+        "byte_count": 3198,
+        "change_type": "create_or_update",
+        "content_sha256": "a4792eee6d07e7023ba5aff1d6f0894fc1fe92287801d87520112e353af20018",
+        "line_count": 62,
+        "repo_path": "manual_guidance/actions/01-aws-account-696505809372-19337c80/decision.json"
+      },
+      {
+        "bundle_path": "executable/actions/02-arn-aws-s3-security-autopilot-access-logs-696505-0ca962a2/providers.tf",
+        "byte_count": 565,
+        "change_type": "create_or_update",
+        "content_sha256": "54c07a5e1e995aa56de9afad75fb0b29c562684f915893beaacbb98b38585136",
+        "line_count": 22,
+        "repo_path": "executable/actions/02-arn-aws-s3-security-autopilot-access-logs-696505-0ca962a2/providers.tf"
+      },
+      {
+        "bundle_path": "executable/actions/02-arn-aws-s3-security-autopilot-access-logs-696505-0ca962a2/s3_cloudfront_oac_private_s3.tf",
+        "byte_count": 9444,
+        "change_type": "create_or_update",
+        "content_sha256": "f265b195b03b43247b9c196758c78eb0dff3646236262f2b13f3969d5a5bf83b",
+        "line_count": 265,
+        "repo_path": "executable/actions/02-arn-aws-s3-security-autopilot-access-logs-696505-0ca962a2/s3_cloudfront_oac_private_s3.tf"
+      },
+      {
+        "bundle_path": "executable/actions/02-arn-aws-s3-security-autopilot-access-logs-696505-0ca962a2/scripts/cloudfront_oac_discovery.py",
+        "byte_count": 8274,
+        "change_type": "create_or_update",
+        "content_sha256": "8313aad30c7b7fe5d8252697a20c1758e905d733b8bc1c37e1d9515d65f04e13",
+        "line_count": 221,
+        "repo_path": "executable/actions/02-arn-aws-s3-security-autopilot-access-logs-696505-0ca962a2/scripts/cloudfront_oac_discovery.py"
+      },
+      {
+        "bundle_path": "executable/actions/02-arn-aws-s3-security-autopilot-access-logs-696505-0ca962a2/terraform.auto.tfvars.json",
+        "byte_count": 1719,
+        "change_type": "create_or_update",
+        "content_sha256": "994e55a07984c4ea0e6d9642566b8695782456a9de868fdf199bb76ab26938aa",
+        "line_count": 3,
+        "repo_path": "executable/actions/02-arn-aws-s3-security-autopilot-access-logs-696505-0ca962a2/terraform.auto.tfvars.json"
+      },
+      {
+        "bundle_path": "executable/actions/02-arn-aws-s3-security-autopilot-access-logs-696505-0ca962a2/README.txt",
+        "byte_count": 1875,
+        "change_type": "create_or_update",
+        "content_sha256": "cb8b531d9b3fdcdb96a0d8f3b409edd5a262aaf6dce8cb2e25039ce1d74c81d3",
+        "line_count": 44,
+        "repo_path": "executable/actions/02-arn-aws-s3-security-autopilot-access-logs-696505-0ca962a2/README.txt"
+      },
+      {
+        "bundle_path": "executable/actions/02-arn-aws-s3-security-autopilot-access-logs-696505-0ca962a2/README_ACTION.txt",
+        "byte_count": 595,
+        "change_type": "create_or_update",
+        "content_sha256": "4195bc13dafae543bc1a2c0e01e53cb772c48bb93ed593b030e42be8e69666aa",
+        "line_count": 12,
+        "repo_path": "executable/actions/02-arn-aws-s3-security-autopilot-access-logs-696505-0ca962a2/README_ACTION.txt"
+      },
+      {
+        "bundle_path": "executable/actions/02-arn-aws-s3-security-autopilot-access-logs-696505-0ca962a2/decision.json",
+        "byte_count": 4279,
+        "change_type": "create_or_update",
+        "content_sha256": "5570d93b0c73af27956f1e34bb2ea267295f9451a5b3c6b73feb5fdf4b159e12",
+        "line_count": 56,
+        "repo_path": "executable/actions/02-arn-aws-s3-security-autopilot-access-logs-696505-0ca962a2/decision.json"
+      },
+      {
+        "bundle_path": "executable/actions/03-arn-aws-s3-security-autopilot-access-logs-696505-0dc8756d/providers.tf",
+        "byte_count": 565,
+        "change_type": "create_or_update",
+        "content_sha256": "54c07a5e1e995aa56de9afad75fb0b29c562684f915893beaacbb98b38585136",
+        "line_count": 22,
+        "repo_path": "executable/actions/03-arn-aws-s3-security-autopilot-access-logs-696505-0dc8756d/providers.tf"
+      },
+      {
+        "bundle_path": "executable/actions/03-arn-aws-s3-security-autopilot-access-logs-696505-0dc8756d/s3_cloudfront_oac_private_s3.tf",
+        "byte_count": 9467,
+        "change_type": "create_or_update",
+        "content_sha256": "147255c4c3739306ea6ebb0d003f9c5d8a80749ee92e5d8cdd6745727a4961a4",
+        "line_count": 265,
+        "repo_path": "executable/actions/03-arn-aws-s3-security-autopilot-access-logs-696505-0dc8756d/s3_cloudfront_oac_private_s3.tf"
+      },
+      {
+        "bundle_path": "executable/actions/03-arn-aws-s3-security-autopilot-access-logs-696505-0dc8756d/scripts/cloudfront_oac_discovery.py",
+        "byte_count": 8274,
+        "change_type": "create_or_update",
+        "content_sha256": "8313aad30c7b7fe5d8252697a20c1758e905d733b8bc1c37e1d9515d65f04e13",
+        "line_count": 221,
+        "repo_path": "executable/actions/03-arn-aws-s3-security-autopilot-access-logs-696505-0dc8756d/scripts/cloudfront_oac_discovery.py"
+      },
+      {
+        "bundle_path": "executable/actions/03-arn-aws-s3-security-autopilot-access-logs-696505-0dc8756d/terraform.auto.tfvars.json",
+        "byte_count": 420,
+        "change_type": "create_or_update",
+        "content_sha256": "4441721ad590ec3afc23de34394169eabac437b2602798ccf25bee78cb49e765",
+        "line_count": 3,
+        "repo_path": "executable/actions/03-arn-aws-s3-security-autopilot-access-logs-696505-0dc8756d/terraform.auto.tfvars.json"
+      },
+      {
+        "bundle_path": "executable/actions/03-arn-aws-s3-security-autopilot-access-logs-696505-0dc8756d/README.txt",
+        "byte_count": 1875,
+        "change_type": "create_or_update",
+        "content_sha256": "cb8b531d9b3fdcdb96a0d8f3b409edd5a262aaf6dce8cb2e25039ce1d74c81d3",
+        "line_count": 44,
+        "repo_path": "executable/actions/03-arn-aws-s3-security-autopilot-access-logs-696505-0dc8756d/README.txt"
+      },
+      {
+        "bundle_path": "executable/actions/03-arn-aws-s3-security-autopilot-access-logs-696505-0dc8756d/README_ACTION.txt",
+        "byte_count": 594,
+        "change_type": "create_or_update",
+        "content_sha256": "cc33ae03ab93092104b0b576a5e38cb5b9fdb6018e47c778b2ea96db7f76e5f3",
+        "line_count": 12,
+        "repo_path": "executable/actions/03-arn-aws-s3-security-autopilot-access-logs-696505-0dc8756d/README_ACTION.txt"
+      },
+      {
+        "bundle_path": "executable/actions/03-arn-aws-s3-security-autopilot-access-logs-696505-0dc8756d/decision.json",
+        "byte_count": 2991,
+        "change_type": "create_or_update",
+        "content_sha256": "7b48812487a39729a245ac89c6bd062cf013ae8f3d614c58cd8a3fc50bce44fb",
+        "line_count": 56,
+        "repo_path": "executable/actions/03-arn-aws-s3-security-autopilot-access-logs-696505-0dc8756d/decision.json"
+      },
+      {
+        "bundle_path": "executable/actions/04-arn-aws-s3-security-autopilot-access-logs-696505-0ff2bc8f/providers.tf",
+        "byte_count": 565,
+        "change_type": "create_or_update",
+        "content_sha256": "54c07a5e1e995aa56de9afad75fb0b29c562684f915893beaacbb98b38585136",
+        "line_count": 22,
+        "repo_path": "executable/actions/04-arn-aws-s3-security-autopilot-access-logs-696505-0ff2bc8f/providers.tf"
+      },
+      {
+        "bundle_path": "executable/actions/04-arn-aws-s3-security-autopilot-access-logs-696505-0ff2bc8f/s3_cloudfront_oac_private_s3.tf",
+        "byte_count": 9428,
+        "change_type": "create_or_update",
+        "content_sha256": "250616cd6b46bacd5503ac9342fd5181f2124f20e3a6c16478e22bc681f2796f",
+        "line_count": 265,
+        "repo_path": "executable/actions/04-arn-aws-s3-security-autopilot-access-logs-696505-0ff2bc8f/s3_cloudfront_oac_private_s3.tf"
+      },
+      {
+        "bundle_path": "executable/actions/04-arn-aws-s3-security-autopilot-access-logs-696505-0ff2bc8f/scripts/cloudfront_oac_discovery.py",
+        "byte_count": 8274,
+        "change_type": "create_or_update",
+        "content_sha256": "8313aad30c7b7fe5d8252697a20c1758e905d733b8bc1c37e1d9515d65f04e13",
+        "line_count": 221,
+        "repo_path": "executable/actions/04-arn-aws-s3-security-autopilot-access-logs-696505-0ff2bc8f/scripts/cloudfront_oac_discovery.py"
+      },
+      {
+        "bundle_path": "executable/actions/04-arn-aws-s3-security-autopilot-access-logs-696505-0ff2bc8f/terraform.auto.tfvars.json",
+        "byte_count": 765,
+        "change_type": "create_or_update",
+        "content_sha256": "b04f15e4f38140cead835e03b2ab96d3c16cf1b5e438283bb64a66fcf8e7fe93",
+        "line_count": 3,
+        "repo_path": "executable/actions/04-arn-aws-s3-security-autopilot-access-logs-696505-0ff2bc8f/terraform.auto.tfvars.json"
+      },
+      {
+        "bundle_path": "executable/actions/04-arn-aws-s3-security-autopilot-access-logs-696505-0ff2bc8f/README.txt",
+        "byte_count": 1875,
+        "change_type": "create_or_update",
+        "content_sha256": "cb8b531d9b3fdcdb96a0d8f3b409edd5a262aaf6dce8cb2e25039ce1d74c81d3",
+        "line_count": 44,
+        "repo_path": "executable/actions/04-arn-aws-s3-security-autopilot-access-logs-696505-0ff2bc8f/README.txt"
+      },
+      {
+        "bundle_path": "executable/actions/04-arn-aws-s3-security-autopilot-access-logs-696505-0ff2bc8f/README_ACTION.txt",
+        "byte_count": 595,
+        "change_type": "create_or_update",
+        "content_sha256": "4ae47771ac00bd1d3fa1ff487084f631d218808d1a9abbdeff4f801a0a40720b",
+        "line_count": 12,
+        "repo_path": "executable/actions/04-arn-aws-s3-security-autopilot-access-logs-696505-0ff2bc8f/README_ACTION.txt"
+      },
+      {
+        "bundle_path": "executable/actions/04-arn-aws-s3-security-autopilot-access-logs-696505-0ff2bc8f/decision.json",
+        "byte_count": 3317,
+        "change_type": "create_or_update",
+        "content_sha256": "f286462f9be07720dded039a582f734b60150456cbdbeb95750ca90f3633ca24",
+        "line_count": 56,
+        "repo_path": "executable/actions/04-arn-aws-s3-security-autopilot-access-logs-696505-0ff2bc8f/decision.json"
+      },
+      {
+        "bundle_path": "executable/actions/05-arn-aws-s3-security-autopilot-dev-serverless-src-1dc66e7e/providers.tf",
+        "byte_count": 565,
+        "change_type": "create_or_update",
+        "content_sha256": "54c07a5e1e995aa56de9afad75fb0b29c562684f915893beaacbb98b38585136",
+        "line_count": 22,
+        "repo_path": "executable/actions/05-arn-aws-s3-security-autopilot-dev-serverless-src-1dc66e7e/providers.tf"
+      },
+      {
+        "bundle_path": "executable/actions/05-arn-aws-s3-security-autopilot-dev-serverless-src-1dc66e7e/s3_cloudfront_oac_private_s3.tf",
+        "byte_count": 9464,
+        "change_type": "create_or_update",
+        "content_sha256": "d5e49d1be8d966febbfc9085dc371b0b1f60dc705fe80cd76c27aa66bf58285c",
+        "line_count": 265,
+        "repo_path": "executable/actions/05-arn-aws-s3-security-autopilot-dev-serverless-src-1dc66e7e/s3_cloudfront_oac_private_s3.tf"
+      },
+      {
+        "bundle_path": "executable/actions/05-arn-aws-s3-security-autopilot-dev-serverless-src-1dc66e7e/scripts/cloudfront_oac_discovery.py",
+        "byte_count": 8274,
+        "change_type": "create_or_update",
+        "content_sha256": "8313aad30c7b7fe5d8252697a20c1758e905d733b8bc1c37e1d9515d65f04e13",
+        "line_count": 221,
+        "repo_path": "executable/actions/05-arn-aws-s3-security-autopilot-dev-serverless-src-1dc66e7e/scripts/cloudfront_oac_discovery.py"
+      },
+      {
+        "bundle_path": "executable/actions/05-arn-aws-s3-security-autopilot-dev-serverless-src-1dc66e7e/terraform.auto.tfvars.json",
+        "byte_count": 416,
+        "change_type": "create_or_update",
+        "content_sha256": "906946b22efaef49eb8a95354c76c1979315712808db5a028022183d42d6471e",
+        "line_count": 3,
+        "repo_path": "executable/actions/05-arn-aws-s3-security-autopilot-dev-serverless-src-1dc66e7e/terraform.auto.tfvars.json"
+      },
+      {
+        "bundle_path": "executable/actions/05-arn-aws-s3-security-autopilot-dev-serverless-src-1dc66e7e/README.txt",
+        "byte_count": 1875,
+        "change_type": "create_or_update",
+        "content_sha256": "cb8b531d9b3fdcdb96a0d8f3b409edd5a262aaf6dce8cb2e25039ce1d74c81d3",
+        "line_count": 44,
+        "repo_path": "executable/actions/05-arn-aws-s3-security-autopilot-dev-serverless-src-1dc66e7e/README.txt"
+      },
+      {
+        "bundle_path": "executable/actions/05-arn-aws-s3-security-autopilot-dev-serverless-src-1dc66e7e/README_ACTION.txt",
+        "byte_count": 595,
+        "change_type": "create_or_update",
+        "content_sha256": "ac9335a2dd61012a074a0d2db93121c4646267aef2a846ebe9c1d6f848fb8909",
+        "line_count": 12,
+        "repo_path": "executable/actions/05-arn-aws-s3-security-autopilot-dev-serverless-src-1dc66e7e/README_ACTION.txt"
+      },
+      {
+        "bundle_path": "executable/actions/05-arn-aws-s3-security-autopilot-dev-serverless-src-1dc66e7e/decision.json",
+        "byte_count": 2986,
+        "change_type": "create_or_update",
+        "content_sha256": "29388f4e42c9b806a9820374e56b10b220485fd54c1bdc9bd26b53e6df306350",
+        "line_count": 56,
+        "repo_path": "executable/actions/05-arn-aws-s3-security-autopilot-dev-serverless-src-1dc66e7e/decision.json"
+      },
+      {
+        "bundle_path": "executable/actions/06-arn-aws-s3-sa-wi7-seed-696505809372-202603282058-21c09e7f/providers.tf",
+        "byte_count": 565,
+        "change_type": "create_or_update",
+        "content_sha256": "54c07a5e1e995aa56de9afad75fb0b29c562684f915893beaacbb98b38585136",
+        "line_count": 22,
+        "repo_path": "executable/actions/06-arn-aws-s3-sa-wi7-seed-696505809372-202603282058-21c09e7f/providers.tf"
+      },
+      {
+        "bundle_path": "executable/actions/06-arn-aws-s3-sa-wi7-seed-696505809372-202603282058-21c09e7f/s3_cloudfront_oac_private_s3.tf",
+        "byte_count": 9444,
+        "change_type": "create_or_update",
+        "content_sha256": "ac42576134bfa63dbaec8dd560de54e890481b02ebc746278cc138d134f40743",
+        "line_count": 265,
+        "repo_path": "executable/actions/06-arn-aws-s3-sa-wi7-seed-696505809372-202603282058-21c09e7f/s3_cloudfront_oac_private_s3.tf"
+      },
+      {
+        "bundle_path": "executable/actions/06-arn-aws-s3-sa-wi7-seed-696505809372-202603282058-21c09e7f/scripts/cloudfront_oac_discovery.py",
+        "byte_count": 8274,
+        "change_type": "create_or_update",
+        "content_sha256": "8313aad30c7b7fe5d8252697a20c1758e905d733b8bc1c37e1d9515d65f04e13",
+        "line_count": 221,
+        "repo_path": "executable/actions/06-arn-aws-s3-sa-wi7-seed-696505809372-202603282058-21c09e7f/scripts/cloudfront_oac_discovery.py"
+      },
+      {
+        "bundle_path": "executable/actions/06-arn-aws-s3-sa-wi7-seed-696505809372-202603282058-21c09e7f/terraform.auto.tfvars.json",
+        "byte_count": 396,
+        "change_type": "create_or_update",
+        "content_sha256": "0505bab2b1d55f147fc30369785c0f7b6cd77837a699e42ed4faedc710376e5a",
+        "line_count": 3,
+        "repo_path": "executable/actions/06-arn-aws-s3-sa-wi7-seed-696505809372-202603282058-21c09e7f/terraform.auto.tfvars.json"
+      },
+      {
+        "bundle_path": "executable/actions/06-arn-aws-s3-sa-wi7-seed-696505809372-202603282058-21c09e7f/README.txt",
+        "byte_count": 1875,
+        "change_type": "create_or_update",
+        "content_sha256": "cb8b531d9b3fdcdb96a0d8f3b409edd5a262aaf6dce8cb2e25039ce1d74c81d3",
+        "line_count": 44,
+        "repo_path": "executable/actions/06-arn-aws-s3-sa-wi7-seed-696505809372-202603282058-21c09e7f/README.txt"
+      },
+      {
+        "bundle_path": "executable/actions/06-arn-aws-s3-sa-wi7-seed-696505809372-202603282058-21c09e7f/README_ACTION.txt",
+        "byte_count": 595,
+        "change_type": "create_or_update",
+        "content_sha256": "8724bd6b3781cb8470c3b746a04cf5d7b3b3cd7f03aa3ce15ee267675d15e20b",
+        "line_count": 12,
+        "repo_path": "executable/actions/06-arn-aws-s3-sa-wi7-seed-696505809372-202603282058-21c09e7f/README_ACTION.txt"
+      },
+      {
+        "bundle_path": "executable/actions/06-arn-aws-s3-sa-wi7-seed-696505809372-202603282058-21c09e7f/decision.json",
+        "byte_count": 2956,
+        "change_type": "create_or_update",
+        "content_sha256": "b6dfd7145d6e1fea20823f828fd0d8fde0258ed869004a146e8f8e2ac96e900d",
+        "line_count": 56,
+        "repo_path": "executable/actions/06-arn-aws-s3-sa-wi7-seed-696505809372-202603282058-21c09e7f/decision.json"
+      },
+      {
+        "bundle_path": "executable/actions/07-arn-aws-s3-ocypheris-live-ct-20260328t181200z-eu-2c8ba273/providers.tf",
+        "byte_count": 565,
+        "change_type": "create_or_update",
+        "content_sha256": "54c07a5e1e995aa56de9afad75fb0b29c562684f915893beaacbb98b38585136",
+        "line_count": 22,
+        "repo_path": "executable/actions/07-arn-aws-s3-ocypheris-live-ct-20260328t181200z-eu-2c8ba273/providers.tf"
+      },
+      {
+        "bundle_path": "executable/actions/07-arn-aws-s3-ocypheris-live-ct-20260328t181200z-eu-2c8ba273/s3_cloudfront_oac_private_s3.tf",
+        "byte_count": 9456,
+        "change_type": "create_or_update",
+        "content_sha256": "1246948e76a3b1cd5e3ac72018556f3eda1186da8be56bc4f27fc8d6245675a9",
+        "line_count": 265,
+        "repo_path": "executable/actions/07-arn-aws-s3-ocypheris-live-ct-20260328t181200z-eu-2c8ba273/s3_cloudfront_oac_private_s3.tf"
+      },
+      {
+        "bundle_path": "executable/actions/07-arn-aws-s3-ocypheris-live-ct-20260328t181200z-eu-2c8ba273/scripts/cloudfront_oac_discovery.py",
+        "byte_count": 8274,
+        "change_type": "create_or_update",
+        "content_sha256": "8313aad30c7b7fe5d8252697a20c1758e905d733b8bc1c37e1d9515d65f04e13",
+        "line_count": 221,
+        "repo_path": "executable/actions/07-arn-aws-s3-ocypheris-live-ct-20260328t181200z-eu-2c8ba273/scripts/cloudfront_oac_discovery.py"
+      },
+      {
+        "bundle_path": "executable/actions/07-arn-aws-s3-ocypheris-live-ct-20260328t181200z-eu-2c8ba273/terraform.auto.tfvars.json",
+        "byte_count": 408,
+        "change_type": "create_or_update",
+        "content_sha256": "85b9fa49690f8aa9e1dc838b30a17c6f91cfbb3541081f1a3be4e9b502b53138",
+        "line_count": 3,
+        "repo_path": "executable/actions/07-arn-aws-s3-ocypheris-live-ct-20260328t181200z-eu-2c8ba273/terraform.auto.tfvars.json"
+      },
+      {
+        "bundle_path": "executable/actions/07-arn-aws-s3-ocypheris-live-ct-20260328t181200z-eu-2c8ba273/README.txt",
+        "byte_count": 1875,
+        "change_type": "create_or_update",
+        "content_sha256": "cb8b531d9b3fdcdb96a0d8f3b409edd5a262aaf6dce8cb2e25039ce1d74c81d3",
+        "line_count": 44,
+        "repo_path": "executable/actions/07-arn-aws-s3-ocypheris-live-ct-20260328t181200z-eu-2c8ba273/README.txt"
+      },
+      {
+        "bundle_path": "executable/actions/07-arn-aws-s3-ocypheris-live-ct-20260328t181200z-eu-2c8ba273/README_ACTION.txt",
+        "byte_count": 595,
+        "change_type": "create_or_update",
+        "content_sha256": "376263f14f032ae5f01b5acf30072b0eaf6a4c74bbce9392a15f5dd8cc3839a2",
+        "line_count": 12,
+        "repo_path": "executable/actions/07-arn-aws-s3-ocypheris-live-ct-20260328t181200z-eu-2c8ba273/README_ACTION.txt"
+      },
+      {
+        "bundle_path": "executable/actions/07-arn-aws-s3-ocypheris-live-ct-20260328t181200z-eu-2c8ba273/decision.json",
+        "byte_count": 2974,
+        "change_type": "create_or_update",
+        "content_sha256": "046e79cc48bb9d11737ca1c66c8040c3e2ee09fcf16423061003ede6b2e05986",
+        "line_count": 56,
+        "repo_path": "executable/actions/07-arn-aws-s3-ocypheris-live-ct-20260328t181200z-eu-2c8ba273/decision.json"
+      },
+      {
+        "bundle_path": "executable/actions/08-arn-aws-s3-sa-wi7-seed-696505809372-202603282058-3ae05cd4/providers.tf",
+        "byte_count": 565,
+        "change_type": "create_or_update",
+        "content_sha256": "54c07a5e1e995aa56de9afad75fb0b29c562684f915893beaacbb98b38585136",
+        "line_count": 22,
+        "repo_path": "executable/actions/08-arn-aws-s3-sa-wi7-seed-696505809372-202603282058-3ae05cd4/providers.tf"
+      },
+      {
+        "bundle_path": "executable/actions/08-arn-aws-s3-sa-wi7-seed-696505809372-202603282058-3ae05cd4/s3_cloudfront_oac_private_s3.tf",
+        "byte_count": 9413,
+        "change_type": "create_or_update",
+        "content_sha256": "359c0465f8027ca90c90fbfd14e2a04313a5b682cac0e7c4e98ec4dd5df6978a",
+        "line_count": 265,
+        "repo_path": "executable/actions/08-arn-aws-s3-sa-wi7-seed-696505809372-202603282058-3ae05cd4/s3_cloudfront_oac_private_s3.tf"
+      },
+      {
+        "bundle_path": "executable/actions/08-arn-aws-s3-sa-wi7-seed-696505809372-202603282058-3ae05cd4/scripts/cloudfront_oac_discovery.py",
+        "byte_count": 8274,
+        "change_type": "create_or_update",
+        "content_sha256": "8313aad30c7b7fe5d8252697a20c1758e905d733b8bc1c37e1d9515d65f04e13",
+        "line_count": 221,
+        "repo_path": "executable/actions/08-arn-aws-s3-sa-wi7-seed-696505809372-202603282058-3ae05cd4/scripts/cloudfront_oac_discovery.py"
+      },
+      {
+        "bundle_path": "executable/actions/08-arn-aws-s3-sa-wi7-seed-696505809372-202603282058-3ae05cd4/README.txt",
+        "byte_count": 1875,
+        "change_type": "create_or_update",
+        "content_sha256": "cb8b531d9b3fdcdb96a0d8f3b409edd5a262aaf6dce8cb2e25039ce1d74c81d3",
+        "line_count": 44,
+        "repo_path": "executable/actions/08-arn-aws-s3-sa-wi7-seed-696505809372-202603282058-3ae05cd4/README.txt"
+      },
+      {
+        "bundle_path": "executable/actions/08-arn-aws-s3-sa-wi7-seed-696505809372-202603282058-3ae05cd4/README_ACTION.txt",
+        "byte_count": 662,
+        "change_type": "create_or_update",
+        "content_sha256": "c5a575f9ffa0f8b68a909ad1a149f22240aa5d433e09a07e1dc3b3b03a0c36d9",
+        "line_count": 12,
+        "repo_path": "executable/actions/08-arn-aws-s3-sa-wi7-seed-696505809372-202603282058-3ae05cd4/README_ACTION.txt"
+      },
+      {
+        "bundle_path": "executable/actions/08-arn-aws-s3-sa-wi7-seed-696505809372-202603282058-3ae05cd4/decision.json",
+        "byte_count": 2907,
+        "change_type": "create_or_update",
+        "content_sha256": "0ebb61a93f94eed5ff65ae38587aadee706924c2ff01fb1cb3f91ba8feafaf37",
+        "line_count": 55,
+        "repo_path": "executable/actions/08-arn-aws-s3-sa-wi7-seed-696505809372-202603282058-3ae05cd4/decision.json"
+      },
+      {
+        "bundle_path": "executable/actions/09-arn-aws-s3-wi1-noncurrent-lifecycle-696505809372-3ce30a5c/providers.tf",
+        "byte_count": 565,
+        "change_type": "create_or_update",
+        "content_sha256": "54c07a5e1e995aa56de9afad75fb0b29c562684f915893beaacbb98b38585136",
+        "line_count": 22,
+        "repo_path": "executable/actions/09-arn-aws-s3-wi1-noncurrent-lifecycle-696505809372-3ce30a5c/providers.tf"
+      },
+      {
+        "bundle_path": "executable/actions/09-arn-aws-s3-wi1-noncurrent-lifecycle-696505809372-3ce30a5c/s3_cloudfront_oac_private_s3.tf",
+        "byte_count": 9468,
+        "change_type": "create_or_update",
+        "content_sha256": "32603b078f7325760aaa594993d8c600afe1cc2afc5fe9087ee710faa95cfaed",
+        "line_count": 265,
+        "repo_path": "executable/actions/09-arn-aws-s3-wi1-noncurrent-lifecycle-696505809372-3ce30a5c/s3_cloudfront_oac_private_s3.tf"
+      },
+      {
+        "bundle_path": "executable/actions/09-arn-aws-s3-wi1-noncurrent-lifecycle-696505809372-3ce30a5c/scripts/cloudfront_oac_discovery.py",
+        "byte_count": 8274,
+        "change_type": "create_or_update",
+        "content_sha256": "8313aad30c7b7fe5d8252697a20c1758e905d733b8bc1c37e1d9515d65f04e13",
+        "line_count": 221,
+        "repo_path": "executable/actions/09-arn-aws-s3-wi1-noncurrent-lifecycle-696505809372-3ce30a5c/scripts/cloudfront_oac_discovery.py"
+      },
+      {
+        "bundle_path": "executable/actions/09-arn-aws-s3-wi1-noncurrent-lifecycle-696505809372-3ce30a5c/terraform.auto.tfvars.json",
+        "byte_count": 420,
+        "change_type": "create_or_update",
+        "content_sha256": "4e294237176e032130963bcebbd073d72df85dbe32114be8dc1d60a579a4f97a",
+        "line_count": 3,
+        "repo_path": "executable/actions/09-arn-aws-s3-wi1-noncurrent-lifecycle-696505809372-3ce30a5c/terraform.auto.tfvars.json"
+      },
+      {
+        "bundle_path": "executable/actions/09-arn-aws-s3-wi1-noncurrent-lifecycle-696505809372-3ce30a5c/README.txt",
+        "byte_count": 1875,
+        "change_type": "create_or_update",
+        "content_sha256": "cb8b531d9b3fdcdb96a0d8f3b409edd5a262aaf6dce8cb2e25039ce1d74c81d3",
+        "line_count": 44,
+        "repo_path": "executable/actions/09-arn-aws-s3-wi1-noncurrent-lifecycle-696505809372-3ce30a5c/README.txt"
+      },
+      {
+        "bundle_path": "executable/actions/09-arn-aws-s3-wi1-noncurrent-lifecycle-696505809372-3ce30a5c/README_ACTION.txt",
+        "byte_count": 595,
+        "change_type": "create_or_update",
+        "content_sha256": "da7fe169ec1a757b53b7b5e2d56259ee2c90efcd699d911c422d96212ef4b98a",
+        "line_count": 12,
+        "repo_path": "executable/actions/09-arn-aws-s3-wi1-noncurrent-lifecycle-696505809372-3ce30a5c/README_ACTION.txt"
+      },
+      {
+        "bundle_path": "executable/actions/09-arn-aws-s3-wi1-noncurrent-lifecycle-696505809372-3ce30a5c/decision.json",
+        "byte_count": 2992,
+        "change_type": "create_or_update",
+        "content_sha256": "12d2062e67dc70e60bb7016105f6a8b620952fb35764cfd2dce51c8b6b1a66cb",
+        "line_count": 56,
+        "repo_path": "executable/actions/09-arn-aws-s3-wi1-noncurrent-lifecycle-696505809372-3ce30a5c/decision.json"
+      },
+      {
+        "bundle_path": "executable/actions/10-arn-aws-s3-security-autopilot-access-logs-696505-496f8cc3/providers.tf",
+        "byte_count": 565,
+        "change_type": "create_or_update",
+        "content_sha256": "54c07a5e1e995aa56de9afad75fb0b29c562684f915893beaacbb98b38585136",
+        "line_count": 22,
+        "repo_path": "executable/actions/10-arn-aws-s3-security-autopilot-access-logs-696505-496f8cc3/providers.tf"
+      },
+      {
+        "bundle_path": "executable/actions/10-arn-aws-s3-security-autopilot-access-logs-696505-496f8cc3/s3_cloudfront_oac_private_s3.tf",
+        "byte_count": 9442,
+        "change_type": "create_or_update",
+        "content_sha256": "0d41b8ad8c003fc3e2a07c3c3435db80180d56f0deecb2a7ea908b6e4829c658",
+        "line_count": 265,
+        "repo_path": "executable/actions/10-arn-aws-s3-security-autopilot-access-logs-696505-496f8cc3/s3_cloudfront_oac_private_s3.tf"
+      },
+      {
+        "bundle_path": "executable/actions/10-arn-aws-s3-security-autopilot-access-logs-696505-496f8cc3/scripts/cloudfront_oac_discovery.py",
+        "byte_count": 8274,
+        "change_type": "create_or_update",
+        "content_sha256": "8313aad30c7b7fe5d8252697a20c1758e905d733b8bc1c37e1d9515d65f04e13",
+        "line_count": 221,
+        "repo_path": "executable/actions/10-arn-aws-s3-security-autopilot-access-logs-696505-496f8cc3/scripts/cloudfront_oac_discovery.py"
+      },
+      {
+        "bundle_path": "executable/actions/10-arn-aws-s3-security-autopilot-access-logs-696505-496f8cc3/terraform.auto.tfvars.json",
+        "byte_count": 1716,
+        "change_type": "create_or_update",
+        "content_sha256": "a69bbd2e542f1eb9db620f37a3e2f5fd4095269f3ff2de9c7f88eb67ad38962f",
+        "line_count": 3,
+        "repo_path": "executable/actions/10-arn-aws-s3-security-autopilot-access-logs-696505-496f8cc3/terraform.auto.tfvars.json"
+      },
+      {
+        "bundle_path": "executable/actions/10-arn-aws-s3-security-autopilot-access-logs-696505-496f8cc3/README.txt",
+        "byte_count": 1875,
+        "change_type": "create_or_update",
+        "content_sha256": "cb8b531d9b3fdcdb96a0d8f3b409edd5a262aaf6dce8cb2e25039ce1d74c81d3",
+        "line_count": 44,
+        "repo_path": "executable/actions/10-arn-aws-s3-security-autopilot-access-logs-696505-496f8cc3/README.txt"
+      },
+      {
+        "bundle_path": "executable/actions/10-arn-aws-s3-security-autopilot-access-logs-696505-496f8cc3/README_ACTION.txt",
+        "byte_count": 595,
+        "change_type": "create_or_update",
+        "content_sha256": "c6d875a0d5306661455241687a0438ffee91e8eb40576610ea144280eddf1a8b",
+        "line_count": 12,
+        "repo_path": "executable/actions/10-arn-aws-s3-security-autopilot-access-logs-696505-496f8cc3/README_ACTION.txt"
+      },
+      {
+        "bundle_path": "executable/actions/10-arn-aws-s3-security-autopilot-access-logs-696505-496f8cc3/decision.json",
+        "byte_count": 4276,
+        "change_type": "create_or_update",
+        "content_sha256": "28ec530d7fd7ea7879b9291c21b636c1d9b242963d1a268222f6e1c09f47cc94",
+        "line_count": 56,
+        "repo_path": "executable/actions/10-arn-aws-s3-security-autopilot-access-logs-696505-496f8cc3/decision.json"
+      },
+      {
+        "bundle_path": "executable/actions/11-arn-aws-s3-phase2-wi1-lifecycle-696505809372-202-499adc8a/providers.tf",
+        "byte_count": 565,
+        "change_type": "create_or_update",
+        "content_sha256": "54c07a5e1e995aa56de9afad75fb0b29c562684f915893beaacbb98b38585136",
+        "line_count": 22,
+        "repo_path": "executable/actions/11-arn-aws-s3-phase2-wi1-lifecycle-696505809372-202-499adc8a/providers.tf"
+      },
+      {
+        "bundle_path": "executable/actions/11-arn-aws-s3-phase2-wi1-lifecycle-696505809372-202-499adc8a/s3_cloudfront_oac_private_s3.tf",
+        "byte_count": 9462,
+        "change_type": "create_or_update",
+        "content_sha256": "6073268bd10da4022c0a21ec6035dae72d1110c1c8fba3c7acc7c5df08020130",
+        "line_count": 265,
+        "repo_path": "executable/actions/11-arn-aws-s3-phase2-wi1-lifecycle-696505809372-202-499adc8a/s3_cloudfront_oac_private_s3.tf"
+      },
+      {
+        "bundle_path": "executable/actions/11-arn-aws-s3-phase2-wi1-lifecycle-696505809372-202-499adc8a/scripts/cloudfront_oac_discovery.py",
+        "byte_count": 8274,
+        "change_type": "create_or_update",
+        "content_sha256": "8313aad30c7b7fe5d8252697a20c1758e905d733b8bc1c37e1d9515d65f04e13",
+        "line_count": 221,
+        "repo_path": "executable/actions/11-arn-aws-s3-phase2-wi1-lifecycle-696505809372-202-499adc8a/scripts/cloudfront_oac_discovery.py"
+      },
+      {
+        "bundle_path": "executable/actions/11-arn-aws-s3-phase2-wi1-lifecycle-696505809372-202-499adc8a/terraform.auto.tfvars.json",
+        "byte_count": 414,
+        "change_type": "create_or_update",
+        "content_sha256": "547562ab470a8a1ed3118c22922c89bdfdc1ed9636f75650dc0c8050088ef888",
+        "line_count": 3,
+        "repo_path": "executable/actions/11-arn-aws-s3-phase2-wi1-lifecycle-696505809372-202-499adc8a/terraform.auto.tfvars.json"
+      },
+      {
+        "bundle_path": "executable/actions/11-arn-aws-s3-phase2-wi1-lifecycle-696505809372-202-499adc8a/README.txt",
+        "byte_count": 1875,
+        "change_type": "create_or_update",
+        "content_sha256": "cb8b531d9b3fdcdb96a0d8f3b409edd5a262aaf6dce8cb2e25039ce1d74c81d3",
+        "line_count": 44,
+        "repo_path": "executable/actions/11-arn-aws-s3-phase2-wi1-lifecycle-696505809372-202-499adc8a/README.txt"
+      },
+      {
+        "bundle_path": "executable/actions/11-arn-aws-s3-phase2-wi1-lifecycle-696505809372-202-499adc8a/README_ACTION.txt",
+        "byte_count": 595,
+        "change_type": "create_or_update",
+        "content_sha256": "020d2e9cab13b8bcd791c5daf114301ad42f63e3931989aeb265f53ae0c63b6b",
+        "line_count": 12,
+        "repo_path": "executable/actions/11-arn-aws-s3-phase2-wi1-lifecycle-696505809372-202-499adc8a/README_ACTION.txt"
+      },
+      {
+        "bundle_path": "executable/actions/11-arn-aws-s3-phase2-wi1-lifecycle-696505809372-202-499adc8a/decision.json",
+        "byte_count": 2984,
+        "change_type": "create_or_update",
+        "content_sha256": "4a174497d9841b732b930a8beac2c32ecfb94a029a0efba08ad1a63c09bb1c4d",
+        "line_count": 56,
+        "repo_path": "executable/actions/11-arn-aws-s3-phase2-wi1-lifecycle-696505809372-202-499adc8a/decision.json"
+      },
+      {
+        "bundle_path": "executable/actions/12-arn-aws-s3-security-autopilot-access-logs-696505-4c631219/providers.tf",
+        "byte_count": 565,
+        "change_type": "create_or_update",
+        "content_sha256": "54c07a5e1e995aa56de9afad75fb0b29c562684f915893beaacbb98b38585136",
+        "line_count": 22,
+        "repo_path": "executable/actions/12-arn-aws-s3-security-autopilot-access-logs-696505-4c631219/providers.tf"
+      },
+      {
+        "bundle_path": "executable/actions/12-arn-aws-s3-security-autopilot-access-logs-696505-4c631219/s3_cloudfront_oac_private_s3.tf",
+        "byte_count": 9467,
+        "change_type": "create_or_update",
+        "content_sha256": "09714bada9f795f960c0650d1f9eb40f8fb9c73cc03e613c73c1af1ff36302cc",
+        "line_count": 265,
+        "repo_path": "executable/actions/12-arn-aws-s3-security-autopilot-access-logs-696505-4c631219/s3_cloudfront_oac_private_s3.tf"
+      },
+      {
+        "bundle_path": "executable/actions/12-arn-aws-s3-security-autopilot-access-logs-696505-4c631219/scripts/cloudfront_oac_discovery.py",
+        "byte_count": 8274,
+        "change_type": "create_or_update",
+        "content_sha256": "8313aad30c7b7fe5d8252697a20c1758e905d733b8bc1c37e1d9515d65f04e13",
+        "line_count": 221,
+        "repo_path": "executable/actions/12-arn-aws-s3-security-autopilot-access-logs-696505-4c631219/scripts/cloudfront_oac_discovery.py"
+      },
+      {
+        "bundle_path": "executable/actions/12-arn-aws-s3-security-autopilot-access-logs-696505-4c631219/terraform.auto.tfvars.json",
+        "byte_count": 420,
+        "change_type": "create_or_update",
+        "content_sha256": "7a41879d401745549bf6b072a29f119d6e837dc7c01d72a6a475e2821b9a8f38",
+        "line_count": 3,
+        "repo_path": "executable/actions/12-arn-aws-s3-security-autopilot-access-logs-696505-4c631219/terraform.auto.tfvars.json"
+      },
+      {
+        "bundle_path": "executable/actions/12-arn-aws-s3-security-autopilot-access-logs-696505-4c631219/README.txt",
+        "byte_count": 1875,
+        "change_type": "create_or_update",
+        "content_sha256": "cb8b531d9b3fdcdb96a0d8f3b409edd5a262aaf6dce8cb2e25039ce1d74c81d3",
+        "line_count": 44,
+        "repo_path": "executable/actions/12-arn-aws-s3-security-autopilot-access-logs-696505-4c631219/README.txt"
+      },
+      {
+        "bundle_path": "executable/actions/12-arn-aws-s3-security-autopilot-access-logs-696505-4c631219/README_ACTION.txt",
+        "byte_count": 594,
+        "change_type": "create_or_update",
+        "content_sha256": "45bde24ad74e4eee4cc99bde77d2d1fe8585143c1cb1b780db0ffdc167eb09f1",
+        "line_count": 12,
+        "repo_path": "executable/actions/12-arn-aws-s3-security-autopilot-access-logs-696505-4c631219/README_ACTION.txt"
+      },
+      {
+        "bundle_path": "executable/actions/12-arn-aws-s3-security-autopilot-access-logs-696505-4c631219/decision.json",
+        "byte_count": 2992,
+        "change_type": "create_or_update",
+        "content_sha256": "a618e2510250c387f02817b153781a09799499ac290c64ad508b3c8dcd6611a3",
+        "line_count": 56,
+        "repo_path": "executable/actions/12-arn-aws-s3-security-autopilot-access-logs-696505-4c631219/decision.json"
+      },
+      {
+        "bundle_path": "executable/actions/13-arn-aws-s3-sa-wi5-site-696505809372-20260328t164-51f0f65a/providers.tf",
+        "byte_count": 565,
+        "change_type": "create_or_update",
+        "content_sha256": "54c07a5e1e995aa56de9afad75fb0b29c562684f915893beaacbb98b38585136",
+        "line_count": 22,
+        "repo_path": "executable/actions/13-arn-aws-s3-sa-wi5-site-696505809372-20260328t164-51f0f65a/providers.tf"
+      },
+      {
+        "bundle_path": "executable/actions/13-arn-aws-s3-sa-wi5-site-696505809372-20260328t164-51f0f65a/s3_cloudfront_oac_private_s3.tf",
+        "byte_count": 9424,
+        "change_type": "create_or_update",
+        "content_sha256": "3272d0940dcbe0ca3d45cea7728ad3a56dbde3c0bb9199175548dcc85d76702a",
+        "line_count": 265,
+        "repo_path": "executable/actions/13-arn-aws-s3-sa-wi5-site-696505809372-20260328t164-51f0f65a/s3_cloudfront_oac_private_s3.tf"
+      },
+      {
+        "bundle_path": "executable/actions/13-arn-aws-s3-sa-wi5-site-696505809372-20260328t164-51f0f65a/scripts/cloudfront_oac_discovery.py",
+        "byte_count": 8274,
+        "change_type": "create_or_update",
+        "content_sha256": "8313aad30c7b7fe5d8252697a20c1758e905d733b8bc1c37e1d9515d65f04e13",
+        "line_count": 221,
+        "repo_path": "executable/actions/13-arn-aws-s3-sa-wi5-site-696505809372-20260328t164-51f0f65a/scripts/cloudfront_oac_discovery.py"
+      },
+      {
+        "bundle_path": "executable/actions/13-arn-aws-s3-sa-wi5-site-696505809372-20260328t164-51f0f65a/README.txt",
+        "byte_count": 1875,
+        "change_type": "create_or_update",
+        "content_sha256": "cb8b531d9b3fdcdb96a0d8f3b409edd5a262aaf6dce8cb2e25039ce1d74c81d3",
+        "line_count": 44,
+        "repo_path": "executable/actions/13-arn-aws-s3-sa-wi5-site-696505809372-20260328t164-51f0f65a/README.txt"
+      },
+      {
+        "bundle_path": "executable/actions/13-arn-aws-s3-sa-wi5-site-696505809372-20260328t164-51f0f65a/README_ACTION.txt",
+        "byte_count": 595,
+        "change_type": "create_or_update",
+        "content_sha256": "63f6c464a5660fa2d0a245733ad502e6d54303cb0b923f97021283a8a8834fa1",
+        "line_count": 12,
+        "repo_path": "executable/actions/13-arn-aws-s3-sa-wi5-site-696505809372-20260328t164-51f0f65a/README_ACTION.txt"
+      },
+      {
+        "bundle_path": "executable/actions/13-arn-aws-s3-sa-wi5-site-696505809372-20260328t164-51f0f65a/decision.json",
+        "byte_count": 2553,
+        "change_type": "create_or_update",
+        "content_sha256": "2b320ba90592d63f606b9261bd02f7edf069e6250691022b018c001176ca86d3",
+        "line_count": 55,
+        "repo_path": "executable/actions/13-arn-aws-s3-sa-wi5-site-696505809372-20260328t164-51f0f65a/decision.json"
+      },
+      {
+        "bundle_path": "executable/actions/14-arn-aws-s3-security-autopilot-dev-serverless-src-5b77d9d9/providers.tf",
+        "byte_count": 565,
+        "change_type": "create_or_update",
+        "content_sha256": "54c07a5e1e995aa56de9afad75fb0b29c562684f915893beaacbb98b38585136",
+        "line_count": 22,
+        "repo_path": "executable/actions/14-arn-aws-s3-security-autopilot-dev-serverless-src-5b77d9d9/providers.tf"
+      },
+      {
+        "bundle_path": "executable/actions/14-arn-aws-s3-security-autopilot-dev-serverless-src-5b77d9d9/s3_cloudfront_oac_private_s3.tf",
+        "byte_count": 9466,
+        "change_type": "create_or_update",
+        "content_sha256": "68900ae6ba75c65d91f76ba7580e6f9d61f4f13f96576b8021441f04495daa75",
+        "line_count": 265,
+        "repo_path": "executable/actions/14-arn-aws-s3-security-autopilot-dev-serverless-src-5b77d9d9/s3_cloudfront_oac_private_s3.tf"
+      },
+      {
+        "bundle_path": "executable/actions/14-arn-aws-s3-security-autopilot-dev-serverless-src-5b77d9d9/scripts/cloudfront_oac_discovery.py",
+        "byte_count": 8274,
+        "change_type": "create_or_update",
+        "content_sha256": "8313aad30c7b7fe5d8252697a20c1758e905d733b8bc1c37e1d9515d65f04e13",
+        "line_count": 221,
+        "repo_path": "executable/actions/14-arn-aws-s3-security-autopilot-dev-serverless-src-5b77d9d9/scripts/cloudfront_oac_discovery.py"
+      },
+      {
+        "bundle_path": "executable/actions/14-arn-aws-s3-security-autopilot-dev-serverless-src-5b77d9d9/terraform.auto.tfvars.json",
+        "byte_count": 418,
+        "change_type": "create_or_update",
+        "content_sha256": "2f07af88a20f669a5506ebb851356527588391b13bb586ea47620f22aa0fc80b",
+        "line_count": 3,
+        "repo_path": "executable/actions/14-arn-aws-s3-security-autopilot-dev-serverless-src-5b77d9d9/terraform.auto.tfvars.json"
+      },
+      {
+        "bundle_path": "executable/actions/14-arn-aws-s3-security-autopilot-dev-serverless-src-5b77d9d9/README.txt",
+        "byte_count": 1875,
+        "change_type": "create_or_update",
+        "content_sha256": "cb8b531d9b3fdcdb96a0d8f3b409edd5a262aaf6dce8cb2e25039ce1d74c81d3",
+        "line_count": 44,
+        "repo_path": "executable/actions/14-arn-aws-s3-security-autopilot-dev-serverless-src-5b77d9d9/README.txt"
+      },
+      {
+        "bundle_path": "executable/actions/14-arn-aws-s3-security-autopilot-dev-serverless-src-5b77d9d9/README_ACTION.txt",
+        "byte_count": 595,
+        "change_type": "create_or_update",
+        "content_sha256": "e763c82318c2f3d8681f16dd5ca0843c88403951e97dd9c8f28612feeba5caa0",
+        "line_count": 12,
+        "repo_path": "executable/actions/14-arn-aws-s3-security-autopilot-dev-serverless-src-5b77d9d9/README_ACTION.txt"
+      },
+      {
+        "bundle_path": "executable/actions/14-arn-aws-s3-security-autopilot-dev-serverless-src-5b77d9d9/decision.json",
+        "byte_count": 2990,
+        "change_type": "create_or_update",
+        "content_sha256": "52f2733bd8d26cc6fba2d09286dbaba24d432c0fb59e79458fc36a3e0dee317b",
+        "line_count": 56,
+        "repo_path": "executable/actions/14-arn-aws-s3-security-autopilot-dev-serverless-src-5b77d9d9/decision.json"
+      },
+      {
+        "bundle_path": "executable/actions/15-arn-aws-s3-arch1-bucket-website-a1-696505809372--7f361ff6/providers.tf",
+        "byte_count": 565,
+        "change_type": "create_or_update",
+        "content_sha256": "54c07a5e1e995aa56de9afad75fb0b29c562684f915893beaacbb98b38585136",
+        "line_count": 22,
+        "repo_path": "executable/actions/15-arn-aws-s3-arch1-bucket-website-a1-696505809372--7f361ff6/providers.tf"
+      },
+      {
+        "bundle_path": "executable/actions/15-arn-aws-s3-arch1-bucket-website-a1-696505809372--7f361ff6/s3_cloudfront_oac_private_s3.tf",
+        "byte_count": 9460,
+        "change_type": "create_or_update",
+        "content_sha256": "9d6f6947ae4cb0c9ab68c145d7fd8a13141e54e4b6ffab4dc2835b0956d9f3c6",
+        "line_count": 265,
+        "repo_path": "executable/actions/15-arn-aws-s3-arch1-bucket-website-a1-696505809372--7f361ff6/s3_cloudfront_oac_private_s3.tf"
+      },
+      {
+        "bundle_path": "executable/actions/15-arn-aws-s3-arch1-bucket-website-a1-696505809372--7f361ff6/scripts/cloudfront_oac_discovery.py",
+        "byte_count": 8274,
+        "change_type": "create_or_update",
+        "content_sha256": "8313aad30c7b7fe5d8252697a20c1758e905d733b8bc1c37e1d9515d65f04e13",
+        "line_count": 221,
+        "repo_path": "executable/actions/15-arn-aws-s3-arch1-bucket-website-a1-696505809372--7f361ff6/scripts/cloudfront_oac_discovery.py"
+      },
+      {
+        "bundle_path": "executable/actions/15-arn-aws-s3-arch1-bucket-website-a1-696505809372--7f361ff6/terraform.auto.tfvars.json",
+        "byte_count": 412,
+        "change_type": "create_or_update",
+        "content_sha256": "d95e13464fbf4fc74d6898f77026aaabcf07331251e183265d053a2626b6fbdd",
+        "line_count": 3,
+        "repo_path": "executable/actions/15-arn-aws-s3-arch1-bucket-website-a1-696505809372--7f361ff6/terraform.auto.tfvars.json"
+      },
+      {
+        "bundle_path": "executable/actions/15-arn-aws-s3-arch1-bucket-website-a1-696505809372--7f361ff6/README.txt",
+        "byte_count": 1875,
+        "change_type": "create_or_update",
+        "content_sha256": "cb8b531d9b3fdcdb96a0d8f3b409edd5a262aaf6dce8cb2e25039ce1d74c81d3",
+        "line_count": 44,
+        "repo_path": "executable/actions/15-arn-aws-s3-arch1-bucket-website-a1-696505809372--7f361ff6/README.txt"
+      },
+      {
+        "bundle_path": "executable/actions/15-arn-aws-s3-arch1-bucket-website-a1-696505809372--7f361ff6/README_ACTION.txt",
+        "byte_count": 595,
+        "change_type": "create_or_update",
+        "content_sha256": "512d3d8b4fa5eb42e64b84ba68e24f4d6216415a117dbaca979bf9a459a46988",
+        "line_count": 12,
+        "repo_path": "executable/actions/15-arn-aws-s3-arch1-bucket-website-a1-696505809372--7f361ff6/README_ACTION.txt"
+      },
+      {
+        "bundle_path": "executable/actions/15-arn-aws-s3-arch1-bucket-website-a1-696505809372--7f361ff6/decision.json",
+        "byte_count": 2981,
+        "change_type": "create_or_update",
+        "content_sha256": "931f1eed01525ec8e6416385e890aedbc38882b649bab60ce8d39a33ec72419c",
+        "line_count": 56,
+        "repo_path": "executable/actions/15-arn-aws-s3-arch1-bucket-website-a1-696505809372--7f361ff6/decision.json"
+      },
+      {
+        "bundle_path": "executable/actions/16-arn-aws-s3-phase2-wi1-lifecycle-696505809372-202-8f162041/providers.tf",
+        "byte_count": 565,
+        "change_type": "create_or_update",
+        "content_sha256": "54c07a5e1e995aa56de9afad75fb0b29c562684f915893beaacbb98b38585136",
+        "line_count": 22,
+        "repo_path": "executable/actions/16-arn-aws-s3-phase2-wi1-lifecycle-696505809372-202-8f162041/providers.tf"
+      },
+      {
+        "bundle_path": "executable/actions/16-arn-aws-s3-phase2-wi1-lifecycle-696505809372-202-8f162041/s3_cloudfront_oac_private_s3.tf",
+        "byte_count": 9432,
+        "change_type": "create_or_update",
+        "content_sha256": "6dbb910c92f61062a53bb2c53dfcd87ae3b5c7031258c8ecd97b49e14554a558",
+        "line_count": 265,
+        "repo_path": "executable/actions/16-arn-aws-s3-phase2-wi1-lifecycle-696505809372-202-8f162041/s3_cloudfront_oac_private_s3.tf"
+      },
+      {
+        "bundle_path": "executable/actions/16-arn-aws-s3-phase2-wi1-lifecycle-696505809372-202-8f162041/scripts/cloudfront_oac_discovery.py",
+        "byte_count": 8274,
+        "change_type": "create_or_update",
+        "content_sha256": "8313aad30c7b7fe5d8252697a20c1758e905d733b8bc1c37e1d9515d65f04e13",
+        "line_count": 221,
+        "repo_path": "executable/actions/16-arn-aws-s3-phase2-wi1-lifecycle-696505809372-202-8f162041/scripts/cloudfront_oac_discovery.py"
+      },
+      {
+        "bundle_path": "executable/actions/16-arn-aws-s3-phase2-wi1-lifecycle-696505809372-202-8f162041/README.txt",
+        "byte_count": 1875,
+        "change_type": "create_or_update",
+        "content_sha256": "cb8b531d9b3fdcdb96a0d8f3b409edd5a262aaf6dce8cb2e25039ce1d74c81d3",
+        "line_count": 44,
+        "repo_path": "executable/actions/16-arn-aws-s3-phase2-wi1-lifecycle-696505809372-202-8f162041/README.txt"
+      },
+      {
+        "bundle_path": "executable/actions/16-arn-aws-s3-phase2-wi1-lifecycle-696505809372-202-8f162041/README_ACTION.txt",
+        "byte_count": 589,
+        "change_type": "create_or_update",
+        "content_sha256": "d97387816d24338d17e97232328c74d2e4c38d5fdb303c1183a7233b3b6adb79",
+        "line_count": 12,
+        "repo_path": "executable/actions/16-arn-aws-s3-phase2-wi1-lifecycle-696505809372-202-8f162041/README_ACTION.txt"
+      },
+      {
+        "bundle_path": "executable/actions/16-arn-aws-s3-phase2-wi1-lifecycle-696505809372-202-8f162041/decision.json",
+        "byte_count": 2554,
+        "change_type": "create_or_update",
+        "content_sha256": "1e971a3486ee0821b8969b78fc026e0e38c9d5150abeacdc791124b0f6b83b4b",
+        "line_count": 55,
+        "repo_path": "executable/actions/16-arn-aws-s3-phase2-wi1-lifecycle-696505809372-202-8f162041/decision.json"
+      },
+      {
+        "bundle_path": "executable/actions/17-arn-aws-s3-security-autopilot-access-logs-696505-9fa9f7b4/providers.tf",
+        "byte_count": 565,
+        "change_type": "create_or_update",
+        "content_sha256": "54c07a5e1e995aa56de9afad75fb0b29c562684f915893beaacbb98b38585136",
+        "line_count": 22,
+        "repo_path": "executable/actions/17-arn-aws-s3-security-autopilot-access-logs-696505-9fa9f7b4/providers.tf"
+      },
+      {
+        "bundle_path": "executable/actions/17-arn-aws-s3-security-autopilot-access-logs-696505-9fa9f7b4/s3_cloudfront_oac_private_s3.tf",
+        "byte_count": 9491,
+        "change_type": "create_or_update",
+        "content_sha256": "73b0bee80fb01e56fd0c38ddcd57630c1759821cd6d955998bf952aeb81f11b5",
+        "line_count": 268,
+        "repo_path": "executable/actions/17-arn-aws-s3-security-autopilot-access-logs-696505-9fa9f7b4/s3_cloudfront_oac_private_s3.tf"
+      },
+      {
+        "bundle_path": "executable/actions/17-arn-aws-s3-security-autopilot-access-logs-696505-9fa9f7b4/scripts/cloudfront_oac_discovery.py",
+        "byte_count": 8274,
+        "change_type": "create_or_update",
+        "content_sha256": "8313aad30c7b7fe5d8252697a20c1758e905d733b8bc1c37e1d9515d65f04e13",
+        "line_count": 221,
+        "repo_path": "executable/actions/17-arn-aws-s3-security-autopilot-access-logs-696505-9fa9f7b4/scripts/cloudfront_oac_discovery.py"
+      },
+      {
+        "bundle_path": "executable/actions/17-arn-aws-s3-security-autopilot-access-logs-696505-9fa9f7b4/README.txt",
+        "byte_count": 1875,
+        "change_type": "create_or_update",
+        "content_sha256": "cb8b531d9b3fdcdb96a0d8f3b409edd5a262aaf6dce8cb2e25039ce1d74c81d3",
+        "line_count": 44,
+        "repo_path": "executable/actions/17-arn-aws-s3-security-autopilot-access-logs-696505-9fa9f7b4/README.txt"
+      },
+      {
+        "bundle_path": "executable/actions/17-arn-aws-s3-security-autopilot-access-logs-696505-9fa9f7b4/README_ACTION.txt",
+        "byte_count": 725,
+        "change_type": "create_or_update",
+        "content_sha256": "277143495dbdbb39f92d07ad4b98171f22157f8e79535e157e22d1e626cf58ce",
+        "line_count": 12,
+        "repo_path": "executable/actions/17-arn-aws-s3-security-autopilot-access-logs-696505-9fa9f7b4/README_ACTION.txt"
+      },
+      {
+        "bundle_path": "executable/actions/17-arn-aws-s3-security-autopilot-access-logs-696505-9fa9f7b4/decision.json",
+        "byte_count": 2883,
+        "change_type": "create_or_update",
+        "content_sha256": "aa6927d9686e9380e42a3d4ae70525a0839d10d7f698413dfce4ebcf9814712b",
+        "line_count": 53,
+        "repo_path": "executable/actions/17-arn-aws-s3-security-autopilot-access-logs-696505-9fa9f7b4/decision.json"
+      },
+      {
+        "bundle_path": "executable/actions/18-arn-aws-s3-sa-wi5-site-696505809372-20260328t164-a76d1974/providers.tf",
+        "byte_count": 565,
+        "change_type": "create_or_update",
+        "content_sha256": "54c07a5e1e995aa56de9afad75fb0b29c562684f915893beaacbb98b38585136",
+        "line_count": 22,
+        "repo_path": "executable/actions/18-arn-aws-s3-sa-wi5-site-696505809372-20260328t164-a76d1974/providers.tf"
+      },
+      {
+        "bundle_path": "executable/actions/18-arn-aws-s3-sa-wi5-site-696505809372-20260328t164-a76d1974/s3_cloudfront_oac_private_s3.tf",
+        "byte_count": 9448,
+        "change_type": "create_or_update",
+        "content_sha256": "72620ab4e763ab000475657846e960de54fb804dce3be954ac4bd546162c882a",
+        "line_count": 265,
+        "repo_path": "executable/actions/18-arn-aws-s3-sa-wi5-site-696505809372-20260328t164-a76d1974/s3_cloudfront_oac_private_s3.tf"
+      },
+      {
+        "bundle_path": "executable/actions/18-arn-aws-s3-sa-wi5-site-696505809372-20260328t164-a76d1974/scripts/cloudfront_oac_discovery.py",
+        "byte_count": 8274,
+        "change_type": "create_or_update",
+        "content_sha256": "8313aad30c7b7fe5d8252697a20c1758e905d733b8bc1c37e1d9515d65f04e13",
+        "line_count": 221,
+        "repo_path": "executable/actions/18-arn-aws-s3-sa-wi5-site-696505809372-20260328t164-a76d1974/scripts/cloudfront_oac_discovery.py"
+      },
+      {
+        "bundle_path": "executable/actions/18-arn-aws-s3-sa-wi5-site-696505809372-20260328t164-a76d1974/terraform.auto.tfvars.json",
+        "byte_count": 400,
+        "change_type": "create_or_update",
+        "content_sha256": "dfcdad0dee2cb6ac7c7cc82b271cb8dd3b907170a881e797fdcff9efb845a5a2",
+        "line_count": 3,
+        "repo_path": "executable/actions/18-arn-aws-s3-sa-wi5-site-696505809372-20260328t164-a76d1974/terraform.auto.tfvars.json"
+      },
+      {
+        "bundle_path": "executable/actions/18-arn-aws-s3-sa-wi5-site-696505809372-20260328t164-a76d1974/README.txt",
+        "byte_count": 1875,
+        "change_type": "create_or_update",
+        "content_sha256": "cb8b531d9b3fdcdb96a0d8f3b409edd5a262aaf6dce8cb2e25039ce1d74c81d3",
+        "line_count": 44,
+        "repo_path": "executable/actions/18-arn-aws-s3-sa-wi5-site-696505809372-20260328t164-a76d1974/README.txt"
+      },
+      {
+        "bundle_path": "executable/actions/18-arn-aws-s3-sa-wi5-site-696505809372-20260328t164-a76d1974/README_ACTION.txt",
+        "byte_count": 595,
+        "change_type": "create_or_update",
+        "content_sha256": "cf03bc3eefef301fd4662ac6ead639330c187c78beef9586092a8cd8742eff1f",
+        "line_count": 12,
+        "repo_path": "executable/actions/18-arn-aws-s3-sa-wi5-site-696505809372-20260328t164-a76d1974/README_ACTION.txt"
+      },
+      {
+        "bundle_path": "executable/actions/18-arn-aws-s3-sa-wi5-site-696505809372-20260328t164-a76d1974/decision.json",
+        "byte_count": 2963,
+        "change_type": "create_or_update",
+        "content_sha256": "5fff68786ead4e7e237e2c77141ec19a4de4cd3ae86b9471c158f748976070f2",
+        "line_count": 56,
+        "repo_path": "executable/actions/18-arn-aws-s3-sa-wi5-site-696505809372-20260328t164-a76d1974/decision.json"
+      },
+      {
+        "bundle_path": "executable/actions/19-arn-aws-s3-phase2-wi1-lifecycle-696505809372-202-a781c11d/providers.tf",
+        "byte_count": 565,
+        "change_type": "create_or_update",
+        "content_sha256": "54c07a5e1e995aa56de9afad75fb0b29c562684f915893beaacbb98b38585136",
+        "line_count": 22,
+        "repo_path": "executable/actions/19-arn-aws-s3-phase2-wi1-lifecycle-696505809372-202-a781c11d/providers.tf"
+      },
+      {
+        "bundle_path": "executable/actions/19-arn-aws-s3-phase2-wi1-lifecycle-696505809372-202-a781c11d/s3_cloudfront_oac_private_s3.tf",
+        "byte_count": 9461,
+        "change_type": "create_or_update",
+        "content_sha256": "12b82e7723586246de7101497cb1ace875209b16e0f751b01b03f27698d9fb49",
+        "line_count": 265,
+        "repo_path": "executable/actions/19-arn-aws-s3-phase2-wi1-lifecycle-696505809372-202-a781c11d/s3_cloudfront_oac_private_s3.tf"
+      },
+      {
+        "bundle_path": "executable/actions/19-arn-aws-s3-phase2-wi1-lifecycle-696505809372-202-a781c11d/scripts/cloudfront_oac_discovery.py",
+        "byte_count": 8274,
+        "change_type": "create_or_update",
+        "content_sha256": "8313aad30c7b7fe5d8252697a20c1758e905d733b8bc1c37e1d9515d65f04e13",
+        "line_count": 221,
+        "repo_path": "executable/actions/19-arn-aws-s3-phase2-wi1-lifecycle-696505809372-202-a781c11d/scripts/cloudfront_oac_discovery.py"
+      },
+      {
+        "bundle_path": "executable/actions/19-arn-aws-s3-phase2-wi1-lifecycle-696505809372-202-a781c11d/terraform.auto.tfvars.json",
+        "byte_count": 414,
+        "change_type": "create_or_update",
+        "content_sha256": "ae68c46fb685c25a1d5d05fd79f48b11c9e2754f02bdec1881120b9ed13c5dfd",
+        "line_count": 3,
+        "repo_path": "executable/actions/19-arn-aws-s3-phase2-wi1-lifecycle-696505809372-202-a781c11d/terraform.auto.tfvars.json"
+      },
+      {
+        "bundle_path": "executable/actions/19-arn-aws-s3-phase2-wi1-lifecycle-696505809372-202-a781c11d/README.txt",
+        "byte_count": 1875,
+        "change_type": "create_or_update",
+        "content_sha256": "cb8b531d9b3fdcdb96a0d8f3b409edd5a262aaf6dce8cb2e25039ce1d74c81d3",
+        "line_count": 44,
+        "repo_path": "executable/actions/19-arn-aws-s3-phase2-wi1-lifecycle-696505809372-202-a781c11d/README.txt"
+      },
+      {
+        "bundle_path": "executable/actions/19-arn-aws-s3-phase2-wi1-lifecycle-696505809372-202-a781c11d/README_ACTION.txt",
+        "byte_count": 594,
+        "change_type": "create_or_update",
+        "content_sha256": "745077a17cb592f22b7484ab630ee210d23883bb4682d38c62a2dd74b2e3ba52",
+        "line_count": 12,
+        "repo_path": "executable/actions/19-arn-aws-s3-phase2-wi1-lifecycle-696505809372-202-a781c11d/README_ACTION.txt"
+      },
+      {
+        "bundle_path": "executable/actions/19-arn-aws-s3-phase2-wi1-lifecycle-696505809372-202-a781c11d/decision.json",
+        "byte_count": 2983,
+        "change_type": "create_or_update",
+        "content_sha256": "6ac6f6489a94fa51ee6499cf8c278cdfe3ccdbd0f434855ffadb3a18d108d76e",
+        "line_count": 56,
+        "repo_path": "executable/actions/19-arn-aws-s3-phase2-wi1-lifecycle-696505809372-202-a781c11d/decision.json"
+      },
+      {
+        "bundle_path": "executable/actions/20-arn-aws-s3-sa-wi13-14-nopolicy-696505809372-2026-ad9bdd8f/providers.tf",
+        "byte_count": 565,
+        "change_type": "create_or_update",
+        "content_sha256": "54c07a5e1e995aa56de9afad75fb0b29c562684f915893beaacbb98b38585136",
+        "line_count": 22,
+        "repo_path": "executable/actions/20-arn-aws-s3-sa-wi13-14-nopolicy-696505809372-2026-ad9bdd8f/providers.tf"
+      },
+      {
+        "bundle_path": "executable/actions/20-arn-aws-s3-sa-wi13-14-nopolicy-696505809372-2026-ad9bdd8f/s3_cloudfront_oac_private_s3.tf",
+        "byte_count": 9460,
+        "change_type": "create_or_update",
+        "content_sha256": "350ee4d492bb366aa915c1b7b63bbd19f20c817b2e0be6baf3b73d34de89c106",
+        "line_count": 265,
+        "repo_path": "executable/actions/20-arn-aws-s3-sa-wi13-14-nopolicy-696505809372-2026-ad9bdd8f/s3_cloudfront_oac_private_s3.tf"
+      },
+      {
+        "bundle_path": "executable/actions/20-arn-aws-s3-sa-wi13-14-nopolicy-696505809372-2026-ad9bdd8f/scripts/cloudfront_oac_discovery.py",
+        "byte_count": 8274,
+        "change_type": "create_or_update",
+        "content_sha256": "8313aad30c7b7fe5d8252697a20c1758e905d733b8bc1c37e1d9515d65f04e13",
+        "line_count": 221,
+        "repo_path": "executable/actions/20-arn-aws-s3-sa-wi13-14-nopolicy-696505809372-2026-ad9bdd8f/scripts/cloudfront_oac_discovery.py"
+      },
+      {
+        "bundle_path": "executable/actions/20-arn-aws-s3-sa-wi13-14-nopolicy-696505809372-2026-ad9bdd8f/terraform.auto.tfvars.json",
+        "byte_count": 412,
+        "change_type": "create_or_update",
+        "content_sha256": "a39fed802e5a2d7a0343832dd1911890fa2787b8a3faa54fe407d1b461d3251f",
+        "line_count": 3,
+        "repo_path": "executable/actions/20-arn-aws-s3-sa-wi13-14-nopolicy-696505809372-2026-ad9bdd8f/terraform.auto.tfvars.json"
+      },
+      {
+        "bundle_path": "executable/actions/20-arn-aws-s3-sa-wi13-14-nopolicy-696505809372-2026-ad9bdd8f/README.txt",
+        "byte_count": 1875,
+        "change_type": "create_or_update",
+        "content_sha256": "cb8b531d9b3fdcdb96a0d8f3b409edd5a262aaf6dce8cb2e25039ce1d74c81d3",
+        "line_count": 44,
+        "repo_path": "executable/actions/20-arn-aws-s3-sa-wi13-14-nopolicy-696505809372-2026-ad9bdd8f/README.txt"
+      },
+      {
+        "bundle_path": "executable/actions/20-arn-aws-s3-sa-wi13-14-nopolicy-696505809372-2026-ad9bdd8f/README_ACTION.txt",
+        "byte_count": 595,
+        "change_type": "create_or_update",
+        "content_sha256": "d4fa1e1d241ae6c7aa3ba35c13505a2580cb5d3d30178ae65da953b37980981f",
+        "line_count": 12,
+        "repo_path": "executable/actions/20-arn-aws-s3-sa-wi13-14-nopolicy-696505809372-2026-ad9bdd8f/README_ACTION.txt"
+      },
+      {
+        "bundle_path": "executable/actions/20-arn-aws-s3-sa-wi13-14-nopolicy-696505809372-2026-ad9bdd8f/decision.json",
+        "byte_count": 2981,
+        "change_type": "create_or_update",
+        "content_sha256": "071b978668fc9682e5a0aae7fd54f409312886d3998d30093a466d8a25479e06",
+        "line_count": 56,
+        "repo_path": "executable/actions/20-arn-aws-s3-sa-wi13-14-nopolicy-696505809372-2026-ad9bdd8f/decision.json"
+      },
+      {
+        "bundle_path": "executable/actions/21-arn-aws-s3-ocypheris-live-ct-20260328t181200z-eu-d03ad604/providers.tf",
+        "byte_count": 565,
+        "change_type": "create_or_update",
+        "content_sha256": "54c07a5e1e995aa56de9afad75fb0b29c562684f915893beaacbb98b38585136",
+        "line_count": 22,
+        "repo_path": "executable/actions/21-arn-aws-s3-ocypheris-live-ct-20260328t181200z-eu-d03ad604/providers.tf"
+      },
+      {
+        "bundle_path": "executable/actions/21-arn-aws-s3-ocypheris-live-ct-20260328t181200z-eu-d03ad604/s3_cloudfront_oac_private_s3.tf",
+        "byte_count": 9430,
+        "change_type": "create_or_update",
+        "content_sha256": "e4b8a35fc1f8e8e46bf2ecc18d6a2e4a823efa533ff5b5be9fa85516c25e530f",
+        "line_count": 265,
+        "repo_path": "executable/actions/21-arn-aws-s3-ocypheris-live-ct-20260328t181200z-eu-d03ad604/s3_cloudfront_oac_private_s3.tf"
+      },
+      {
+        "bundle_path": "executable/actions/21-arn-aws-s3-ocypheris-live-ct-20260328t181200z-eu-d03ad604/scripts/cloudfront_oac_discovery.py",
+        "byte_count": 8274,
+        "change_type": "create_or_update",
+        "content_sha256": "8313aad30c7b7fe5d8252697a20c1758e905d733b8bc1c37e1d9515d65f04e13",
+        "line_count": 221,
+        "repo_path": "executable/actions/21-arn-aws-s3-ocypheris-live-ct-20260328t181200z-eu-d03ad604/scripts/cloudfront_oac_discovery.py"
+      },
+      {
+        "bundle_path": "executable/actions/21-arn-aws-s3-ocypheris-live-ct-20260328t181200z-eu-d03ad604/README.txt",
+        "byte_count": 1875,
+        "change_type": "create_or_update",
+        "content_sha256": "cb8b531d9b3fdcdb96a0d8f3b409edd5a262aaf6dce8cb2e25039ce1d74c81d3",
+        "line_count": 44,
+        "repo_path": "executable/actions/21-arn-aws-s3-ocypheris-live-ct-20260328t181200z-eu-d03ad604/README.txt"
+      },
+      {
+        "bundle_path": "executable/actions/21-arn-aws-s3-ocypheris-live-ct-20260328t181200z-eu-d03ad604/README_ACTION.txt",
+        "byte_count": 667,
+        "change_type": "create_or_update",
+        "content_sha256": "e0b17b9537a7c1e52a57739ca4e64705773661c0639c7cfcc96420faa49ce6fc",
+        "line_count": 12,
+        "repo_path": "executable/actions/21-arn-aws-s3-ocypheris-live-ct-20260328t181200z-eu-d03ad604/README_ACTION.txt"
+      },
+      {
+        "bundle_path": "executable/actions/21-arn-aws-s3-ocypheris-live-ct-20260328t181200z-eu-d03ad604/decision.json",
+        "byte_count": 2925,
+        "change_type": "create_or_update",
+        "content_sha256": "d68248c7eca160785c1f4a86854a4e407d311f39c17999ea8b1fa100e30236c1",
+        "line_count": 55,
+        "repo_path": "executable/actions/21-arn-aws-s3-ocypheris-live-ct-20260328t181200z-eu-d03ad604/decision.json"
+      },
+      {
+        "bundle_path": "executable/actions/22-arn-aws-s3-sa-wi13-14-nopolicy-696505809372-2026-d3cf0cc7/providers.tf",
+        "byte_count": 565,
+        "change_type": "create_or_update",
+        "content_sha256": "54c07a5e1e995aa56de9afad75fb0b29c562684f915893beaacbb98b38585136",
+        "line_count": 22,
+        "repo_path": "executable/actions/22-arn-aws-s3-sa-wi13-14-nopolicy-696505809372-2026-d3cf0cc7/providers.tf"
+      },
+      {
+        "bundle_path": "executable/actions/22-arn-aws-s3-sa-wi13-14-nopolicy-696505809372-2026-d3cf0cc7/s3_cloudfront_oac_private_s3.tf",
+        "byte_count": 9436,
+        "change_type": "create_or_update",
+        "content_sha256": "3078b5d4d74aa8a97be1f8ce3bfa635bd8ca2bcea9290c1b043ce3acf94bf35f",
+        "line_count": 265,
+        "repo_path": "executable/actions/22-arn-aws-s3-sa-wi13-14-nopolicy-696505809372-2026-d3cf0cc7/s3_cloudfront_oac_private_s3.tf"
+      },
+      {
+        "bundle_path": "executable/actions/22-arn-aws-s3-sa-wi13-14-nopolicy-696505809372-2026-d3cf0cc7/scripts/cloudfront_oac_discovery.py",
+        "byte_count": 8274,
+        "change_type": "create_or_update",
+        "content_sha256": "8313aad30c7b7fe5d8252697a20c1758e905d733b8bc1c37e1d9515d65f04e13",
+        "line_count": 221,
+        "repo_path": "executable/actions/22-arn-aws-s3-sa-wi13-14-nopolicy-696505809372-2026-d3cf0cc7/scripts/cloudfront_oac_discovery.py"
+      },
+      {
+        "bundle_path": "executable/actions/22-arn-aws-s3-sa-wi13-14-nopolicy-696505809372-2026-d3cf0cc7/terraform.auto.tfvars.json",
+        "byte_count": 85,
+        "change_type": "create_or_update",
+        "content_sha256": "f4e39c76ae082742a5e1dca7050581219218920fdbe0d6327d7d17025ef61d10",
+        "line_count": 3,
+        "repo_path": "executable/actions/22-arn-aws-s3-sa-wi13-14-nopolicy-696505809372-2026-d3cf0cc7/terraform.auto.tfvars.json"
+      },
+      {
+        "bundle_path": "executable/actions/22-arn-aws-s3-sa-wi13-14-nopolicy-696505809372-2026-d3cf0cc7/README.txt",
+        "byte_count": 1875,
+        "change_type": "create_or_update",
+        "content_sha256": "cb8b531d9b3fdcdb96a0d8f3b409edd5a262aaf6dce8cb2e25039ce1d74c81d3",
+        "line_count": 44,
+        "repo_path": "executable/actions/22-arn-aws-s3-sa-wi13-14-nopolicy-696505809372-2026-d3cf0cc7/README.txt"
+      },
+      {
+        "bundle_path": "executable/actions/22-arn-aws-s3-sa-wi13-14-nopolicy-696505809372-2026-d3cf0cc7/README_ACTION.txt",
+        "byte_count": 595,
+        "change_type": "create_or_update",
+        "content_sha256": "3fa7a9ea1cd49744e7709549481fe8a85d7ec35d46045bcda08fdeeacce1477c",
+        "line_count": 12,
+        "repo_path": "executable/actions/22-arn-aws-s3-sa-wi13-14-nopolicy-696505809372-2026-d3cf0cc7/README_ACTION.txt"
+      },
+      {
+        "bundle_path": "executable/actions/22-arn-aws-s3-sa-wi13-14-nopolicy-696505809372-2026-d3cf0cc7/decision.json",
+        "byte_count": 2982,
+        "change_type": "create_or_update",
+        "content_sha256": "2c1582d094d3d59b4dd84af2e33056365cf10ded584dab0750a54709633959dc",
+        "line_count": 56,
+        "repo_path": "executable/actions/22-arn-aws-s3-sa-wi13-14-nopolicy-696505809372-2026-d3cf0cc7/decision.json"
+      },
+      {
+        "bundle_path": "executable/actions/23-arn-aws-s3-arch1-bucket-website-a1-696505809372--da0d429e/providers.tf",
+        "byte_count": 565,
+        "change_type": "create_or_update",
+        "content_sha256": "54c07a5e1e995aa56de9afad75fb0b29c562684f915893beaacbb98b38585136",
+        "line_count": 22,
+        "repo_path": "executable/actions/23-arn-aws-s3-arch1-bucket-website-a1-696505809372--da0d429e/providers.tf"
+      },
+      {
+        "bundle_path": "executable/actions/23-arn-aws-s3-arch1-bucket-website-a1-696505809372--da0d429e/s3_cloudfront_oac_private_s3.tf",
+        "byte_count": 9436,
+        "change_type": "create_or_update",
+        "content_sha256": "e5f8371b8580241db7517fa9a6ca8c76f7d343b581f5e97c87c0d2c2b5c72e02",
+        "line_count": 265,
+        "repo_path": "executable/actions/23-arn-aws-s3-arch1-bucket-website-a1-696505809372--da0d429e/s3_cloudfront_oac_private_s3.tf"
+      },
+      {
+        "bundle_path": "executable/actions/23-arn-aws-s3-arch1-bucket-website-a1-696505809372--da0d429e/scripts/cloudfront_oac_discovery.py",
+        "byte_count": 8274,
+        "change_type": "create_or_update",
+        "content_sha256": "8313aad30c7b7fe5d8252697a20c1758e905d733b8bc1c37e1d9515d65f04e13",
+        "line_count": 221,
+        "repo_path": "executable/actions/23-arn-aws-s3-arch1-bucket-website-a1-696505809372--da0d429e/scripts/cloudfront_oac_discovery.py"
+      },
+      {
+        "bundle_path": "executable/actions/23-arn-aws-s3-arch1-bucket-website-a1-696505809372--da0d429e/terraform.auto.tfvars.json",
+        "byte_count": 272,
+        "change_type": "create_or_update",
+        "content_sha256": "83f4caaee48ea855402e6b28daf0ac4c0c0ec4a18d2da098a50c8f618330a725",
+        "line_count": 3,
+        "repo_path": "executable/actions/23-arn-aws-s3-arch1-bucket-website-a1-696505809372--da0d429e/terraform.auto.tfvars.json"
+      },
+      {
+        "bundle_path": "executable/actions/23-arn-aws-s3-arch1-bucket-website-a1-696505809372--da0d429e/README.txt",
+        "byte_count": 1875,
+        "change_type": "create_or_update",
+        "content_sha256": "cb8b531d9b3fdcdb96a0d8f3b409edd5a262aaf6dce8cb2e25039ce1d74c81d3",
+        "line_count": 44,
+        "repo_path": "executable/actions/23-arn-aws-s3-arch1-bucket-website-a1-696505809372--da0d429e/README.txt"
+      },
+      {
+        "bundle_path": "executable/actions/23-arn-aws-s3-arch1-bucket-website-a1-696505809372--da0d429e/README_ACTION.txt",
+        "byte_count": 595,
+        "change_type": "create_or_update",
+        "content_sha256": "6d8b07042852ab5fcc30a2aaa363549c7b1e5acccc619babdb2465141e7dca6a",
+        "line_count": 12,
+        "repo_path": "executable/actions/23-arn-aws-s3-arch1-bucket-website-a1-696505809372--da0d429e/README_ACTION.txt"
+      },
+      {
+        "bundle_path": "executable/actions/23-arn-aws-s3-arch1-bucket-website-a1-696505809372--da0d429e/decision.json",
+        "byte_count": 2930,
+        "change_type": "create_or_update",
+        "content_sha256": "6d8263b8b40cadd523b630609b1617b9e0f69b63d5b90e819549370f81b1d9ca",
+        "line_count": 57,
+        "repo_path": "executable/actions/23-arn-aws-s3-arch1-bucket-website-a1-696505809372--da0d429e/decision.json"
+      },
+      {
+        "bundle_path": "executable/actions/24-arn-aws-s3-security-autopilot-access-logs-696505-dda812ab/providers.tf",
+        "byte_count": 565,
+        "change_type": "create_or_update",
+        "content_sha256": "54c07a5e1e995aa56de9afad75fb0b29c562684f915893beaacbb98b38585136",
+        "line_count": 22,
+        "repo_path": "executable/actions/24-arn-aws-s3-security-autopilot-access-logs-696505-dda812ab/providers.tf"
+      },
+      {
+        "bundle_path": "executable/actions/24-arn-aws-s3-security-autopilot-access-logs-696505-dda812ab/s3_cloudfront_oac_private_s3.tf",
+        "byte_count": 9442,
+        "change_type": "create_or_update",
+        "content_sha256": "8dfe0ce177216af4e234cc2353b4b111ece518ce67177a3559796d64915a023d",
+        "line_count": 265,
+        "repo_path": "executable/actions/24-arn-aws-s3-security-autopilot-access-logs-696505-dda812ab/s3_cloudfront_oac_private_s3.tf"
+      },
+      {
+        "bundle_path": "executable/actions/24-arn-aws-s3-security-autopilot-access-logs-696505-dda812ab/scripts/cloudfront_oac_discovery.py",
+        "byte_count": 8274,
+        "change_type": "create_or_update",
+        "content_sha256": "8313aad30c7b7fe5d8252697a20c1758e905d733b8bc1c37e1d9515d65f04e13",
+        "line_count": 221,
+        "repo_path": "executable/actions/24-arn-aws-s3-security-autopilot-access-logs-696505-dda812ab/scripts/cloudfront_oac_discovery.py"
+      },
+      {
+        "bundle_path": "executable/actions/24-arn-aws-s3-security-autopilot-access-logs-696505-dda812ab/terraform.auto.tfvars.json",
+        "byte_count": 1587,
+        "change_type": "create_or_update",
+        "content_sha256": "834f664a3fe9150da76aa095e4304bc06d4e2207796590f2aa55117f03d50858",
+        "line_count": 3,
+        "repo_path": "executable/actions/24-arn-aws-s3-security-autopilot-access-logs-696505-dda812ab/terraform.auto.tfvars.json"
+      },
+      {
+        "bundle_path": "executable/actions/24-arn-aws-s3-security-autopilot-access-logs-696505-dda812ab/README.txt",
+        "byte_count": 1875,
+        "change_type": "create_or_update",
+        "content_sha256": "cb8b531d9b3fdcdb96a0d8f3b409edd5a262aaf6dce8cb2e25039ce1d74c81d3",
+        "line_count": 44,
+        "repo_path": "executable/actions/24-arn-aws-s3-security-autopilot-access-logs-696505-dda812ab/README.txt"
+      },
+      {
+        "bundle_path": "executable/actions/24-arn-aws-s3-security-autopilot-access-logs-696505-dda812ab/README_ACTION.txt",
+        "byte_count": 595,
+        "change_type": "create_or_update",
+        "content_sha256": "7f27369c9e742182623321d6eb1ae1014e1562698ac86db3e7be30557cae30a6",
+        "line_count": 12,
+        "repo_path": "executable/actions/24-arn-aws-s3-security-autopilot-access-logs-696505-dda812ab/README_ACTION.txt"
+      },
+      {
+        "bundle_path": "executable/actions/24-arn-aws-s3-security-autopilot-access-logs-696505-dda812ab/decision.json",
+        "byte_count": 4147,
+        "change_type": "create_or_update",
+        "content_sha256": "10d49aa6190f5de3c45a74a9d04bd0bb3cd0e0088494fc0e700d039300e85154",
+        "line_count": 56,
+        "repo_path": "executable/actions/24-arn-aws-s3-security-autopilot-access-logs-696505-dda812ab/decision.json"
+      },
+      {
+        "bundle_path": "executable/actions/25-arn-aws-s3-wi1-noncurrent-lifecycle-696505809372-dedc7b1c/providers.tf",
+        "byte_count": 565,
+        "change_type": "create_or_update",
+        "content_sha256": "54c07a5e1e995aa56de9afad75fb0b29c562684f915893beaacbb98b38585136",
+        "line_count": 22,
+        "repo_path": "executable/actions/25-arn-aws-s3-wi1-noncurrent-lifecycle-696505809372-dedc7b1c/providers.tf"
+      },
+      {
+        "bundle_path": "executable/actions/25-arn-aws-s3-wi1-noncurrent-lifecycle-696505809372-dedc7b1c/s3_cloudfront_oac_private_s3.tf",
+        "byte_count": 9445,
+        "change_type": "create_or_update",
+        "content_sha256": "d01609a5b67ba3659e8b6f74d271ee1c415cd3d1be47d7b73d771e8422a39bac",
+        "line_count": 265,
+        "repo_path": "executable/actions/25-arn-aws-s3-wi1-noncurrent-lifecycle-696505809372-dedc7b1c/s3_cloudfront_oac_private_s3.tf"
+      },
+      {
+        "bundle_path": "executable/actions/25-arn-aws-s3-wi1-noncurrent-lifecycle-696505809372-dedc7b1c/scripts/cloudfront_oac_discovery.py",
+        "byte_count": 8274,
+        "change_type": "create_or_update",
+        "content_sha256": "8313aad30c7b7fe5d8252697a20c1758e905d733b8bc1c37e1d9515d65f04e13",
+        "line_count": 221,
+        "repo_path": "executable/actions/25-arn-aws-s3-wi1-noncurrent-lifecycle-696505809372-dedc7b1c/scripts/cloudfront_oac_discovery.py"
+      },
+      {
+        "bundle_path": "executable/actions/25-arn-aws-s3-wi1-noncurrent-lifecycle-696505809372-dedc7b1c/README.txt",
+        "byte_count": 1875,
+        "change_type": "create_or_update",
+        "content_sha256": "cb8b531d9b3fdcdb96a0d8f3b409edd5a262aaf6dce8cb2e25039ce1d74c81d3",
+        "line_count": 44,
+        "repo_path": "executable/actions/25-arn-aws-s3-wi1-noncurrent-lifecycle-696505809372-dedc7b1c/README.txt"
+      },
+      {
+        "bundle_path": "executable/actions/25-arn-aws-s3-wi1-noncurrent-lifecycle-696505809372-dedc7b1c/README_ACTION.txt",
+        "byte_count": 668,
+        "change_type": "create_or_update",
+        "content_sha256": "57dfc2b1da21e7abf46a9a472d0a28c5ac1927c6c80214a573131cfe68248ec7",
+        "line_count": 12,
+        "repo_path": "executable/actions/25-arn-aws-s3-wi1-noncurrent-lifecycle-696505809372-dedc7b1c/README_ACTION.txt"
+      },
+      {
+        "bundle_path": "executable/actions/25-arn-aws-s3-wi1-noncurrent-lifecycle-696505809372-dedc7b1c/decision.json",
+        "byte_count": 2940,
+        "change_type": "create_or_update",
+        "content_sha256": "54b306664942acac7d8ccb216ff740423cfe0d9fe0abaa0469f8b8846d4977f7",
+        "line_count": 55,
+        "repo_path": "executable/actions/25-arn-aws-s3-wi1-noncurrent-lifecycle-696505809372-dedc7b1c/decision.json"
+      },
+      {
+        "bundle_path": "executable/actions/26-arn-aws-s3-security-autopilot-access-logs-696505-deff1612/providers.tf",
+        "byte_count": 565,
+        "change_type": "create_or_update",
+        "content_sha256": "54c07a5e1e995aa56de9afad75fb0b29c562684f915893beaacbb98b38585136",
+        "line_count": 22,
+        "repo_path": "executable/actions/26-arn-aws-s3-security-autopilot-access-logs-696505-deff1612/providers.tf"
+      },
+      {
+        "bundle_path": "executable/actions/26-arn-aws-s3-security-autopilot-access-logs-696505-deff1612/s3_cloudfront_oac_private_s3.tf",
+        "byte_count": 9465,
+        "change_type": "create_or_update",
+        "content_sha256": "e3e1a77041867470615942e22af0634cf17f52c94837de28f9c0de80fbeb3e62",
+        "line_count": 265,
+        "repo_path": "executable/actions/26-arn-aws-s3-security-autopilot-access-logs-696505-deff1612/s3_cloudfront_oac_private_s3.tf"
+      },
+      {
+        "bundle_path": "executable/actions/26-arn-aws-s3-security-autopilot-access-logs-696505-deff1612/scripts/cloudfront_oac_discovery.py",
+        "byte_count": 8274,
+        "change_type": "create_or_update",
+        "content_sha256": "8313aad30c7b7fe5d8252697a20c1758e905d733b8bc1c37e1d9515d65f04e13",
+        "line_count": 221,
+        "repo_path": "executable/actions/26-arn-aws-s3-security-autopilot-access-logs-696505-deff1612/scripts/cloudfront_oac_discovery.py"
+      },
+      {
+        "bundle_path": "executable/actions/26-arn-aws-s3-security-autopilot-access-logs-696505-deff1612/terraform.auto.tfvars.json",
+        "byte_count": 418,
+        "change_type": "create_or_update",
+        "content_sha256": "90ca44f94c17d9213a39f4240b5d3cd28fd8009817a0896e8cd91ee6f85fc88e",
+        "line_count": 3,
+        "repo_path": "executable/actions/26-arn-aws-s3-security-autopilot-access-logs-696505-deff1612/terraform.auto.tfvars.json"
+      },
+      {
+        "bundle_path": "executable/actions/26-arn-aws-s3-security-autopilot-access-logs-696505-deff1612/README.txt",
+        "byte_count": 1875,
+        "change_type": "create_or_update",
+        "content_sha256": "cb8b531d9b3fdcdb96a0d8f3b409edd5a262aaf6dce8cb2e25039ce1d74c81d3",
+        "line_count": 44,
+        "repo_path": "executable/actions/26-arn-aws-s3-security-autopilot-access-logs-696505-deff1612/README.txt"
+      },
+      {
+        "bundle_path": "executable/actions/26-arn-aws-s3-security-autopilot-access-logs-696505-deff1612/README_ACTION.txt",
+        "byte_count": 594,
+        "change_type": "create_or_update",
+        "content_sha256": "de95d0ab98757efdb054a7a4d12504f18872d671bf59fd02cd0c0a166e2125f4",
+        "line_count": 12,
+        "repo_path": "executable/actions/26-arn-aws-s3-security-autopilot-access-logs-696505-deff1612/README_ACTION.txt"
+      },
+      {
+        "bundle_path": "executable/actions/26-arn-aws-s3-security-autopilot-access-logs-696505-deff1612/decision.json",
+        "byte_count": 2989,
+        "change_type": "create_or_update",
+        "content_sha256": "25c2785be4c24c1aa21b9619bdf61f7b6315a14ece4985e93ef1ce9e4d89bf7a",
+        "line_count": 56,
+        "repo_path": "executable/actions/26-arn-aws-s3-security-autopilot-access-logs-696505-deff1612/decision.json"
+      },
+      {
+        "bundle_path": "executable/actions/27-arn-aws-s3-phase2-wi1-lifecycle-696505809372-202-dfdf129a/providers.tf",
+        "byte_count": 565,
+        "change_type": "create_or_update",
+        "content_sha256": "54c07a5e1e995aa56de9afad75fb0b29c562684f915893beaacbb98b38585136",
+        "line_count": 22,
+        "repo_path": "executable/actions/27-arn-aws-s3-phase2-wi1-lifecycle-696505809372-202-dfdf129a/providers.tf"
+      },
+      {
+        "bundle_path": "executable/actions/27-arn-aws-s3-phase2-wi1-lifecycle-696505809372-202-dfdf129a/s3_cloudfront_oac_private_s3.tf",
+        "byte_count": 9436,
+        "change_type": "create_or_update",
+        "content_sha256": "df1db9af8a443a0327f5182e233f609b93ab4a7b9e9a536e2db2fc3012227104",
+        "line_count": 265,
+        "repo_path": "executable/actions/27-arn-aws-s3-phase2-wi1-lifecycle-696505809372-202-dfdf129a/s3_cloudfront_oac_private_s3.tf"
+      },
+      {
+        "bundle_path": "executable/actions/27-arn-aws-s3-phase2-wi1-lifecycle-696505809372-202-dfdf129a/scripts/cloudfront_oac_discovery.py",
+        "byte_count": 8274,
+        "change_type": "create_or_update",
+        "content_sha256": "8313aad30c7b7fe5d8252697a20c1758e905d733b8bc1c37e1d9515d65f04e13",
+        "line_count": 221,
+        "repo_path": "executable/actions/27-arn-aws-s3-phase2-wi1-lifecycle-696505809372-202-dfdf129a/scripts/cloudfront_oac_discovery.py"
+      },
+      {
+        "bundle_path": "executable/actions/27-arn-aws-s3-phase2-wi1-lifecycle-696505809372-202-dfdf129a/README.txt",
+        "byte_count": 1875,
+        "change_type": "create_or_update",
+        "content_sha256": "cb8b531d9b3fdcdb96a0d8f3b409edd5a262aaf6dce8cb2e25039ce1d74c81d3",
+        "line_count": 44,
+        "repo_path": "executable/actions/27-arn-aws-s3-phase2-wi1-lifecycle-696505809372-202-dfdf129a/README.txt"
+      },
+      {
+        "bundle_path": "executable/actions/27-arn-aws-s3-phase2-wi1-lifecycle-696505809372-202-dfdf129a/README_ACTION.txt",
+        "byte_count": 667,
+        "change_type": "create_or_update",
+        "content_sha256": "5dff7fb472f9877d786e51bef2a5ec0a6862048ddecfe36168bbfa2861915086",
+        "line_count": 12,
+        "repo_path": "executable/actions/27-arn-aws-s3-phase2-wi1-lifecycle-696505809372-202-dfdf129a/README_ACTION.txt"
+      },
+      {
+        "bundle_path": "executable/actions/27-arn-aws-s3-phase2-wi1-lifecycle-696505809372-202-dfdf129a/decision.json",
+        "byte_count": 2931,
+        "change_type": "create_or_update",
+        "content_sha256": "234bc710e2a454e3be290bf38edb9f32c73091bb9c92892d8fe1f525741af54e",
+        "line_count": 55,
+        "repo_path": "executable/actions/27-arn-aws-s3-phase2-wi1-lifecycle-696505809372-202-dfdf129a/decision.json"
+      },
+      {
+        "bundle_path": "executable/actions/28-arn-aws-s3-phase2-wi1-lifecycle-696505809372-202-e7f23835/providers.tf",
+        "byte_count": 565,
+        "change_type": "create_or_update",
+        "content_sha256": "54c07a5e1e995aa56de9afad75fb0b29c562684f915893beaacbb98b38585136",
+        "line_count": 22,
+        "repo_path": "executable/actions/28-arn-aws-s3-phase2-wi1-lifecycle-696505809372-202-e7f23835/providers.tf"
+      },
+      {
+        "bundle_path": "executable/actions/28-arn-aws-s3-phase2-wi1-lifecycle-696505809372-202-e7f23835/s3_cloudfront_oac_private_s3.tf",
+        "byte_count": 9462,
+        "change_type": "create_or_update",
+        "content_sha256": "93f61ed90a7040fd72286e5e42fe88f138bd1515065a354c902cb44b7260fd56",
+        "line_count": 265,
+        "repo_path": "executable/actions/28-arn-aws-s3-phase2-wi1-lifecycle-696505809372-202-e7f23835/s3_cloudfront_oac_private_s3.tf"
+      },
+      {
+        "bundle_path": "executable/actions/28-arn-aws-s3-phase2-wi1-lifecycle-696505809372-202-e7f23835/scripts/cloudfront_oac_discovery.py",
+        "byte_count": 8274,
+        "change_type": "create_or_update",
+        "content_sha256": "8313aad30c7b7fe5d8252697a20c1758e905d733b8bc1c37e1d9515d65f04e13",
+        "line_count": 221,
+        "repo_path": "executable/actions/28-arn-aws-s3-phase2-wi1-lifecycle-696505809372-202-e7f23835/scripts/cloudfront_oac_discovery.py"
+      },
+      {
+        "bundle_path": "executable/actions/28-arn-aws-s3-phase2-wi1-lifecycle-696505809372-202-e7f23835/terraform.auto.tfvars.json",
+        "byte_count": 414,
+        "change_type": "create_or_update",
+        "content_sha256": "c21abbc37d75c2cbe73c67acfb575609ffecd7d9b30c5f3c460956601b4511be",
+        "line_count": 3,
+        "repo_path": "executable/actions/28-arn-aws-s3-phase2-wi1-lifecycle-696505809372-202-e7f23835/terraform.auto.tfvars.json"
+      },
+      {
+        "bundle_path": "executable/actions/28-arn-aws-s3-phase2-wi1-lifecycle-696505809372-202-e7f23835/README.txt",
+        "byte_count": 1875,
+        "change_type": "create_or_update",
+        "content_sha256": "cb8b531d9b3fdcdb96a0d8f3b409edd5a262aaf6dce8cb2e25039ce1d74c81d3",
+        "line_count": 44,
+        "repo_path": "executable/actions/28-arn-aws-s3-phase2-wi1-lifecycle-696505809372-202-e7f23835/README.txt"
+      },
+      {
+        "bundle_path": "executable/actions/28-arn-aws-s3-phase2-wi1-lifecycle-696505809372-202-e7f23835/README_ACTION.txt",
+        "byte_count": 595,
+        "change_type": "create_or_update",
+        "content_sha256": "bf71455c033c0fa47064620eeacb5dfe929b25b4dbea303337c7727129cd69e0",
+        "line_count": 12,
+        "repo_path": "executable/actions/28-arn-aws-s3-phase2-wi1-lifecycle-696505809372-202-e7f23835/README_ACTION.txt"
+      },
+      {
+        "bundle_path": "executable/actions/28-arn-aws-s3-phase2-wi1-lifecycle-696505809372-202-e7f23835/decision.json",
+        "byte_count": 2984,
+        "change_type": "create_or_update",
+        "content_sha256": "770893fdacd2656afb786dbc8195d79f9bda172d9697fe4d1e16036f71a69396",
+        "line_count": 56,
+        "repo_path": "executable/actions/28-arn-aws-s3-phase2-wi1-lifecycle-696505809372-202-e7f23835/decision.json"
+      },
+      {
+        "bundle_path": "executable/actions/29-arn-aws-s3-arch1-bucket-evidence-b1-696505809372-ed8274a5/providers.tf",
+        "byte_count": 565,
+        "change_type": "create_or_update",
+        "content_sha256": "54c07a5e1e995aa56de9afad75fb0b29c562684f915893beaacbb98b38585136",
+        "line_count": 22,
+        "repo_path": "executable/actions/29-arn-aws-s3-arch1-bucket-evidence-b1-696505809372-ed8274a5/providers.tf"
+      },
+      {
+        "bundle_path": "executable/actions/29-arn-aws-s3-arch1-bucket-evidence-b1-696505809372-ed8274a5/s3_cloudfront_oac_private_s3.tf",
+        "byte_count": 9462,
+        "change_type": "create_or_update",
+        "content_sha256": "1a59da03b8d36568097a1613c59588a96b75fba9e346c4f2f99d3889da0c90d5",
+        "line_count": 265,
+        "repo_path": "executable/actions/29-arn-aws-s3-arch1-bucket-evidence-b1-696505809372-ed8274a5/s3_cloudfront_oac_private_s3.tf"
+      },
+      {
+        "bundle_path": "executable/actions/29-arn-aws-s3-arch1-bucket-evidence-b1-696505809372-ed8274a5/scripts/cloudfront_oac_discovery.py",
+        "byte_count": 8274,
+        "change_type": "create_or_update",
+        "content_sha256": "8313aad30c7b7fe5d8252697a20c1758e905d733b8bc1c37e1d9515d65f04e13",
+        "line_count": 221,
+        "repo_path": "executable/actions/29-arn-aws-s3-arch1-bucket-evidence-b1-696505809372-ed8274a5/scripts/cloudfront_oac_discovery.py"
+      },
+      {
+        "bundle_path": "executable/actions/29-arn-aws-s3-arch1-bucket-evidence-b1-696505809372-ed8274a5/terraform.auto.tfvars.json",
+        "byte_count": 414,
+        "change_type": "create_or_update",
+        "content_sha256": "e77d443603b501b5d791821c9352d559a59748cbc8e22389e2efe9177f4d4a61",
+        "line_count": 3,
+        "repo_path": "executable/actions/29-arn-aws-s3-arch1-bucket-evidence-b1-696505809372-ed8274a5/terraform.auto.tfvars.json"
+      },
+      {
+        "bundle_path": "executable/actions/29-arn-aws-s3-arch1-bucket-evidence-b1-696505809372-ed8274a5/README.txt",
+        "byte_count": 1875,
+        "change_type": "create_or_update",
+        "content_sha256": "cb8b531d9b3fdcdb96a0d8f3b409edd5a262aaf6dce8cb2e25039ce1d74c81d3",
+        "line_count": 44,
+        "repo_path": "executable/actions/29-arn-aws-s3-arch1-bucket-evidence-b1-696505809372-ed8274a5/README.txt"
+      },
+      {
+        "bundle_path": "executable/actions/29-arn-aws-s3-arch1-bucket-evidence-b1-696505809372-ed8274a5/README_ACTION.txt",
+        "byte_count": 595,
+        "change_type": "create_or_update",
+        "content_sha256": "4c92a9e8e18682a80f90f4ff725e55102e0c69e0d0f96224b45316e9f0259047",
+        "line_count": 12,
+        "repo_path": "executable/actions/29-arn-aws-s3-arch1-bucket-evidence-b1-696505809372-ed8274a5/README_ACTION.txt"
+      },
+      {
+        "bundle_path": "executable/actions/29-arn-aws-s3-arch1-bucket-evidence-b1-696505809372-ed8274a5/decision.json",
+        "byte_count": 2984,
+        "change_type": "create_or_update",
+        "content_sha256": "a5a04f5bf9b24f8972ad3216e05de79440c6c109b6ef8ec690e6e5a1ffdccc68",
+        "line_count": 56,
+        "repo_path": "executable/actions/29-arn-aws-s3-arch1-bucket-evidence-b1-696505809372-ed8274a5/decision.json"
+      },
+      {
+        "bundle_path": "executable/actions/30-arn-aws-s3-phase2-wi1-lifecycle-696505809372-202-fb27abe2/providers.tf",
+        "byte_count": 565,
+        "change_type": "create_or_update",
+        "content_sha256": "54c07a5e1e995aa56de9afad75fb0b29c562684f915893beaacbb98b38585136",
+        "line_count": 22,
+        "repo_path": "executable/actions/30-arn-aws-s3-phase2-wi1-lifecycle-696505809372-202-fb27abe2/providers.tf"
+      },
+      {
+        "bundle_path": "executable/actions/30-arn-aws-s3-phase2-wi1-lifecycle-696505809372-202-fb27abe2/s3_cloudfront_oac_private_s3.tf",
+        "byte_count": 9437,
+        "change_type": "create_or_update",
+        "content_sha256": "821d7d5df0c66282c3557d9ae0d458f640aac17044de83c1b7697017265558ed",
+        "line_count": 265,
+        "repo_path": "executable/actions/30-arn-aws-s3-phase2-wi1-lifecycle-696505809372-202-fb27abe2/s3_cloudfront_oac_private_s3.tf"
+      },
+      {
+        "bundle_path": "executable/actions/30-arn-aws-s3-phase2-wi1-lifecycle-696505809372-202-fb27abe2/scripts/cloudfront_oac_discovery.py",
+        "byte_count": 8274,
+        "change_type": "create_or_update",
+        "content_sha256": "8313aad30c7b7fe5d8252697a20c1758e905d733b8bc1c37e1d9515d65f04e13",
+        "line_count": 221,
+        "repo_path": "executable/actions/30-arn-aws-s3-phase2-wi1-lifecycle-696505809372-202-fb27abe2/scripts/cloudfront_oac_discovery.py"
+      },
+      {
+        "bundle_path": "executable/actions/30-arn-aws-s3-phase2-wi1-lifecycle-696505809372-202-fb27abe2/README.txt",
+        "byte_count": 1875,
+        "change_type": "create_or_update",
+        "content_sha256": "cb8b531d9b3fdcdb96a0d8f3b409edd5a262aaf6dce8cb2e25039ce1d74c81d3",
+        "line_count": 44,
+        "repo_path": "executable/actions/30-arn-aws-s3-phase2-wi1-lifecycle-696505809372-202-fb27abe2/README.txt"
+      },
+      {
+        "bundle_path": "executable/actions/30-arn-aws-s3-phase2-wi1-lifecycle-696505809372-202-fb27abe2/README_ACTION.txt",
+        "byte_count": 668,
+        "change_type": "create_or_update",
+        "content_sha256": "5da26383f7446443560d3545b9e6c02c033a3a54fcb6529d8abe08658bc2525e",
+        "line_count": 12,
+        "repo_path": "executable/actions/30-arn-aws-s3-phase2-wi1-lifecycle-696505809372-202-fb27abe2/README_ACTION.txt"
+      },
+      {
+        "bundle_path": "executable/actions/30-arn-aws-s3-phase2-wi1-lifecycle-696505809372-202-fb27abe2/decision.json",
+        "byte_count": 2932,
+        "change_type": "create_or_update",
+        "content_sha256": "a37fd1e64acaf2e6d729865071fdba42217c110f5de18b481fdadf08c6d6db60",
+        "line_count": 55,
+        "repo_path": "executable/actions/30-arn-aws-s3-phase2-wi1-lifecycle-696505809372-202-fb27abe2/decision.json"
+      },
+      {
+        "bundle_path": "executable/actions/31-arn-aws-s3-arch1-bucket-evidence-b1-696505809372-fddd2631/providers.tf",
+        "byte_count": 565,
+        "change_type": "create_or_update",
+        "content_sha256": "54c07a5e1e995aa56de9afad75fb0b29c562684f915893beaacbb98b38585136",
+        "line_count": 22,
+        "repo_path": "executable/actions/31-arn-aws-s3-arch1-bucket-evidence-b1-696505809372-fddd2631/providers.tf"
+      },
+      {
+        "bundle_path": "executable/actions/31-arn-aws-s3-arch1-bucket-evidence-b1-696505809372-fddd2631/s3_cloudfront_oac_private_s3.tf",
+        "byte_count": 9438,
+        "change_type": "create_or_update",
+        "content_sha256": "ec58cc9edf18797dc4b42dcec39d4e0c839df75429ddc756960651b70aff94c9",
+        "line_count": 265,
+        "repo_path": "executable/actions/31-arn-aws-s3-arch1-bucket-evidence-b1-696505809372-fddd2631/s3_cloudfront_oac_private_s3.tf"
+      },
+      {
+        "bundle_path": "executable/actions/31-arn-aws-s3-arch1-bucket-evidence-b1-696505809372-fddd2631/scripts/cloudfront_oac_discovery.py",
+        "byte_count": 8274,
+        "change_type": "create_or_update",
+        "content_sha256": "8313aad30c7b7fe5d8252697a20c1758e905d733b8bc1c37e1d9515d65f04e13",
+        "line_count": 221,
+        "repo_path": "executable/actions/31-arn-aws-s3-arch1-bucket-evidence-b1-696505809372-fddd2631/scripts/cloudfront_oac_discovery.py"
+      },
+      {
+        "bundle_path": "executable/actions/31-arn-aws-s3-arch1-bucket-evidence-b1-696505809372-fddd2631/terraform.auto.tfvars.json",
+        "byte_count": 805,
+        "change_type": "create_or_update",
+        "content_sha256": "cf3576d31a1115b775729d9436ad78f5cd69847bd5e9997e8d5375650667f52e",
+        "line_count": 3,
+        "repo_path": "executable/actions/31-arn-aws-s3-arch1-bucket-evidence-b1-696505809372-fddd2631/terraform.auto.tfvars.json"
+      },
+      {
+        "bundle_path": "executable/actions/31-arn-aws-s3-arch1-bucket-evidence-b1-696505809372-fddd2631/README.txt",
+        "byte_count": 1875,
+        "change_type": "create_or_update",
+        "content_sha256": "cb8b531d9b3fdcdb96a0d8f3b409edd5a262aaf6dce8cb2e25039ce1d74c81d3",
+        "line_count": 44,
+        "repo_path": "executable/actions/31-arn-aws-s3-arch1-bucket-evidence-b1-696505809372-fddd2631/README.txt"
+      },
+      {
+        "bundle_path": "executable/actions/31-arn-aws-s3-arch1-bucket-evidence-b1-696505809372-fddd2631/README_ACTION.txt",
+        "byte_count": 595,
+        "change_type": "create_or_update",
+        "content_sha256": "0ec231ac57c08abc93bacc11c2b8ab6312b8c3bc2eb55d2f087fd8ba89af7649",
+        "line_count": 12,
+        "repo_path": "executable/actions/31-arn-aws-s3-arch1-bucket-evidence-b1-696505809372-fddd2631/README_ACTION.txt"
+      },
+      {
+        "bundle_path": "executable/actions/31-arn-aws-s3-arch1-bucket-evidence-b1-696505809372-fddd2631/decision.json",
+        "byte_count": 3705,
+        "change_type": "create_or_update",
+        "content_sha256": "f3252ffec45f68f42ad6c347ef827fd7001bc26e4f742d3899eaba172040f663",
+        "line_count": 56,
+        "repo_path": "executable/actions/31-arn-aws-s3-arch1-bucket-evidence-b1-696505809372-fddd2631/decision.json"
+      },
+      {
+        "bundle_path": "executable/actions/32-arn-aws-s3-security-autopilot-w6-envready-s311-r-abf5eb48/providers.tf",
+        "byte_count": 565,
+        "change_type": "create_or_update",
+        "content_sha256": "54c07a5e1e995aa56de9afad75fb0b29c562684f915893beaacbb98b38585136",
+        "line_count": 22,
+        "repo_path": "executable/actions/32-arn-aws-s3-security-autopilot-w6-envready-s311-r-abf5eb48/providers.tf"
+      },
+      {
+        "bundle_path": "executable/actions/32-arn-aws-s3-security-autopilot-w6-envready-s311-r-abf5eb48/s3_cloudfront_oac_private_s3.tf",
+        "byte_count": 9446,
+        "change_type": "create_or_update",
+        "content_sha256": "abbf0fa3b61be5a7a22303c2fe9b05e242c63ebaf74992f472e2479ec37b0a21",
+        "line_count": 265,
+        "repo_path": "executable/actions/32-arn-aws-s3-security-autopilot-w6-envready-s311-r-abf5eb48/s3_cloudfront_oac_private_s3.tf"
+      },
+      {
+        "bundle_path": "executable/actions/32-arn-aws-s3-security-autopilot-w6-envready-s311-r-abf5eb48/scripts/cloudfront_oac_discovery.py",
+        "byte_count": 8274,
+        "change_type": "create_or_update",
+        "content_sha256": "8313aad30c7b7fe5d8252697a20c1758e905d733b8bc1c37e1d9515d65f04e13",
+        "line_count": 221,
+        "repo_path": "executable/actions/32-arn-aws-s3-security-autopilot-w6-envready-s311-r-abf5eb48/scripts/cloudfront_oac_discovery.py"
+      },
+      {
+        "bundle_path": "executable/actions/32-arn-aws-s3-security-autopilot-w6-envready-s311-r-abf5eb48/terraform.auto.tfvars.json",
+        "byte_count": 893,
+        "change_type": "create_or_update",
+        "content_sha256": "5ac046038e4fc076d4ea15d3f974b1bfbf126747f1f1ce4b90e1126174f02b57",
+        "line_count": 3,
+        "repo_path": "executable/actions/32-arn-aws-s3-security-autopilot-w6-envready-s311-r-abf5eb48/terraform.auto.tfvars.json"
+      },
+      {
+        "bundle_path": "executable/actions/32-arn-aws-s3-security-autopilot-w6-envready-s311-r-abf5eb48/README.txt",
+        "byte_count": 1875,
+        "change_type": "create_or_update",
+        "content_sha256": "cb8b531d9b3fdcdb96a0d8f3b409edd5a262aaf6dce8cb2e25039ce1d74c81d3",
+        "line_count": 44,
+        "repo_path": "executable/actions/32-arn-aws-s3-security-autopilot-w6-envready-s311-r-abf5eb48/README.txt"
+      },
+      {
+        "bundle_path": "executable/actions/32-arn-aws-s3-security-autopilot-w6-envready-s311-r-abf5eb48/README_ACTION.txt",
+        "byte_count": 589,
+        "change_type": "create_or_update",
+        "content_sha256": "5ddf29a7b4ad0a36c84848474699f9419cf9d16de515e485feb6185da7d66e7b",
+        "line_count": 12,
+        "repo_path": "executable/actions/32-arn-aws-s3-security-autopilot-w6-envready-s311-r-abf5eb48/README_ACTION.txt"
+      },
+      {
+        "bundle_path": "executable/actions/32-arn-aws-s3-security-autopilot-w6-envready-s311-r-abf5eb48/decision.json",
+        "byte_count": 3861,
+        "change_type": "create_or_update",
+        "content_sha256": "80bfba317662c2a24c93b0804a0aead8d70db62285594e2156f60b02fabcfe7e",
+        "line_count": 57,
+        "repo_path": "executable/actions/32-arn-aws-s3-security-autopilot-w6-envready-s311-r-abf5eb48/decision.json"
+      },
+      {
+        "bundle_path": "executable/actions/33-arn-aws-s3-security-autopilot-w6-envready-s315-e-f497bc0c/providers.tf",
+        "byte_count": 565,
+        "change_type": "create_or_update",
+        "content_sha256": "54c07a5e1e995aa56de9afad75fb0b29c562684f915893beaacbb98b38585136",
+        "line_count": 22,
+        "repo_path": "executable/actions/33-arn-aws-s3-security-autopilot-w6-envready-s315-e-f497bc0c/providers.tf"
+      },
+      {
+        "bundle_path": "executable/actions/33-arn-aws-s3-security-autopilot-w6-envready-s315-e-f497bc0c/s3_cloudfront_oac_private_s3.tf",
+        "byte_count": 9442,
+        "change_type": "create_or_update",
+        "content_sha256": "ce253f6580a917a2404e07285bdb41a9da07310985cfb3f1bd663c4a5428014d",
+        "line_count": 265,
+        "repo_path": "executable/actions/33-arn-aws-s3-security-autopilot-w6-envready-s315-e-f497bc0c/s3_cloudfront_oac_private_s3.tf"
+      },
+      {
+        "bundle_path": "executable/actions/33-arn-aws-s3-security-autopilot-w6-envready-s315-e-f497bc0c/scripts/cloudfront_oac_discovery.py",
+        "byte_count": 8274,
+        "change_type": "create_or_update",
+        "content_sha256": "8313aad30c7b7fe5d8252697a20c1758e905d733b8bc1c37e1d9515d65f04e13",
+        "line_count": 221,
+        "repo_path": "executable/actions/33-arn-aws-s3-security-autopilot-w6-envready-s315-e-f497bc0c/scripts/cloudfront_oac_discovery.py"
+      },
+      {
+        "bundle_path": "executable/actions/33-arn-aws-s3-security-autopilot-w6-envready-s315-e-f497bc0c/terraform.auto.tfvars.json",
+        "byte_count": 887,
+        "change_type": "create_or_update",
+        "content_sha256": "3f8325832f760f9b41cc6013ca763b7aa77c52d28ee596de9cf70cf770d1ad0c",
+        "line_count": 3,
+        "repo_path": "executable/actions/33-arn-aws-s3-security-autopilot-w6-envready-s315-e-f497bc0c/terraform.auto.tfvars.json"
+      },
+      {
+        "bundle_path": "executable/actions/33-arn-aws-s3-security-autopilot-w6-envready-s315-e-f497bc0c/README.txt",
+        "byte_count": 1875,
+        "change_type": "create_or_update",
+        "content_sha256": "cb8b531d9b3fdcdb96a0d8f3b409edd5a262aaf6dce8cb2e25039ce1d74c81d3",
+        "line_count": 44,
+        "repo_path": "executable/actions/33-arn-aws-s3-security-autopilot-w6-envready-s315-e-f497bc0c/README.txt"
+      },
+      {
+        "bundle_path": "executable/actions/33-arn-aws-s3-security-autopilot-w6-envready-s315-e-f497bc0c/README_ACTION.txt",
+        "byte_count": 589,
+        "change_type": "create_or_update",
+        "content_sha256": "710c3c37369fb04a0d9034ce35c532b7d25f61b9bed427205b35c69f44c3518e",
+        "line_count": 12,
+        "repo_path": "executable/actions/33-arn-aws-s3-security-autopilot-w6-envready-s315-e-f497bc0c/README_ACTION.txt"
+      },
+      {
+        "bundle_path": "executable/actions/33-arn-aws-s3-security-autopilot-w6-envready-s315-e-f497bc0c/decision.json",
+        "byte_count": 3791,
+        "change_type": "create_or_update",
+        "content_sha256": "049ebaaee849d9fe20eb1703d098a0d9b80bf9e1d7167edb337d15ade34adbd0",
+        "line_count": 56,
+        "repo_path": "executable/actions/33-arn-aws-s3-security-autopilot-w6-envready-s315-e-f497bc0c/decision.json"
+      }
+    ],
+    "fingerprint_sha256": "73689f3ffdceb99ef334808b61ac461d106261061450b345aeee94a9a0d75a91",
+    "repo_target_configured": true,
+    "summary_lines": [
+      "`run_all.sh` <- `run_all.sh` (103 lines, sha256:27adde456fc1)",
+      "`replay_group_run_reports.sh` <- `replay_group_run_reports.sh` (54 lines, sha256:722cb6d7017b)",
+      "`run_actions.sh` <- `run_actions.sh` (663 lines, sha256:5f3a9a96fd5b)",
+      "`README_GROUP.txt` <- `README_GROUP.txt` (52 lines, sha256:a6ebcb515b7c)",
+      "`bundle_manifest.json` <- `bundle_manifest.json` (1897 lines, sha256:839dd89d0198)",
+      "`decision_log.md` <- `decision_log.md` (233 lines, sha256:f11f25f45977)",
+      "`finding_coverage.json` <- `finding_coverage.json` (170 lines, sha256:9fec97bad821)",
+      "`manual_guidance/actions/01-aws-account-696505809372-19337c80/README_ACTION.txt` <- `manual_guidance/actions/01-aws-account-696505809372-19337c80/README_ACTION.txt` (12 lines, sha256:19efa1c7912a)",
+      "`manual_guidance/actions/01-aws-account-696505809372-19337c80/decision.json` <- `manual_guidance/actions/01-aws-account-696505809372-19337c80/decision.json` (62 lines, sha256:a4792eee6d07)",
+      "`executable/actions/02-arn-aws-s3-security-autopilot-access-logs-696505-0ca962a2/providers.tf` <- `executable/actions/02-arn-aws-s3-security-autopilot-access-logs-696505-0ca962a2/providers.tf` (22 lines, sha256:54c07a5e1e99)",
+      "`executable/actions/02-arn-aws-s3-security-autopilot-access-logs-696505-0ca962a2/s3_cloudfront_oac_private_s3.tf` <- `executable/actions/02-arn-aws-s3-security-autopilot-access-logs-696505-0ca962a2/s3_cloudfront_oac_private_s3.tf` (265 lines, sha256:f265b195b03b)",
+      "`executable/actions/02-arn-aws-s3-security-autopilot-access-logs-696505-0ca962a2/scripts/cloudfront_oac_discovery.py` <- `executable/actions/02-arn-aws-s3-security-autopilot-access-logs-696505-0ca962a2/scripts/cloudfront_oac_discovery.py` (221 lines, sha256:8313aad30c7b)",
+      "`executable/actions/02-arn-aws-s3-security-autopilot-access-logs-696505-0ca962a2/terraform.auto.tfvars.json` <- `executable/actions/02-arn-aws-s3-security-autopilot-access-logs-696505-0ca962a2/terraform.auto.tfvars.json` (3 lines, sha256:994e55a07984)",
+      "`executable/actions/02-arn-aws-s3-security-autopilot-access-logs-696505-0ca962a2/README.txt` <- `executable/actions/02-arn-aws-s3-security-autopilot-access-logs-696505-0ca962a2/README.txt` (44 lines, sha256:cb8b531d9b3f)",
+      "`executable/actions/02-arn-aws-s3-security-autopilot-access-logs-696505-0ca962a2/README_ACTION.txt` <- `executable/actions/02-arn-aws-s3-security-autopilot-access-logs-696505-0ca962a2/README_ACTION.txt` (12 lines, sha256:4195bc13dafa)",
+      "`executable/actions/02-arn-aws-s3-security-autopilot-access-logs-696505-0ca962a2/decision.json` <- `executable/actions/02-arn-aws-s3-security-autopilot-access-logs-696505-0ca962a2/decision.json` (56 lines, sha256:5570d93b0c73)",
+      "`executable/actions/03-arn-aws-s3-security-autopilot-access-logs-696505-0dc8756d/providers.tf` <- `executable/actions/03-arn-aws-s3-security-autopilot-access-logs-696505-0dc8756d/providers.tf` (22 lines, sha256:54c07a5e1e99)",
+      "`executable/actions/03-arn-aws-s3-security-autopilot-access-logs-696505-0dc8756d/s3_cloudfront_oac_private_s3.tf` <- `executable/actions/03-arn-aws-s3-security-autopilot-access-logs-696505-0dc8756d/s3_cloudfront_oac_private_s3.tf` (265 lines, sha256:147255c4c373)",
+      "`executable/actions/03-arn-aws-s3-security-autopilot-access-logs-696505-0dc8756d/scripts/cloudfront_oac_discovery.py` <- `executable/actions/03-arn-aws-s3-security-autopilot-access-logs-696505-0dc8756d/scripts/cloudfront_oac_discovery.py` (221 lines, sha256:8313aad30c7b)",
+      "`executable/actions/03-arn-aws-s3-security-autopilot-access-logs-696505-0dc8756d/terraform.auto.tfvars.json` <- `executable/actions/03-arn-aws-s3-security-autopilot-access-logs-696505-0dc8756d/terraform.auto.tfvars.json` (3 lines, sha256:4441721ad590)",
+      "`executable/actions/03-arn-aws-s3-security-autopilot-access-logs-696505-0dc8756d/README.txt` <- `executable/actions/03-arn-aws-s3-security-autopilot-access-logs-696505-0dc8756d/README.txt` (44 lines, sha256:cb8b531d9b3f)",
+      "`executable/actions/03-arn-aws-s3-security-autopilot-access-logs-696505-0dc8756d/README_ACTION.txt` <- `executable/actions/03-arn-aws-s3-security-autopilot-access-logs-696505-0dc8756d/README_ACTION.txt` (12 lines, sha256:cc33ae03ab93)",
+      "`executable/actions/03-arn-aws-s3-security-autopilot-access-logs-696505-0dc8756d/decision.json` <- `executable/actions/03-arn-aws-s3-security-autopilot-access-logs-696505-0dc8756d/decision.json` (56 lines, sha256:7b48812487a3)",
+      "`executable/actions/04-arn-aws-s3-security-autopilot-access-logs-696505-0ff2bc8f/providers.tf` <- `executable/actions/04-arn-aws-s3-security-autopilot-access-logs-696505-0ff2bc8f/providers.tf` (22 lines, sha256:54c07a5e1e99)",
+      "`executable/actions/04-arn-aws-s3-security-autopilot-access-logs-696505-0ff2bc8f/s3_cloudfront_oac_private_s3.tf` <- `executable/actions/04-arn-aws-s3-security-autopilot-access-logs-696505-0ff2bc8f/s3_cloudfront_oac_private_s3.tf` (265 lines, sha256:250616cd6b46)",
+      "`executable/actions/04-arn-aws-s3-security-autopilot-access-logs-696505-0ff2bc8f/scripts/cloudfront_oac_discovery.py` <- `executable/actions/04-arn-aws-s3-security-autopilot-access-logs-696505-0ff2bc8f/scripts/cloudfront_oac_discovery.py` (221 lines, sha256:8313aad30c7b)",
+      "`executable/actions/04-arn-aws-s3-security-autopilot-access-logs-696505-0ff2bc8f/terraform.auto.tfvars.json` <- `executable/actions/04-arn-aws-s3-security-autopilot-access-logs-696505-0ff2bc8f/terraform.auto.tfvars.json` (3 lines, sha256:b04f15e4f381)",
+      "`executable/actions/04-arn-aws-s3-security-autopilot-access-logs-696505-0ff2bc8f/README.txt` <- `executable/actions/04-arn-aws-s3-security-autopilot-access-logs-696505-0ff2bc8f/README.txt` (44 lines, sha256:cb8b531d9b3f)",
+      "`executable/actions/04-arn-aws-s3-security-autopilot-access-logs-696505-0ff2bc8f/README_ACTION.txt` <- `executable/actions/04-arn-aws-s3-security-autopilot-access-logs-696505-0ff2bc8f/README_ACTION.txt` (12 lines, sha256:4ae47771ac00)",
+      "`executable/actions/04-arn-aws-s3-security-autopilot-access-logs-696505-0ff2bc8f/decision.json` <- `executable/actions/04-arn-aws-s3-security-autopilot-access-logs-696505-0ff2bc8f/decision.json` (56 lines, sha256:f286462f9be0)",
+      "`executable/actions/05-arn-aws-s3-security-autopilot-dev-serverless-src-1dc66e7e/providers.tf` <- `executable/actions/05-arn-aws-s3-security-autopilot-dev-serverless-src-1dc66e7e/providers.tf` (22 lines, sha256:54c07a5e1e99)",
+      "`executable/actions/05-arn-aws-s3-security-autopilot-dev-serverless-src-1dc66e7e/s3_cloudfront_oac_private_s3.tf` <- `executable/actions/05-arn-aws-s3-security-autopilot-dev-serverless-src-1dc66e7e/s3_cloudfront_oac_private_s3.tf` (265 lines, sha256:d5e49d1be8d9)",
+      "`executable/actions/05-arn-aws-s3-security-autopilot-dev-serverless-src-1dc66e7e/scripts/cloudfront_oac_discovery.py` <- `executable/actions/05-arn-aws-s3-security-autopilot-dev-serverless-src-1dc66e7e/scripts/cloudfront_oac_discovery.py` (221 lines, sha256:8313aad30c7b)",
+      "`executable/actions/05-arn-aws-s3-security-autopilot-dev-serverless-src-1dc66e7e/terraform.auto.tfvars.json` <- `executable/actions/05-arn-aws-s3-security-autopilot-dev-serverless-src-1dc66e7e/terraform.auto.tfvars.json` (3 lines, sha256:906946b22efa)",
+      "`executable/actions/05-arn-aws-s3-security-autopilot-dev-serverless-src-1dc66e7e/README.txt` <- `executable/actions/05-arn-aws-s3-security-autopilot-dev-serverless-src-1dc66e7e/README.txt` (44 lines, sha256:cb8b531d9b3f)",
+      "`executable/actions/05-arn-aws-s3-security-autopilot-dev-serverless-src-1dc66e7e/README_ACTION.txt` <- `executable/actions/05-arn-aws-s3-security-autopilot-dev-serverless-src-1dc66e7e/README_ACTION.txt` (12 lines, sha256:ac9335a2dd61)",
+      "`executable/actions/05-arn-aws-s3-security-autopilot-dev-serverless-src-1dc66e7e/decision.json` <- `executable/actions/05-arn-aws-s3-security-autopilot-dev-serverless-src-1dc66e7e/decision.json` (56 lines, sha256:29388f4e42c9)",
+      "`executable/actions/06-arn-aws-s3-sa-wi7-seed-696505809372-202603282058-21c09e7f/providers.tf` <- `executable/actions/06-arn-aws-s3-sa-wi7-seed-696505809372-202603282058-21c09e7f/providers.tf` (22 lines, sha256:54c07a5e1e99)",
+      "`executable/actions/06-arn-aws-s3-sa-wi7-seed-696505809372-202603282058-21c09e7f/s3_cloudfront_oac_private_s3.tf` <- `executable/actions/06-arn-aws-s3-sa-wi7-seed-696505809372-202603282058-21c09e7f/s3_cloudfront_oac_private_s3.tf` (265 lines, sha256:ac42576134bf)",
+      "`executable/actions/06-arn-aws-s3-sa-wi7-seed-696505809372-202603282058-21c09e7f/scripts/cloudfront_oac_discovery.py` <- `executable/actions/06-arn-aws-s3-sa-wi7-seed-696505809372-202603282058-21c09e7f/scripts/cloudfront_oac_discovery.py` (221 lines, sha256:8313aad30c7b)",
+      "`executable/actions/06-arn-aws-s3-sa-wi7-seed-696505809372-202603282058-21c09e7f/terraform.auto.tfvars.json` <- `executable/actions/06-arn-aws-s3-sa-wi7-seed-696505809372-202603282058-21c09e7f/terraform.auto.tfvars.json` (3 lines, sha256:0505bab2b1d5)",
+      "`executable/actions/06-arn-aws-s3-sa-wi7-seed-696505809372-202603282058-21c09e7f/README.txt` <- `executable/actions/06-arn-aws-s3-sa-wi7-seed-696505809372-202603282058-21c09e7f/README.txt` (44 lines, sha256:cb8b531d9b3f)",
+      "`executable/actions/06-arn-aws-s3-sa-wi7-seed-696505809372-202603282058-21c09e7f/README_ACTION.txt` <- `executable/actions/06-arn-aws-s3-sa-wi7-seed-696505809372-202603282058-21c09e7f/README_ACTION.txt` (12 lines, sha256:8724bd6b3781)",
+      "`executable/actions/06-arn-aws-s3-sa-wi7-seed-696505809372-202603282058-21c09e7f/decision.json` <- `executable/actions/06-arn-aws-s3-sa-wi7-seed-696505809372-202603282058-21c09e7f/decision.json` (56 lines, sha256:b6dfd7145d6e)",
+      "`executable/actions/07-arn-aws-s3-ocypheris-live-ct-20260328t181200z-eu-2c8ba273/providers.tf` <- `executable/actions/07-arn-aws-s3-ocypheris-live-ct-20260328t181200z-eu-2c8ba273/providers.tf` (22 lines, sha256:54c07a5e1e99)",
+      "`executable/actions/07-arn-aws-s3-ocypheris-live-ct-20260328t181200z-eu-2c8ba273/s3_cloudfront_oac_private_s3.tf` <- `executable/actions/07-arn-aws-s3-ocypheris-live-ct-20260328t181200z-eu-2c8ba273/s3_cloudfront_oac_private_s3.tf` (265 lines, sha256:1246948e76a3)",
+      "`executable/actions/07-arn-aws-s3-ocypheris-live-ct-20260328t181200z-eu-2c8ba273/scripts/cloudfront_oac_discovery.py` <- `executable/actions/07-arn-aws-s3-ocypheris-live-ct-20260328t181200z-eu-2c8ba273/scripts/cloudfront_oac_discovery.py` (221 lines, sha256:8313aad30c7b)",
+      "`executable/actions/07-arn-aws-s3-ocypheris-live-ct-20260328t181200z-eu-2c8ba273/terraform.auto.tfvars.json` <- `executable/actions/07-arn-aws-s3-ocypheris-live-ct-20260328t181200z-eu-2c8ba273/terraform.auto.tfvars.json` (3 lines, sha256:85b9fa49690f)",
+      "`executable/actions/07-arn-aws-s3-ocypheris-live-ct-20260328t181200z-eu-2c8ba273/README.txt` <- `executable/actions/07-arn-aws-s3-ocypheris-live-ct-20260328t181200z-eu-2c8ba273/README.txt` (44 lines, sha256:cb8b531d9b3f)",
+      "`executable/actions/07-arn-aws-s3-ocypheris-live-ct-20260328t181200z-eu-2c8ba273/README_ACTION.txt` <- `executable/actions/07-arn-aws-s3-ocypheris-live-ct-20260328t181200z-eu-2c8ba273/README_ACTION.txt` (12 lines, sha256:376263f14f03)",
+      "`executable/actions/07-arn-aws-s3-ocypheris-live-ct-20260328t181200z-eu-2c8ba273/decision.json` <- `executable/actions/07-arn-aws-s3-ocypheris-live-ct-20260328t181200z-eu-2c8ba273/decision.json` (56 lines, sha256:046e79cc48bb)",
+      "`executable/actions/08-arn-aws-s3-sa-wi7-seed-696505809372-202603282058-3ae05cd4/providers.tf` <- `executable/actions/08-arn-aws-s3-sa-wi7-seed-696505809372-202603282058-3ae05cd4/providers.tf` (22 lines, sha256:54c07a5e1e99)",
+      "`executable/actions/08-arn-aws-s3-sa-wi7-seed-696505809372-202603282058-3ae05cd4/s3_cloudfront_oac_private_s3.tf` <- `executable/actions/08-arn-aws-s3-sa-wi7-seed-696505809372-202603282058-3ae05cd4/s3_cloudfront_oac_private_s3.tf` (265 lines, sha256:359c0465f802)",
+      "`executable/actions/08-arn-aws-s3-sa-wi7-seed-696505809372-202603282058-3ae05cd4/scripts/cloudfront_oac_discovery.py` <- `executable/actions/08-arn-aws-s3-sa-wi7-seed-696505809372-202603282058-3ae05cd4/scripts/cloudfront_oac_discovery.py` (221 lines, sha256:8313aad30c7b)",
+      "`executable/actions/08-arn-aws-s3-sa-wi7-seed-696505809372-202603282058-3ae05cd4/README.txt` <- `executable/actions/08-arn-aws-s3-sa-wi7-seed-696505809372-202603282058-3ae05cd4/README.txt` (44 lines, sha256:cb8b531d9b3f)",
+      "`executable/actions/08-arn-aws-s3-sa-wi7-seed-696505809372-202603282058-3ae05cd4/README_ACTION.txt` <- `executable/actions/08-arn-aws-s3-sa-wi7-seed-696505809372-202603282058-3ae05cd4/README_ACTION.txt` (12 lines, sha256:c5a575f9ffa0)",
+      "`executable/actions/08-arn-aws-s3-sa-wi7-seed-696505809372-202603282058-3ae05cd4/decision.json` <- `executable/actions/08-arn-aws-s3-sa-wi7-seed-696505809372-202603282058-3ae05cd4/decision.json` (55 lines, sha256:0ebb61a93f94)",
+      "`executable/actions/09-arn-aws-s3-wi1-noncurrent-lifecycle-696505809372-3ce30a5c/providers.tf` <- `executable/actions/09-arn-aws-s3-wi1-noncurrent-lifecycle-696505809372-3ce30a5c/providers.tf` (22 lines, sha256:54c07a5e1e99)",
+      "`executable/actions/09-arn-aws-s3-wi1-noncurrent-lifecycle-696505809372-3ce30a5c/s3_cloudfront_oac_private_s3.tf` <- `executable/actions/09-arn-aws-s3-wi1-noncurrent-lifecycle-696505809372-3ce30a5c/s3_cloudfront_oac_private_s3.tf` (265 lines, sha256:32603b078f73)",
+      "`executable/actions/09-arn-aws-s3-wi1-noncurrent-lifecycle-696505809372-3ce30a5c/scripts/cloudfront_oac_discovery.py` <- `executable/actions/09-arn-aws-s3-wi1-noncurrent-lifecycle-696505809372-3ce30a5c/scripts/cloudfront_oac_discovery.py` (221 lines, sha256:8313aad30c7b)",
+      "`executable/actions/09-arn-aws-s3-wi1-noncurrent-lifecycle-696505809372-3ce30a5c/terraform.auto.tfvars.json` <- `executable/actions/09-arn-aws-s3-wi1-noncurrent-lifecycle-696505809372-3ce30a5c/terraform.auto.tfvars.json` (3 lines, sha256:4e294237176e)",
+      "`executable/actions/09-arn-aws-s3-wi1-noncurrent-lifecycle-696505809372-3ce30a5c/README.txt` <- `executable/actions/09-arn-aws-s3-wi1-noncurrent-lifecycle-696505809372-3ce30a5c/README.txt` (44 lines, sha256:cb8b531d9b3f)",
+      "`executable/actions/09-arn-aws-s3-wi1-noncurrent-lifecycle-696505809372-3ce30a5c/README_ACTION.txt` <- `executable/actions/09-arn-aws-s3-wi1-noncurrent-lifecycle-696505809372-3ce30a5c/README_ACTION.txt` (12 lines, sha256:da7fe169ec1a)",
+      "`executable/actions/09-arn-aws-s3-wi1-noncurrent-lifecycle-696505809372-3ce30a5c/decision.json` <- `executable/actions/09-arn-aws-s3-wi1-noncurrent-lifecycle-696505809372-3ce30a5c/decision.json` (56 lines, sha256:12d2062e67dc)",
+      "`executable/actions/10-arn-aws-s3-security-autopilot-access-logs-696505-496f8cc3/providers.tf` <- `executable/actions/10-arn-aws-s3-security-autopilot-access-logs-696505-496f8cc3/providers.tf` (22 lines, sha256:54c07a5e1e99)",
+      "`executable/actions/10-arn-aws-s3-security-autopilot-access-logs-696505-496f8cc3/s3_cloudfront_oac_private_s3.tf` <- `executable/actions/10-arn-aws-s3-security-autopilot-access-logs-696505-496f8cc3/s3_cloudfront_oac_private_s3.tf` (265 lines, sha256:0d41b8ad8c00)",
+      "`executable/actions/10-arn-aws-s3-security-autopilot-access-logs-696505-496f8cc3/scripts/cloudfront_oac_discovery.py` <- `executable/actions/10-arn-aws-s3-security-autopilot-access-logs-696505-496f8cc3/scripts/cloudfront_oac_discovery.py` (221 lines, sha256:8313aad30c7b)",
+      "`executable/actions/10-arn-aws-s3-security-autopilot-access-logs-696505-496f8cc3/terraform.auto.tfvars.json` <- `executable/actions/10-arn-aws-s3-security-autopilot-access-logs-696505-496f8cc3/terraform.auto.tfvars.json` (3 lines, sha256:a69bbd2e542f)",
+      "`executable/actions/10-arn-aws-s3-security-autopilot-access-logs-696505-496f8cc3/README.txt` <- `executable/actions/10-arn-aws-s3-security-autopilot-access-logs-696505-496f8cc3/README.txt` (44 lines, sha256:cb8b531d9b3f)",
+      "`executable/actions/10-arn-aws-s3-security-autopilot-access-logs-696505-496f8cc3/README_ACTION.txt` <- `executable/actions/10-arn-aws-s3-security-autopilot-access-logs-696505-496f8cc3/README_ACTION.txt` (12 lines, sha256:c6d875a0d530)",
+      "`executable/actions/10-arn-aws-s3-security-autopilot-access-logs-696505-496f8cc3/decision.json` <- `executable/actions/10-arn-aws-s3-security-autopilot-access-logs-696505-496f8cc3/decision.json` (56 lines, sha256:28ec530d7fd7)",
+      "`executable/actions/11-arn-aws-s3-phase2-wi1-lifecycle-696505809372-202-499adc8a/providers.tf` <- `executable/actions/11-arn-aws-s3-phase2-wi1-lifecycle-696505809372-202-499adc8a/providers.tf` (22 lines, sha256:54c07a5e1e99)",
+      "`executable/actions/11-arn-aws-s3-phase2-wi1-lifecycle-696505809372-202-499adc8a/s3_cloudfront_oac_private_s3.tf` <- `executable/actions/11-arn-aws-s3-phase2-wi1-lifecycle-696505809372-202-499adc8a/s3_cloudfront_oac_private_s3.tf` (265 lines, sha256:6073268bd10d)",
+      "`executable/actions/11-arn-aws-s3-phase2-wi1-lifecycle-696505809372-202-499adc8a/scripts/cloudfront_oac_discovery.py` <- `executable/actions/11-arn-aws-s3-phase2-wi1-lifecycle-696505809372-202-499adc8a/scripts/cloudfront_oac_discovery.py` (221 lines, sha256:8313aad30c7b)",
+      "`executable/actions/11-arn-aws-s3-phase2-wi1-lifecycle-696505809372-202-499adc8a/terraform.auto.tfvars.json` <- `executable/actions/11-arn-aws-s3-phase2-wi1-lifecycle-696505809372-202-499adc8a/terraform.auto.tfvars.json` (3 lines, sha256:547562ab470a)",
+      "`executable/actions/11-arn-aws-s3-phase2-wi1-lifecycle-696505809372-202-499adc8a/README.txt` <- `executable/actions/11-arn-aws-s3-phase2-wi1-lifecycle-696505809372-202-499adc8a/README.txt` (44 lines, sha256:cb8b531d9b3f)",
+      "`executable/actions/11-arn-aws-s3-phase2-wi1-lifecycle-696505809372-202-499adc8a/README_ACTION.txt` <- `executable/actions/11-arn-aws-s3-phase2-wi1-lifecycle-696505809372-202-499adc8a/README_ACTION.txt` (12 lines, sha256:020d2e9cab13)",
+      "`executable/actions/11-arn-aws-s3-phase2-wi1-lifecycle-696505809372-202-499adc8a/decision.json` <- `executable/actions/11-arn-aws-s3-phase2-wi1-lifecycle-696505809372-202-499adc8a/decision.json` (56 lines, sha256:4a174497d984)",
+      "`executable/actions/12-arn-aws-s3-security-autopilot-access-logs-696505-4c631219/providers.tf` <- `executable/actions/12-arn-aws-s3-security-autopilot-access-logs-696505-4c631219/providers.tf` (22 lines, sha256:54c07a5e1e99)",
+      "`executable/actions/12-arn-aws-s3-security-autopilot-access-logs-696505-4c631219/s3_cloudfront_oac_private_s3.tf` <- `executable/actions/12-arn-aws-s3-security-autopilot-access-logs-696505-4c631219/s3_cloudfront_oac_private_s3.tf` (265 lines, sha256:09714bada9f7)",
+      "`executable/actions/12-arn-aws-s3-security-autopilot-access-logs-696505-4c631219/scripts/cloudfront_oac_discovery.py` <- `executable/actions/12-arn-aws-s3-security-autopilot-access-logs-696505-4c631219/scripts/cloudfront_oac_discovery.py` (221 lines, sha256:8313aad30c7b)",
+      "`executable/actions/12-arn-aws-s3-security-autopilot-access-logs-696505-4c631219/terraform.auto.tfvars.json` <- `executable/actions/12-arn-aws-s3-security-autopilot-access-logs-696505-4c631219/terraform.auto.tfvars.json` (3 lines, sha256:7a41879d4017)",
+      "`executable/actions/12-arn-aws-s3-security-autopilot-access-logs-696505-4c631219/README.txt` <- `executable/actions/12-arn-aws-s3-security-autopilot-access-logs-696505-4c631219/README.txt` (44 lines, sha256:cb8b531d9b3f)",
+      "`executable/actions/12-arn-aws-s3-security-autopilot-access-logs-696505-4c631219/README_ACTION.txt` <- `executable/actions/12-arn-aws-s3-security-autopilot-access-logs-696505-4c631219/README_ACTION.txt` (12 lines, sha256:45bde24ad74e)",
+      "`executable/actions/12-arn-aws-s3-security-autopilot-access-logs-696505-4c631219/decision.json` <- `executable/actions/12-arn-aws-s3-security-autopilot-access-logs-696505-4c631219/decision.json` (56 lines, sha256:a618e2510250)",
+      "`executable/actions/13-arn-aws-s3-sa-wi5-site-696505809372-20260328t164-51f0f65a/providers.tf` <- `executable/actions/13-arn-aws-s3-sa-wi5-site-696505809372-20260328t164-51f0f65a/providers.tf` (22 lines, sha256:54c07a5e1e99)",
+      "`executable/actions/13-arn-aws-s3-sa-wi5-site-696505809372-20260328t164-51f0f65a/s3_cloudfront_oac_private_s3.tf` <- `executable/actions/13-arn-aws-s3-sa-wi5-site-696505809372-20260328t164-51f0f65a/s3_cloudfront_oac_private_s3.tf` (265 lines, sha256:3272d0940dcb)",
+      "`executable/actions/13-arn-aws-s3-sa-wi5-site-696505809372-20260328t164-51f0f65a/scripts/cloudfront_oac_discovery.py` <- `executable/actions/13-arn-aws-s3-sa-wi5-site-696505809372-20260328t164-51f0f65a/scripts/cloudfront_oac_discovery.py` (221 lines, sha256:8313aad30c7b)",
+      "`executable/actions/13-arn-aws-s3-sa-wi5-site-696505809372-20260328t164-51f0f65a/README.txt` <- `executable/actions/13-arn-aws-s3-sa-wi5-site-696505809372-20260328t164-51f0f65a/README.txt` (44 lines, sha256:cb8b531d9b3f)",
+      "`executable/actions/13-arn-aws-s3-sa-wi5-site-696505809372-20260328t164-51f0f65a/README_ACTION.txt` <- `executable/actions/13-arn-aws-s3-sa-wi5-site-696505809372-20260328t164-51f0f65a/README_ACTION.txt` (12 lines, sha256:63f6c464a566)",
+      "`executable/actions/13-arn-aws-s3-sa-wi5-site-696505809372-20260328t164-51f0f65a/decision.json` <- `executable/actions/13-arn-aws-s3-sa-wi5-site-696505809372-20260328t164-51f0f65a/decision.json` (55 lines, sha256:2b320ba90592)",
+      "`executable/actions/14-arn-aws-s3-security-autopilot-dev-serverless-src-5b77d9d9/providers.tf` <- `executable/actions/14-arn-aws-s3-security-autopilot-dev-serverless-src-5b77d9d9/providers.tf` (22 lines, sha256:54c07a5e1e99)",
+      "`executable/actions/14-arn-aws-s3-security-autopilot-dev-serverless-src-5b77d9d9/s3_cloudfront_oac_private_s3.tf` <- `executable/actions/14-arn-aws-s3-security-autopilot-dev-serverless-src-5b77d9d9/s3_cloudfront_oac_private_s3.tf` (265 lines, sha256:68900ae6ba75)",
+      "`executable/actions/14-arn-aws-s3-security-autopilot-dev-serverless-src-5b77d9d9/scripts/cloudfront_oac_discovery.py` <- `executable/actions/14-arn-aws-s3-security-autopilot-dev-serverless-src-5b77d9d9/scripts/cloudfront_oac_discovery.py` (221 lines, sha256:8313aad30c7b)",
+      "`executable/actions/14-arn-aws-s3-security-autopilot-dev-serverless-src-5b77d9d9/terraform.auto.tfvars.json` <- `executable/actions/14-arn-aws-s3-security-autopilot-dev-serverless-src-5b77d9d9/terraform.auto.tfvars.json` (3 lines, sha256:2f07af88a20f)",
+      "`executable/actions/14-arn-aws-s3-security-autopilot-dev-serverless-src-5b77d9d9/README.txt` <- `executable/actions/14-arn-aws-s3-security-autopilot-dev-serverless-src-5b77d9d9/README.txt` (44 lines, sha256:cb8b531d9b3f)",
+      "`executable/actions/14-arn-aws-s3-security-autopilot-dev-serverless-src-5b77d9d9/README_ACTION.txt` <- `executable/actions/14-arn-aws-s3-security-autopilot-dev-serverless-src-5b77d9d9/README_ACTION.txt` (12 lines, sha256:e763c82318c2)",
+      "`executable/actions/14-arn-aws-s3-security-autopilot-dev-serverless-src-5b77d9d9/decision.json` <- `executable/actions/14-arn-aws-s3-security-autopilot-dev-serverless-src-5b77d9d9/decision.json` (56 lines, sha256:52f2733bd8d2)",
+      "`executable/actions/15-arn-aws-s3-arch1-bucket-website-a1-696505809372--7f361ff6/providers.tf` <- `executable/actions/15-arn-aws-s3-arch1-bucket-website-a1-696505809372--7f361ff6/providers.tf` (22 lines, sha256:54c07a5e1e99)",
+      "`executable/actions/15-arn-aws-s3-arch1-bucket-website-a1-696505809372--7f361ff6/s3_cloudfront_oac_private_s3.tf` <- `executable/actions/15-arn-aws-s3-arch1-bucket-website-a1-696505809372--7f361ff6/s3_cloudfront_oac_private_s3.tf` (265 lines, sha256:9d6f6947ae4c)",
+      "`executable/actions/15-arn-aws-s3-arch1-bucket-website-a1-696505809372--7f361ff6/scripts/cloudfront_oac_discovery.py` <- `executable/actions/15-arn-aws-s3-arch1-bucket-website-a1-696505809372--7f361ff6/scripts/cloudfront_oac_discovery.py` (221 lines, sha256:8313aad30c7b)",
+      "`executable/actions/15-arn-aws-s3-arch1-bucket-website-a1-696505809372--7f361ff6/terraform.auto.tfvars.json` <- `executable/actions/15-arn-aws-s3-arch1-bucket-website-a1-696505809372--7f361ff6/terraform.auto.tfvars.json` (3 lines, sha256:d95e13464fbf)",
+      "`executable/actions/15-arn-aws-s3-arch1-bucket-website-a1-696505809372--7f361ff6/README.txt` <- `executable/actions/15-arn-aws-s3-arch1-bucket-website-a1-696505809372--7f361ff6/README.txt` (44 lines, sha256:cb8b531d9b3f)",
+      "`executable/actions/15-arn-aws-s3-arch1-bucket-website-a1-696505809372--7f361ff6/README_ACTION.txt` <- `executable/actions/15-arn-aws-s3-arch1-bucket-website-a1-696505809372--7f361ff6/README_ACTION.txt` (12 lines, sha256:512d3d8b4fa5)",
+      "`executable/actions/15-arn-aws-s3-arch1-bucket-website-a1-696505809372--7f361ff6/decision.json` <- `executable/actions/15-arn-aws-s3-arch1-bucket-website-a1-696505809372--7f361ff6/decision.json` (56 lines, sha256:931f1eed0152)",
+      "`executable/actions/16-arn-aws-s3-phase2-wi1-lifecycle-696505809372-202-8f162041/providers.tf` <- `executable/actions/16-arn-aws-s3-phase2-wi1-lifecycle-696505809372-202-8f162041/providers.tf` (22 lines, sha256:54c07a5e1e99)",
+      "`executable/actions/16-arn-aws-s3-phase2-wi1-lifecycle-696505809372-202-8f162041/s3_cloudfront_oac_private_s3.tf` <- `executable/actions/16-arn-aws-s3-phase2-wi1-lifecycle-696505809372-202-8f162041/s3_cloudfront_oac_private_s3.tf` (265 lines, sha256:6dbb910c92f6)",
+      "`executable/actions/16-arn-aws-s3-phase2-wi1-lifecycle-696505809372-202-8f162041/scripts/cloudfront_oac_discovery.py` <- `executable/actions/16-arn-aws-s3-phase2-wi1-lifecycle-696505809372-202-8f162041/scripts/cloudfront_oac_discovery.py` (221 lines, sha256:8313aad30c7b)",
+      "`executable/actions/16-arn-aws-s3-phase2-wi1-lifecycle-696505809372-202-8f162041/README.txt` <- `executable/actions/16-arn-aws-s3-phase2-wi1-lifecycle-696505809372-202-8f162041/README.txt` (44 lines, sha256:cb8b531d9b3f)",
+      "`executable/actions/16-arn-aws-s3-phase2-wi1-lifecycle-696505809372-202-8f162041/README_ACTION.txt` <- `executable/actions/16-arn-aws-s3-phase2-wi1-lifecycle-696505809372-202-8f162041/README_ACTION.txt` (12 lines, sha256:d97387816d24)",
+      "`executable/actions/16-arn-aws-s3-phase2-wi1-lifecycle-696505809372-202-8f162041/decision.json` <- `executable/actions/16-arn-aws-s3-phase2-wi1-lifecycle-696505809372-202-8f162041/decision.json` (55 lines, sha256:1e971a3486ee)",
+      "`executable/actions/17-arn-aws-s3-security-autopilot-access-logs-696505-9fa9f7b4/providers.tf` <- `executable/actions/17-arn-aws-s3-security-autopilot-access-logs-696505-9fa9f7b4/providers.tf` (22 lines, sha256:54c07a5e1e99)",
+      "`executable/actions/17-arn-aws-s3-security-autopilot-access-logs-696505-9fa9f7b4/s3_cloudfront_oac_private_s3.tf` <- `executable/actions/17-arn-aws-s3-security-autopilot-access-logs-696505-9fa9f7b4/s3_cloudfront_oac_private_s3.tf` (268 lines, sha256:73b0bee80fb0)",
+      "`executable/actions/17-arn-aws-s3-security-autopilot-access-logs-696505-9fa9f7b4/scripts/cloudfront_oac_discovery.py` <- `executable/actions/17-arn-aws-s3-security-autopilot-access-logs-696505-9fa9f7b4/scripts/cloudfront_oac_discovery.py` (221 lines, sha256:8313aad30c7b)",
+      "`executable/actions/17-arn-aws-s3-security-autopilot-access-logs-696505-9fa9f7b4/README.txt` <- `executable/actions/17-arn-aws-s3-security-autopilot-access-logs-696505-9fa9f7b4/README.txt` (44 lines, sha256:cb8b531d9b3f)",
+      "`executable/actions/17-arn-aws-s3-security-autopilot-access-logs-696505-9fa9f7b4/README_ACTION.txt` <- `executable/actions/17-arn-aws-s3-security-autopilot-access-logs-696505-9fa9f7b4/README_ACTION.txt` (12 lines, sha256:277143495dbd)",
+      "`executable/actions/17-arn-aws-s3-security-autopilot-access-logs-696505-9fa9f7b4/decision.json` <- `executable/actions/17-arn-aws-s3-security-autopilot-access-logs-696505-9fa9f7b4/decision.json` (53 lines, sha256:aa6927d9686e)",
+      "`executable/actions/18-arn-aws-s3-sa-wi5-site-696505809372-20260328t164-a76d1974/providers.tf` <- `executable/actions/18-arn-aws-s3-sa-wi5-site-696505809372-20260328t164-a76d1974/providers.tf` (22 lines, sha256:54c07a5e1e99)",
+      "`executable/actions/18-arn-aws-s3-sa-wi5-site-696505809372-20260328t164-a76d1974/s3_cloudfront_oac_private_s3.tf` <- `executable/actions/18-arn-aws-s3-sa-wi5-site-696505809372-20260328t164-a76d1974/s3_cloudfront_oac_private_s3.tf` (265 lines, sha256:72620ab4e763)",
+      "`executable/actions/18-arn-aws-s3-sa-wi5-site-696505809372-20260328t164-a76d1974/scripts/cloudfront_oac_discovery.py` <- `executable/actions/18-arn-aws-s3-sa-wi5-site-696505809372-20260328t164-a76d1974/scripts/cloudfront_oac_discovery.py` (221 lines, sha256:8313aad30c7b)",
+      "`executable/actions/18-arn-aws-s3-sa-wi5-site-696505809372-20260328t164-a76d1974/terraform.auto.tfvars.json` <- `executable/actions/18-arn-aws-s3-sa-wi5-site-696505809372-20260328t164-a76d1974/terraform.auto.tfvars.json` (3 lines, sha256:dfcdad0dee2c)",
+      "`executable/actions/18-arn-aws-s3-sa-wi5-site-696505809372-20260328t164-a76d1974/README.txt` <- `executable/actions/18-arn-aws-s3-sa-wi5-site-696505809372-20260328t164-a76d1974/README.txt` (44 lines, sha256:cb8b531d9b3f)",
+      "`executable/actions/18-arn-aws-s3-sa-wi5-site-696505809372-20260328t164-a76d1974/README_ACTION.txt` <- `executable/actions/18-arn-aws-s3-sa-wi5-site-696505809372-20260328t164-a76d1974/README_ACTION.txt` (12 lines, sha256:cf03bc3eefef)",
+      "`executable/actions/18-arn-aws-s3-sa-wi5-site-696505809372-20260328t164-a76d1974/decision.json` <- `executable/actions/18-arn-aws-s3-sa-wi5-site-696505809372-20260328t164-a76d1974/decision.json` (56 lines, sha256:5fff68786ead)",
+      "`executable/actions/19-arn-aws-s3-phase2-wi1-lifecycle-696505809372-202-a781c11d/providers.tf` <- `executable/actions/19-arn-aws-s3-phase2-wi1-lifecycle-696505809372-202-a781c11d/providers.tf` (22 lines, sha256:54c07a5e1e99)",
+      "`executable/actions/19-arn-aws-s3-phase2-wi1-lifecycle-696505809372-202-a781c11d/s3_cloudfront_oac_private_s3.tf` <- `executable/actions/19-arn-aws-s3-phase2-wi1-lifecycle-696505809372-202-a781c11d/s3_cloudfront_oac_private_s3.tf` (265 lines, sha256:12b82e772358)",
+      "`executable/actions/19-arn-aws-s3-phase2-wi1-lifecycle-696505809372-202-a781c11d/scripts/cloudfront_oac_discovery.py` <- `executable/actions/19-arn-aws-s3-phase2-wi1-lifecycle-696505809372-202-a781c11d/scripts/cloudfront_oac_discovery.py` (221 lines, sha256:8313aad30c7b)",
+      "`executable/actions/19-arn-aws-s3-phase2-wi1-lifecycle-696505809372-202-a781c11d/terraform.auto.tfvars.json` <- `executable/actions/19-arn-aws-s3-phase2-wi1-lifecycle-696505809372-202-a781c11d/terraform.auto.tfvars.json` (3 lines, sha256:ae68c46fb685)",
+      "`executable/actions/19-arn-aws-s3-phase2-wi1-lifecycle-696505809372-202-a781c11d/README.txt` <- `executable/actions/19-arn-aws-s3-phase2-wi1-lifecycle-696505809372-202-a781c11d/README.txt` (44 lines, sha256:cb8b531d9b3f)",
+      "`executable/actions/19-arn-aws-s3-phase2-wi1-lifecycle-696505809372-202-a781c11d/README_ACTION.txt` <- `executable/actions/19-arn-aws-s3-phase2-wi1-lifecycle-696505809372-202-a781c11d/README_ACTION.txt` (12 lines, sha256:745077a17cb5)",
+      "`executable/actions/19-arn-aws-s3-phase2-wi1-lifecycle-696505809372-202-a781c11d/decision.json` <- `executable/actions/19-arn-aws-s3-phase2-wi1-lifecycle-696505809372-202-a781c11d/decision.json` (56 lines, sha256:6ac6f6489a94)",
+      "`executable/actions/20-arn-aws-s3-sa-wi13-14-nopolicy-696505809372-2026-ad9bdd8f/providers.tf` <- `executable/actions/20-arn-aws-s3-sa-wi13-14-nopolicy-696505809372-2026-ad9bdd8f/providers.tf` (22 lines, sha256:54c07a5e1e99)",
+      "`executable/actions/20-arn-aws-s3-sa-wi13-14-nopolicy-696505809372-2026-ad9bdd8f/s3_cloudfront_oac_private_s3.tf` <- `executable/actions/20-arn-aws-s3-sa-wi13-14-nopolicy-696505809372-2026-ad9bdd8f/s3_cloudfront_oac_private_s3.tf` (265 lines, sha256:350ee4d492bb)",
+      "`executable/actions/20-arn-aws-s3-sa-wi13-14-nopolicy-696505809372-2026-ad9bdd8f/scripts/cloudfront_oac_discovery.py` <- `executable/actions/20-arn-aws-s3-sa-wi13-14-nopolicy-696505809372-2026-ad9bdd8f/scripts/cloudfront_oac_discovery.py` (221 lines, sha256:8313aad30c7b)",
+      "`executable/actions/20-arn-aws-s3-sa-wi13-14-nopolicy-696505809372-2026-ad9bdd8f/terraform.auto.tfvars.json` <- `executable/actions/20-arn-aws-s3-sa-wi13-14-nopolicy-696505809372-2026-ad9bdd8f/terraform.auto.tfvars.json` (3 lines, sha256:a39fed802e5a)",
+      "`executable/actions/20-arn-aws-s3-sa-wi13-14-nopolicy-696505809372-2026-ad9bdd8f/README.txt` <- `executable/actions/20-arn-aws-s3-sa-wi13-14-nopolicy-696505809372-2026-ad9bdd8f/README.txt` (44 lines, sha256:cb8b531d9b3f)",
+      "`executable/actions/20-arn-aws-s3-sa-wi13-14-nopolicy-696505809372-2026-ad9bdd8f/README_ACTION.txt` <- `executable/actions/20-arn-aws-s3-sa-wi13-14-nopolicy-696505809372-2026-ad9bdd8f/README_ACTION.txt` (12 lines, sha256:d4fa1e1d241a)",
+      "`executable/actions/20-arn-aws-s3-sa-wi13-14-nopolicy-696505809372-2026-ad9bdd8f/decision.json` <- `executable/actions/20-arn-aws-s3-sa-wi13-14-nopolicy-696505809372-2026-ad9bdd8f/decision.json` (56 lines, sha256:071b978668fc)",
+      "`executable/actions/21-arn-aws-s3-ocypheris-live-ct-20260328t181200z-eu-d03ad604/providers.tf` <- `executable/actions/21-arn-aws-s3-ocypheris-live-ct-20260328t181200z-eu-d03ad604/providers.tf` (22 lines, sha256:54c07a5e1e99)",
+      "`executable/actions/21-arn-aws-s3-ocypheris-live-ct-20260328t181200z-eu-d03ad604/s3_cloudfront_oac_private_s3.tf` <- `executable/actions/21-arn-aws-s3-ocypheris-live-ct-20260328t181200z-eu-d03ad604/s3_cloudfront_oac_private_s3.tf` (265 lines, sha256:e4b8a35fc1f8)",
+      "`executable/actions/21-arn-aws-s3-ocypheris-live-ct-20260328t181200z-eu-d03ad604/scripts/cloudfront_oac_discovery.py` <- `executable/actions/21-arn-aws-s3-ocypheris-live-ct-20260328t181200z-eu-d03ad604/scripts/cloudfront_oac_discovery.py` (221 lines, sha256:8313aad30c7b)",
+      "`executable/actions/21-arn-aws-s3-ocypheris-live-ct-20260328t181200z-eu-d03ad604/README.txt` <- `executable/actions/21-arn-aws-s3-ocypheris-live-ct-20260328t181200z-eu-d03ad604/README.txt` (44 lines, sha256:cb8b531d9b3f)",
+      "`executable/actions/21-arn-aws-s3-ocypheris-live-ct-20260328t181200z-eu-d03ad604/README_ACTION.txt` <- `executable/actions/21-arn-aws-s3-ocypheris-live-ct-20260328t181200z-eu-d03ad604/README_ACTION.txt` (12 lines, sha256:e0b17b9537a7)",
+      "`executable/actions/21-arn-aws-s3-ocypheris-live-ct-20260328t181200z-eu-d03ad604/decision.json` <- `executable/actions/21-arn-aws-s3-ocypheris-live-ct-20260328t181200z-eu-d03ad604/decision.json` (55 lines, sha256:d68248c7eca1)",
+      "`executable/actions/22-arn-aws-s3-sa-wi13-14-nopolicy-696505809372-2026-d3cf0cc7/providers.tf` <- `executable/actions/22-arn-aws-s3-sa-wi13-14-nopolicy-696505809372-2026-d3cf0cc7/providers.tf` (22 lines, sha256:54c07a5e1e99)",
+      "`executable/actions/22-arn-aws-s3-sa-wi13-14-nopolicy-696505809372-2026-d3cf0cc7/s3_cloudfront_oac_private_s3.tf` <- `executable/actions/22-arn-aws-s3-sa-wi13-14-nopolicy-696505809372-2026-d3cf0cc7/s3_cloudfront_oac_private_s3.tf` (265 lines, sha256:3078b5d4d74a)",
+      "`executable/actions/22-arn-aws-s3-sa-wi13-14-nopolicy-696505809372-2026-d3cf0cc7/scripts/cloudfront_oac_discovery.py` <- `executable/actions/22-arn-aws-s3-sa-wi13-14-nopolicy-696505809372-2026-d3cf0cc7/scripts/cloudfront_oac_discovery.py` (221 lines, sha256:8313aad30c7b)",
+      "`executable/actions/22-arn-aws-s3-sa-wi13-14-nopolicy-696505809372-2026-d3cf0cc7/terraform.auto.tfvars.json` <- `executable/actions/22-arn-aws-s3-sa-wi13-14-nopolicy-696505809372-2026-d3cf0cc7/terraform.auto.tfvars.json` (3 lines, sha256:f4e39c76ae08)",
+      "`executable/actions/22-arn-aws-s3-sa-wi13-14-nopolicy-696505809372-2026-d3cf0cc7/README.txt` <- `executable/actions/22-arn-aws-s3-sa-wi13-14-nopolicy-696505809372-2026-d3cf0cc7/README.txt` (44 lines, sha256:cb8b531d9b3f)",
+      "`executable/actions/22-arn-aws-s3-sa-wi13-14-nopolicy-696505809372-2026-d3cf0cc7/README_ACTION.txt` <- `executable/actions/22-arn-aws-s3-sa-wi13-14-nopolicy-696505809372-2026-d3cf0cc7/README_ACTION.txt` (12 lines, sha256:3fa7a9ea1cd4)",
+      "`executable/actions/22-arn-aws-s3-sa-wi13-14-nopolicy-696505809372-2026-d3cf0cc7/decision.json` <- `executable/actions/22-arn-aws-s3-sa-wi13-14-nopolicy-696505809372-2026-d3cf0cc7/decision.json` (56 lines, sha256:2c1582d094d3)",
+      "`executable/actions/23-arn-aws-s3-arch1-bucket-website-a1-696505809372--da0d429e/providers.tf` <- `executable/actions/23-arn-aws-s3-arch1-bucket-website-a1-696505809372--da0d429e/providers.tf` (22 lines, sha256:54c07a5e1e99)",
+      "`executable/actions/23-arn-aws-s3-arch1-bucket-website-a1-696505809372--da0d429e/s3_cloudfront_oac_private_s3.tf` <- `executable/actions/23-arn-aws-s3-arch1-bucket-website-a1-696505809372--da0d429e/s3_cloudfront_oac_private_s3.tf` (265 lines, sha256:e5f8371b8580)",
+      "`executable/actions/23-arn-aws-s3-arch1-bucket-website-a1-696505809372--da0d429e/scripts/cloudfront_oac_discovery.py` <- `executable/actions/23-arn-aws-s3-arch1-bucket-website-a1-696505809372--da0d429e/scripts/cloudfront_oac_discovery.py` (221 lines, sha256:8313aad30c7b)",
+      "`executable/actions/23-arn-aws-s3-arch1-bucket-website-a1-696505809372--da0d429e/terraform.auto.tfvars.json` <- `executable/actions/23-arn-aws-s3-arch1-bucket-website-a1-696505809372--da0d429e/terraform.auto.tfvars.json` (3 lines, sha256:83f4caaee48e)",
+      "`executable/actions/23-arn-aws-s3-arch1-bucket-website-a1-696505809372--da0d429e/README.txt` <- `executable/actions/23-arn-aws-s3-arch1-bucket-website-a1-696505809372--da0d429e/README.txt` (44 lines, sha256:cb8b531d9b3f)",
+      "`executable/actions/23-arn-aws-s3-arch1-bucket-website-a1-696505809372--da0d429e/README_ACTION.txt` <- `executable/actions/23-arn-aws-s3-arch1-bucket-website-a1-696505809372--da0d429e/README_ACTION.txt` (12 lines, sha256:6d8b07042852)",
+      "`executable/actions/23-arn-aws-s3-arch1-bucket-website-a1-696505809372--da0d429e/decision.json` <- `executable/actions/23-arn-aws-s3-arch1-bucket-website-a1-696505809372--da0d429e/decision.json` (57 lines, sha256:6d8263b8b40c)",
+      "`executable/actions/24-arn-aws-s3-security-autopilot-access-logs-696505-dda812ab/providers.tf` <- `executable/actions/24-arn-aws-s3-security-autopilot-access-logs-696505-dda812ab/providers.tf` (22 lines, sha256:54c07a5e1e99)",
+      "`executable/actions/24-arn-aws-s3-security-autopilot-access-logs-696505-dda812ab/s3_cloudfront_oac_private_s3.tf` <- `executable/actions/24-arn-aws-s3-security-autopilot-access-logs-696505-dda812ab/s3_cloudfront_oac_private_s3.tf` (265 lines, sha256:8dfe0ce17721)",
+      "`executable/actions/24-arn-aws-s3-security-autopilot-access-logs-696505-dda812ab/scripts/cloudfront_oac_discovery.py` <- `executable/actions/24-arn-aws-s3-security-autopilot-access-logs-696505-dda812ab/scripts/cloudfront_oac_discovery.py` (221 lines, sha256:8313aad30c7b)",
+      "`executable/actions/24-arn-aws-s3-security-autopilot-access-logs-696505-dda812ab/terraform.auto.tfvars.json` <- `executable/actions/24-arn-aws-s3-security-autopilot-access-logs-696505-dda812ab/terraform.auto.tfvars.json` (3 lines, sha256:834f664a3fe9)",
+      "`executable/actions/24-arn-aws-s3-security-autopilot-access-logs-696505-dda812ab/README.txt` <- `executable/actions/24-arn-aws-s3-security-autopilot-access-logs-696505-dda812ab/README.txt` (44 lines, sha256:cb8b531d9b3f)",
+      "`executable/actions/24-arn-aws-s3-security-autopilot-access-logs-696505-dda812ab/README_ACTION.txt` <- `executable/actions/24-arn-aws-s3-security-autopilot-access-logs-696505-dda812ab/README_ACTION.txt` (12 lines, sha256:7f27369c9e74)",
+      "`executable/actions/24-arn-aws-s3-security-autopilot-access-logs-696505-dda812ab/decision.json` <- `executable/actions/24-arn-aws-s3-security-autopilot-access-logs-696505-dda812ab/decision.json` (56 lines, sha256:10d49aa6190f)",
+      "`executable/actions/25-arn-aws-s3-wi1-noncurrent-lifecycle-696505809372-dedc7b1c/providers.tf` <- `executable/actions/25-arn-aws-s3-wi1-noncurrent-lifecycle-696505809372-dedc7b1c/providers.tf` (22 lines, sha256:54c07a5e1e99)",
+      "`executable/actions/25-arn-aws-s3-wi1-noncurrent-lifecycle-696505809372-dedc7b1c/s3_cloudfront_oac_private_s3.tf` <- `executable/actions/25-arn-aws-s3-wi1-noncurrent-lifecycle-696505809372-dedc7b1c/s3_cloudfront_oac_private_s3.tf` (265 lines, sha256:d01609a5b67b)",
+      "`executable/actions/25-arn-aws-s3-wi1-noncurrent-lifecycle-696505809372-dedc7b1c/scripts/cloudfront_oac_discovery.py` <- `executable/actions/25-arn-aws-s3-wi1-noncurrent-lifecycle-696505809372-dedc7b1c/scripts/cloudfront_oac_discovery.py` (221 lines, sha256:8313aad30c7b)",
+      "`executable/actions/25-arn-aws-s3-wi1-noncurrent-lifecycle-696505809372-dedc7b1c/README.txt` <- `executable/actions/25-arn-aws-s3-wi1-noncurrent-lifecycle-696505809372-dedc7b1c/README.txt` (44 lines, sha256:cb8b531d9b3f)",
+      "`executable/actions/25-arn-aws-s3-wi1-noncurrent-lifecycle-696505809372-dedc7b1c/README_ACTION.txt` <- `executable/actions/25-arn-aws-s3-wi1-noncurrent-lifecycle-696505809372-dedc7b1c/README_ACTION.txt` (12 lines, sha256:57dfc2b1da21)",
+      "`executable/actions/25-arn-aws-s3-wi1-noncurrent-lifecycle-696505809372-dedc7b1c/decision.json` <- `executable/actions/25-arn-aws-s3-wi1-noncurrent-lifecycle-696505809372-dedc7b1c/decision.json` (55 lines, sha256:54b306664942)",
+      "`executable/actions/26-arn-aws-s3-security-autopilot-access-logs-696505-deff1612/providers.tf` <- `executable/actions/26-arn-aws-s3-security-autopilot-access-logs-696505-deff1612/providers.tf` (22 lines, sha256:54c07a5e1e99)",
+      "`executable/actions/26-arn-aws-s3-security-autopilot-access-logs-696505-deff1612/s3_cloudfront_oac_private_s3.tf` <- `executable/actions/26-arn-aws-s3-security-autopilot-access-logs-696505-deff1612/s3_cloudfront_oac_private_s3.tf` (265 lines, sha256:e3e1a7704186)",
+      "`executable/actions/26-arn-aws-s3-security-autopilot-access-logs-696505-deff1612/scripts/cloudfront_oac_discovery.py` <- `executable/actions/26-arn-aws-s3-security-autopilot-access-logs-696505-deff1612/scripts/cloudfront_oac_discovery.py` (221 lines, sha256:8313aad30c7b)",
+      "`executable/actions/26-arn-aws-s3-security-autopilot-access-logs-696505-deff1612/terraform.auto.tfvars.json` <- `executable/actions/26-arn-aws-s3-security-autopilot-access-logs-696505-deff1612/terraform.auto.tfvars.json` (3 lines, sha256:90ca44f94c17)",
+      "`executable/actions/26-arn-aws-s3-security-autopilot-access-logs-696505-deff1612/README.txt` <- `executable/actions/26-arn-aws-s3-security-autopilot-access-logs-696505-deff1612/README.txt` (44 lines, sha256:cb8b531d9b3f)",
+      "`executable/actions/26-arn-aws-s3-security-autopilot-access-logs-696505-deff1612/README_ACTION.txt` <- `executable/actions/26-arn-aws-s3-security-autopilot-access-logs-696505-deff1612/README_ACTION.txt` (12 lines, sha256:de95d0ab9875)",
+      "`executable/actions/26-arn-aws-s3-security-autopilot-access-logs-696505-deff1612/decision.json` <- `executable/actions/26-arn-aws-s3-security-autopilot-access-logs-696505-deff1612/decision.json` (56 lines, sha256:25c2785be4c2)",
+      "`executable/actions/27-arn-aws-s3-phase2-wi1-lifecycle-696505809372-202-dfdf129a/providers.tf` <- `executable/actions/27-arn-aws-s3-phase2-wi1-lifecycle-696505809372-202-dfdf129a/providers.tf` (22 lines, sha256:54c07a5e1e99)",
+      "`executable/actions/27-arn-aws-s3-phase2-wi1-lifecycle-696505809372-202-dfdf129a/s3_cloudfront_oac_private_s3.tf` <- `executable/actions/27-arn-aws-s3-phase2-wi1-lifecycle-696505809372-202-dfdf129a/s3_cloudfront_oac_private_s3.tf` (265 lines, sha256:df1db9af8a44)",
+      "`executable/actions/27-arn-aws-s3-phase2-wi1-lifecycle-696505809372-202-dfdf129a/scripts/cloudfront_oac_discovery.py` <- `executable/actions/27-arn-aws-s3-phase2-wi1-lifecycle-696505809372-202-dfdf129a/scripts/cloudfront_oac_discovery.py` (221 lines, sha256:8313aad30c7b)",
+      "`executable/actions/27-arn-aws-s3-phase2-wi1-lifecycle-696505809372-202-dfdf129a/README.txt` <- `executable/actions/27-arn-aws-s3-phase2-wi1-lifecycle-696505809372-202-dfdf129a/README.txt` (44 lines, sha256:cb8b531d9b3f)",
+      "`executable/actions/27-arn-aws-s3-phase2-wi1-lifecycle-696505809372-202-dfdf129a/README_ACTION.txt` <- `executable/actions/27-arn-aws-s3-phase2-wi1-lifecycle-696505809372-202-dfdf129a/README_ACTION.txt` (12 lines, sha256:5dff7fb472f9)",
+      "`executable/actions/27-arn-aws-s3-phase2-wi1-lifecycle-696505809372-202-dfdf129a/decision.json` <- `executable/actions/27-arn-aws-s3-phase2-wi1-lifecycle-696505809372-202-dfdf129a/decision.json` (55 lines, sha256:234bc710e2a4)",
+      "`executable/actions/28-arn-aws-s3-phase2-wi1-lifecycle-696505809372-202-e7f23835/providers.tf` <- `executable/actions/28-arn-aws-s3-phase2-wi1-lifecycle-696505809372-202-e7f23835/providers.tf` (22 lines, sha256:54c07a5e1e99)",
+      "`executable/actions/28-arn-aws-s3-phase2-wi1-lifecycle-696505809372-202-e7f23835/s3_cloudfront_oac_private_s3.tf` <- `executable/actions/28-arn-aws-s3-phase2-wi1-lifecycle-696505809372-202-e7f23835/s3_cloudfront_oac_private_s3.tf` (265 lines, sha256:93f61ed90a70)",
+      "`executable/actions/28-arn-aws-s3-phase2-wi1-lifecycle-696505809372-202-e7f23835/scripts/cloudfront_oac_discovery.py` <- `executable/actions/28-arn-aws-s3-phase2-wi1-lifecycle-696505809372-202-e7f23835/scripts/cloudfront_oac_discovery.py` (221 lines, sha256:8313aad30c7b)",
+      "`executable/actions/28-arn-aws-s3-phase2-wi1-lifecycle-696505809372-202-e7f23835/terraform.auto.tfvars.json` <- `executable/actions/28-arn-aws-s3-phase2-wi1-lifecycle-696505809372-202-e7f23835/terraform.auto.tfvars.json` (3 lines, sha256:c21abbc37d75)",
+      "`executable/actions/28-arn-aws-s3-phase2-wi1-lifecycle-696505809372-202-e7f23835/README.txt` <- `executable/actions/28-arn-aws-s3-phase2-wi1-lifecycle-696505809372-202-e7f23835/README.txt` (44 lines, sha256:cb8b531d9b3f)",
+      "`executable/actions/28-arn-aws-s3-phase2-wi1-lifecycle-696505809372-202-e7f23835/README_ACTION.txt` <- `executable/actions/28-arn-aws-s3-phase2-wi1-lifecycle-696505809372-202-e7f23835/README_ACTION.txt` (12 lines, sha256:bf71455c033c)",
+      "`executable/actions/28-arn-aws-s3-phase2-wi1-lifecycle-696505809372-202-e7f23835/decision.json` <- `executable/actions/28-arn-aws-s3-phase2-wi1-lifecycle-696505809372-202-e7f23835/decision.json` (56 lines, sha256:770893fdacd2)",
+      "`executable/actions/29-arn-aws-s3-arch1-bucket-evidence-b1-696505809372-ed8274a5/providers.tf` <- `executable/actions/29-arn-aws-s3-arch1-bucket-evidence-b1-696505809372-ed8274a5/providers.tf` (22 lines, sha256:54c07a5e1e99)",
+      "`executable/actions/29-arn-aws-s3-arch1-bucket-evidence-b1-696505809372-ed8274a5/s3_cloudfront_oac_private_s3.tf` <- `executable/actions/29-arn-aws-s3-arch1-bucket-evidence-b1-696505809372-ed8274a5/s3_cloudfront_oac_private_s3.tf` (265 lines, sha256:1a59da03b8d3)",
+      "`executable/actions/29-arn-aws-s3-arch1-bucket-evidence-b1-696505809372-ed8274a5/scripts/cloudfront_oac_discovery.py` <- `executable/actions/29-arn-aws-s3-arch1-bucket-evidence-b1-696505809372-ed8274a5/scripts/cloudfront_oac_discovery.py` (221 lines, sha256:8313aad30c7b)",
+      "`executable/actions/29-arn-aws-s3-arch1-bucket-evidence-b1-696505809372-ed8274a5/terraform.auto.tfvars.json` <- `executable/actions/29-arn-aws-s3-arch1-bucket-evidence-b1-696505809372-ed8274a5/terraform.auto.tfvars.json` (3 lines, sha256:e77d443603b5)",
+      "`executable/actions/29-arn-aws-s3-arch1-bucket-evidence-b1-696505809372-ed8274a5/README.txt` <- `executable/actions/29-arn-aws-s3-arch1-bucket-evidence-b1-696505809372-ed8274a5/README.txt` (44 lines, sha256:cb8b531d9b3f)",
+      "`executable/actions/29-arn-aws-s3-arch1-bucket-evidence-b1-696505809372-ed8274a5/README_ACTION.txt` <- `executable/actions/29-arn-aws-s3-arch1-bucket-evidence-b1-696505809372-ed8274a5/README_ACTION.txt` (12 lines, sha256:4c92a9e8e186)",
+      "`executable/actions/29-arn-aws-s3-arch1-bucket-evidence-b1-696505809372-ed8274a5/decision.json` <- `executable/actions/29-arn-aws-s3-arch1-bucket-evidence-b1-696505809372-ed8274a5/decision.json` (56 lines, sha256:a5a04f5bf9b2)",
+      "`executable/actions/30-arn-aws-s3-phase2-wi1-lifecycle-696505809372-202-fb27abe2/providers.tf` <- `executable/actions/30-arn-aws-s3-phase2-wi1-lifecycle-696505809372-202-fb27abe2/providers.tf` (22 lines, sha256:54c07a5e1e99)",
+      "`executable/actions/30-arn-aws-s3-phase2-wi1-lifecycle-696505809372-202-fb27abe2/s3_cloudfront_oac_private_s3.tf` <- `executable/actions/30-arn-aws-s3-phase2-wi1-lifecycle-696505809372-202-fb27abe2/s3_cloudfront_oac_private_s3.tf` (265 lines, sha256:821d7d5df0c6)",
+      "`executable/actions/30-arn-aws-s3-phase2-wi1-lifecycle-696505809372-202-fb27abe2/scripts/cloudfront_oac_discovery.py` <- `executable/actions/30-arn-aws-s3-phase2-wi1-lifecycle-696505809372-202-fb27abe2/scripts/cloudfront_oac_discovery.py` (221 lines, sha256:8313aad30c7b)",
+      "`executable/actions/30-arn-aws-s3-phase2-wi1-lifecycle-696505809372-202-fb27abe2/README.txt` <- `executable/actions/30-arn-aws-s3-phase2-wi1-lifecycle-696505809372-202-fb27abe2/README.txt` (44 lines, sha256:cb8b531d9b3f)",
+      "`executable/actions/30-arn-aws-s3-phase2-wi1-lifecycle-696505809372-202-fb27abe2/README_ACTION.txt` <- `executable/actions/30-arn-aws-s3-phase2-wi1-lifecycle-696505809372-202-fb27abe2/README_ACTION.txt` (12 lines, sha256:5da26383f744)",
+      "`executable/actions/30-arn-aws-s3-phase2-wi1-lifecycle-696505809372-202-fb27abe2/decision.json` <- `executable/actions/30-arn-aws-s3-phase2-wi1-lifecycle-696505809372-202-fb27abe2/decision.json` (55 lines, sha256:a37fd1e64aca)",
+      "`executable/actions/31-arn-aws-s3-arch1-bucket-evidence-b1-696505809372-fddd2631/providers.tf` <- `executable/actions/31-arn-aws-s3-arch1-bucket-evidence-b1-696505809372-fddd2631/providers.tf` (22 lines, sha256:54c07a5e1e99)",
+      "`executable/actions/31-arn-aws-s3-arch1-bucket-evidence-b1-696505809372-fddd2631/s3_cloudfront_oac_private_s3.tf` <- `executable/actions/31-arn-aws-s3-arch1-bucket-evidence-b1-696505809372-fddd2631/s3_cloudfront_oac_private_s3.tf` (265 lines, sha256:ec58cc9edf18)",
+      "`executable/actions/31-arn-aws-s3-arch1-bucket-evidence-b1-696505809372-fddd2631/scripts/cloudfront_oac_discovery.py` <- `executable/actions/31-arn-aws-s3-arch1-bucket-evidence-b1-696505809372-fddd2631/scripts/cloudfront_oac_discovery.py` (221 lines, sha256:8313aad30c7b)",
+      "`executable/actions/31-arn-aws-s3-arch1-bucket-evidence-b1-696505809372-fddd2631/terraform.auto.tfvars.json` <- `executable/actions/31-arn-aws-s3-arch1-bucket-evidence-b1-696505809372-fddd2631/terraform.auto.tfvars.json` (3 lines, sha256:cf3576d31a11)",
+      "`executable/actions/31-arn-aws-s3-arch1-bucket-evidence-b1-696505809372-fddd2631/README.txt` <- `executable/actions/31-arn-aws-s3-arch1-bucket-evidence-b1-696505809372-fddd2631/README.txt` (44 lines, sha256:cb8b531d9b3f)",
+      "`executable/actions/31-arn-aws-s3-arch1-bucket-evidence-b1-696505809372-fddd2631/README_ACTION.txt` <- `executable/actions/31-arn-aws-s3-arch1-bucket-evidence-b1-696505809372-fddd2631/README_ACTION.txt` (12 lines, sha256:0ec231ac57c0)",
+      "`executable/actions/31-arn-aws-s3-arch1-bucket-evidence-b1-696505809372-fddd2631/decision.json` <- `executable/actions/31-arn-aws-s3-arch1-bucket-evidence-b1-696505809372-fddd2631/decision.json` (56 lines, sha256:f3252ffec45f)",
+      "`executable/actions/32-arn-aws-s3-security-autopilot-w6-envready-s311-r-abf5eb48/providers.tf` <- `executable/actions/32-arn-aws-s3-security-autopilot-w6-envready-s311-r-abf5eb48/providers.tf` (22 lines, sha256:54c07a5e1e99)",
+      "`executable/actions/32-arn-aws-s3-security-autopilot-w6-envready-s311-r-abf5eb48/s3_cloudfront_oac_private_s3.tf` <- `executable/actions/32-arn-aws-s3-security-autopilot-w6-envready-s311-r-abf5eb48/s3_cloudfront_oac_private_s3.tf` (265 lines, sha256:abbf0fa3b61b)",
+      "`executable/actions/32-arn-aws-s3-security-autopilot-w6-envready-s311-r-abf5eb48/scripts/cloudfront_oac_discovery.py` <- `executable/actions/32-arn-aws-s3-security-autopilot-w6-envready-s311-r-abf5eb48/scripts/cloudfront_oac_discovery.py` (221 lines, sha256:8313aad30c7b)",
+      "`executable/actions/32-arn-aws-s3-security-autopilot-w6-envready-s311-r-abf5eb48/terraform.auto.tfvars.json` <- `executable/actions/32-arn-aws-s3-security-autopilot-w6-envready-s311-r-abf5eb48/terraform.auto.tfvars.json` (3 lines, sha256:5ac046038e4f)",
+      "`executable/actions/32-arn-aws-s3-security-autopilot-w6-envready-s311-r-abf5eb48/README.txt` <- `executable/actions/32-arn-aws-s3-security-autopilot-w6-envready-s311-r-abf5eb48/README.txt` (44 lines, sha256:cb8b531d9b3f)",
+      "`executable/actions/32-arn-aws-s3-security-autopilot-w6-envready-s311-r-abf5eb48/README_ACTION.txt` <- `executable/actions/32-arn-aws-s3-security-autopilot-w6-envready-s311-r-abf5eb48/README_ACTION.txt` (12 lines, sha256:5ddf29a7b4ad)",
+      "`executable/actions/32-arn-aws-s3-security-autopilot-w6-envready-s311-r-abf5eb48/decision.json` <- `executable/actions/32-arn-aws-s3-security-autopilot-w6-envready-s311-r-abf5eb48/decision.json` (57 lines, sha256:80bfba317662)",
+      "`executable/actions/33-arn-aws-s3-security-autopilot-w6-envready-s315-e-f497bc0c/providers.tf` <- `executable/actions/33-arn-aws-s3-security-autopilot-w6-envready-s315-e-f497bc0c/providers.tf` (22 lines, sha256:54c07a5e1e99)",
+      "`executable/actions/33-arn-aws-s3-security-autopilot-w6-envready-s315-e-f497bc0c/s3_cloudfront_oac_private_s3.tf` <- `executable/actions/33-arn-aws-s3-security-autopilot-w6-envready-s315-e-f497bc0c/s3_cloudfront_oac_private_s3.tf` (265 lines, sha256:ce253f6580a9)",
+      "`executable/actions/33-arn-aws-s3-security-autopilot-w6-envready-s315-e-f497bc0c/scripts/cloudfront_oac_discovery.py` <- `executable/actions/33-arn-aws-s3-security-autopilot-w6-envready-s315-e-f497bc0c/scripts/cloudfront_oac_discovery.py` (221 lines, sha256:8313aad30c7b)",
+      "`executable/actions/33-arn-aws-s3-security-autopilot-w6-envready-s315-e-f497bc0c/terraform.auto.tfvars.json` <- `executable/actions/33-arn-aws-s3-security-autopilot-w6-envready-s315-e-f497bc0c/terraform.auto.tfvars.json` (3 lines, sha256:3f8325832f76)",
+      "`executable/actions/33-arn-aws-s3-security-autopilot-w6-envready-s315-e-f497bc0c/README.txt` <- `executable/actions/33-arn-aws-s3-security-autopilot-w6-envready-s315-e-f497bc0c/README.txt` (44 lines, sha256:cb8b531d9b3f)",
+      "`executable/actions/33-arn-aws-s3-security-autopilot-w6-envready-s315-e-f497bc0c/README_ACTION.txt` <- `executable/actions/33-arn-aws-s3-security-autopilot-w6-envready-s315-e-f497bc0c/README_ACTION.txt` (12 lines, sha256:710c3c37369f)",
+      "`executable/actions/33-arn-aws-s3-security-autopilot-w6-envready-s315-e-f497bc0c/decision.json` <- `executable/actions/33-arn-aws-s3-security-autopilot-w6-envready-s315-e-f497bc0c/decision.json` (56 lines, sha256:049ebaaee849)"
+    ],
+    "version": 1
+  },
+  "provider_agnostic": true,
+  "repo_target": {
+    "base_branch": "main",
+    "head_branch": "20260402t010412z-s32-oac-live-rerun-successor",
+    "provider": "github",
+    "repository": "example/security-autopilot-remediations"
+  },
+  "rollback_notes": {
+    "artifact_type": "rollback_notes",
+    "entries": [
+      {
+        "action_id": "19337c80-843c-40fb-b35c-fd561406009f",
+        "action_type": "s3_bucket_block_public_access",
+        "control_id": "S3.2",
+        "rollback_command": "aws s3api delete-public-access-block --bucket 696505809372|eu-north-1|AWS::::Account:696505809372|S3.2",
+        "target_id": "696505809372|eu-north-1|AWS::::Account:696505809372|S3.2",
+        "title": "S3 general purpose buckets should block public write access"
+      },
+      {
+        "action_id": "0ca962a2-1dee-421e-88fc-e3be9af0b56d",
+        "action_type": "s3_bucket_block_public_access",
+        "control_id": "S3.2",
+        "rollback_command": "aws s3api delete-public-access-block --bucket security-autopilot-access-logs-696505809372-r222018",
+        "target_id": "696505809372|eu-north-1|arn:aws:s3:::security-autopilot-access-logs-696505809372-r222018|S3.2",
+        "title": "S3 general purpose buckets should block public write access"
+      },
+      {
+        "action_id": "0dc8756d-3d23-4945-a66a-b425bf315fb1",
+        "action_type": "s3_bucket_block_public_access",
+        "control_id": "S3.2",
+        "rollback_command": "aws s3api delete-public-access-block --bucket security-autopilot-access-logs-696505809372-r222018-access-logs",
+        "target_id": "696505809372|eu-north-1|arn:aws:s3:::security-autopilot-access-logs-696505809372-r222018-access-logs|S3.2",
+        "title": "S3 general purpose buckets should block public read access"
+      },
+      {
+        "action_id": "0ff2bc8f-d6f6-483b-adca-30619d4ac208",
+        "action_type": "s3_bucket_block_public_access",
+        "control_id": "S3.2",
+        "rollback_command": "aws s3api delete-public-access-block --bucket security-autopilot-access-logs-696505809372",
+        "target_id": "696505809372|eu-north-1|arn:aws:s3:::security-autopilot-access-logs-696505809372|S3.2",
+        "title": "S3 general purpose buckets should block public write access"
+      },
+      {
+        "action_id": "1dc66e7e-efe9-4fd6-9335-3197211b289f",
+        "action_type": "s3_bucket_block_public_access",
+        "control_id": "S3.2",
+        "rollback_command": "aws s3api delete-public-access-block --bucket security-autopilot-dev-serverless-src-696505809372-eu-north-1",
+        "target_id": "696505809372|eu-north-1|arn:aws:s3:::security-autopilot-dev-serverless-src-696505809372-eu-north-1|S3.2",
+        "title": "S3 general purpose buckets should block public write access"
+      },
+      {
+        "action_id": "21c09e7f-7b0c-4be5-9bed-981fa8f01907",
+        "action_type": "s3_bucket_block_public_access",
+        "control_id": "S3.2",
+        "rollback_command": "aws s3api delete-public-access-block --bucket sa-wi7-seed-696505809372-20260328205857-access-logs",
+        "target_id": "696505809372|eu-north-1|arn:aws:s3:::sa-wi7-seed-696505809372-20260328205857-access-logs|S3.2",
+        "title": "S3 general purpose buckets should block public write access"
+      },
+      {
+        "action_id": "2c8ba273-6902-4f19-afeb-9e6d6a523aa1",
+        "action_type": "s3_bucket_block_public_access",
+        "control_id": "S3.2",
+        "rollback_command": "aws s3api delete-public-access-block --bucket ocypheris-live-ct-20260328t181200z-eu-north-1-access-logs",
+        "target_id": "696505809372|eu-north-1|arn:aws:s3:::ocypheris-live-ct-20260328t181200z-eu-north-1-access-logs|S3.2",
+        "title": "S3 general purpose buckets should block public write access"
+      },
+      {
+        "action_id": "3ae05cd4-4f24-4371-ad5d-63e2ae01d341",
+        "action_type": "s3_bucket_block_public_access",
+        "control_id": "S3.2",
+        "rollback_command": "aws s3api delete-public-access-block --bucket sa-wi7-seed-696505809372-20260328205857",
+        "target_id": "696505809372|eu-north-1|arn:aws:s3:::sa-wi7-seed-696505809372-20260328205857|S3.2",
+        "title": "S3 general purpose buckets should block public access"
+      },
+      {
+        "action_id": "3ce30a5c-4f48-44e0-877a-ee3bdc641a27",
+        "action_type": "s3_bucket_block_public_access",
+        "control_id": "S3.2",
+        "rollback_command": "aws s3api delete-public-access-block --bucket wi1-noncurrent-lifecycle-696505809372-2026033000365-access-logs",
+        "target_id": "696505809372|eu-north-1|arn:aws:s3:::wi1-noncurrent-lifecycle-696505809372-2026033000365-access-logs|S3.2",
+        "title": "S3 general purpose buckets should block public write access"
+      },
+      {
+        "action_id": "496f8cc3-f3c0-4587-becf-6ec0d5b68d61",
+        "action_type": "s3_bucket_block_public_access",
+        "control_id": "S3.2",
+        "rollback_command": "aws s3api delete-public-access-block --bucket security-autopilot-access-logs-696505809372-r94854",
+        "target_id": "696505809372|eu-north-1|arn:aws:s3:::security-autopilot-access-logs-696505809372-r94854|S3.2",
+        "title": "S3 general purpose buckets should block public write access"
+      },
+      {
+        "action_id": "499adc8a-c56c-4782-ad28-127a69cf241e",
+        "action_type": "s3_bucket_block_public_access",
+        "control_id": "S3.2",
+        "rollback_command": "aws s3api delete-public-access-block --bucket phase2-wi1-lifecycle-696505809372-20260329004157-access-logs",
+        "target_id": "696505809372|eu-north-1|arn:aws:s3:::phase2-wi1-lifecycle-696505809372-20260329004157-access-logs|S3.2",
+        "title": "S3 general purpose buckets should block public write access"
+      },
+      {
+        "action_id": "4c631219-af57-4aad-af2e-a1add122aff2",
+        "action_type": "s3_bucket_block_public_access",
+        "control_id": "S3.2",
+        "rollback_command": "aws s3api delete-public-access-block --bucket security-autopilot-access-logs-696505809372-r221001-access-logs",
+        "target_id": "696505809372|eu-north-1|arn:aws:s3:::security-autopilot-access-logs-696505809372-r221001-access-logs|S3.2",
+        "title": "S3 general purpose buckets should block public read access"
+      },
+      {
+        "action_id": "51f0f65a-8f13-44b1-b889-1243080bd069",
+        "action_type": "s3_bucket_block_public_access",
+        "control_id": "S3.2",
+        "rollback_command": "aws s3api delete-public-access-block --bucket sa-wi5-site-696505809372-20260328t164043z",
+        "target_id": "696505809372|eu-north-1|arn:aws:s3:::sa-wi5-site-696505809372-20260328t164043z|S3.2",
+        "title": "S3 general purpose buckets should block public write access"
+      },
+      {
+        "action_id": "5b77d9d9-fa33-4435-b70b-0e8a1cde7682",
+        "action_type": "s3_bucket_block_public_access",
+        "control_id": "S3.2",
+        "rollback_command": "aws s3api delete-public-access-block --bucket security-autopilot-dev-serverless-src-696505809372-access-logs",
+        "target_id": "696505809372|eu-north-1|arn:aws:s3:::security-autopilot-dev-serverless-src-696505809372-access-logs|S3.2",
+        "title": "S3 general purpose buckets should block public write access"
+      },
+      {
+        "action_id": "7f361ff6-fb26-4207-9cf7-92ca0dcb3460",
+        "action_type": "s3_bucket_block_public_access",
+        "control_id": "S3.2",
+        "rollback_command": "aws s3api delete-public-access-block --bucket arch1-bucket-website-a1-696505809372-eu-north-1-access-logs",
+        "target_id": "696505809372|eu-north-1|arn:aws:s3:::arch1-bucket-website-a1-696505809372-eu-north-1-access-logs|S3.2",
+        "title": "S3 general purpose buckets should block public write access"
+      },
+      {
+        "action_id": "8f162041-8712-4a78-a757-a6f8b7a33129",
+        "action_type": "s3_bucket_block_public_access",
+        "control_id": "S3.2",
+        "rollback_command": "aws s3api delete-public-access-block --bucket phase2-wi1-lifecycle-696505809372-20260328224331",
+        "target_id": "696505809372|eu-north-1|arn:aws:s3:::phase2-wi1-lifecycle-696505809372-20260328224331|S3.2",
+        "title": "S3 general purpose buckets should block public access"
+      },
+      {
+        "action_id": "9fa9f7b4-ac06-497e-bf34-ba31b8c98d51",
+        "action_type": "s3_bucket_block_public_access",
+        "control_id": "S3.2",
+        "rollback_command": "aws s3api delete-public-access-block --bucket security-autopilot-access-logs-696505809372-r221001",
+        "target_id": "696505809372|eu-north-1|arn:aws:s3:::security-autopilot-access-logs-696505809372-r221001|S3.2",
+        "title": "S3 general purpose buckets should block public write access"
+      },
+      {
+        "action_id": "a76d1974-0643-4780-8689-91a23075fb83",
+        "action_type": "s3_bucket_block_public_access",
+        "control_id": "S3.2",
+        "rollback_command": "aws s3api delete-public-access-block --bucket sa-wi5-site-696505809372-20260328t164043z-access-logs",
+        "target_id": "696505809372|eu-north-1|arn:aws:s3:::sa-wi5-site-696505809372-20260328t164043z-access-logs|S3.2",
+        "title": "S3 general purpose buckets should block public write access"
+      },
+      {
+        "action_id": "a781c11d-f7fe-4ff4-a9e1-8ba921068654",
+        "action_type": "s3_bucket_block_public_access",
+        "control_id": "S3.2",
+        "rollback_command": "aws s3api delete-public-access-block --bucket phase2-wi1-lifecycle-696505809372-20260328224331-access-logs",
+        "target_id": "696505809372|eu-north-1|arn:aws:s3:::phase2-wi1-lifecycle-696505809372-20260328224331-access-logs|S3.2",
+        "title": "S3 general purpose buckets should block public read access"
+      },
+      {
+        "action_id": "ad9bdd8f-7b30-4d58-9599-85fa6673edd2",
+        "action_type": "s3_bucket_block_public_access",
+        "control_id": "S3.2",
+        "rollback_command": "aws s3api delete-public-access-block --bucket sa-wi13-14-nopolicy-696505809372-20260328201935-access-logs",
+        "target_id": "696505809372|eu-north-1|arn:aws:s3:::sa-wi13-14-nopolicy-696505809372-20260328201935-access-logs|S3.2",
+        "title": "S3 general purpose buckets should block public write access"
+      },
+      {
+        "action_id": "d03ad604-a057-4677-8c12-0934a27317ea",
+        "action_type": "s3_bucket_block_public_access",
+        "control_id": "S3.2",
+        "rollback_command": "aws s3api delete-public-access-block --bucket ocypheris-live-ct-20260328t181200z-eu-north-1",
+        "target_id": "696505809372|eu-north-1|arn:aws:s3:::ocypheris-live-ct-20260328t181200z-eu-north-1|S3.2",
+        "title": "S3 general purpose buckets should block public read access"
+      },
+      {
+        "action_id": "d3cf0cc7-e545-4151-818c-18f8d806c919",
+        "action_type": "s3_bucket_block_public_access",
+        "control_id": "S3.2",
+        "rollback_command": "aws s3api delete-public-access-block --bucket sa-wi13-14-nopolicy-696505809372-20260328201935",
+        "target_id": "696505809372|eu-north-1|arn:aws:s3:::sa-wi13-14-nopolicy-696505809372-20260328201935|S3.2",
+        "title": "S3 general purpose buckets should block public write access"
+      },
+      {
+        "action_id": "da0d429e-6f16-461e-be2f-09ea7997e30a",
+        "action_type": "s3_bucket_block_public_access",
+        "control_id": "S3.2",
+        "rollback_command": "aws s3api delete-public-access-block --bucket arch1-bucket-website-a1-696505809372-eu-north-1",
+        "target_id": "696505809372|eu-north-1|arn:aws:s3:::arch1-bucket-website-a1-696505809372-eu-north-1|S3.2",
+        "title": "S3 general purpose buckets should block public write access"
+      },
+      {
+        "action_id": "dda812ab-15c2-482f-8782-ffef1ab0a60d",
+        "action_type": "s3_bucket_block_public_access",
+        "control_id": "S3.2",
+        "rollback_command": "aws s3api delete-public-access-block --bucket security-autopilot-access-logs-696505809372-s9fix1",
+        "target_id": "696505809372|eu-north-1|arn:aws:s3:::security-autopilot-access-logs-696505809372-s9fix1|S3.2",
+        "title": "S3 general purpose buckets should block public write access"
+      },
+      {
+        "action_id": "dedc7b1c-0300-4a28-8806-6735354facba",
+        "action_type": "s3_bucket_block_public_access",
+        "control_id": "S3.2",
+        "rollback_command": "aws s3api delete-public-access-block --bucket wi1-noncurrent-lifecycle-696505809372-20260330003655",
+        "target_id": "696505809372|eu-north-1|arn:aws:s3:::wi1-noncurrent-lifecycle-696505809372-20260330003655|S3.2",
+        "title": "S3 general purpose buckets should block public write access"
+      },
+      {
+        "action_id": "deff1612-54f9-4b10-85ae-afc1e557e571",
+        "action_type": "s3_bucket_block_public_access",
+        "control_id": "S3.2",
+        "rollback_command": "aws s3api delete-public-access-block --bucket security-autopilot-access-logs-696505809372-r94854-access-logs",
+        "target_id": "696505809372|eu-north-1|arn:aws:s3:::security-autopilot-access-logs-696505809372-r94854-access-logs|S3.2",
+        "title": "S3 general purpose buckets should block public read access"
+      },
+      {
+        "action_id": "dfdf129a-d3ea-4821-8074-e060d7dd92f6",
+        "action_type": "s3_bucket_block_public_access",
+        "control_id": "S3.2",
+        "rollback_command": "aws s3api delete-public-access-block --bucket phase2-wi1-lifecycle-696505809372-20260329004157",
+        "target_id": "696505809372|eu-north-1|arn:aws:s3:::phase2-wi1-lifecycle-696505809372-20260329004157|S3.2",
+        "title": "S3 general purpose buckets should block public read access"
+      },
+      {
+        "action_id": "e7f23835-5d6e-410f-8ccd-27a0c268c546",
+        "action_type": "s3_bucket_block_public_access",
+        "control_id": "S3.2",
+        "rollback_command": "aws s3api delete-public-access-block --bucket phase2-wi1-lifecycle-696505809372-20260329002042-access-logs",
+        "target_id": "696505809372|eu-north-1|arn:aws:s3:::phase2-wi1-lifecycle-696505809372-20260329002042-access-logs|S3.2",
+        "title": "S3 general purpose buckets should block public write access"
+      },
+      {
+        "action_id": "ed8274a5-f821-4036-95c7-7079cd6553ec",
+        "action_type": "s3_bucket_block_public_access",
+        "control_id": "S3.2",
+        "rollback_command": "aws s3api delete-public-access-block --bucket arch1-bucket-evidence-b1-696505809372-eu-north-1-access-logs",
+        "target_id": "696505809372|eu-north-1|arn:aws:s3:::arch1-bucket-evidence-b1-696505809372-eu-north-1-access-logs|S3.2",
+        "title": "S3 general purpose buckets should block public write access"
+      },
+      {
+        "action_id": "fb27abe2-d234-4627-9ee2-6227b8447efd",
+        "action_type": "s3_bucket_block_public_access",
+        "control_id": "S3.2",
+        "rollback_command": "aws s3api delete-public-access-block --bucket phase2-wi1-lifecycle-696505809372-20260329002042",
+        "target_id": "696505809372|eu-north-1|arn:aws:s3:::phase2-wi1-lifecycle-696505809372-20260329002042|S3.2",
+        "title": "S3 general purpose buckets should block public write access"
+      },
+      {
+        "action_id": "fddd2631-0898-48d7-8bf8-5e638c4ac493",
+        "action_type": "s3_bucket_block_public_access",
+        "control_id": "S3.2",
+        "rollback_command": "aws s3api delete-public-access-block --bucket arch1-bucket-evidence-b1-696505809372-eu-north-1",
+        "target_id": "696505809372|eu-north-1|arn:aws:s3:::arch1-bucket-evidence-b1-696505809372-eu-north-1|S3.2",
+        "title": "S3 general purpose buckets should block public write access"
+      },
+      {
+        "action_id": "abf5eb48-ea9b-48d0-a534-236cf8818bf9",
+        "action_type": "s3_bucket_block_public_access",
+        "control_id": "S3.2",
+        "rollback_command": "aws s3api delete-public-access-block --bucket security-autopilot-w6-envready-s311-review-696505809372",
+        "target_id": "696505809372|eu-north-1|arn:aws:s3:::security-autopilot-w6-envready-s311-review-696505809372|S3.2",
+        "title": "S3 general purpose buckets should block public access"
+      },
+      {
+        "action_id": "f497bc0c-ddcb-4191-8fa5-c6ed21bbe134",
+        "action_type": "s3_bucket_block_public_access",
+        "control_id": "S3.2",
+        "rollback_command": "aws s3api delete-public-access-block --bucket security-autopilot-w6-envready-s315-exec-696505809372",
+        "target_id": "696505809372|eu-north-1|arn:aws:s3:::security-autopilot-w6-envready-s315-exec-696505809372|S3.2",
+        "title": "S3 general purpose buckets should block public access"
+      }
+    ],
+    "entry_count": 33,
+    "recommended_path": "Prefer reverting through version control and the same reviewed deployment workflow.",
+    "version": 1
+  },
+  "title": "Apply AWS Security Autopilot remediation bundle (33 actions)",
+  "version": 1
+}

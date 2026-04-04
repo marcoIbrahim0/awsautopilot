@@ -1,0 +1,144 @@
+{
+  "action_id": "f47a11cd-8055-4b52-81c3-2838e9696f80",
+  "action_type": "s3_bucket_encryption_kms",
+  "manual_high_risk": false,
+  "mode_options": [
+    "pr_only"
+  ],
+  "pre_execution_notice": null,
+  "recommendation": {
+    "advisory": true,
+    "default_mode": "pr_only",
+    "enforced_by_policy": null,
+    "evidence": {
+      "context_incomplete": true,
+      "data_sensitivity": 1.0,
+      "exploit_signals": 0.0,
+      "internet_exposure": 0.0,
+      "matched_signals": [],
+      "privilege_level": 0.6,
+      "score": 42
+    },
+    "matrix_position": {
+      "business_criticality": "high",
+      "cell": "risk_medium__criticality_high",
+      "risk_tier": "medium"
+    },
+    "mode": "pr_only",
+    "rationale": "Matrix cell risk_medium__criticality_high maps to default recommendation 'pr_only'. Risk is medium and business criticality is high. Criticality evidence: data_sensitivity=1.00, privilege_level=0.60, internet_exposure=0.00, matched_signals=none. Relationship context is incomplete, so the recommendation remains conservative and advisory unless policy overrides it. Current execution surfaces stay PR-only, so this recommendation remains advisory until the reviewed bundle is applied."
+  },
+  "runbook_url": null,
+  "strategies": [
+    {
+      "blast_radius": "resource",
+      "blocked_reasons": [],
+      "context": {
+        "default_inputs": {
+          "kms_key_mode": "aws_managed"
+        },
+        "kms_key_options_error": "AccessDeniedException"
+      },
+      "decision_rationale": "Family resolver kept S3.15 branch 's3_enable_sse_kms_guided' executable with key_mode=aws_managed.",
+      "dependency_checks": [
+        {
+          "code": "s3_sse_kms_bucket_scope_confirmed",
+          "message": "Bucket-scoped target was identified for S3 SSE-KMS enforcement.",
+          "status": "pass"
+        },
+        {
+          "code": "s3_sse_kms_aws_managed_branch_ready",
+          "message": "AWS-managed SSE-KMS remains executable on this branch.",
+          "status": "pass"
+        }
+      ],
+      "estimated_resolution_time": "12-24 hours",
+      "exception_only": false,
+      "impact_text": "Default bucket encryption will be enforced with SSE-KMS using either aws/s3 or the selected customer-managed KMS key.",
+      "input_schema": {
+        "fields": [
+          {
+            "default_value": "aws_managed",
+            "description": "Select which KMS key mode to use for default bucket encryption.",
+            "group": "Encryption Settings",
+            "key": "kms_key_mode",
+            "options": [
+              {
+                "label": "AWS managed key (aws/s3)",
+                "value": "aws_managed"
+              },
+              {
+                "label": "Custom KMS key",
+                "value": "custom"
+              }
+            ],
+            "required": false,
+            "safe_default_label": "Use AWS managed key (aws/s3)",
+            "safe_default_value": "aws_managed",
+            "type": "select"
+          },
+          {
+            "description": "Customer-managed KMS key ARN to use when key mode is custom.",
+            "group": "Encryption Settings",
+            "key": "kms_key_arn",
+            "placeholder": "arn:aws:kms:us-east-1:123456789012:key/1234abcd-5678-ef90-1234-56789abcdef0",
+            "required": false,
+            "type": "string",
+            "visible_when": {
+              "equals": "custom",
+              "field": "kms_key_mode"
+            }
+          }
+        ]
+      },
+      "label": "Enable S3 default encryption (SSE-KMS)",
+      "missing_defaults": [],
+      "mode": "pr_only",
+      "preservation_summary": {
+        "customer_managed_dependency_proven": false,
+        "customer_managed_grants_captured": false,
+        "customer_managed_key_valid": null,
+        "customer_managed_policy_json_captured": false,
+        "executable_kms_change_allowed": true,
+        "family": "s3_bucket_encryption_kms",
+        "family_strategy": "s3_enable_sse_kms_guided",
+        "kms_key_arn_present": false,
+        "kms_key_mode": "aws_managed",
+        "selected_branch": "s3_enable_sse_kms_guided",
+        "single_profile_compatible": true,
+        "strategy_only_supported": true,
+        "target_bucket_name": "arch1-bucket-evidence-b1-696505809372-eu-north-1",
+        "target_bucket_scope_proven": true
+      },
+      "profiles": [
+        {
+          "exception_only": false,
+          "profile_id": "s3_enable_sse_kms_guided",
+          "recommended": true,
+          "requires_inputs": true,
+          "support_tier": "deterministic_bundle",
+          "supports_exception_flow": false
+        },
+        {
+          "exception_only": false,
+          "profile_id": "s3_enable_sse_kms_customer_managed",
+          "recommended": false,
+          "requires_inputs": true,
+          "support_tier": "manual_guidance_only",
+          "supports_exception_flow": false
+        }
+      ],
+      "recommended": true,
+      "recommended_profile_id": "s3_enable_sse_kms_guided",
+      "requires_inputs": true,
+      "risk_level": "low",
+      "rollback_command": "if [ -f pre-remediation-encryption.json ]; then aws s3api put-bucket-encryption --bucket <BUCKET_NAME> --server-side-encryption-configuration file://pre-remediation-encryption.json; else aws s3api delete-bucket-encryption --bucket <BUCKET_NAME>; fi",
+      "strategy_id": "s3_enable_sse_kms_guided",
+      "supports_exception_flow": false,
+      "supports_immediate_reeval": true,
+      "warnings": [
+        "Capture the current bucket encryption configuration before apply so exact rollback can restore it if needed.",
+        "Ensure KMS key policy grants required S3 and workload principals when using a custom key."
+      ]
+    }
+  ]
+}

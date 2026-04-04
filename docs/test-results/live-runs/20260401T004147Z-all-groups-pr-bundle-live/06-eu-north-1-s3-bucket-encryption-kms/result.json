@@ -1,0 +1,28 @@
+{
+  "account_id": "696505809372",
+  "action_type": "s3_bucket_encryption_kms",
+  "apply_status": "failed",
+  "folder": "06-eu-north-1-s3-bucket-encryption-kms",
+  "generation_status": "success",
+  "group_id": "97e52204-f7f6-40c1-b2ac-acb99308e241",
+  "group_run_id": "be367b61-af64-4b17-ae0a-79fa81f1f3de",
+  "manual_guidance_action_count": 0,
+  "non_runnable_reasons": [],
+  "region": "eu-north-1",
+  "remediation_run_id": "97865f8a-92aa-4d50-99f5-3a4353187e63",
+  "review_required_action_count": 0,
+  "runnable_action_count": 15,
+  "selected_request": {
+    "bucket_creation_acknowledged": false,
+    "repo_target": {
+      "base_branch": "main",
+      "head_branch": "20260401t004147z-all-groups-pr-bundle-live-06-eu-north-1-s3-bucket-encryption-kms-s3-enable-sse-kms-guided",
+      "provider": "github",
+      "repository": "example/security-autopilot-remediations"
+    },
+    "risk_acknowledged": true,
+    "strategy_id": "s3_enable_sse_kms_guided",
+    "strategy_inputs": {}
+  },
+  "summary_status": "APPLY NOT SUCCESSFUL"
+}

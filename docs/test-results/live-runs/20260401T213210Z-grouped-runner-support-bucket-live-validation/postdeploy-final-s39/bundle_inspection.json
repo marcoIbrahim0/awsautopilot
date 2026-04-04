@@ -1,0 +1,16 @@
+{
+  "runner_template_source": "repo:infrastructure/templates/run_all.sh",
+  "helper_bucket_inventory": [],
+  "execution_root": "executable/actions",
+  "runnable_action_count": 0,
+  "tier_counts": {
+    "executable": 0,
+    "manual_guidance": 0,
+    "review_required": 14
+  },
+  "run_all_contains_adopt_existing_log_bucket": false,
+  "run_all_contains_EXECUTION_ROOT": false,
+  "run_actions_exists": true,
+  "executable_dirs": 0,
+  "review_required_dirs": 14
+}

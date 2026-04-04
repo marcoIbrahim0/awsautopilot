@@ -1,0 +1,42 @@
+{
+  "action_id": "78237cc2-e47f-4f0f-80de-22b08d8725c7",
+  "action_type": "s3_bucket_require_ssl",
+  "blocked_reasons": [],
+  "control_id": "S3.5",
+  "decision_rationale": "Family resolver kept S3.5 strategy 's3_enforce_ssl_strict_deny' executable because merge-safe policy preservation evidence is available. Run creation did not require additional risk-only acceptance.",
+  "decision_summary": "Family resolver kept S3.5 strategy 's3_enforce_ssl_strict_deny' executable because merge-safe policy preservation evidence is available. Run creation did not require additional risk-only acceptance.",
+  "decision_version": "resolver/v1",
+  "finding_coverage": {},
+  "folder": "executable/actions/08-arn-aws-s3-sa-wi13-14-nopolicy-696505809372-2026-78237cc2",
+  "has_runnable_terraform": true,
+  "index": 8,
+  "missing_defaults": [],
+  "missing_inputs": [],
+  "outcome": "executable_bundle_generated",
+  "preservation_summary": {
+    "apply_time_merge": false,
+    "apply_time_merge_reason": null,
+    "bucket_policy_analysis_possible": true,
+    "executable_policy_merge_allowed": true,
+    "existing_bucket_policy_json_captured": false,
+    "existing_bucket_policy_statement_count": 0,
+    "family": "s3_bucket_require_ssl",
+    "family_strategy": "s3_enforce_ssl_strict_deny",
+    "merge_safe_policy_available": false,
+    "preserve_existing_policy": true,
+    "single_profile_compatible": true,
+    "strategy_only_supported": true,
+    "unsafe_overwrite_requested": false
+  },
+  "profile_id": "s3_enforce_ssl_strict_deny",
+  "rejected_profiles": [],
+  "strategy_id": "s3_enforce_ssl_strict_deny",
+  "strategy_inputs": {
+    "existing_bucket_policy_statement_count": 0
+  },
+  "support_tier": "deterministic_bundle",
+  "target_id": "696505809372|eu-north-1|arn:aws:s3:::sa-wi13-14-nopolicy-696505809372-20260328201935|S3.5",
+  "tier": "executable",
+  "tier_root": "executable/actions",
+  "title": "S3 general purpose buckets should require requests to use SSL"
+}

@@ -1,0 +1,408 @@
+{
+  "action_id": "0960aba7-eddd-48d7-aafc-5379d1e482d9",
+  "action_type": "s3_bucket_block_public_access",
+  "manual_high_risk": false,
+  "mode_options": [
+    "pr_only"
+  ],
+  "pre_execution_notice": null,
+  "recommendation": {
+    "advisory": true,
+    "default_mode": "exception_review",
+    "enforced_by_policy": null,
+    "evidence": {
+      "context_incomplete": true,
+      "data_sensitivity": 0.8,
+      "exploit_signals": 0.7333,
+      "internet_exposure": 0.9,
+      "matched_signals": [],
+      "privilege_level": 0.6,
+      "score": 76
+    },
+    "matrix_position": {
+      "business_criticality": "high",
+      "cell": "risk_high__criticality_high",
+      "risk_tier": "high"
+    },
+    "mode": "exception_review",
+    "rationale": "Matrix cell risk_high__criticality_high maps to default recommendation 'exception_review'. Risk is high and business criticality is high. Criticality evidence: data_sensitivity=0.80, privilege_level=0.60, internet_exposure=0.90, matched_signals=none. Relationship context is incomplete, so the recommendation remains conservative and advisory unless policy overrides it."
+  },
+  "runbook_url": null,
+  "strategies": [
+    {
+      "blast_radius": "resource",
+      "blocked_reasons": [],
+      "context": {},
+      "decision_rationale": "Family resolver kept executable S3.2 profile 's3_bucket_block_public_access_standard' for strategy 's3_bucket_block_public_access_standard'.",
+      "dependency_checks": [
+        {
+          "code": "s3_public_access_dependency",
+          "message": "Bucket policy is not public and website hosting is disabled; no direct-public-access dependency was detected from runtime probes.",
+          "status": "pass"
+        }
+      ],
+      "estimated_resolution_time": "12-24 hours",
+      "exception_only": false,
+      "impact_text": "All four bucket-level public access block settings will be enabled for this bucket.",
+      "input_schema": {
+        "fields": []
+      },
+      "label": "Block public access on bucket",
+      "missing_defaults": [],
+      "mode": "pr_only",
+      "preservation_summary": {
+        "access_path_evidence_available": true,
+        "apply_time_merge": false,
+        "apply_time_merge_reason": null,
+        "bucket_policy_public": false,
+        "dns_inputs_complete": false,
+        "executable_preservation_allowed": true,
+        "existing_bucket_policy_json_captured": false,
+        "existing_bucket_policy_statement_count": null,
+        "family": "s3_bucket_block_public_access",
+        "family_strategy": "s3_bucket_block_public_access_standard",
+        "manual_preservation_required": false,
+        "public_policy_scrub_available": false,
+        "public_policy_scrub_reason": null,
+        "selected_branch": "s3_bucket_block_public_access_standard",
+        "single_profile_compatible": true,
+        "strategy_only_supported": true,
+        "website_configuration_captured": false,
+        "website_configured": false,
+        "website_translation_reason": "S3 static website hosting is not enabled.",
+        "website_translation_supported": false
+      },
+      "profiles": [
+        {
+          "exception_only": false,
+          "profile_id": "s3_bucket_block_public_access_standard",
+          "recommended": true,
+          "requires_inputs": false,
+          "support_tier": "deterministic_bundle",
+          "supports_exception_flow": false
+        },
+        {
+          "exception_only": false,
+          "profile_id": "s3_bucket_block_public_access_manual_preservation",
+          "recommended": false,
+          "requires_inputs": false,
+          "support_tier": "manual_guidance_only",
+          "supports_exception_flow": false
+        },
+        {
+          "exception_only": false,
+          "profile_id": "s3_bucket_block_public_access_review_public_policy_scrub",
+          "recommended": false,
+          "requires_inputs": false,
+          "support_tier": "review_required_bundle",
+          "supports_exception_flow": false
+        }
+      ],
+      "recommended": false,
+      "recommended_profile_id": "s3_bucket_block_public_access_standard",
+      "requires_inputs": false,
+      "risk_level": "high",
+      "rollback_command": "aws s3api delete-public-access-block --bucket <BUCKET_NAME>",
+      "strategy_id": "s3_bucket_block_public_access_standard",
+      "supports_exception_flow": false,
+      "supports_immediate_reeval": true,
+      "warnings": [
+        "May break workloads that depend on direct public S3 access. Analyze the affected S3 bucket policy/ACL/public-access-block settings, the bucket KMS key policy/grants (if SSE-KMS), CloudFront OAC/OAI configuration, and any VPC endpoint or cross-account IAM principals that access the bucket. If IAM Access Analyzer is enabled in this account/region, dependency validation can be automated."
+      ]
+    },
+    {
+      "blast_radius": "resource",
+      "blocked_reasons": [],
+      "context": {},
+      "decision_rationale": "Family resolver kept executable S3.2 profile 's3_migrate_cloudfront_oac_private' for strategy 's3_migrate_cloudfront_oac_private'.",
+      "dependency_checks": [
+        {
+          "code": "s3_public_access_dependency",
+          "message": "Bucket policy is not public and website hosting is disabled; no direct-public-access dependency was detected from runtime probes.",
+          "status": "pass"
+        }
+      ],
+      "estimated_resolution_time": "12-24 hours",
+      "exception_only": false,
+      "impact_text": "Bucket-level public access block settings will be enabled and access will be served through CloudFront + OAC.",
+      "input_schema": {
+        "fields": []
+      },
+      "label": "Migrate to CloudFront + OAC + private S3",
+      "missing_defaults": [],
+      "mode": "pr_only",
+      "preservation_summary": {
+        "access_path_evidence_available": true,
+        "apply_time_merge": false,
+        "apply_time_merge_reason": null,
+        "bucket_policy_public": false,
+        "dns_inputs_complete": false,
+        "executable_preservation_allowed": true,
+        "existing_bucket_policy_json_captured": true,
+        "existing_bucket_policy_statement_count": 3,
+        "family": "s3_bucket_block_public_access",
+        "family_strategy": "s3_migrate_cloudfront_oac_private",
+        "manual_preservation_required": false,
+        "public_policy_scrub_available": false,
+        "public_policy_scrub_reason": null,
+        "selected_branch": "s3_migrate_cloudfront_oac_private",
+        "single_profile_compatible": true,
+        "strategy_only_supported": true,
+        "website_configuration_captured": false,
+        "website_configured": false,
+        "website_translation_reason": "S3 static website hosting is not enabled.",
+        "website_translation_supported": false
+      },
+      "profiles": [
+        {
+          "exception_only": false,
+          "profile_id": "s3_migrate_cloudfront_oac_private",
+          "recommended": true,
+          "requires_inputs": false,
+          "support_tier": "deterministic_bundle",
+          "supports_exception_flow": false
+        },
+        {
+          "exception_only": false,
+          "profile_id": "s3_migrate_cloudfront_oac_private_manual_preservation",
+          "recommended": false,
+          "requires_inputs": false,
+          "support_tier": "manual_guidance_only",
+          "supports_exception_flow": false
+        }
+      ],
+      "recommended": true,
+      "recommended_profile_id": "s3_migrate_cloudfront_oac_private",
+      "requires_inputs": false,
+      "risk_level": "medium",
+      "rollback_command": "aws s3api delete-public-access-block --bucket <BUCKET_NAME>",
+      "strategy_id": "s3_migrate_cloudfront_oac_private",
+      "supports_exception_flow": false,
+      "supports_immediate_reeval": true,
+      "warnings": [
+        "Requires careful validation of bucket policies and KMS permissions. Analyze the affected S3 bucket policy/ACL/public-access-block settings, the bucket KMS key policy/grants (if SSE-KMS), CloudFront OAC/OAI configuration, and any VPC endpoint or cross-account IAM principals that access the bucket. If IAM Access Analyzer is enabled in this account/region, dependency validation can be automated."
+      ]
+    },
+    {
+      "blast_radius": "resource",
+      "blocked_reasons": [
+        "S3 static website hosting is not confirmed for this bucket; use the non-website S3.2 strategy instead.",
+        "Website migration requires strategy_inputs.aliases for the Route53 cutover hostnames.",
+        "Website migration requires strategy_inputs.route53_hosted_zone_id for Route53 alias updates.",
+        "Website migration requires strategy_inputs.acm_certificate_arn for the CloudFront viewer certificate.",
+        "Runtime evidence did not confirm active S3 static website hosting for this bucket."
+      ],
+      "context": {
+        "default_inputs": {
+          "price_class": "PriceClass_100"
+        }
+      },
+      "decision_rationale": "Family resolver downgraded strategy 's3_migrate_website_cloudfront_private' to manual S3.2 preservation profile 's3_migrate_website_cloudfront_private_review_required'. S3 static website hosting is not confirmed for this bucket; use the non-website S3.2 strategy instead. Website migration requires strategy_inputs.aliases for the Route53 cutover hostnames. Website migration requires strategy_inputs.route53_hosted_zone_id for Route53 alias updates. Website migration requires strategy_inputs.acm_certificate_arn for the CloudFront viewer certificate. Blocking checks: Runtime evidence did not confirm active S3 static website hosting for this bucket..",
+      "dependency_checks": [
+        {
+          "code": "s3_public_access_dependency",
+          "message": "Runtime evidence did not confirm active S3 static website hosting for this bucket.",
+          "status": "fail"
+        }
+      ],
+      "estimated_resolution_time": "12-24 hours",
+      "exception_only": false,
+      "impact_text": "Creates a CloudFront distribution and Route53 alias cutover, removes S3 website hosting, and enables bucket-level public access block settings while serving content from private S3.",
+      "input_schema": {
+        "fields": [
+          {
+            "description": "DNS hostnames that should point to the CloudFront distribution.",
+            "group": "DNS Cutover",
+            "key": "aliases",
+            "required": true,
+            "type": "string_array"
+          },
+          {
+            "description": "Route53 hosted zone ID that owns the website aliases.",
+            "group": "DNS Cutover",
+            "key": "route53_hosted_zone_id",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "description": "ACM certificate ARN for the website aliases. CloudFront certificates must live in us-east-1.",
+            "group": "DNS Cutover",
+            "key": "acm_certificate_arn",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "default_value": "PriceClass_100",
+            "description": "CloudFront price class.",
+            "group": "CloudFront",
+            "key": "price_class",
+            "options": [
+              {
+                "label": "North America + Europe",
+                "value": "PriceClass_100"
+              },
+              {
+                "label": "Most regions",
+                "value": "PriceClass_200"
+              },
+              {
+                "label": "All edge locations",
+                "value": "PriceClass_All"
+              }
+            ],
+            "required": false,
+            "type": "select"
+          },
+          {
+            "description": "Optional CloudFront default root object override when it should differ from the captured website index document.",
+            "group": "CloudFront",
+            "key": "default_root_object_override",
+            "required": false,
+            "type": "string"
+          }
+        ]
+      },
+      "label": "Migrate S3 website to CloudFront + private S3",
+      "missing_defaults": [],
+      "mode": "pr_only",
+      "preservation_summary": {
+        "access_path_evidence_available": true,
+        "apply_time_merge": false,
+        "apply_time_merge_reason": null,
+        "bucket_policy_public": false,
+        "dns_inputs_complete": false,
+        "executable_preservation_allowed": false,
+        "existing_bucket_policy_json_captured": true,
+        "existing_bucket_policy_statement_count": 3,
+        "family": "s3_bucket_block_public_access",
+        "family_strategy": "s3_migrate_website_cloudfront_private",
+        "manual_preservation_required": false,
+        "public_policy_scrub_available": false,
+        "public_policy_scrub_reason": null,
+        "selected_branch": "s3_migrate_website_cloudfront_private_review_required",
+        "single_profile_compatible": false,
+        "strategy_only_supported": true,
+        "website_configuration_captured": false,
+        "website_configured": false,
+        "website_translation_reason": "S3 static website hosting is not enabled.",
+        "website_translation_supported": false
+      },
+      "profiles": [
+        {
+          "exception_only": false,
+          "profile_id": "s3_migrate_website_cloudfront_private",
+          "recommended": false,
+          "requires_inputs": true,
+          "support_tier": "review_required_bundle",
+          "supports_exception_flow": false
+        },
+        {
+          "exception_only": false,
+          "profile_id": "s3_migrate_website_cloudfront_private_review_required",
+          "recommended": true,
+          "requires_inputs": true,
+          "support_tier": "review_required_bundle",
+          "supports_exception_flow": false
+        }
+      ],
+      "recommended": false,
+      "recommended_profile_id": "s3_migrate_website_cloudfront_private_review_required",
+      "requires_inputs": true,
+      "risk_level": "medium",
+      "rollback_command": "aws s3api delete-public-access-block --bucket <BUCKET_NAME>",
+      "strategy_id": "s3_migrate_website_cloudfront_private",
+      "supports_exception_flow": false,
+      "supports_immediate_reeval": true,
+      "warnings": [
+        "This strategy changes origin routing and DNS. It is intended only for buckets currently using S3 static website hosting with a simple index/error configuration.",
+        "CloudFront alias cutover requires explicit Route53 zone and ACM certificate inputs. Certificates must be compatible with CloudFront."
+      ]
+    },
+    {
+      "blast_radius": "resource",
+      "blocked_reasons": [],
+      "context": {
+        "default_inputs": {
+          "exception_duration_days": "30"
+        }
+      },
+      "decision_rationale": "Compatibility resolver defaulted to the compatible profile 's3_keep_public_exception' for strategy 's3_keep_public_exception'.",
+      "dependency_checks": [
+        {
+          "code": "s3_public_exception",
+          "message": "Public access remains enabled; exception must include business approval and review date.",
+          "status": "warn"
+        }
+      ],
+      "estimated_resolution_time": "12-24 hours",
+      "exception_only": true,
+      "impact_text": "Bucket-level public access block settings remain unchanged while exception workflow is used.",
+      "input_schema": {
+        "fields": [
+          {
+            "default_value": "30",
+            "description": "How long should this exception remain active?",
+            "group": "Exception",
+            "key": "exception_duration_days",
+            "options": [
+              {
+                "label": "7 days",
+                "value": "7"
+              },
+              {
+                "label": "14 days",
+                "value": "14"
+              },
+              {
+                "label": "30 days",
+                "value": "30"
+              },
+              {
+                "label": "90 days",
+                "value": "90"
+              }
+            ],
+            "required": false,
+            "type": "select"
+          },
+          {
+            "description": "Why can't you apply this fix right now?",
+            "group": "Exception",
+            "key": "exception_reason",
+            "placeholder": "Describe the temporary business or operational constraint.",
+            "required": false,
+            "type": "string"
+          }
+        ]
+      },
+      "label": "Keep intentionally public (exception path)",
+      "missing_defaults": [],
+      "mode": "pr_only",
+      "preservation_summary": {
+        "single_profile_compatible": true,
+        "strategy_only_supported": true
+      },
+      "profiles": [
+        {
+          "exception_only": true,
+          "profile_id": "s3_keep_public_exception",
+          "recommended": true,
+          "requires_inputs": true,
+          "support_tier": "manual_guidance_only",
+          "supports_exception_flow": true
+        }
+      ],
+      "recommended": false,
+      "recommended_profile_id": "s3_keep_public_exception",
+      "requires_inputs": true,
+      "risk_level": "high",
+      "rollback_command": "aws s3api delete-public-access-block --bucket <BUCKET_NAME>",
+      "strategy_id": "s3_keep_public_exception",
+      "supports_exception_flow": true,
+      "supports_immediate_reeval": false,
+      "warnings": [
+        "Keeps public exposure; requires explicit business approval and compensating controls."
+      ]
+    }
+  ]
+}

@@ -1,0 +1,38 @@
+[
+  {
+    "bucket_creation_acknowledged": false,
+    "repo_target": {
+      "base_branch": "main",
+      "head_branch": "20260401t004147z-all-groups-pr-bundle-live-01-eu-north-1-aws-config-enabled-config-enable-account-local-delivery",
+      "provider": "github",
+      "repository": "example/security-autopilot-remediations"
+    },
+    "risk_acknowledged": true,
+    "strategy_id": "config_enable_account_local_delivery",
+    "strategy_inputs": {}
+  },
+  {
+    "bucket_creation_acknowledged": false,
+    "repo_target": {
+      "base_branch": "main",
+      "head_branch": "20260401t004147z-all-groups-pr-bundle-live-01-eu-north-1-aws-config-enabled-config-enable-centralized-delivery",
+      "provider": "github",
+      "repository": "example/security-autopilot-remediations"
+    },
+    "risk_acknowledged": true,
+    "strategy_id": "config_enable_centralized_delivery",
+    "strategy_inputs": {}
+  },
+  {
+    "bucket_creation_acknowledged": false,
+    "repo_target": {
+      "base_branch": "main",
+      "head_branch": "20260401t004147z-all-groups-pr-bundle-live-01-eu-north-1-aws-config-enabled-config-keep-exception",
+      "provider": "github",
+      "repository": "example/security-autopilot-remediations"
+    },
+    "risk_acknowledged": true,
+    "strategy_id": "config_keep_exception",
+    "strategy_inputs": {}
+  }
+]

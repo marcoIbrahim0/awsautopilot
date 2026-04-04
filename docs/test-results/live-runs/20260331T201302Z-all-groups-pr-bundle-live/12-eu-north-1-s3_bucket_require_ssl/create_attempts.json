@@ -1,0 +1,21 @@
+[
+  {
+    "payload": {
+      "detail": {
+        "detail": "A PR bundle was already created successfully for this exact group. No changes were made since the previous bundle generation.",
+        "error": "PR bundle already created",
+        "existing_group_run_id": "0d42d05c-ae20-444f-be96-7e4e9b9dce61",
+        "existing_run_id": "137a42b9-c2d5-4099-9272-0608be02c682",
+        "existing_run_status": "success",
+        "reason": "grouped_bundle_already_created_no_changes"
+      }
+    },
+    "reason": "grouped_bundle_already_created_no_changes",
+    "request_body": {
+      "bucket_creation_acknowledged": false,
+      "risk_acknowledged": true,
+      "strategy_id": "s3_enforce_ssl_strict_deny"
+    },
+    "status_code": 409
+  }
+]

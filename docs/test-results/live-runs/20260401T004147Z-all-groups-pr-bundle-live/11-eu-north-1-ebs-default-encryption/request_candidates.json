@@ -1,0 +1,26 @@
+[
+  {
+    "bucket_creation_acknowledged": false,
+    "repo_target": {
+      "base_branch": "main",
+      "head_branch": "20260401t004147z-all-groups-pr-bundle-live-11-eu-north-1-ebs-default-encryption-ebs-enable-default-encryption-aws-manage",
+      "provider": "github",
+      "repository": "example/security-autopilot-remediations"
+    },
+    "risk_acknowledged": true,
+    "strategy_id": "ebs_enable_default_encryption_aws_managed_kms_pr_bundle",
+    "strategy_inputs": {}
+  },
+  {
+    "bucket_creation_acknowledged": false,
+    "repo_target": {
+      "base_branch": "main",
+      "head_branch": "20260401t004147z-all-groups-pr-bundle-live-11-eu-north-1-ebs-default-encryption-ebs-enable-default-encryption-customer-k",
+      "provider": "github",
+      "repository": "example/security-autopilot-remediations"
+    },
+    "risk_acknowledged": true,
+    "strategy_id": "ebs_enable_default_encryption_customer_kms_pr_bundle",
+    "strategy_inputs": {}
+  }
+]

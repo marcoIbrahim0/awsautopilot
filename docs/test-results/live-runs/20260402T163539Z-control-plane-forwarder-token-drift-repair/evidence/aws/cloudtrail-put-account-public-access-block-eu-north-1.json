@@ -1,0 +1,20 @@
+{
+    "Events": [
+        {
+            "EventId": "8d899066-0163-4550-ada5-44535918ccc2",
+            "EventName": "PutAccountPublicAccessBlock",
+            "ReadOnly": "false",
+            "AccessKeyId": "AKIA2EKX3HHOKSTDT2YX",
+            "EventTime": "2026-04-02T18:28:36+02:00",
+            "EventSource": "s3.amazonaws.com",
+            "Username": "root",
+            "Resources": [
+                {
+                    "ResourceType": "AWS::S3::AccountPublicAccessBlock",
+                    "ResourceName": "696505809372.s3-control.eu-north-1.amazonaws.com"
+                }
+            ],
+            "CloudTrailEvent": "{\"eventVersion\":\"1.11\",\"userIdentity\":{\"type\":\"Root\",\"principalId\":\"696505809372\",\"arn\":\"arn:aws:iam::696505809372:root\",\"accountId\":\"696505809372\",\"accessKeyId\":\"AKIA2EKX3HHOKSTDT2YX\"},\"eventTime\":\"2026-04-02T16:28:36Z\",\"eventSource\":\"s3.amazonaws.com\",\"eventName\":\"PutAccountPublicAccessBlock\",\"awsRegion\":\"eu-north-1\",\"sourceIPAddress\":\"41.238.89.71\",\"userAgent\":\"[aws-cli/2.33.0 md/awscrt#0.29.1 ua/2.1 os/macos#25.1.0 md/arch#arm64 lang/python#3.13.11 md/pyimpl#CPython m/E,b,n,Z,T cfg/retry-mode#standard md/installer#exe md/prompt#off md/command#s3control.put-public-access-block]\",\"requestParameters\":{\"PublicAccessBlockConfiguration\":{\"xmlns\":\"http://awss3control.amazonaws.com/doc/2018-08-20/\",\"RestrictPublicBuckets\":true,\"BlockPublicPolicy\":true,\"BlockPublicAcls\":true,\"IgnorePublicAcls\":true},\"Host\":\"696505809372.s3-control.eu-north-1.amazonaws.com\"},\"responseElements\":null,\"additionalEventData\":{\"SignatureVersion\":\"SigV4\",\"CipherSuite\":\"TLS_AES_128_GCM_SHA256\",\"bytesTransferredIn\":297,\"AuthenticationMethod\":\"AuthHeader\",\"x-amz-id-2\":\"hUfkEgW/vWX01Lb/1V1kql8eiU4qTIZxlkNv+JDXzpMy1mTUqod3KJwuSTNXL2CQ/50xhf+08lS0wTe9CuVB2eipmZPfZXsD\",\"bytesTransferredOut\":0},\"requestID\":\"E276QRA6TTNE7J88\",\"eventID\":\"8d899066-0163-4550-ada5-44535918ccc2\",\"readOnly\":false,\"eventType\":\"AwsApiCall\",\"managementEvent\":true,\"recipientAccountId\":\"696505809372\",\"eventCategory\":\"Management\",\"tlsDetails\":{\"tlsVersion\":\"TLSv1.3\",\"cipherSuite\":\"TLS_AES_128_GCM_SHA256\",\"clientProvidedHostHeader\":\"696505809372.s3-control.eu-north-1.amazonaws.com\"}}"
+        }
+    ]
+}

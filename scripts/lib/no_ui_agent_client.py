@@ -175,6 +175,30 @@ class SaaSApiClient:
     def create_action_group_bundle_run(self, group_id: str, body: dict[str, Any]) -> dict[str, Any]:
         return self._request_json("POST", f"/api/action-groups/{group_id}/bundle-run", body=body)
 
+    def list_action_groups(
+        self,
+        *,
+        account_id: str | None = None,
+        region: str | None = None,
+        action_type: str | None = None,
+        limit: int = 50,
+        offset: int = 0,
+    ) -> dict[str, Any]:
+        query: dict[str, Any] = {"limit": int(limit), "offset": int(offset)}
+        if account_id:
+            query["account_id"] = account_id
+        if region:
+            query["region"] = region
+        if action_type:
+            query["action_type"] = action_type
+        return self._request_json("GET", "/api/action-groups", query=query)
+
+    def get_action_group_detail(self, group_id: str) -> dict[str, Any]:
+        return self._request_json("GET", f"/api/action-groups/{group_id}")
+
+    def get_action_group_run(self, group_id: str, run_id: str) -> dict[str, Any]:
+        return self._request_json("GET", f"/api/action-groups/{group_id}/runs/{run_id}")
+
     def get_remediation_run(self, run_id: str) -> dict[str, Any]:
         return self._request_json("GET", f"/api/remediation-runs/{run_id}")
 
@@ -290,7 +314,15 @@ class SaaSApiClient:
         return f"{self.api_base}{suffix}?{urlencode(filtered, doseq=True)}"
 
     def _build_headers(self, include_auth: bool) -> dict[str, str]:
-        headers = {"Content-Type": "application/json", "Accept": "application/json"}
+        headers = {
+            "Content-Type": "application/json",
+            "Accept": "application/json",
+            "User-Agent": (
+                "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
+                "AppleWebKit/537.36 (KHTML, like Gecko) "
+                "Chrome/136.0.0.0 Safari/537.36"
+            ),
+        }
         if include_auth:
             token = str(self.access_token or "").strip()
             if not token:

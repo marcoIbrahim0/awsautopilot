@@ -1,0 +1,6 @@
+{
+  "group_run_id": "78cb0346-f171-4e9e-a9eb-c2f107bd0f70",
+  "remediation_run_id": "b971e542-e5c2-474b-91da-71141a467ffa",
+  "status": "queued",
+  "reason": "grouped_bundle_already_created_no_changes"
+}

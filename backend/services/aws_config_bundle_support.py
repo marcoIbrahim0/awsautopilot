@@ -156,7 +156,7 @@ def _apply_helpers() -> str:
             return result.returncode == 0
 
 
-        def create_bucket(bucket: str, region: str) -> None:
+        def create_bucket(bucket: str, region: str, *, object_lock_enabled: bool = False) -> None:
             args = ["aws", "s3api", "create-bucket", "--bucket", bucket, "--region", region]
             if region != "us-east-1":
                 args.extend(
@@ -165,6 +165,8 @@ def _apply_helpers() -> str:
                         f"LocationConstraint={region}",
                     ]
                 )
+            if object_lock_enabled:
+                args.append("--object-lock-enabled-for-bucket")
             run_command(args)
 
 
@@ -447,8 +449,12 @@ def _apply_main() -> str:
             summary = load_or_capture_snapshot(snapshot_dir, region=region, bucket=bucket)
             if create_local_bucket:
                 if not bucket_exists(bucket, region):
-                    create_bucket(bucket, region)
-                apply_support_bucket_baseline(bucket, region)
+                    create_bucket(bucket, region, object_lock_enabled=True)
+                apply_support_bucket_baseline(
+                    bucket,
+                    region,
+                    helper_bucket_role="aws-config-delivery",
+                )
                 original_policy = load_json(snapshot_dir / "pre_target_bucket_state.json").get("policy_json")
                 merged_policy = merge_bucket_policies(
                     original_policy,

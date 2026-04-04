@@ -1,0 +1,35 @@
+{
+  "request": {
+    "method": "POST",
+    "url": "https://api.ocypheris.com/api/aws/accounts/696505809372/ingest",
+    "params": null,
+    "json": null
+  },
+  "status_code": 202,
+  "headers": {
+    "Date": "Thu, 02 Apr 2026 14:38:21 GMT",
+    "Content-Type": "application/json",
+    "Content-Length": "223",
+    "Connection": "keep-alive",
+    "CF-Ray": "9e6093a3ce0811b8-MRS",
+    "CF-Cache-Status": "DYNAMIC",
+    "Server": "cloudflare",
+    "apigw-requestid": "bMjWkgkFAi0EPgQ=",
+    "Report-To": "{\"group\":\"cf-nel\",\"max_age\":604800,\"endpoints\":[{\"url\":\"https://a.nel.cloudflare.com/report/v4?s=Mb0IuX3pu4OICfcxFWlu7VrfqGj9XQnrYzsIfFCjZzTkwUF0RHwPEP49Ltk8wj%2FQLIrMa3XIxaCM67Tg4e3MXSiEW2Gb%2Bj0xNz6n9j%2Bdl58fZC2fVtR7zZy%2F8%2FsrsRPdgn36zw%3D%3D\"}]}",
+    "Nel": "{\"report_to\":\"cf-nel\",\"success_fraction\":0.0,\"max_age\":604800}",
+    "alt-svc": "h3=\":443\"; ma=86400"
+  },
+  "body": {
+    "account_id": "696505809372",
+    "jobs_queued": 2,
+    "regions": [
+      "eu-north-1",
+      "us-east-1"
+    ],
+    "message_ids": [
+      "e3658e3f-2116-4eb3-a0e7-646af355a642",
+      "19174a42-2739-40a1-8e7e-71b4098c5168"
+    ],
+    "message": "Ingestion jobs queued successfully"
+  }
+}

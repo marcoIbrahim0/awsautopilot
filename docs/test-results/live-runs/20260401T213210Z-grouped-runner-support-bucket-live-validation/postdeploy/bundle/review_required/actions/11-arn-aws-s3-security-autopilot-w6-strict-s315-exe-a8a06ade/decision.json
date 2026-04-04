@@ -1,0 +1,56 @@
+{
+  "action_id": "a8a06ade-67b9-4b5b-89df-1f4f430036a5",
+  "action_type": "s3_bucket_access_logging",
+  "blocked_reasons": [
+    "Target bucket 'security-autopilot-w6-strict-s315-exec-696505809372' existence could not be verified from this account context (403). Do not keep the existing-bucket remediation path executable until bucket existence is proven.",
+    "Destination log bucket 'security-autopilot-w6-strict-s315-exec-696505809372-access-logs' could not be verified from this account context (403)."
+  ],
+  "control_id": "S3.9",
+  "decision_rationale": "Family resolver downgraded S3.9 to destination-safety review. Target bucket 'security-autopilot-w6-strict-s315-exec-696505809372' existence could not be verified from this account context (403). Do not keep the existing-bucket remediation path executable until bucket existence is proven. Destination log bucket 'security-autopilot-w6-strict-s315-exec-696505809372-access-logs' could not be verified from this account context (403). Run creation did not require additional risk-only acceptance.",
+  "decision_summary": "Family resolver downgraded S3.9 to destination-safety review. Target bucket 'security-autopilot-w6-strict-s315-exec-696505809372' existence could not be verified from this account context (403). Do not keep the existing-bucket remediation path executable until bucket existence is proven. Destination log bucket 'security-autopilot-w6-strict-s315-exec-696505809372-access-logs' could not be verified from this account context (403). Run creation did not require additional risk-only acceptance.",
+  "decision_version": "resolver/v1",
+  "finding_coverage": {},
+  "folder": "review_required/actions/11-arn-aws-s3-security-autopilot-w6-strict-s315-exe-a8a06ade",
+  "has_runnable_terraform": false,
+  "index": 11,
+  "missing_defaults": [],
+  "missing_inputs": [],
+  "outcome": "review_required_metadata_only",
+  "preservation_summary": {
+    "ambiguous_source_destination_relationship": true,
+    "create_bucket_if_missing": false,
+    "destination_bucket_name": "security-autopilot-w6-strict-s315-exec-696505809372-access-logs",
+    "destination_bucket_reachable": false,
+    "destination_safety_proven": false,
+    "executable_destination_allowed": false,
+    "family": "s3_bucket_access_logging",
+    "family_strategy": "s3_enable_access_logging_guided",
+    "selected_branch": "s3_enable_access_logging_review_destination_safety",
+    "single_profile_compatible": false,
+    "source_bucket_name": "security-autopilot-w6-strict-s315-exec-696505809372",
+    "source_bucket_scope_proven": true,
+    "strategy_only_supported": true,
+    "target_bucket_creation_possible": false,
+    "target_bucket_exists": false,
+    "target_bucket_missing": false,
+    "target_bucket_reason": "Target bucket 'security-autopilot-w6-strict-s315-exec-696505809372' existence could not be verified from this account context (403). Do not keep the existing-bucket remediation path executable until bucket existence is proven.",
+    "target_bucket_verification_available": false
+  },
+  "profile_id": "s3_enable_access_logging_review_destination_safety",
+  "rejected_profiles": [
+    {
+      "detail": "Target bucket 'security-autopilot-w6-strict-s315-exec-696505809372' existence could not be verified from this account context (403). Do not keep the existing-bucket remediation path executable until bucket existence is proven.",
+      "profile_id": "s3_enable_access_logging_guided",
+      "reason": "branch_unavailable"
+    }
+  ],
+  "strategy_id": "s3_enable_access_logging_guided",
+  "strategy_inputs": {
+    "log_bucket_name": "security-autopilot-w6-strict-s315-exec-696505809372-access-logs"
+  },
+  "support_tier": "review_required_bundle",
+  "target_id": "696505809372|eu-north-1|arn:aws:s3:::security-autopilot-w6-strict-s315-exec-696505809372|S3.9",
+  "tier": "review_required",
+  "tier_root": "review_required/actions",
+  "title": "S3 general purpose buckets should have server access logging enabled"
+}

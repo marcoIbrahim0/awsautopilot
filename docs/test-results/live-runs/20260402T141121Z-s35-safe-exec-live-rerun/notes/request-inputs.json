@@ -1,0 +1,19 @@
+{
+  "account_id": "696505809372",
+  "region": "eu-north-1",
+  "action_type": "s3_bucket_require_ssl",
+  "action_id": "3970aa2f-edc5-4870-87bd-fa986dad3d98",
+  "bucket_name": "arch1-bucket-evidence-b1-696505809372-eu-north-1",
+  "strategy_id": "s3_enforce_ssl_strict_deny",
+  "profile_id": "s3_enforce_ssl_strict_deny",
+  "strategy_inputs": {
+    "create_bucket_if_missing": false,
+    "preserve_existing_policy": true
+  },
+  "mode": "pr_only",
+  "risk_acknowledged": true,
+  "aws_profile": "test28-root",
+  "runtime_validation_date_utc": "2026-04-02",
+  "remediation_run_id": "3c5c5cf3-1190-42c9-9ad7-737d57915ba5"
+}
+

@@ -1,0 +1,19 @@
+{
+  "action": {
+    "id": "3970aa2f-edc5-4870-87bd-fa986dad3d98",
+    "status": "resolved",
+    "action_type": "s3_bucket_require_ssl",
+    "target_id": "696505809372|eu-north-1|arn:aws:s3:::arch1-bucket-evidence-b1-696505809372-eu-north-1|S3.5",
+    "resource_id": "arn:aws:s3:::arch1-bucket-evidence-b1-696505809372-eu-north-1",
+    "updated_at": "2026-04-02 14:44:42.237453+00:00"
+  },
+  "finding": {
+    "id": "69507c08-bbb8-491d-9ec0-543278d96a2b",
+    "status": "RESOLVED",
+    "severity_label": "INFORMATIONAL",
+    "updated_at": "2026-04-02 15:56:18.687831+00:00",
+    "resolved_at": "2026-04-02 14:16:41.066000+00:00",
+    "shadow_status_normalized": "RESOLVED",
+    "shadow_status_reason": "inventory_confirmed_compliant"
+  }
+}

@@ -1,0 +1,258 @@
+Region: eu-north-1
+Build stack: security-autopilot-saas-serverless-build
+Runtime stack: security-autopilot-saas-serverless-runtime
+Name prefix: security-autopilot-dev
+Image tag: 20260401T230346Z-s35
+Enable worker mappings: true
+
+0) Verifying runtime/DB alignment before build...
+./scripts/deploy_saas_serverless.sh: line 239: ./venv/bin/python: No such file or directory
+Region: eu-north-1
+Build stack: security-autopilot-saas-serverless-build
+Runtime stack: security-autopilot-saas-serverless-runtime
+Name prefix: security-autopilot-dev
+Image tag: 20260401T230346Z-s35
+Enable worker mappings: true
+
+0) Verifying runtime/DB alignment before build...
+Traceback (most recent call last):
+  File "/private/tmp/aws-security-autopilot-s35/scripts/check_runtime_db_alignment.py", line 61, in <module>
+    raise SystemExit(main())
+  File "/private/tmp/aws-security-autopilot-s35/scripts/check_runtime_db_alignment.py", line 54, in main
+    ok, message = validate_revision_status(require_at_head=bool(args.require_at_head))
+  File "/private/tmp/aws-security-autopilot-s35/scripts/check_runtime_db_alignment.py", line 10, in validate_revision_status
+    status = get_revision_status()
+  File "/private/tmp/aws-security-autopilot-s35/backend/services/migration_guard.py", line 38, in get_revision_status
+    cfg = _alembic_config()
+  File "/private/tmp/aws-security-autopilot-s35/backend/services/migration_guard.py", line 33, in _alembic_config
+    cfg.set_main_option("sqlalchemy.url", resolve_database_urls().sync_url)
+  File "/private/tmp/aws-security-autopilot-s35/backend/services/database_failover.py", line 434, in resolve_database_urls
+    chosen = _resolve_by_probe(candidates)
+  File "/private/tmp/aws-security-autopilot-s35/backend/services/database_failover.py", line 463, in _resolve_by_probe
+    raise RuntimeError(f"Unable to connect to any configured database candidate. {details}")
+RuntimeError: Unable to connect to any configured database candidate. primary@<unknown>: Could not parse SQLAlchemy URL from given URL string; fallback@<unknown>: Could not parse SQLAlchemy URL from given URL string
+Region: eu-north-1
+Build stack: security-autopilot-saas-serverless-build
+Runtime stack: security-autopilot-saas-serverless-runtime
+Name prefix: security-autopilot-dev
+Image tag: 20260401T230346Z-s35
+Enable worker mappings: true
+
+0) Verifying runtime/DB alignment before build...
+Traceback (most recent call last):
+  File "/private/tmp/aws-security-autopilot-s35/scripts/check_runtime_db_alignment.py", line 61, in <module>
+    raise SystemExit(main())
+  File "/private/tmp/aws-security-autopilot-s35/scripts/check_runtime_db_alignment.py", line 54, in main
+    ok, message = validate_revision_status(require_at_head=bool(args.require_at_head))
+  File "/private/tmp/aws-security-autopilot-s35/scripts/check_runtime_db_alignment.py", line 10, in validate_revision_status
+    status = get_revision_status()
+  File "/private/tmp/aws-security-autopilot-s35/backend/services/migration_guard.py", line 38, in get_revision_status
+    cfg = _alembic_config()
+  File "/private/tmp/aws-security-autopilot-s35/backend/services/migration_guard.py", line 33, in _alembic_config
+    cfg.set_main_option("sqlalchemy.url", resolve_database_urls().sync_url)
+  File "/private/tmp/aws-security-autopilot-s35/backend/services/database_failover.py", line 434, in resolve_database_urls
+    chosen = _resolve_by_probe(candidates)
+  File "/private/tmp/aws-security-autopilot-s35/backend/services/database_failover.py", line 463, in _resolve_by_probe
+    raise RuntimeError(f"Unable to connect to any configured database candidate. {details}")
+RuntimeError: Unable to connect to any configured database candidate. primary@<unknown>: Could not parse SQLAlchemy URL from given URL string; fallback@<unknown>: Could not parse SQLAlchemy URL from given URL string
+Region: eu-north-1
+Build stack: security-autopilot-saas-serverless-build
+Runtime stack: security-autopilot-saas-serverless-runtime
+Name prefix: security-autopilot-dev
+Image tag: 20260401T230346Z-s35
+Enable worker mappings: true
+
+0) Verifying runtime/DB alignment before build...
+Runtime/DB alignment failed: database revision is ahead of the runtime artifact (current=['0055_sync_account_external_id_mirror'], expected=['0054_control_plane_previous_token_grace']).
+Region: eu-north-1
+Build stack: security-autopilot-saas-serverless-build
+Runtime stack: security-autopilot-saas-serverless-runtime
+Name prefix: security-autopilot-dev
+Image tag: 20260401T230346Z-s35
+Enable worker mappings: true
+
+0) Verifying runtime/DB alignment before build...
+Runtime/DB alignment passed: relation=at_head current=['0055_sync_account_external_id_mirror'] expected=['0055_sync_account_external_id_mirror']
+
+1) Deploying build stack (ECR + S3 + CodeBuild)...
+
+Waiting for changeset to be created..
+
+No changes to deploy. Stack security-autopilot-saas-serverless-build is up to date
+
+2) Creating source zip (excluding .env) for CodeBuild...
+Uploading: s3://security-autopilot-dev-serverless-src-029037611564-eu-north-1/sources/security-autopilot-dev/serverless-20260401T230346Z-s35.zip
+
+3) Building/pushing images in CodeBuild...
+Build ID: security-autopilot-dev-serverless-image-builder:d745bb79-206f-4869-adf6-dc7d97ef12a1
+
+4) Deploying runtime stack (API Gateway + Lambdas)...
+
+Waiting for changeset to be created..
+Waiting for stack create/update to complete
+Successfully created/updated stack - security-autopilot-saas-serverless-runtime
+
+5) Normalizing Lambda runtime/helper state drift...
+Region: eu-north-1
+Name prefix: security-autopilot-dev
+Enable worker: true
+Worker reserved concurrency: 10
+reserved concurrency already clear: security-autopilot-dev-api
+reserved concurrency already 10: security-autopilot-dev-worker
+worker mapping already enabled: 1a8946b6-7673-4533-be3f-93599901aa78
+worker mapping already enabled: cbc06570-74c1-4deb-bafd-117a1ce4b3b2
+worker mapping already enabled: 5dd3132b-f2ef-451a-b4e6-10a28b58e7c8
+worker mapping already enabled: f5de3fa1-19e6-42d1-b1c9-307a0bef9455
+
+Deployed: security-autopilot-saas-serverless-runtime (eu-north-1)
+----------------------------------------------------------------------------------------------------------------------------------------------
+|                                                               DescribeStacks                                                               |
++--------------------------------------------------+---------------------+-------------------------------------------------------------------+
+|                    Description                   |      OutputKey      |                            OutputValue                            |
++--------------------------------------------------+---------------------+-------------------------------------------------------------------+
+|  Stage ARN for WAF association (HTTP API).       |  ApiGatewayStageArn |  arn:aws:apigateway:eu-north-1::/apis/7ti19t61e6/stages/$default  |
+|  Public base URL for the API (no trailing /api). |  ApiBaseUrl         |  https://7ti19t61e6.execute-api.eu-north-1.amazonaws.com          |
+|  API Gateway HTTP API ID.                        |  ApiId              |  7ti19t61e6                                                       |
++--------------------------------------------------+---------------------+-------------------------------------------------------------------+
+
+6) Waiting for Lambda image rollout...
+lambda image active: security-autopilot-dev-api -> 029037611564.dkr.ecr.eu-north-1.amazonaws.com/security-autopilot-dev-saas-api:20260401T230346Z-s35
+lambda image active: security-autopilot-dev-worker -> 029037611564.dkr.ecr.eu-north-1.amazonaws.com/security-autopilot-dev-saas-worker:20260401T230346Z-s35
+
+7) Verifying runtime/DB alignment before database upgrade...
+Runtime/DB alignment passed: relation=at_head current=['0055_sync_account_external_id_mirror'] expected=['0055_sync_account_external_id_mirror']
+
+8) Applying database migrations...
+INFO  [alembic.runtime.migration] Context impl PostgresqlImpl.
+INFO  [alembic.runtime.migration] Will assume transactional DDL.
+
+9) Verifying runtime/DB alignment after database upgrade...
+Runtime/DB alignment passed: relation=at_head current=['0055_sync_account_external_id_mirror'] expected=['0055_sync_account_external_id_mirror']
+Region: eu-north-1
+Build stack: security-autopilot-saas-serverless-build
+Runtime stack: security-autopilot-saas-serverless-runtime
+Name prefix: security-autopilot-dev
+Image tag: 20260401T231300Z-s35-hotfix
+Enable worker mappings: true
+
+0) Verifying runtime/DB alignment before build...
+Runtime/DB alignment passed: relation=at_head current=['0055_sync_account_external_id_mirror'] expected=['0055_sync_account_external_id_mirror']
+
+1) Deploying build stack (ECR + S3 + CodeBuild)...
+
+Waiting for changeset to be created..
+
+No changes to deploy. Stack security-autopilot-saas-serverless-build is up to date
+
+2) Creating source zip (excluding .env) for CodeBuild...
+Uploading: s3://security-autopilot-dev-serverless-src-029037611564-eu-north-1/sources/security-autopilot-dev/serverless-20260401T231300Z-s35-hotfix.zip
+
+3) Building/pushing images in CodeBuild...
+Build ID: security-autopilot-dev-serverless-image-builder:76105163-f492-47bc-99e3-24a265271d19
+
+4) Deploying runtime stack (API Gateway + Lambdas)...
+
+Waiting for changeset to be created..
+Waiting for stack create/update to complete
+Successfully created/updated stack - security-autopilot-saas-serverless-runtime
+
+5) Normalizing Lambda runtime/helper state drift...
+Region: eu-north-1
+Name prefix: security-autopilot-dev
+Enable worker: true
+Worker reserved concurrency: 10
+reserved concurrency already clear: security-autopilot-dev-api
+reserved concurrency already 10: security-autopilot-dev-worker
+worker mapping already enabled: 1a8946b6-7673-4533-be3f-93599901aa78
+worker mapping already enabled: cbc06570-74c1-4deb-bafd-117a1ce4b3b2
+worker mapping already enabled: 5dd3132b-f2ef-451a-b4e6-10a28b58e7c8
+worker mapping already enabled: f5de3fa1-19e6-42d1-b1c9-307a0bef9455
+
+Deployed: security-autopilot-saas-serverless-runtime (eu-north-1)
+----------------------------------------------------------------------------------------------------------------------------------------------
+|                                                               DescribeStacks                                                               |
++--------------------------------------------------+---------------------+-------------------------------------------------------------------+
+|                    Description                   |      OutputKey      |                            OutputValue                            |
++--------------------------------------------------+---------------------+-------------------------------------------------------------------+
+|  Stage ARN for WAF association (HTTP API).       |  ApiGatewayStageArn |  arn:aws:apigateway:eu-north-1::/apis/7ti19t61e6/stages/$default  |
+|  Public base URL for the API (no trailing /api). |  ApiBaseUrl         |  https://7ti19t61e6.execute-api.eu-north-1.amazonaws.com          |
+|  API Gateway HTTP API ID.                        |  ApiId              |  7ti19t61e6                                                       |
++--------------------------------------------------+---------------------+-------------------------------------------------------------------+
+
+6) Waiting for Lambda image rollout...
+lambda image active: security-autopilot-dev-api -> 029037611564.dkr.ecr.eu-north-1.amazonaws.com/security-autopilot-dev-saas-api:20260401T231300Z-s35-hotfix
+lambda image active: security-autopilot-dev-worker -> 029037611564.dkr.ecr.eu-north-1.amazonaws.com/security-autopilot-dev-saas-worker:20260401T231300Z-s35-hotfix
+
+7) Verifying runtime/DB alignment before database upgrade...
+Runtime/DB alignment passed: relation=at_head current=['0055_sync_account_external_id_mirror'] expected=['0055_sync_account_external_id_mirror']
+
+8) Applying database migrations...
+INFO  [alembic.runtime.migration] Context impl PostgresqlImpl.
+INFO  [alembic.runtime.migration] Will assume transactional DDL.
+
+9) Verifying runtime/DB alignment after database upgrade...
+Runtime/DB alignment passed: relation=at_head current=['0055_sync_account_external_id_mirror'] expected=['0055_sync_account_external_id_mirror']
+Region: eu-north-1
+Build stack: security-autopilot-saas-serverless-build
+Runtime stack: security-autopilot-saas-serverless-runtime
+Name prefix: security-autopilot-dev
+Image tag: 20260401T232040Z-s35-hotfix2
+Enable worker mappings: true
+
+0) Verifying runtime/DB alignment before build...
+Runtime/DB alignment passed: relation=at_head current=['0055_sync_account_external_id_mirror'] expected=['0055_sync_account_external_id_mirror']
+
+1) Deploying build stack (ECR + S3 + CodeBuild)...
+
+Waiting for changeset to be created..
+
+No changes to deploy. Stack security-autopilot-saas-serverless-build is up to date
+
+2) Creating source zip (excluding .env) for CodeBuild...
+Uploading: s3://security-autopilot-dev-serverless-src-029037611564-eu-north-1/sources/security-autopilot-dev/serverless-20260401T232040Z-s35-hotfix2.zip
+
+3) Building/pushing images in CodeBuild...
+Build ID: security-autopilot-dev-serverless-image-builder:8b97ce42-750b-43e7-b935-34e732bfa766
+
+4) Deploying runtime stack (API Gateway + Lambdas)...
+
+Waiting for changeset to be created..
+Waiting for stack create/update to complete
+Successfully created/updated stack - security-autopilot-saas-serverless-runtime
+
+5) Normalizing Lambda runtime/helper state drift...
+Region: eu-north-1
+Name prefix: security-autopilot-dev
+Enable worker: true
+Worker reserved concurrency: 10
+reserved concurrency already clear: security-autopilot-dev-api
+reserved concurrency already 10: security-autopilot-dev-worker
+worker mapping already enabled: 1a8946b6-7673-4533-be3f-93599901aa78
+worker mapping already enabled: cbc06570-74c1-4deb-bafd-117a1ce4b3b2
+worker mapping already enabled: 5dd3132b-f2ef-451a-b4e6-10a28b58e7c8
+worker mapping already enabled: f5de3fa1-19e6-42d1-b1c9-307a0bef9455
+
+Deployed: security-autopilot-saas-serverless-runtime (eu-north-1)
+----------------------------------------------------------------------------------------------------------------------------------------------
+|                                                               DescribeStacks                                                               |
++--------------------------------------------------+---------------------+-------------------------------------------------------------------+
+|                    Description                   |      OutputKey      |                            OutputValue                            |
++--------------------------------------------------+---------------------+-------------------------------------------------------------------+
+|  Stage ARN for WAF association (HTTP API).       |  ApiGatewayStageArn |  arn:aws:apigateway:eu-north-1::/apis/7ti19t61e6/stages/$default  |
+|  Public base URL for the API (no trailing /api). |  ApiBaseUrl         |  https://7ti19t61e6.execute-api.eu-north-1.amazonaws.com          |
+|  API Gateway HTTP API ID.                        |  ApiId              |  7ti19t61e6                                                       |
++--------------------------------------------------+---------------------+-------------------------------------------------------------------+
+
+6) Waiting for Lambda image rollout...
+lambda image active: security-autopilot-dev-api -> 029037611564.dkr.ecr.eu-north-1.amazonaws.com/security-autopilot-dev-saas-api:20260401T232040Z-s35-hotfix2
+lambda image active: security-autopilot-dev-worker -> 029037611564.dkr.ecr.eu-north-1.amazonaws.com/security-autopilot-dev-saas-worker:20260401T232040Z-s35-hotfix2
+
+7) Verifying runtime/DB alignment before database upgrade...
+Runtime/DB alignment passed: relation=at_head current=['0055_sync_account_external_id_mirror'] expected=['0055_sync_account_external_id_mirror']
+
+8) Applying database migrations...
+INFO  [alembic.runtime.migration] Context impl PostgresqlImpl.
+INFO  [alembic.runtime.migration] Will assume transactional DDL.
+
+9) Verifying runtime/DB alignment after database upgrade...
+Runtime/DB alignment passed: relation=at_head current=['0055_sync_account_external_id_mirror'] expected=['0055_sync_account_external_id_mirror']

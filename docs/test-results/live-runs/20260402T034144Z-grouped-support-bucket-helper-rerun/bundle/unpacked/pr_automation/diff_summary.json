@@ -1,0 +1,137 @@
+{
+  "artifact_type": "generated_diff_summary",
+  "file_count": 14,
+  "files": [
+    {
+      "bundle_path": "run_all.sh",
+      "byte_count": 4871,
+      "change_type": "create_or_update",
+      "content_sha256": "c3c90832cb73ac3b0a1bfa216df56511ea7e75af862b23f8a74aaf28519608db",
+      "line_count": 103,
+      "repo_path": "evidence/helper-rerun-20260402T034144Z/run_all.sh"
+    },
+    {
+      "bundle_path": "replay_group_run_reports.sh",
+      "byte_count": 1521,
+      "change_type": "create_or_update",
+      "content_sha256": "722cb6d7017b682c0f4c44153d15e7e4a9918cfc102cf87fa92fef591f5dbd4f",
+      "line_count": 54,
+      "repo_path": "evidence/helper-rerun-20260402T034144Z/replay_group_run_reports.sh"
+    },
+    {
+      "bundle_path": "run_actions.sh",
+      "byte_count": 23934,
+      "change_type": "create_or_update",
+      "content_sha256": "97328c83ab13e15069b95c92f9e1b9db143c2916bb04a3e019782151d5392e6e",
+      "line_count": 804,
+      "repo_path": "evidence/helper-rerun-20260402T034144Z/run_actions.sh"
+    },
+    {
+      "bundle_path": "README_GROUP.txt",
+      "byte_count": 719,
+      "change_type": "create_or_update",
+      "content_sha256": "ddd56ab68670860c68649e752ff1eec0f5d8f2745825891c9a3fc3f8b101c150",
+      "line_count": 21,
+      "repo_path": "evidence/helper-rerun-20260402T034144Z/README_GROUP.txt"
+    },
+    {
+      "bundle_path": "bundle_manifest.json",
+      "byte_count": 3421,
+      "change_type": "create_or_update",
+      "content_sha256": "ecee3114e83f4e077c79d7b71a6ea2576932ba8f26ae258971d1c9170f0a175e",
+      "line_count": 80,
+      "repo_path": "evidence/helper-rerun-20260402T034144Z/bundle_manifest.json"
+    },
+    {
+      "bundle_path": "decision_log.md",
+      "byte_count": 538,
+      "change_type": "create_or_update",
+      "content_sha256": "75fdefa24df7ddd7fd2b30e2dcc712a4911e01b489131b8e7fd7ec7bdcb563dd",
+      "line_count": 9,
+      "repo_path": "evidence/helper-rerun-20260402T034144Z/decision_log.md"
+    },
+    {
+      "bundle_path": "finding_coverage.json",
+      "byte_count": 221,
+      "change_type": "create_or_update",
+      "content_sha256": "2fb4ffcf5cafc9ae394936442391669f820d5899c07866ec8cf6b23024f1e44a",
+      "line_count": 10,
+      "repo_path": "evidence/helper-rerun-20260402T034144Z/finding_coverage.json"
+    },
+    {
+      "bundle_path": "executable/actions/01-aws-account-696505809372-7d51a23a/providers.tf",
+      "byte_count": 557,
+      "change_type": "create_or_update",
+      "content_sha256": "f94b43f86e30978edc49d6a86b6cebf38c9aec621d2031c7b12d94eca0de382f",
+      "line_count": 22,
+      "repo_path": "evidence/helper-rerun-20260402T034144Z/executable/actions/01-aws-account-696505809372-7d51a23a/providers.tf"
+    },
+    {
+      "bundle_path": "executable/actions/01-aws-account-696505809372-7d51a23a/aws_config_enabled.tf",
+      "byte_count": 2210,
+      "change_type": "create_or_update",
+      "content_sha256": "96eb5b7f1efbd3bc6bdc0e28412954a004858b43da3f8f1aedd2fd0f5e6d2afa",
+      "line_count": 68,
+      "repo_path": "evidence/helper-rerun-20260402T034144Z/executable/actions/01-aws-account-696505809372-7d51a23a/aws_config_enabled.tf"
+    },
+    {
+      "bundle_path": "executable/actions/01-aws-account-696505809372-7d51a23a/scripts/aws_config_apply.py",
+      "byte_count": 22393,
+      "change_type": "create_or_update",
+      "content_sha256": "423be62890640368588e87fa2f79d9d525f98ef66573338eec8c69201950040f",
+      "line_count": 592,
+      "repo_path": "evidence/helper-rerun-20260402T034144Z/executable/actions/01-aws-account-696505809372-7d51a23a/scripts/aws_config_apply.py"
+    },
+    {
+      "bundle_path": "executable/actions/01-aws-account-696505809372-7d51a23a/rollback/aws_config_restore.py",
+      "byte_count": 11154,
+      "change_type": "create_or_update",
+      "content_sha256": "344d4b5cf02440c27a6b9146efc99b91f04bae1150a92ae0ef249422dabd168b",
+      "line_count": 309,
+      "repo_path": "evidence/helper-rerun-20260402T034144Z/executable/actions/01-aws-account-696505809372-7d51a23a/rollback/aws_config_restore.py"
+    },
+    {
+      "bundle_path": "executable/actions/01-aws-account-696505809372-7d51a23a/README.txt",
+      "byte_count": 2236,
+      "change_type": "create_or_update",
+      "content_sha256": "f3d5888d100d7664a4fbeacc7160ef88e0fc5456d1a7cfb031efa30fe0cb1597",
+      "line_count": 34,
+      "repo_path": "evidence/helper-rerun-20260402T034144Z/executable/actions/01-aws-account-696505809372-7d51a23a/README.txt"
+    },
+    {
+      "bundle_path": "executable/actions/01-aws-account-696505809372-7d51a23a/README_ACTION.txt",
+      "byte_count": 640,
+      "change_type": "create_or_update",
+      "content_sha256": "e677da553ed9859e16177193a5733e4c522353608528705820440919f0d4266a",
+      "line_count": 12,
+      "repo_path": "evidence/helper-rerun-20260402T034144Z/executable/actions/01-aws-account-696505809372-7d51a23a/README_ACTION.txt"
+    },
+    {
+      "bundle_path": "executable/actions/01-aws-account-696505809372-7d51a23a/decision.json",
+      "byte_count": 2524,
+      "change_type": "create_or_update",
+      "content_sha256": "fb9d1db2e8f602fa090178729746333e7695c0bb72a3bcafae33d6d2b1ed9ad0",
+      "line_count": 54,
+      "repo_path": "evidence/helper-rerun-20260402T034144Z/executable/actions/01-aws-account-696505809372-7d51a23a/decision.json"
+    }
+  ],
+  "fingerprint_sha256": "2ffa16d86be9ffafb9603f9fa8db1e73c06b3b58661dba400046fe4b416e6ea4",
+  "repo_target_configured": true,
+  "summary_lines": [
+    "`evidence/helper-rerun-20260402T034144Z/run_all.sh` <- `run_all.sh` (103 lines, sha256:c3c90832cb73)",
+    "`evidence/helper-rerun-20260402T034144Z/replay_group_run_reports.sh` <- `replay_group_run_reports.sh` (54 lines, sha256:722cb6d7017b)",
+    "`evidence/helper-rerun-20260402T034144Z/run_actions.sh` <- `run_actions.sh` (804 lines, sha256:97328c83ab13)",
+    "`evidence/helper-rerun-20260402T034144Z/README_GROUP.txt` <- `README_GROUP.txt` (21 lines, sha256:ddd56ab68670)",
+    "`evidence/helper-rerun-20260402T034144Z/bundle_manifest.json` <- `bundle_manifest.json` (80 lines, sha256:ecee3114e83f)",
+    "`evidence/helper-rerun-20260402T034144Z/decision_log.md` <- `decision_log.md` (9 lines, sha256:75fdefa24df7)",
+    "`evidence/helper-rerun-20260402T034144Z/finding_coverage.json` <- `finding_coverage.json` (10 lines, sha256:2fb4ffcf5caf)",
+    "`evidence/helper-rerun-20260402T034144Z/executable/actions/01-aws-account-696505809372-7d51a23a/providers.tf` <- `executable/actions/01-aws-account-696505809372-7d51a23a/providers.tf` (22 lines, sha256:f94b43f86e30)",
+    "`evidence/helper-rerun-20260402T034144Z/executable/actions/01-aws-account-696505809372-7d51a23a/aws_config_enabled.tf` <- `executable/actions/01-aws-account-696505809372-7d51a23a/aws_config_enabled.tf` (68 lines, sha256:96eb5b7f1efb)",
+    "`evidence/helper-rerun-20260402T034144Z/executable/actions/01-aws-account-696505809372-7d51a23a/scripts/aws_config_apply.py` <- `executable/actions/01-aws-account-696505809372-7d51a23a/scripts/aws_config_apply.py` (592 lines, sha256:423be6289064)",
+    "`evidence/helper-rerun-20260402T034144Z/executable/actions/01-aws-account-696505809372-7d51a23a/rollback/aws_config_restore.py` <- `executable/actions/01-aws-account-696505809372-7d51a23a/rollback/aws_config_restore.py` (309 lines, sha256:344d4b5cf024)",
+    "`evidence/helper-rerun-20260402T034144Z/executable/actions/01-aws-account-696505809372-7d51a23a/README.txt` <- `executable/actions/01-aws-account-696505809372-7d51a23a/README.txt` (34 lines, sha256:f3d5888d100d)",
+    "`evidence/helper-rerun-20260402T034144Z/executable/actions/01-aws-account-696505809372-7d51a23a/README_ACTION.txt` <- `executable/actions/01-aws-account-696505809372-7d51a23a/README_ACTION.txt` (12 lines, sha256:e677da553ed9)",
+    "`evidence/helper-rerun-20260402T034144Z/executable/actions/01-aws-account-696505809372-7d51a23a/decision.json` <- `executable/actions/01-aws-account-696505809372-7d51a23a/decision.json` (54 lines, sha256:fb9d1db2e8f6)"
+  ],
+  "version": 1
+}

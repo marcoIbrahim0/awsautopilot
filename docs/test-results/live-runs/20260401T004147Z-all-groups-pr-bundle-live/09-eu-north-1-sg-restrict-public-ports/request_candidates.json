@@ -1,0 +1,14 @@
+[
+  {
+    "bucket_creation_acknowledged": false,
+    "repo_target": {
+      "base_branch": "main",
+      "head_branch": "20260401t004147z-all-groups-pr-bundle-live-09-eu-north-1-sg-restrict-public-ports-sg-restrict-public-ports-guided",
+      "provider": "github",
+      "repository": "example/security-autopilot-remediations"
+    },
+    "risk_acknowledged": true,
+    "strategy_id": "sg_restrict_public_ports_guided",
+    "strategy_inputs": {}
+  }
+]

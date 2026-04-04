@@ -1,0 +1,19 @@
+{
+  "runner_template_source": "repo:infrastructure/templates/run_all.sh",
+  "runner_template_version": "sha256:a5cf62e37840be74",
+  "helper_bucket_inventory": [
+    {
+      "bucket_name": "security-autopilot-config-696505809372-eu-north-1",
+      "created": true,
+      "helper_bucket_role": "aws-config-delivery",
+      "reused": false
+    }
+  ],
+  "execution_root": "executable/actions",
+  "runnable_action_count": 1,
+  "executable_action_count": null,
+  "review_required_action_count": null,
+  "run_all_invokes_run_actions": true,
+  "run_actions_contains_adopt_existing_log_bucket": true,
+  "run_actions_contains_EXECUTION_ROOT": true
+}

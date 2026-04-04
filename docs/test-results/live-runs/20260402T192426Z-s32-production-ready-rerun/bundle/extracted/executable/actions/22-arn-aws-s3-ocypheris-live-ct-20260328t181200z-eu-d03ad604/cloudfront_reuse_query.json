@@ -1,0 +1,7 @@
+{
+  "bucket_name": "ocypheris-live-ct-20260328t181200z-eu-north-1",
+  "expected_bucket_regional_domain_name": "ocypheris-live-ct-20260328t181200z-eu-north-1.s3.eu-north-1.amazonaws.com",
+  "expected_distribution_comment": "Security Autopilot migration for ocypheris-live-ct-20260328t181200z-eu-north-1",
+  "expected_oac_name": "security-autopilot-oac-7696ae29c61e",
+  "expected_origin_id": "s3-ocypheris-live-ct-20260328t181200z-eu-north-1"
+}

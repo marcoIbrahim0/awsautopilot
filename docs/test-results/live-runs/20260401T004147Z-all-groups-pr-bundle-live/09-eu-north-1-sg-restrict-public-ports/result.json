@@ -1,0 +1,28 @@
+{
+  "account_id": "696505809372",
+  "action_type": "sg_restrict_public_ports",
+  "apply_status": "failed",
+  "folder": "09-eu-north-1-sg-restrict-public-ports",
+  "generation_status": "success",
+  "group_id": "595cb7e3-5f4f-49a4-9c48-9388f139f012",
+  "group_run_id": "fe667235-6149-4813-8959-8a1c8ae077da",
+  "manual_guidance_action_count": 0,
+  "non_runnable_reasons": [],
+  "region": "eu-north-1",
+  "remediation_run_id": "39d1ad76-c49d-4db7-92c4-225a4600ac23",
+  "review_required_action_count": 0,
+  "runnable_action_count": 7,
+  "selected_request": {
+    "bucket_creation_acknowledged": false,
+    "repo_target": {
+      "base_branch": "main",
+      "head_branch": "20260401t004147z-all-groups-pr-bundle-live-09-eu-north-1-sg-restrict-public-ports-sg-restrict-public-ports-guided",
+      "provider": "github",
+      "repository": "example/security-autopilot-remediations"
+    },
+    "risk_acknowledged": true,
+    "strategy_id": "sg_restrict_public_ports_guided",
+    "strategy_inputs": {}
+  },
+  "summary_status": "APPLY NOT SUCCESSFUL"
+}

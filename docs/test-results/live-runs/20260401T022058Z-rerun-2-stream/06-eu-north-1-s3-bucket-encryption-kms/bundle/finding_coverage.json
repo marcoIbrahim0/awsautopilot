@@ -1,0 +1,80 @@
+{
+  "actions": [
+    {
+      "action_id": "f47a11cd-8055-4b52-81c3-2838e9696f80",
+      "finding_coverage": {},
+      "support_tier": "deterministic_bundle"
+    },
+    {
+      "action_id": "45d79702-98f7-4ddc-964c-4b8d91e0e06b",
+      "finding_coverage": {},
+      "support_tier": "deterministic_bundle"
+    },
+    {
+      "action_id": "39732b9a-956a-4deb-913d-d652cad22526",
+      "finding_coverage": {},
+      "support_tier": "deterministic_bundle"
+    },
+    {
+      "action_id": "8130621f-9c7c-4b7c-83cb-9397fb14c7cd",
+      "finding_coverage": {},
+      "support_tier": "deterministic_bundle"
+    },
+    {
+      "action_id": "998b9663-cc6f-4baf-a796-99ae261f482c",
+      "finding_coverage": {},
+      "support_tier": "deterministic_bundle"
+    },
+    {
+      "action_id": "90a9507a-7a74-4e6f-a2ff-b78712719388",
+      "finding_coverage": {},
+      "support_tier": "deterministic_bundle"
+    },
+    {
+      "action_id": "ba07da99-600c-4fd2-8091-3f1b7d5ecc02",
+      "finding_coverage": {},
+      "support_tier": "deterministic_bundle"
+    },
+    {
+      "action_id": "45d7dd83-bc32-4789-a5ce-a71cd4a215cd",
+      "finding_coverage": {},
+      "support_tier": "deterministic_bundle"
+    },
+    {
+      "action_id": "15891d06-c639-4692-881d-05fdcca5d581",
+      "finding_coverage": {},
+      "support_tier": "deterministic_bundle"
+    },
+    {
+      "action_id": "4fe5d11f-81f1-48f6-b1eb-2fca55cee9d9",
+      "finding_coverage": {},
+      "support_tier": "deterministic_bundle"
+    },
+    {
+      "action_id": "c5c8cb79-6e08-4341-9301-4e9f2272cb0e",
+      "finding_coverage": {},
+      "support_tier": "deterministic_bundle"
+    },
+    {
+      "action_id": "7249615a-d298-4278-9f9f-e41a04cb2811",
+      "finding_coverage": {},
+      "support_tier": "deterministic_bundle"
+    },
+    {
+      "action_id": "b74b1748-222a-44f5-bd02-93d1e3ea5d34",
+      "finding_coverage": {},
+      "support_tier": "deterministic_bundle"
+    },
+    {
+      "action_id": "a7f92106-2df8-4768-aac0-358250abdb7b",
+      "finding_coverage": {},
+      "support_tier": "deterministic_bundle"
+    },
+    {
+      "action_id": "398a13c7-d1fc-44f6-8621-ea7c4bf9da88",
+      "finding_coverage": {},
+      "support_tier": "deterministic_bundle"
+    }
+  ],
+  "layout_version": "grouped_bundle_mixed_tier/v1"
+}

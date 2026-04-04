@@ -1,6 +1,16 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+EXECUTION_ROOT="${EXECUTION_ROOT:-actions}"
+MANIFEST_PATH="${BUNDLE_MANIFEST_PATH:-./bundle_manifest.json}"
+SUMMARY_PATH="${BUNDLE_EXECUTION_SUMMARY_PATH:-./.bundle-execution-summary.json}"
+STATUS_JOURNAL="$(mktemp)"
+
+cleanup_temp_files() {
+  rm -f "${STATUS_JOURNAL}"
+}
+trap cleanup_temp_files EXIT
+
 if ! command -v terraform >/dev/null 2>&1; then
   echo "terraform is required but not installed."
   exit 1
@@ -186,15 +196,362 @@ cleanup_action_workspace() {
   rm -rf "$workspace_root"
 }
 
+merge_auto_tfvars_json() {
+  local tfvars_path="$1"
+  local create_log_bucket="$2"
+  local adopt_existing_log_bucket="$3"
+  python3 - "$tfvars_path" "$create_log_bucket" "$adopt_existing_log_bucket" <<'PY'
+import json
+import sys
+from pathlib import Path
+
+path = Path(sys.argv[1])
+payload = {}
+if path.is_file():
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8"))
+    except Exception:
+        payload = {}
+payload["create_log_bucket"] = sys.argv[2].strip().lower() == "true"
+payload["adopt_existing_log_bucket"] = sys.argv[3].strip().lower() == "true"
+path.write_text(json.dumps(payload, separators=(",", ":")) + "\n", encoding="utf-8")
+PY
+}
+
+merge_cloudfront_oac_tfvars_json() {
+  local tfvars_path="$1"
+  local discovery_json_path="$2"
+  python3 - "$tfvars_path" "$discovery_json_path" <<'PY'
+import json
+import sys
+from pathlib import Path
+
+tfvars_path = Path(sys.argv[1])
+discovery_path = Path(sys.argv[2])
+
+payload = {}
+if tfvars_path.is_file():
+    try:
+        payload = json.loads(tfvars_path.read_text(encoding="utf-8"))
+    except Exception as exc:
+        raise SystemExit(f"Unable to parse existing tfvars JSON: {exc}")
+
+try:
+    discovery = json.loads(discovery_path.read_text(encoding="utf-8"))
+except Exception as exc:
+    raise SystemExit(f"Unable to parse CloudFront/OAC discovery JSON: {exc}")
+
+if not isinstance(discovery, dict):
+    raise SystemExit("CloudFront/OAC discovery output must be a JSON object.")
+
+allowed_keys = {
+    "cloudfront_reuse_mode",
+    "reuse_oac_id",
+    "reuse_distribution_id",
+    "reuse_distribution_arn",
+    "reuse_distribution_domain_name",
+}
+unexpected = sorted(set(discovery) - allowed_keys)
+if unexpected:
+    raise SystemExit(f"Unexpected CloudFront/OAC discovery keys: {', '.join(unexpected)}")
+
+mode = str(discovery.get("cloudfront_reuse_mode") or "").strip() or "create"
+if mode not in {"create", "reuse_oac_only", "reuse_distribution"}:
+    raise SystemExit(f"Unsupported cloudfront_reuse_mode: {mode!r}")
+
+merged = dict(payload)
+merged["cloudfront_reuse_mode"] = mode
+for key in (
+    "reuse_oac_id",
+    "reuse_distribution_id",
+    "reuse_distribution_arn",
+    "reuse_distribution_domain_name",
+):
+    value = discovery.get(key, "")
+    if value is None:
+        value = ""
+    if not isinstance(value, str):
+        raise SystemExit(f"CloudFront/OAC discovery value for {key} must be a string.")
+    merged[key] = value.strip()
+
+if mode == "create":
+    merged["reuse_oac_id"] = ""
+    merged["reuse_distribution_id"] = ""
+    merged["reuse_distribution_arn"] = ""
+    merged["reuse_distribution_domain_name"] = ""
+elif mode == "reuse_oac_only":
+    if not merged["reuse_oac_id"]:
+        raise SystemExit("CloudFront/OAC discovery mode reuse_oac_only requires reuse_oac_id.")
+    merged["reuse_distribution_id"] = ""
+    merged["reuse_distribution_arn"] = ""
+    merged["reuse_distribution_domain_name"] = ""
+else:
+    required = (
+        "reuse_oac_id",
+        "reuse_distribution_id",
+        "reuse_distribution_arn",
+        "reuse_distribution_domain_name",
+    )
+    missing = [key for key in required if not merged[key]]
+    if missing:
+        raise SystemExit(
+            "CloudFront/OAC discovery mode reuse_distribution is missing required values: "
+            + ", ".join(missing)
+        )
+
+tfvars_path.write_text(json.dumps(merged, separators=(",", ":")) + "\n", encoding="utf-8")
+print(mode)
+PY
+}
+
+extract_s3_access_logging_defaults() {
+  local source_dir="$1"
+  python3 - "$source_dir" <<'PY'
+import re
+import sys
+from pathlib import Path
+
+path = Path(sys.argv[1]) / "s3_bucket_access_logging.tf"
+if not path.is_file():
+    sys.exit(0)
+text = path.read_text(encoding="utf-8")
+
+def find_default(name: str) -> str:
+    quoted = re.search(rf'variable "{re.escape(name)}" \{{.*?default\s*=\s*"([^"]+)"', text, re.S)
+    if quoted:
+        return quoted.group(1)
+    boolean = re.search(rf'variable "{re.escape(name)}" \{{.*?default\s*=\s*(true|false)', text, re.S)
+    if boolean:
+        return boolean.group(1)
+    return ""
+
+print(find_default("log_bucket_name"))
+print(find_default("create_log_bucket"))
+PY
+}
+
+prepare_s3_access_logging_tfvars() {
+  local source_dir="$1"
+  local workspace_dir="$2"
+  local tfvars_path bucket_name create_log_bucket_default error_file
+  local -a defaults=()
+
+  if [ ! -f "${source_dir}/s3_bucket_access_logging.tf" ]; then
+    return 0
+  fi
+  if ! command -v aws >/dev/null 2>&1; then
+    return 0
+  fi
+  mapfile -t defaults < <(extract_s3_access_logging_defaults "$source_dir")
+  bucket_name="${defaults[0]:-}"
+  create_log_bucket_default="${defaults[1]:-false}"
+  if [ -z "$bucket_name" ] || [ "$create_log_bucket_default" != "true" ]; then
+    return 0
+  fi
+
+  error_file=$(mktemp)
+  if aws s3api get-bucket-location --bucket "$bucket_name" >/dev/null 2>"$error_file"; then
+    tfvars_path="${workspace_dir}/security_autopilot.auto.tfvars.json"
+    merge_auto_tfvars_json "$tfvars_path" false true
+    echo "INFO: reusing existing owned S3.9 destination bucket ${bucket_name}; applying the shared support-bucket baseline without re-creating it."
+    rm -f "$error_file"
+    return 0
+  fi
+  rm -f "$error_file"
+  return 0
+}
+
+prepare_cloudfront_oac_tfvars() {
+  local source_dir="$1"
+  local workspace_dir="$2"
+  local tfvars_path output_file error_file mode
+
+  if [ ! -f "${source_dir}/s3_cloudfront_oac_private_s3.tf" ]; then
+    return 0
+  fi
+
+  if ! command -v python3 >/dev/null 2>&1; then
+    echo "ERROR: python3 is required for CloudFront/OAC reuse preflight."
+    return 1
+  fi
+  if ! command -v aws >/dev/null 2>&1; then
+    echo "ERROR: aws CLI is required for CloudFront/OAC reuse preflight."
+    return 1
+  fi
+  if [ ! -f "${workspace_dir}/scripts/cloudfront_oac_discovery.py" ]; then
+    echo "ERROR: bundled CloudFront/OAC discovery script is missing for ${source_dir}."
+    return 1
+  fi
+  if [ ! -f "${workspace_dir}/cloudfront_reuse_query.json" ]; then
+    echo "ERROR: bundled CloudFront/OAC discovery query is missing for ${source_dir}."
+    return 1
+  fi
+
+  output_file=$(mktemp)
+  error_file=$(mktemp)
+  if ! python3 "${workspace_dir}/scripts/cloudfront_oac_discovery.py" \
+      < "${workspace_dir}/cloudfront_reuse_query.json" \
+      > "${output_file}" 2> "${error_file}"; then
+    echo "ERROR: CloudFront/OAC reuse preflight failed for ${source_dir}."
+    cat "${error_file}"
+    rm -f "${output_file}" "${error_file}"
+    return 1
+  fi
+
+  tfvars_path="${workspace_dir}/security_autopilot.auto.tfvars.json"
+  if ! mode=$(merge_cloudfront_oac_tfvars_json "${tfvars_path}" "${output_file}" 2> "${error_file}"); then
+    echo "ERROR: CloudFront/OAC reuse preflight produced invalid output for ${source_dir}."
+    cat "${error_file}"
+    rm -f "${output_file}" "${error_file}"
+    return 1
+  fi
+
+  echo "INFO: CloudFront/OAC reuse preflight mode=${mode} for ${source_dir}."
+  rm -f "${output_file}" "${error_file}"
+  return 0
+}
+
+manifest_shared_field() {
+  local folder="$1"
+  local field="$2"
+  if [ ! -f "${MANIFEST_PATH}" ]; then
+    return 0
+  fi
+  python3 - "${MANIFEST_PATH}" "$folder" "$field" <<'PY'
+import json
+import sys
+from pathlib import Path
+
+manifest_path = Path(sys.argv[1])
+folder = sys.argv[2]
+field = sys.argv[3]
+try:
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+except Exception:
+    sys.exit(0)
+for item in manifest.get("shared_execution_folders") or []:
+    if not isinstance(item, dict):
+        continue
+    if str(item.get("folder") or "") != folder:
+        continue
+    value = item.get(field)
+    if value is None:
+        sys.exit(0)
+    if isinstance(value, (dict, list)):
+        print(json.dumps(value, separators=(",", ":")))
+    else:
+        print(str(value))
+    break
+PY
+}
+
+manifest_shared_folders() {
+  if [ ! -f "${MANIFEST_PATH}" ]; then
+    return 0
+  fi
+  python3 - "${MANIFEST_PATH}" <<'PY'
+import json
+import sys
+from pathlib import Path
+
+manifest_path = Path(sys.argv[1])
+try:
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+except Exception:
+    sys.exit(0)
+
+for item in manifest.get("shared_execution_folders") or []:
+    if not isinstance(item, dict):
+        continue
+    folder = str(item.get("folder") or "").strip()
+    if folder:
+        print(folder)
+PY
+}
+
+prepare_shared_folder_tfvars() {
+  local source_dir="$1"
+  local workspace_dir="$2"
+  local shared_kind bucket_name tfvars_path error_file
+  shared_kind=$(manifest_shared_field "$source_dir" "kind")
+  if [ "$shared_kind" != "s3_access_logging_destination_setup" ]; then
+    return 0
+  fi
+  bucket_name=$(manifest_shared_field "$source_dir" "destination_bucket_name")
+  if [ -z "$bucket_name" ]; then
+    echo "ERROR: shared execution folder metadata is missing destination_bucket_name for $source_dir."
+    return 1
+  fi
+
+  tfvars_path="${workspace_dir}/security_autopilot.auto.tfvars.json"
+  if ! command -v aws >/dev/null 2>&1; then
+    cat > "${tfvars_path}" <<EOF
+{"create_log_bucket": true}
+EOF
+    return 0
+  fi
+
+  error_file=$(mktemp)
+  if aws s3api get-bucket-location --bucket "$bucket_name" >/dev/null 2>"$error_file"; then
+    cat > "${tfvars_path}" <<EOF
+{"create_log_bucket": false}
+EOF
+    rm -f "$error_file"
+    return 0
+  fi
+  if grep -Eiq 'NoSuchBucket|Not Found|404' "$error_file"; then
+    cat > "${tfvars_path}" <<EOF
+{"create_log_bucket": true}
+EOF
+    rm -f "$error_file"
+    return 0
+  fi
+  echo "ERROR: unable to verify whether shared destination bucket ${bucket_name} already exists and is owned."
+  cat "$error_file"
+  rm -f "$error_file"
+  return 1
+}
+
 bootstrap_provider_cache
 write_tfrc_with_mirror "${ACTIVE_TF_PROVIDER_MIRROR_DIR}"
 
-TOTAL=$(find actions -mindepth 1 -maxdepth 1 -type d 2>/dev/null | wc -l | tr -d ' ')
-if [ "${TOTAL:-0}" -eq 0 ]; then
-  TOTAL=1
-  ACTION_DIRS=(".")
+if [ -d "${EXECUTION_ROOT}" ]; then
+  mapfile -t ACTION_DIRS < <(find "${EXECUTION_ROOT}" -mindepth 1 -maxdepth 1 -type d | sort)
 else
-  mapfile -t ACTION_DIRS < <(find actions -mindepth 1 -maxdepth 1 -type d | sort)
+  ACTION_DIRS=()
+fi
+mapfile -t SHARED_DIRS < <(manifest_shared_folders)
+NON_SHARED_ACTION_DIRS=()
+if [ "${#SHARED_DIRS[@]}" -gt 0 ]; then
+  for dir in "${ACTION_DIRS[@]}"; do
+    is_shared_dir=0
+    for shared_dir in "${SHARED_DIRS[@]}"; do
+      if [ "$dir" = "$shared_dir" ]; then
+        is_shared_dir=1
+        break
+      fi
+    done
+    if [ "$is_shared_dir" -eq 0 ]; then
+      NON_SHARED_ACTION_DIRS+=("$dir")
+    fi
+  done
+else
+  NON_SHARED_ACTION_DIRS=("${ACTION_DIRS[@]}")
+fi
+TOTAL="${#ACTION_DIRS[@]}"
+if [ "${TOTAL:-0}" -eq 0 ]; then
+  python3 - "${SUMMARY_PATH}" <<'PY'
+import json
+import sys
+from pathlib import Path
+
+Path(sys.argv[1]).write_text(
+    json.dumps({"action_results": [], "shared_execution_results": []}, indent=2, sort_keys=True) + "\n",
+    encoding="utf-8",
+)
+PY
+  echo "No executable Terraform action folders found under ${EXECUTION_ROOT}/."
+  exit 0
 fi
 
 SHOW_BAR=0
@@ -202,7 +559,6 @@ if [ -t 1 ] && [ -z "${CI:-}" ] && [ "${TERM:-}" != "dumb" ]; then
   SHOW_BAR=1
 fi
 
-# Fallback ETA (seconds per action) until at least one action completes.
 DEFAULT_ACTION_SECS="${ETA_DEFAULT_ACTION_SECS:-90}"
 if ! [[ "${DEFAULT_ACTION_SECS}" =~ ^[0-9]+$ ]] || [ "${DEFAULT_ACTION_SECS}" -le 0 ]; then
   DEFAULT_ACTION_SECS=90
@@ -212,6 +568,10 @@ ACTION_TIMEOUT_SECS="${ACTION_TIMEOUT_SECS:-300}"
 if ! [[ "${ACTION_TIMEOUT_SECS}" =~ ^[0-9]+$ ]] || [ "${ACTION_TIMEOUT_SECS}" -le 0 ]; then
   ACTION_TIMEOUT_SECS=300
 fi
+CLOUDFRONT_OAC_ACTION_TIMEOUT_SECS="${CLOUDFRONT_OAC_ACTION_TIMEOUT_SECS:-1800}"
+if ! [[ "${CLOUDFRONT_OAC_ACTION_TIMEOUT_SECS}" =~ ^[0-9]+$ ]] || [ "${CLOUDFRONT_OAC_ACTION_TIMEOUT_SECS}" -le 0 ]; then
+  CLOUDFRONT_OAC_ACTION_TIMEOUT_SECS=1800
+fi
 
 START_TS=$(date +%s)
 SUCCESS_COUNT=0
@@ -220,7 +580,35 @@ FAILED_ACTIONS=()
 
 DEFAULT_PARALLEL_BUNDLES=3
 MAX_PARALLEL_BUNDLES=5
-REQUESTED_PARALLEL="${PARALLEL_BUNDLES:-$DEFAULT_PARALLEL_BUNDLES}"
+bundle_uses_cloudfront_oac() {
+  local dir="$1"
+  [ -f "${dir}/s3_cloudfront_oac_private_s3.tf" ]
+}
+
+bundle_timeout_secs() {
+  local dir="$1"
+  if bundle_uses_cloudfront_oac "$dir"; then
+    printf '%s\n' "$CLOUDFRONT_OAC_ACTION_TIMEOUT_SECS"
+    return 0
+  fi
+  printf '%s\n' "$ACTION_TIMEOUT_SECS"
+}
+
+HAS_CLOUDFRONT_OAC_BUNDLES=0
+for dir in "${ACTION_DIRS[@]}"; do
+  if bundle_uses_cloudfront_oac "$dir"; then
+    HAS_CLOUDFRONT_OAC_BUNDLES=1
+    break
+  fi
+done
+
+REQUESTED_PARALLEL="${PARALLEL_BUNDLES:-}"
+if [ -z "${REQUESTED_PARALLEL}" ]; then
+  REQUESTED_PARALLEL="$DEFAULT_PARALLEL_BUNDLES"
+  if [ "${HAS_CLOUDFRONT_OAC_BUNDLES}" -eq 1 ]; then
+    REQUESTED_PARALLEL=1
+  fi
+fi
 if ! [[ "${REQUESTED_PARALLEL}" =~ ^[0-9]+$ ]] || [ "${REQUESTED_PARALLEL}" -le 0 ]; then
   REQUESTED_PARALLEL="$DEFAULT_PARALLEL_BUNDLES"
 fi
@@ -242,6 +630,9 @@ is_known_duplicate_only() {
   if [ -z "$error_lines" ]; then
     return 1
   fi
+  if printf '%s\n' "$error_lines" | grep -Eiq 'OriginAccessControlAlreadyExists|origin access control[^[:cntrl:]]*already exists'; then
+    return 1
+  fi
   if ! printf '%s\n' "$error_lines" | grep -Eiq "$duplicate_pattern"; then
     return 1
   fi
@@ -251,10 +642,22 @@ is_known_duplicate_only() {
   return 0
 }
 
+is_shared_s3_destination_owned_error() {
+  local log_file="$1"
+  if ! grep -Eiq 'BucketAlreadyOwnedByYou' "$log_file"; then
+    return 1
+  fi
+  if grep -Eiq 'AccessDenied|UnauthorizedOperation|InvalidGroupId|DependencyViolation|Throttl|ExpiredToken|not found|NoSuch' "$log_file"; then
+    return 1
+  fi
+  return 0
+}
+
 apply_with_duplicate_tolerance() {
   local dir="$1"
-  local timeout_secs="${2:-${ACTION_TIMEOUT_SECS}}"
-  local log_file rc resource existing_id duplicate_line
+  local source_dir="$2"
+  local timeout_secs="${3:-${ACTION_TIMEOUT_SECS}}"
+  local log_file rc resource existing_id duplicate_line shared_kind
   export TF_DATA_DIR="${dir}/.terraform-data"
   mkdir -p "${TF_DATA_DIR}"
 
@@ -273,12 +676,24 @@ apply_with_duplicate_tolerance() {
     return 0
   fi
 
+  shared_kind=$(manifest_shared_field "$source_dir" "kind")
+  if [ "$shared_kind" = "s3_access_logging_destination_setup" ] && is_shared_s3_destination_owned_error "$log_file"; then
+    duplicate_line=$(grep -Ei 'BucketAlreadyOwnedByYou' "$log_file" | head -n 1)
+    echo "WARNING: shared S3.9 destination bucket already exists and is owned; continuing without failure."
+    echo "  action: $source_dir"
+    if [ -n "$duplicate_line" ]; then
+      echo "  detail: $duplicate_line"
+    fi
+    rm -f "$log_file"
+    return 0
+  fi
+
   if is_known_duplicate_only "$log_file"; then
     resource=$(sed -n 's/.*with \([^,]*\),/\1/p' "$log_file" | head -n 1)
     existing_id=$(grep -Eo 'sg-[0-9A-Za-z-]+' "$log_file" | head -n 1)
     duplicate_line=$(grep -Ei 'InvalidPermission\.Duplicate|already exists|AlreadyExists|EntityAlreadyExists' "$log_file" | head -n 1)
     echo "WARNING: duplicate/already-existing resource detected; continuing without failure."
-    echo "  action: $dir"
+    echo "  action: $source_dir"
     if [ -n "$resource" ]; then
       echo "  resource: $resource"
     fi
@@ -405,6 +820,100 @@ render_progress() {
   printf "\r[%s%s] %3d%% (%d/%d) %s ETA %s" "$bar_fill" "$bar_empty" "$pct" "$completed" "$TOTAL" "$current_label" "$eta"
 }
 
+write_status_journal() {
+  local status="$1"
+  local dir="$2"
+  local stage="$3"
+  printf '%s|%s|%s\n' "$status" "$dir" "$stage" >> "${STATUS_JOURNAL}"
+}
+
+build_execution_summary() {
+  python3 - "${MANIFEST_PATH}" "${STATUS_JOURNAL}" "${SUMMARY_PATH}" <<'PY'
+import json
+import sys
+from pathlib import Path
+
+manifest_path = Path(sys.argv[1])
+journal_path = Path(sys.argv[2])
+summary_path = Path(sys.argv[3])
+
+manifest = {}
+if manifest_path.is_file():
+    try:
+        manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    except Exception:
+        manifest = {}
+
+statuses = {}
+if journal_path.is_file():
+    for raw_line in journal_path.read_text(encoding="utf-8").splitlines():
+        parts = raw_line.split("|", 2)
+        if len(parts) != 3:
+            continue
+        statuses[parts[1]] = {"status": parts[0], "stage": parts[2]}
+
+def result_for_folder(folder: str) -> dict:
+    entry = statuses.get(folder) or {"status": "failed", "stage": "missing"}
+    if entry["status"] == "success":
+        return {"execution_status": "success"}
+    stage = entry["stage"] or "unknown"
+    return {
+        "execution_status": "failed",
+        "execution_error_code": f"bundle_runner_{stage}",
+        "execution_error_message": f"run_all.sh failed during {stage} for folder {folder}",
+    }
+
+action_results = []
+for item in manifest.get("actions") or []:
+    if not isinstance(item, dict) or not item.get("has_runnable_terraform"):
+        continue
+    folder = str(item.get("folder") or "").strip()
+    action_id = str(item.get("action_id") or "").strip()
+    if not folder or not action_id:
+        continue
+    result = result_for_folder(folder)
+    result["action_id"] = action_id
+    action_results.append(result)
+
+shared_execution_results = []
+for item in manifest.get("shared_execution_folders") or []:
+    if not isinstance(item, dict):
+        continue
+    folder = str(item.get("folder") or "").strip()
+    kind = str(item.get("kind") or "").strip()
+    if not folder or not kind:
+        continue
+    result = result_for_folder(folder)
+    shared_execution_results.append(
+        {
+            "folder": folder,
+            "kind": kind,
+            "execution_status": result["execution_status"],
+            "execution_error_code": result.get("execution_error_code"),
+            "execution_error_message": result.get("execution_error_message"),
+            "details": {
+                key: value
+                for key, value in item.items()
+                if key not in {"folder", "kind"}
+            },
+        }
+    )
+
+summary_path.write_text(
+    json.dumps(
+        {
+            "action_results": action_results,
+            "shared_execution_results": shared_execution_results,
+        },
+        indent=2,
+        sort_keys=True,
+    )
+    + "\n",
+    encoding="utf-8",
+)
+PY
+}
+
 i=0
 COMPLETED_COUNT=0
 pids=()
@@ -415,56 +924,92 @@ run_one_bundle() {
   local dir="$1"
   local status_file="$2"
   local workspace_dir=""
+  local timeout_secs
 
   echo ""
   echo "=== Running terraform in $dir ==="
 
   if has_unresolved_placeholders "$dir"; then
     echo "ERROR: unresolved placeholders detected for $dir. Skipping this action folder."
-    printf "failed|%s (precheck)\n" "$dir" > "$status_file"
+    printf "failed|%s|precheck\n" "$dir" > "$status_file"
     return 0
   fi
 
   workspace_dir=$(prepare_action_workspace "$dir") || {
     echo "ERROR: failed to prepare isolated terraform workspace for $dir. Skipping this action folder."
-    printf "failed|%s (workspace)\n" "$dir" > "$status_file"
+    printf "failed|%s|workspace\n" "$dir" > "$status_file"
     return 0
   }
+
+  if ! prepare_shared_folder_tfvars "$dir" "$workspace_dir"; then
+    cleanup_action_workspace "$workspace_dir"
+    printf "failed|%s|shared_preflight\n" "$dir" > "$status_file"
+    return 0
+  fi
+  prepare_s3_access_logging_tfvars "$dir" "$workspace_dir"
+  if ! prepare_cloudfront_oac_tfvars "$dir" "$workspace_dir"; then
+    cleanup_action_workspace "$workspace_dir"
+    printf "failed|%s|cloudfront_oac_preflight\n" "$dir" > "$status_file"
+    return 0
+  fi
+  timeout_secs=$(bundle_timeout_secs "$dir")
 
   if ! run_terraform_init_with_retry "$workspace_dir"; then
     echo "ERROR: terraform init failed for $dir after retries. Skipping this action folder."
     cleanup_action_workspace "$workspace_dir"
-    printf "failed|%s (init)\n" "$dir" > "$status_file"
+    printf "failed|%s|init\n" "$dir" > "$status_file"
     return 0
   fi
 
   set +e
   (
     cd "$workspace_dir"
-    run_with_timeout "$ACTION_TIMEOUT_SECS" terraform plan -input=false
+    run_with_timeout "$timeout_secs" terraform plan -input=false
   )
   plan_rc=$?
   set -e
   if [ "$plan_rc" -ne 0 ]; then
     echo "ERROR: terraform plan failed for $dir. Skipping apply for this action folder."
     cleanup_action_workspace "$workspace_dir"
-    printf "failed|%s (plan)\n" "$dir" > "$status_file"
+    printf "failed|%s|plan\n" "$dir" > "$status_file"
     return 0
   fi
 
-  if ! apply_with_duplicate_tolerance "$workspace_dir" "$ACTION_TIMEOUT_SECS"; then
+  if ! apply_with_duplicate_tolerance "$workspace_dir" "$dir" "$timeout_secs"; then
     echo "ERROR: terraform apply failed for $dir. Continuing with remaining action folders."
     cleanup_action_workspace "$workspace_dir"
-    printf "failed|%s (apply)\n" "$dir" > "$status_file"
+    printf "failed|%s|apply\n" "$dir" > "$status_file"
     return 0
   fi
   cleanup_action_workspace "$workspace_dir"
-  printf "success|%s\n" "$dir" > "$status_file"
+  printf "success|%s|done\n" "$dir" > "$status_file"
   return 0
 }
 
+consume_status_file() {
+  local dir="$1"
+  local status_file="$2"
+  local line status detail stage
+
+  line="$(cat "$status_file" 2>/dev/null || true)"
+  status="${line%%|*}"
+  detail="${line#*|}"
+  stage="${detail##*|}"
+  detail="${detail%|*}"
+  if [ "$status" = "success" ]; then
+    SUCCESS_COUNT=$((SUCCESS_COUNT + 1))
+  else
+    FAILED_COUNT=$((FAILED_COUNT + 1))
+    FAILED_ACTIONS+=("${detail:-$dir} (${stage:-unknown})")
+  fi
+  write_status_journal "${status:-failed}" "${detail:-$dir}" "${stage:-unknown}"
+  rm -f "$status_file"
+  COMPLETED_COUNT=$((COMPLETED_COUNT + 1))
+  render_progress "$COMPLETED_COUNT" "(${COMPLETED_COUNT}/${TOTAL}) parallel=${PARALLEL_BUNDLE_EXECUTIONS}"
+}
+
 wait_for_one_bundle() {
-  local idx pid dir status_file line status detail
+  local idx pid dir status_file
   while true; do
     for idx in "${!pids[@]}"; do
       pid="${pids[$idx]}"
@@ -474,24 +1019,13 @@ wait_for_one_bundle() {
         set -e
         dir="${pid_dirs[$idx]}"
         status_file="${pid_status[$idx]}"
-        line="$(cat "$status_file" 2>/dev/null || true)"
-        status="${line%%|*}"
-        detail="${line#*|}"
-        if [ "$status" = "success" ]; then
-          SUCCESS_COUNT=$((SUCCESS_COUNT + 1))
-        else
-          FAILED_COUNT=$((FAILED_COUNT + 1))
-          FAILED_ACTIONS+=("${detail:-$dir (unknown)}")
-        fi
-        rm -f "$status_file"
+        consume_status_file "$dir" "$status_file"
         unset 'pids[idx]'
         unset 'pid_dirs[idx]'
         unset 'pid_status[idx]'
         pids=("${pids[@]}")
         pid_dirs=("${pid_dirs[@]}")
         pid_status=("${pid_status[@]}")
-        COMPLETED_COUNT=$((COMPLETED_COUNT + 1))
-        render_progress "$COMPLETED_COUNT" "(${COMPLETED_COUNT}/${TOTAL}) parallel=${PARALLEL_BUNDLE_EXECUTIONS}"
         return 0
       fi
     done
@@ -499,8 +1033,16 @@ wait_for_one_bundle() {
   done
 }
 
-echo "Running ${TOTAL} bundle folder(s) with parallel executions=${PARALLEL_BUNDLE_EXECUTIONS} (max=${MAX_PARALLEL_BUNDLES})"
-for dir in "${ACTION_DIRS[@]}"; do
+echo "Running ${TOTAL} bundle folder(s) from ${EXECUTION_ROOT} with shared folders=${#SHARED_DIRS[@]} and parallel action executions=${PARALLEL_BUNDLE_EXECUTIONS} (max=${MAX_PARALLEL_BUNDLES}) cloudfront_oac_bundles=${HAS_CLOUDFRONT_OAC_BUNDLES}"
+for dir in "${SHARED_DIRS[@]}"; do
+  i=$((i + 1))
+  render_progress "$COMPLETED_COUNT" "(${i}/${TOTAL}) shared ${dir}"
+  status_file="$(mktemp)"
+  run_one_bundle "$dir" "$status_file"
+  consume_status_file "$dir" "$status_file"
+done
+
+for dir in "${NON_SHARED_ACTION_DIRS[@]}"; do
   i=$((i + 1))
   render_progress "$COMPLETED_COUNT" "(${i}/${TOTAL}) queued ${dir}"
   status_file="$(mktemp)"
@@ -518,12 +1060,15 @@ while [ "${#pids[@]}" -gt 0 ]; do
   wait_for_one_bundle
 done
 
+build_execution_summary
+
 if [ "$SHOW_BAR" -eq 1 ]; then
   printf "\n"
 fi
 echo "Bundle run completed."
 echo "  Successful action folders: ${SUCCESS_COUNT}/${TOTAL}"
 echo "  Failed action folders: ${FAILED_COUNT}/${TOTAL}"
+echo "  Summary file: ${SUMMARY_PATH}"
 if [ "$FAILED_COUNT" -gt 0 ]; then
   echo "Failed folders summary:"
   for failed in "${FAILED_ACTIONS[@]}"; do

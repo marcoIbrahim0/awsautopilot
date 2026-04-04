@@ -1,0 +1,6 @@
+{
+  "method": "jwt-placeholder-runtime-secret",
+  "issued_for": "marco.ibrahim@ocypheris.com",
+  "tenant": "Valens",
+  "token_retained": false
+}

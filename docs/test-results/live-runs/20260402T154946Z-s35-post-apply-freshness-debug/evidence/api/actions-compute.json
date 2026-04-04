@@ -1,0 +1,32 @@
+{
+  "request": {
+    "method": "POST",
+    "url": "https://api.ocypheris.com/api/actions/compute",
+    "params": null,
+    "json": {
+      "account_id": "696505809372"
+    }
+  },
+  "status_code": 202,
+  "headers": {
+    "Date": "Thu, 02 Apr 2026 15:53:02 GMT",
+    "Content-Type": "application/json",
+    "Content-Length": "132",
+    "Connection": "keep-alive",
+    "CF-Ray": "9e61010a1a915fd0-MRS",
+    "CF-Cache-Status": "DYNAMIC",
+    "Server": "cloudflare",
+    "apigw-requestid": "bMuSthELAi0EJKw=",
+    "Report-To": "{\"group\":\"cf-nel\",\"max_age\":604800,\"endpoints\":[{\"url\":\"https://a.nel.cloudflare.com/report/v4?s=97cwKwbGsF9KOEVK3YGtAMKnfgAbWoaEetsuijfIAhlsNfU%2FkkitYK2peMXU6%2F%2BHfTrZtFE6hvRz2MHkpe4nwbHSrlz4l%2FEBbRpeidK2kxYFU9xHPPuLl18S1l0kBzPiNbc%2FUw%3D%3D\"}]}",
+    "Nel": "{\"report_to\":\"cf-nel\",\"success_fraction\":0.0,\"max_age\":604800}",
+    "alt-svc": "h3=\":443\"; ma=86400"
+  },
+  "body": {
+    "message": "Action computation job queued",
+    "tenant_id": "9f7616d8-af04-43ca-99cd-713625357b70",
+    "scope": {
+      "account_id": "696505809372"
+    }
+  },
+  "captured_at_utc": "2026-04-02T15:53:02.121296+00:00"
+}

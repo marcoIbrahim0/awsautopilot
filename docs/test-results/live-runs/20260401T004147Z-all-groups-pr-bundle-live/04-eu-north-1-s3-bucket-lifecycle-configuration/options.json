@@ -1,0 +1,109 @@
+{
+  "action_id": "c8d496fe-3431-4a44-bc08-74646b5f2572",
+  "action_type": "s3_bucket_lifecycle_configuration",
+  "manual_high_risk": false,
+  "mode_options": [
+    "pr_only"
+  ],
+  "pre_execution_notice": null,
+  "recommendation": {
+    "advisory": true,
+    "default_mode": "pr_only",
+    "enforced_by_policy": null,
+    "evidence": {
+      "context_incomplete": false,
+      "data_sensitivity": 0.6,
+      "exploit_signals": 0.0,
+      "internet_exposure": 0.0,
+      "matched_signals": [],
+      "privilege_level": 0.6,
+      "score": 36
+    },
+    "matrix_position": {
+      "business_criticality": "medium",
+      "cell": "risk_low__criticality_medium",
+      "risk_tier": "low"
+    },
+    "mode": "pr_only",
+    "rationale": "Matrix cell risk_low__criticality_medium maps to default recommendation 'pr_only'. Risk is low and business criticality is medium. Criticality evidence: data_sensitivity=0.60, privilege_level=0.60, internet_exposure=0.00, matched_signals=none. Relationship context is complete enough for advisory matrix placement. Current execution surfaces stay PR-only, so this recommendation remains advisory until the reviewed bundle is applied."
+  },
+  "runbook_url": null,
+  "strategies": [
+    {
+      "blast_radius": "resource",
+      "blocked_reasons": [],
+      "context": {
+        "default_inputs": {
+          "abort_days": 7
+        }
+      },
+      "decision_rationale": "Family resolver kept S3.11 strategy 's3_enable_abort_incomplete_uploads' executable with abort_days=7 because lifecycle preservation is already safe.",
+      "dependency_checks": [
+        {
+          "code": "risk_evaluation_not_specialized",
+          "message": "No specialized dependency checks are available for this strategy yet.",
+          "status": "unknown"
+        }
+      ],
+      "estimated_resolution_time": "12-24 hours",
+      "exception_only": false,
+      "impact_text": "A lifecycle rule will abort incomplete multipart uploads after the configured number of days.",
+      "input_schema": {
+        "fields": [
+          {
+            "default_value": 7,
+            "description": "Days after which incomplete multipart uploads are automatically cleaned up.",
+            "group": "Lifecycle Settings",
+            "impact_text": "Incomplete multipart uploads older than the configured number of days will be automatically aborted.",
+            "key": "abort_days",
+            "max": 365,
+            "min": 1,
+            "required": false,
+            "type": "number"
+          }
+        ]
+      },
+      "label": "Enable lifecycle cleanup for incomplete uploads",
+      "missing_defaults": [],
+      "mode": "pr_only",
+      "preservation_summary": {
+        "abort_days": 7,
+        "additive_merge_safe": true,
+        "apply_time_merge": false,
+        "apply_time_merge_reason": null,
+        "executable_lifecycle_merge_allowed": true,
+        "existing_equivalent_abort_rule_present": false,
+        "existing_lifecycle_configuration_captured": false,
+        "existing_lifecycle_configuration_equivalent": false,
+        "existing_lifecycle_merge_renderable": false,
+        "existing_lifecycle_render_failure_reason": null,
+        "existing_lifecycle_rule_count": 0,
+        "family": "s3_bucket_lifecycle_configuration",
+        "family_strategy": "s3_enable_abort_incomplete_uploads",
+        "single_profile_compatible": true,
+        "strategy_only_supported": true
+      },
+      "profiles": [
+        {
+          "exception_only": false,
+          "profile_id": "s3_enable_abort_incomplete_uploads",
+          "recommended": true,
+          "requires_inputs": true,
+          "support_tier": "deterministic_bundle",
+          "supports_exception_flow": false
+        }
+      ],
+      "recommended": true,
+      "recommended_profile_id": "s3_enable_abort_incomplete_uploads",
+      "requires_inputs": true,
+      "risk_level": "low",
+      "rollback_command": "aws s3api delete-bucket-lifecycle --bucket <BUCKET_NAME>",
+      "strategy_id": "s3_enable_abort_incomplete_uploads",
+      "supports_exception_flow": false,
+      "supports_immediate_reeval": true,
+      "warnings": [
+        "Lifecycle policy changes can affect storage behavior and cost."
+      ]
+    }
+  ]
+}

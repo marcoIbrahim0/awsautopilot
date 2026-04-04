@@ -1,0 +1,37 @@
+{
+  "user": {
+    "id": "a5fab489-9b8e-4656-b2f4-8accfbed6142",
+    "email": "marco.ibrahim@ocypheris.com",
+    "name": "Maher",
+    "role": "admin",
+    "onboarding_completed_at": "2026-03-28T02:18:41.899936+00:00",
+    "phone_number": null,
+    "phone_verified": false,
+    "email_verified": true,
+    "mfa_enabled": false,
+    "mfa_method": null,
+    "is_saas_admin": false
+  },
+  "tenant": {
+    "id": "e4e07aa8-b8ea-4c1d-9fd7-4362a2fc1195",
+    "name": "Marco",
+    "external_id": "ext-1f274864a7704551"
+  },
+  "saas_account_id": "029037611564",
+  "read_role_launch_stack_url": "https://eu-north-1.console.aws.amazon.com/cloudformation/home?region=eu-north-1#/stacks/create/review?templateURL=https%3A%2F%2Fsecurity-autopilot-templates.s3.amazonaws.com%2Fcloudformation%2Fread-role%2Fv1.5.9.yaml%3FX-Amz-Algorithm%3DAWS4-HMAC-SHA256%26X-Amz-Credential%3DASIAQNQWGZIWIKZZYZDU%252F20260331%252Feu-north-1%252Fs3%252Faws4_request%26X-Amz-Date%3D20260331T205319Z%26X-Amz-Expires%3D604800%26X-Amz-SignedHeaders%3Dhost%26X-Amz-Security-Token%3DIQoJb3JpZ2luX2VjEHwaCmV1LW5vcnRoLTEiSDBGAiEArAl3aZxDEyGt9O9Pveg7U8u8g16yawBSvekjI0ypRlgCIQC56S%252BHY2mgLCOqaDcvDIPOQZRSQ79TlShKIyZ6QrmbTSqJBAhGEAAaDDAyOTAzNzYxMTU2NCIMG%252BbHhrER6%252Bd39CQqKuYDvdmR2mq%252BY4qiFSitA2%252FVpZJvLWx3MOeGmF1eV0EAs8L7lqHTgptF3LYWOa7d80yudcLEzTxa9ja8nGxf82Ci8AQgbMXlHkIFs0jzReait1EQJEC1YsleIwAGsnn82tzWo9%252F6mp4PGd1YIxhXXVpxZ7iZVAPtu9H%252FX%252BRlmNuBzEoJfXmfBhx4jl5b0TQDCPWwD9CmL2ACqHVyb3v6CymI5Jd%252BRL%252BEl%252BRdAwxFCs4N2WHWuOzM51G%252FXABfJpi9DoVEA1rAjKDuq4VCEQS1NF9N3Udb6DT3PqE8suCPuFJ%252FnGLdOiiEmkoKbuX0QMrHHll1LDW%252Fu9Mp7f5dB9eZiDMmjjh0SX9EYoSOEPzW5XsCJ4Eu8LpgSsmsCcqR66Y9apwKqSVtXwk7V8QawwREn3zfObLuinrWjOAoDZNuwSpw47u1Zmdw5UrjZW5tDAgrcPKy2Dnr22RCfacb9NJzZ4u%252FiGLy2ajvkFQNrRczhHm3TBBBKrpFqx1xjkGIm2n%252FwUOz3h0onA8d4mVwISIwg3b3awNLYQkM4zeUl3m6XGEEsbR0Ghegmyps4NdbbapdzaXsgqHlyZnp0wgmhXSlLWlR2M70n2%252Br60x6FNw6RL1pKV8O68A2Y9ettJDCtTjv5BFf%252FdQJyx3dMPvhsM4GOqEBIj0ATdkM6ORJtWtpkoXqqw%252FAtRO2ofbWy636tix6HHNNMd0I04MjUsB3Y9jS%252BBAKkTIT6WJZTUgVW2gEIkkgeJdohPx0DeBAUQTiDVWs495v2FNPrAr5msu2dTMyeyfgo5JKzQx4X05H8J0jG%252By%252FP1nLED9q9sDfBKZTrEWglcMD7HL%252B1vINvxhafbqmbpwqNZ%252F5qrynhWx8dFD%252BtZH1t30%253D%26X-Amz-Signature%3Db7f381ea03b11a8eeb626b45a581af09b568801df4ea15342b55b12b0ef85f47&stackName=SecurityAutopilotReadRole&param_SaaSAccountId=029037611564&param_ExternalId=ext-1f274864a7704551&param_SaaSExecutionRoleArns=arn%3Aaws%3Aiam%3A%3A029037611564%3Arole%2Fsecurity-autopilot-dev-lambda-api%2Carn%3Aaws%3Aiam%3A%3A029037611564%3Arole%2Fsecurity-autopilot-dev-lambda-worker",
+  "read_role_template_url": "https://security-autopilot-templates.s3.eu-north-1.amazonaws.com/cloudformation/read-role/v1.5.9.yaml",
+  "read_role_region": "eu-north-1",
+  "read_role_default_stack_name": "SecurityAutopilotReadRole",
+  "write_role_launch_stack_url": "https://eu-north-1.console.aws.amazon.com/cloudformation/home?region=eu-north-1#/stacks/create/review?templateURL=https%3A%2F%2Fsecurity-autopilot-templates.s3.amazonaws.com%2Fcloudformation%2Fwrite-role%2Fv1.4.7.yaml%3FX-Amz-Algorithm%3DAWS4-HMAC-SHA256%26X-Amz-Credential%3DASIAQNQWGZIWIKZZYZDU%252F20260331%252Feu-north-1%252Fs3%252Faws4_request%26X-Amz-Date%3D20260331T205319Z%26X-Amz-Expires%3D604800%26X-Amz-SignedHeaders%3Dhost%26X-Amz-Security-Token%3DIQoJb3JpZ2luX2VjEHwaCmV1LW5vcnRoLTEiSDBGAiEArAl3aZxDEyGt9O9Pveg7U8u8g16yawBSvekjI0ypRlgCIQC56S%252BHY2mgLCOqaDcvDIPOQZRSQ79TlShKIyZ6QrmbTSqJBAhGEAAaDDAyOTAzNzYxMTU2NCIMG%252BbHhrER6%252Bd39CQqKuYDvdmR2mq%252BY4qiFSitA2%252FVpZJvLWx3MOeGmF1eV0EAs8L7lqHTgptF3LYWOa7d80yudcLEzTxa9ja8nGxf82Ci8AQgbMXlHkIFs0jzReait1EQJEC1YsleIwAGsnn82tzWo9%252F6mp4PGd1YIxhXXVpxZ7iZVAPtu9H%252FX%252BRlmNuBzEoJfXmfBhx4jl5b0TQDCPWwD9CmL2ACqHVyb3v6CymI5Jd%252BRL%252BEl%252BRdAwxFCs4N2WHWuOzM51G%252FXABfJpi9DoVEA1rAjKDuq4VCEQS1NF9N3Udb6DT3PqE8suCPuFJ%252FnGLdOiiEmkoKbuX0QMrHHll1LDW%252Fu9Mp7f5dB9eZiDMmjjh0SX9EYoSOEPzW5XsCJ4Eu8LpgSsmsCcqR66Y9apwKqSVtXwk7V8QawwREn3zfObLuinrWjOAoDZNuwSpw47u1Zmdw5UrjZW5tDAgrcPKy2Dnr22RCfacb9NJzZ4u%252FiGLy2ajvkFQNrRczhHm3TBBBKrpFqx1xjkGIm2n%252FwUOz3h0onA8d4mVwISIwg3b3awNLYQkM4zeUl3m6XGEEsbR0Ghegmyps4NdbbapdzaXsgqHlyZnp0wgmhXSlLWlR2M70n2%252Br60x6FNw6RL1pKV8O68A2Y9ettJDCtTjv5BFf%252FdQJyx3dMPvhsM4GOqEBIj0ATdkM6ORJtWtpkoXqqw%252FAtRO2ofbWy636tix6HHNNMd0I04MjUsB3Y9jS%252BBAKkTIT6WJZTUgVW2gEIkkgeJdohPx0DeBAUQTiDVWs495v2FNPrAr5msu2dTMyeyfgo5JKzQx4X05H8J0jG%252By%252FP1nLED9q9sDfBKZTrEWglcMD7HL%252B1vINvxhafbqmbpwqNZ%252F5qrynhWx8dFD%252BtZH1t30%253D%26X-Amz-Signature%3D2b9af5bc490ec30459ee390dcaa3f0eabe9d20e2bb5e595719d91a254753614b&stackName=SecurityAutopilotWriteRole&param_SaaSAccountId=029037611564&param_ExternalId=ext-1f274864a7704551&param_SaaSExecutionRoleArns=arn%3Aaws%3Aiam%3A%3A029037611564%3Arole%2Fsecurity-autopilot-dev-lambda-api%2Carn%3Aaws%3Aiam%3A%3A029037611564%3Arole%2Fsecurity-autopilot-dev-lambda-worker",
+  "write_role_template_url": "https://security-autopilot-templates.s3.eu-north-1.amazonaws.com/cloudformation/write-role/v1.4.7.yaml",
+  "write_role_default_stack_name": "SecurityAutopilotWriteRole",
+  "control_plane_token": "***",
+  "control_plane_token_fingerprint": "***",
+  "control_plane_token_created_at": "***",
+  "control_plane_token_revoked_at": "***",
+  "control_plane_token_active": "***",
+  "control_plane_forwarder_launch_stack_url": "https://eu-north-1.console.aws.amazon.com/cloudformation/home?region=eu-north-1#/stacks/create/review?templateURL=https%3A%2F%2Fsecurity-autopilot-templates.s3.amazonaws.com%2Fcloudformation%2Fcontrol-plane-forwarder%2Fv1.0.0.yaml%3FX-Amz-Algorithm%3DAWS4-HMAC-SHA256%26X-Amz-Credential%3DASIAQNQWGZIWIKZZYZDU%252F20260331%252Feu-north-1%252Fs3%252Faws4_request%26X-Amz-Date%3D20260331T205319Z%26X-Amz-Expires%3D604800%26X-Amz-SignedHeaders%3Dhost%26X-Amz-Security-Token%3DIQoJb3JpZ2luX2VjEHwaCmV1LW5vcnRoLTEiSDBGAiEArAl3aZxDEyGt9O9Pveg7U8u8g16yawBSvekjI0ypRlgCIQC56S%252BHY2mgLCOqaDcvDIPOQZRSQ79TlShKIyZ6QrmbTSqJBAhGEAAaDDAyOTAzNzYxMTU2NCIMG%252BbHhrER6%252Bd39CQqKuYDvdmR2mq%252BY4qiFSitA2%252FVpZJvLWx3MOeGmF1eV0EAs8L7lqHTgptF3LYWOa7d80yudcLEzTxa9ja8nGxf82Ci8AQgbMXlHkIFs0jzReait1EQJEC1YsleIwAGsnn82tzWo9%252F6mp4PGd1YIxhXXVpxZ7iZVAPtu9H%252FX%252BRlmNuBzEoJfXmfBhx4jl5b0TQDCPWwD9CmL2ACqHVyb3v6CymI5Jd%252BRL%252BEl%252BRdAwxFCs4N2WHWuOzM51G%252FXABfJpi9DoVEA1rAjKDuq4VCEQS1NF9N3Udb6DT3PqE8suCPuFJ%252FnGLdOiiEmkoKbuX0QMrHHll1LDW%252Fu9Mp7f5dB9eZiDMmjjh0SX9EYoSOEPzW5XsCJ4Eu8LpgSsmsCcqR66Y9apwKqSVtXwk7V8QawwREn3zfObLuinrWjOAoDZNuwSpw47u1Zmdw5UrjZW5tDAgrcPKy2Dnr22RCfacb9NJzZ4u%252FiGLy2ajvkFQNrRczhHm3TBBBKrpFqx1xjkGIm2n%252FwUOz3h0onA8d4mVwISIwg3b3awNLYQkM4zeUl3m6XGEEsbR0Ghegmyps4NdbbapdzaXsgqHlyZnp0wgmhXSlLWlR2M70n2%252Br60x6FNw6RL1pKV8O68A2Y9ettJDCtTjv5BFf%252FdQJyx3dMPvhsM4GOqEBIj0ATdkM6ORJtWtpkoXqqw%252FAtRO2ofbWy636tix6HHNNMd0I04MjUsB3Y9jS%252BBAKkTIT6WJZTUgVW2gEIkkgeJdohPx0DeBAUQTiDVWs495v2FNPrAr5msu2dTMyeyfgo5JKzQx4X05H8J0jG%252By%252FP1nLED9q9sDfBKZTrEWglcMD7HL%252B1vINvxhafbqmbpwqNZ%252F5qrynhWx8dFD%252BtZH1t30%253D%26X-Amz-Signature%3Dac2159212564d81ca6544eade7a45b5004df8d27d72db019976ab622ad69585d&stackName=SecurityAutopilotControlPlaneForwarder&param_SaaSIngestUrl=https%3A%2F%2Fapi.ocypheris.com%2Fapi%2Fcontrol-plane%2Fevents",
+  "control_plane_forwarder_template_url": "https://security-autopilot-templates.s3.eu-north-1.amazonaws.com/cloudformation/control-plane-forwarder/v1.0.0.yaml",
+  "control_plane_ingest_url": "https://api.ocypheris.com/api/control-plane/events",
+  "control_plane_forwarder_default_stack_name": "SecurityAutopilotControlPlaneForwarder"
+}

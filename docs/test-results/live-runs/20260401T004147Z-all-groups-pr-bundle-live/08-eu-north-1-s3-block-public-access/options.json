@@ -1,0 +1,80 @@
+{
+  "action_id": "18e459b1-3bc2-47b4-a520-c955e921c75f",
+  "action_type": "s3_block_public_access",
+  "manual_high_risk": false,
+  "mode_options": [
+    "pr_only"
+  ],
+  "pre_execution_notice": null,
+  "recommendation": {
+    "advisory": true,
+    "default_mode": "pr_only",
+    "enforced_by_policy": null,
+    "evidence": {
+      "context_incomplete": true,
+      "data_sensitivity": 0.75,
+      "exploit_signals": 0.6667,
+      "internet_exposure": 0.75,
+      "matched_signals": [],
+      "privilege_level": 1.0,
+      "score": 51
+    },
+    "matrix_position": {
+      "business_criticality": "high",
+      "cell": "risk_medium__criticality_high",
+      "risk_tier": "medium"
+    },
+    "mode": "pr_only",
+    "rationale": "Matrix cell risk_medium__criticality_high maps to default recommendation 'pr_only'. Risk is medium and business criticality is high. Criticality evidence: data_sensitivity=0.75, privilege_level=1.00, internet_exposure=0.75, matched_signals=none. Relationship context is incomplete, so the recommendation remains conservative and advisory unless policy overrides it. Current execution surfaces stay PR-only, so this recommendation remains advisory until the reviewed bundle is applied."
+  },
+  "runbook_url": null,
+  "strategies": [
+    {
+      "blast_radius": "account",
+      "blocked_reasons": [],
+      "context": {},
+      "decision_rationale": "Compatibility resolver defaulted to the compatible profile 's3_account_block_public_access_pr_bundle' for strategy 's3_account_block_public_access_pr_bundle'.",
+      "dependency_checks": [
+        {
+          "code": "risk_evaluation_not_specialized",
+          "message": "No specialized dependency checks are available for this strategy yet.",
+          "status": "unknown"
+        }
+      ],
+      "estimated_resolution_time": "12-24 hours",
+      "exception_only": false,
+      "impact_text": "All four account-level public access block settings will be enabled.",
+      "input_schema": {
+        "fields": []
+      },
+      "label": "Enable account-level S3 Block Public Access (PR bundle)",
+      "missing_defaults": [],
+      "mode": "pr_only",
+      "preservation_summary": {
+        "single_profile_compatible": true,
+        "strategy_only_supported": true
+      },
+      "profiles": [
+        {
+          "exception_only": false,
+          "profile_id": "s3_account_block_public_access_pr_bundle",
+          "recommended": true,
+          "requires_inputs": false,
+          "support_tier": "deterministic_bundle",
+          "supports_exception_flow": false
+        }
+      ],
+      "recommended": false,
+      "recommended_profile_id": "s3_account_block_public_access_pr_bundle",
+      "requires_inputs": false,
+      "risk_level": "low",
+      "rollback_command": "aws s3control delete-public-access-block --account-id <ACCOUNT_ID>",
+      "strategy_id": "s3_account_block_public_access_pr_bundle",
+      "supports_exception_flow": false,
+      "supports_immediate_reeval": true,
+      "warnings": [
+        "Review workloads that intentionally rely on public bucket policies before apply."
+      ]
+    }
+  ]
+}

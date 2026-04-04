@@ -1,0 +1,459 @@
+{
+  "region": "eu-north-1",
+  "rule_name": "SecurityAutopilotControlPlaneApiCallsRule-eu-north-1",
+  "start_time": "2026-04-01T00:00:00Z",
+  "end_time": "2026-04-02T16:24:00Z",
+  "period_seconds": 300,
+  "metrics": {
+    "MatchedEvents": {
+      "sum": 142.0,
+      "datapoints": [
+        {
+          "Timestamp": "2026-04-01T03:50:00+02:00",
+          "Sum": 17.0,
+          "Unit": "Count"
+        },
+        {
+          "Timestamp": "2026-04-01T03:55:00+02:00",
+          "Sum": 67.0,
+          "Unit": "Count"
+        },
+        {
+          "Timestamp": "2026-04-01T04:00:00+02:00",
+          "Sum": 5.0,
+          "Unit": "Count"
+        },
+        {
+          "Timestamp": "2026-04-01T04:05:00+02:00",
+          "Sum": 2.0,
+          "Unit": "Count"
+        },
+        {
+          "Timestamp": "2026-04-01T22:20:00+02:00",
+          "Sum": 3.0,
+          "Unit": "Count"
+        },
+        {
+          "Timestamp": "2026-04-01T22:25:00+02:00",
+          "Sum": 5.0,
+          "Unit": "Count"
+        },
+        {
+          "Timestamp": "2026-04-01T22:30:00+02:00",
+          "Sum": 5.0,
+          "Unit": "Count"
+        },
+        {
+          "Timestamp": "2026-04-01T22:35:00+02:00",
+          "Sum": 1.0,
+          "Unit": "Count"
+        },
+        {
+          "Timestamp": "2026-04-02T00:10:00+02:00",
+          "Sum": 2.0,
+          "Unit": "Count"
+        },
+        {
+          "Timestamp": "2026-04-02T03:40:00+02:00",
+          "Sum": 1.0,
+          "Unit": "Count"
+        },
+        {
+          "Timestamp": "2026-04-02T03:45:00+02:00",
+          "Sum": 1.0,
+          "Unit": "Count"
+        },
+        {
+          "Timestamp": "2026-04-02T03:50:00+02:00",
+          "Sum": 3.0,
+          "Unit": "Count"
+        },
+        {
+          "Timestamp": "2026-04-02T03:55:00+02:00",
+          "Sum": 1.0,
+          "Unit": "Count"
+        },
+        {
+          "Timestamp": "2026-04-02T04:00:00+02:00",
+          "Sum": 2.0,
+          "Unit": "Count"
+        },
+        {
+          "Timestamp": "2026-04-02T04:05:00+02:00",
+          "Sum": 1.0,
+          "Unit": "Count"
+        },
+        {
+          "Timestamp": "2026-04-02T04:10:00+02:00",
+          "Sum": 2.0,
+          "Unit": "Count"
+        },
+        {
+          "Timestamp": "2026-04-02T04:15:00+02:00",
+          "Sum": 2.0,
+          "Unit": "Count"
+        },
+        {
+          "Timestamp": "2026-04-02T04:20:00+02:00",
+          "Sum": 1.0,
+          "Unit": "Count"
+        },
+        {
+          "Timestamp": "2026-04-02T04:25:00+02:00",
+          "Sum": 2.0,
+          "Unit": "Count"
+        },
+        {
+          "Timestamp": "2026-04-02T04:30:00+02:00",
+          "Sum": 1.0,
+          "Unit": "Count"
+        },
+        {
+          "Timestamp": "2026-04-02T04:35:00+02:00",
+          "Sum": 2.0,
+          "Unit": "Count"
+        },
+        {
+          "Timestamp": "2026-04-02T04:40:00+02:00",
+          "Sum": 3.0,
+          "Unit": "Count"
+        },
+        {
+          "Timestamp": "2026-04-02T04:45:00+02:00",
+          "Sum": 2.0,
+          "Unit": "Count"
+        },
+        {
+          "Timestamp": "2026-04-02T04:50:00+02:00",
+          "Sum": 1.0,
+          "Unit": "Count"
+        },
+        {
+          "Timestamp": "2026-04-02T04:55:00+02:00",
+          "Sum": 2.0,
+          "Unit": "Count"
+        },
+        {
+          "Timestamp": "2026-04-02T05:00:00+02:00",
+          "Sum": 1.0,
+          "Unit": "Count"
+        },
+        {
+          "Timestamp": "2026-04-02T05:05:00+02:00",
+          "Sum": 4.0,
+          "Unit": "Count"
+        },
+        {
+          "Timestamp": "2026-04-02T05:45:00+02:00",
+          "Sum": 2.0,
+          "Unit": "Count"
+        },
+        {
+          "Timestamp": "2026-04-02T16:10:00+02:00",
+          "Sum": 1.0,
+          "Unit": "Count"
+        }
+      ]
+    },
+    "Invocations": {
+      "sum": 148.0,
+      "datapoints": [
+        {
+          "Timestamp": "2026-04-01T20:00:00+02:00",
+          "Sum": 31.0,
+          "Unit": "Count"
+        },
+        {
+          "Timestamp": "2026-04-01T20:05:00+02:00",
+          "Sum": 51.0,
+          "Unit": "Count"
+        },
+        {
+          "Timestamp": "2026-04-01T20:10:00+02:00",
+          "Sum": 14.0,
+          "Unit": "Count"
+        },
+        {
+          "Timestamp": "2026-04-01T20:35:00+02:00",
+          "Sum": 1.0,
+          "Unit": "Count"
+        },
+        {
+          "Timestamp": "2026-04-01T22:20:00+02:00",
+          "Sum": 3.0,
+          "Unit": "Count"
+        },
+        {
+          "Timestamp": "2026-04-01T22:25:00+02:00",
+          "Sum": 5.0,
+          "Unit": "Count"
+        },
+        {
+          "Timestamp": "2026-04-01T22:30:00+02:00",
+          "Sum": 5.0,
+          "Unit": "Count"
+        },
+        {
+          "Timestamp": "2026-04-01T22:35:00+02:00",
+          "Sum": 1.0,
+          "Unit": "Count"
+        },
+        {
+          "Timestamp": "2026-04-02T00:10:00+02:00",
+          "Sum": 2.0,
+          "Unit": "Count"
+        },
+        {
+          "Timestamp": "2026-04-02T03:40:00+02:00",
+          "Sum": 1.0,
+          "Unit": "Count"
+        },
+        {
+          "Timestamp": "2026-04-02T03:45:00+02:00",
+          "Sum": 1.0,
+          "Unit": "Count"
+        },
+        {
+          "Timestamp": "2026-04-02T03:50:00+02:00",
+          "Sum": 3.0,
+          "Unit": "Count"
+        },
+        {
+          "Timestamp": "2026-04-02T03:55:00+02:00",
+          "Sum": 1.0,
+          "Unit": "Count"
+        },
+        {
+          "Timestamp": "2026-04-02T04:00:00+02:00",
+          "Sum": 2.0,
+          "Unit": "Count"
+        },
+        {
+          "Timestamp": "2026-04-02T04:05:00+02:00",
+          "Sum": 1.0,
+          "Unit": "Count"
+        },
+        {
+          "Timestamp": "2026-04-02T04:10:00+02:00",
+          "Sum": 2.0,
+          "Unit": "Count"
+        },
+        {
+          "Timestamp": "2026-04-02T04:15:00+02:00",
+          "Sum": 2.0,
+          "Unit": "Count"
+        },
+        {
+          "Timestamp": "2026-04-02T04:20:00+02:00",
+          "Sum": 1.0,
+          "Unit": "Count"
+        },
+        {
+          "Timestamp": "2026-04-02T04:25:00+02:00",
+          "Sum": 2.0,
+          "Unit": "Count"
+        },
+        {
+          "Timestamp": "2026-04-02T04:30:00+02:00",
+          "Sum": 1.0,
+          "Unit": "Count"
+        },
+        {
+          "Timestamp": "2026-04-02T04:35:00+02:00",
+          "Sum": 2.0,
+          "Unit": "Count"
+        },
+        {
+          "Timestamp": "2026-04-02T04:40:00+02:00",
+          "Sum": 3.0,
+          "Unit": "Count"
+        },
+        {
+          "Timestamp": "2026-04-02T04:45:00+02:00",
+          "Sum": 2.0,
+          "Unit": "Count"
+        },
+        {
+          "Timestamp": "2026-04-02T04:50:00+02:00",
+          "Sum": 1.0,
+          "Unit": "Count"
+        },
+        {
+          "Timestamp": "2026-04-02T04:55:00+02:00",
+          "Sum": 2.0,
+          "Unit": "Count"
+        },
+        {
+          "Timestamp": "2026-04-02T05:00:00+02:00",
+          "Sum": 1.0,
+          "Unit": "Count"
+        },
+        {
+          "Timestamp": "2026-04-02T05:05:00+02:00",
+          "Sum": 4.0,
+          "Unit": "Count"
+        },
+        {
+          "Timestamp": "2026-04-02T05:45:00+02:00",
+          "Sum": 2.0,
+          "Unit": "Count"
+        },
+        {
+          "Timestamp": "2026-04-02T16:10:00+02:00",
+          "Sum": 1.0,
+          "Unit": "Count"
+        }
+      ]
+    },
+    "FailedInvocations": {
+      "sum": 148.0,
+      "datapoints": [
+        {
+          "Timestamp": "2026-04-01T20:00:00+02:00",
+          "Sum": 31.0,
+          "Unit": "Count"
+        },
+        {
+          "Timestamp": "2026-04-01T20:05:00+02:00",
+          "Sum": 51.0,
+          "Unit": "Count"
+        },
+        {
+          "Timestamp": "2026-04-01T20:10:00+02:00",
+          "Sum": 14.0,
+          "Unit": "Count"
+        },
+        {
+          "Timestamp": "2026-04-01T20:35:00+02:00",
+          "Sum": 1.0,
+          "Unit": "Count"
+        },
+        {
+          "Timestamp": "2026-04-01T22:20:00+02:00",
+          "Sum": 3.0,
+          "Unit": "Count"
+        },
+        {
+          "Timestamp": "2026-04-01T22:25:00+02:00",
+          "Sum": 5.0,
+          "Unit": "Count"
+        },
+        {
+          "Timestamp": "2026-04-01T22:30:00+02:00",
+          "Sum": 5.0,
+          "Unit": "Count"
+        },
+        {
+          "Timestamp": "2026-04-01T22:35:00+02:00",
+          "Sum": 1.0,
+          "Unit": "Count"
+        },
+        {
+          "Timestamp": "2026-04-02T00:10:00+02:00",
+          "Sum": 2.0,
+          "Unit": "Count"
+        },
+        {
+          "Timestamp": "2026-04-02T03:40:00+02:00",
+          "Sum": 1.0,
+          "Unit": "Count"
+        },
+        {
+          "Timestamp": "2026-04-02T03:45:00+02:00",
+          "Sum": 1.0,
+          "Unit": "Count"
+        },
+        {
+          "Timestamp": "2026-04-02T03:50:00+02:00",
+          "Sum": 3.0,
+          "Unit": "Count"
+        },
+        {
+          "Timestamp": "2026-04-02T03:55:00+02:00",
+          "Sum": 1.0,
+          "Unit": "Count"
+        },
+        {
+          "Timestamp": "2026-04-02T04:00:00+02:00",
+          "Sum": 2.0,
+          "Unit": "Count"
+        },
+        {
+          "Timestamp": "2026-04-02T04:05:00+02:00",
+          "Sum": 1.0,
+          "Unit": "Count"
+        },
+        {
+          "Timestamp": "2026-04-02T04:10:00+02:00",
+          "Sum": 2.0,
+          "Unit": "Count"
+        },
+        {
+          "Timestamp": "2026-04-02T04:15:00+02:00",
+          "Sum": 2.0,
+          "Unit": "Count"
+        },
+        {
+          "Timestamp": "2026-04-02T04:20:00+02:00",
+          "Sum": 1.0,
+          "Unit": "Count"
+        },
+        {
+          "Timestamp": "2026-04-02T04:25:00+02:00",
+          "Sum": 2.0,
+          "Unit": "Count"
+        },
+        {
+          "Timestamp": "2026-04-02T04:30:00+02:00",
+          "Sum": 1.0,
+          "Unit": "Count"
+        },
+        {
+          "Timestamp": "2026-04-02T04:35:00+02:00",
+          "Sum": 2.0,
+          "Unit": "Count"
+        },
+        {
+          "Timestamp": "2026-04-02T04:40:00+02:00",
+          "Sum": 3.0,
+          "Unit": "Count"
+        },
+        {
+          "Timestamp": "2026-04-02T04:45:00+02:00",
+          "Sum": 2.0,
+          "Unit": "Count"
+        },
+        {
+          "Timestamp": "2026-04-02T04:50:00+02:00",
+          "Sum": 1.0,
+          "Unit": "Count"
+        },
+        {
+          "Timestamp": "2026-04-02T04:55:00+02:00",
+          "Sum": 2.0,
+          "Unit": "Count"
+        },
+        {
+          "Timestamp": "2026-04-02T05:00:00+02:00",
+          "Sum": 1.0,
+          "Unit": "Count"
+        },
+        {
+          "Timestamp": "2026-04-02T05:05:00+02:00",
+          "Sum": 4.0,
+          "Unit": "Count"
+        },
+        {
+          "Timestamp": "2026-04-02T05:45:00+02:00",
+          "Sum": 2.0,
+          "Unit": "Count"
+        },
+        {
+          "Timestamp": "2026-04-02T16:10:00+02:00",
+          "Sum": 1.0,
+          "Unit": "Count"
+        }
+      ]
+    }
+  }
+}

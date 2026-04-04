@@ -1,0 +1,53 @@
+{
+  "account_id": "696505809372",
+  "action_type": "enable_guardduty",
+  "blocked_by_run_id": null,
+  "blocked_detail": null,
+  "blocked_reason": null,
+  "can_generate_bundle": true,
+  "counters": {
+    "metadata_only": 0,
+    "not_run_yet": 1,
+    "run_not_successful": 0,
+    "run_successful": 0,
+    "total_actions": 1
+  },
+  "created_at": "2026-03-28T02:18:19.470676+00:00",
+  "group_key": "e4e07aa8-b8ea-4c1d-9fd7-4362a2fc1195|enable_guardduty|696505809372|eu-north-1",
+  "id": "c84d5c12-593d-4ab3-b790-ce56e5484f92",
+  "members": [
+    {
+      "action_id": "30efce6e-bcd7-4583-8400-aaf9569130ef",
+      "action_status": "resolved",
+      "assigned_at": "2026-03-28T02:18:19.470676+00:00",
+      "control_id": "GuardDuty.1",
+      "followup_kind": null,
+      "last_attempt_at": null,
+      "last_confirmation_source": null,
+      "last_confirmed_at": null,
+      "latest_run": {
+        "finished_at": null,
+        "id": null,
+        "started_at": null,
+        "status": null
+      },
+      "pending_confirmation": false,
+      "pending_confirmation_deadline_at": null,
+      "pending_confirmation_message": null,
+      "pending_confirmation_severity": null,
+      "pending_confirmation_started_at": null,
+      "priority": 41,
+      "resource_id": "AWS::::Account:696505809372",
+      "status_bucket": "not_run_yet",
+      "status_message": null,
+      "status_severity": null,
+      "title": "GuardDuty should be enabled"
+    }
+  ],
+  "metadata": {
+    "source": "auto_assign"
+  },
+  "region": "eu-north-1",
+  "tenant_id": "e4e07aa8-b8ea-4c1d-9fd7-4362a2fc1195",
+  "updated_at": "2026-03-28T02:18:19.470676+00:00"
+}

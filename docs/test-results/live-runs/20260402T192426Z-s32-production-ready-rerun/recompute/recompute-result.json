@@ -1,0 +1,10 @@
+{
+  "status": "blocked",
+  "step": "recompute_account_actions",
+  "attempted_at": "2026-04-02T19:49:00Z",
+  "tenant_id": "9f7616d8-af04-43ca-99cd-713625357b70",
+  "account_id": "696505809372",
+  "region": "eu-north-1",
+  "summary": "Second consecutive recompute invocation produced no stdout and appeared wedged on DB access; grouped bundle proof proceeded using live action-group generation instead.",
+  "observed_process_pid": 75047
+}

@@ -1,0 +1,53 @@
+{
+  "account_id": "696505809372",
+  "action_type": "ebs_default_encryption",
+  "blocked_by_run_id": null,
+  "blocked_detail": null,
+  "blocked_reason": null,
+  "can_generate_bundle": true,
+  "counters": {
+    "metadata_only": 0,
+    "not_run_yet": 0,
+    "run_not_successful": 1,
+    "run_successful": 0,
+    "total_actions": 1
+  },
+  "created_at": "2026-03-28T02:18:19.470676+00:00",
+  "group_key": "e4e07aa8-b8ea-4c1d-9fd7-4362a2fc1195|ebs_default_encryption|696505809372|eu-north-1",
+  "id": "3ff809df-3a5b-4012-b60d-5ffa124b0035",
+  "members": [
+    {
+      "action_id": "c400ae42-865c-4808-8aa0-11450b717714",
+      "action_status": "resolved",
+      "assigned_at": "2026-03-28T02:18:19.470676+00:00",
+      "control_id": "EC2.7",
+      "followup_kind": null,
+      "last_attempt_at": "2026-03-31T20:11:59.826904+00:00",
+      "last_confirmation_source": null,
+      "last_confirmed_at": null,
+      "latest_run": {
+        "finished_at": "2026-03-31T20:38:43+00:00",
+        "id": "b162a58b-62bf-4d1f-9402-35c21bb1d14f",
+        "started_at": "2026-03-31T20:11:59.826904+00:00",
+        "status": "failed"
+      },
+      "pending_confirmation": false,
+      "pending_confirmation_deadline_at": null,
+      "pending_confirmation_message": null,
+      "pending_confirmation_severity": null,
+      "pending_confirmation_started_at": null,
+      "priority": 26,
+      "resource_id": "AWS::::Account:696505809372",
+      "status_bucket": "run_not_successful",
+      "status_message": null,
+      "status_severity": null,
+      "title": "EBS default encryption should be enabled"
+    }
+  ],
+  "metadata": {
+    "source": "auto_assign"
+  },
+  "region": "eu-north-1",
+  "tenant_id": "e4e07aa8-b8ea-4c1d-9fd7-4362a2fc1195",
+  "updated_at": "2026-03-28T02:18:19.470676+00:00"
+}

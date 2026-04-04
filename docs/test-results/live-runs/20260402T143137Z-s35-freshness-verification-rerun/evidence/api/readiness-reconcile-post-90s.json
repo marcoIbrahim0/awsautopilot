@@ -1,0 +1,50 @@
+{
+  "request": {
+    "method": "GET",
+    "url": "https://api.ocypheris.com/api/aws/accounts/696505809372/control-plane-readiness",
+    "params": {
+      "stale_after_minutes": 30
+    },
+    "json": null
+  },
+  "status_code": 200,
+  "headers": {
+    "Date": "Thu, 02 Apr 2026 14:45:08 GMT",
+    "Content-Type": "application/json",
+    "Transfer-Encoding": "chunked",
+    "Connection": "keep-alive",
+    "CF-Ray": "9e609d959b7ce19c-MRS",
+    "CF-Cache-Status": "DYNAMIC",
+    "Nel": "{\"report_to\":\"cf-nel\",\"success_fraction\":0.0,\"max_age\":604800}",
+    "Server": "cloudflare",
+    "apigw-requestid": "bMkWNhMXAi0EMJg=",
+    "Report-To": "{\"group\":\"cf-nel\",\"max_age\":604800,\"endpoints\":[{\"url\":\"https://a.nel.cloudflare.com/report/v4?s=9nNL5g0MosWjFjFNB%2BcAHyQ3x20Q8bHhTViI2xko9a4LfmKLArEvZvgVVAlqihPQQM9Tbx3gtnCjQsVowFLyy5VjlbFdHEeHpwM8%2B87pn1RWT2afA5qRaA8f8kPr2%2BgwFrQFvg%3D%3D\"}]}",
+    "Content-Encoding": "gzip",
+    "alt-svc": "h3=\":443\"; ma=86400"
+  },
+  "body": {
+    "account_id": "696505809372",
+    "stale_after_minutes": 30,
+    "overall_ready": false,
+    "missing_regions": [
+      "eu-north-1",
+      "us-east-1"
+    ],
+    "regions": [
+      {
+        "region": "eu-north-1",
+        "last_event_time": "2026-03-24T17:15:05Z",
+        "last_intake_time": "2026-03-24T17:15:12.987294Z",
+        "is_recent": false,
+        "age_minutes": 12809.92
+      },
+      {
+        "region": "us-east-1",
+        "last_event_time": "2026-03-24T17:19:27Z",
+        "last_intake_time": "2026-03-24T17:19:33.690142Z",
+        "is_recent": false,
+        "age_minutes": 12805.58
+      }
+    ]
+  }
+}

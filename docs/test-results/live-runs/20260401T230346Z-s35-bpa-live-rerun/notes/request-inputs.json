@@ -1,0 +1,10 @@
+{
+  "account_id": "696505809372",
+  "region": "eu-north-1",
+  "action_type": "s3_bucket_require_ssl",
+  "api_base": "https://api.ocypheris.com",
+  "deploy_image_tag": "20260401T232040Z-s35-hotfix2",
+  "affected_action_id": "53b7b063-8531-4829-9b23-f03b1796b23d",
+  "affected_bucket": "arch1-bucket-website-a1-696505809372-eu-north-1",
+  "validation_mode": "single_action_pr_only"
+}

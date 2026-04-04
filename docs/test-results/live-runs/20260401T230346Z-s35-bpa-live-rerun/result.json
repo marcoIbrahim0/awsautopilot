@@ -1,0 +1,14 @@
+{
+  "status": "failed",
+  "account_id": "696505809372",
+  "region": "eu-north-1",
+  "action_type": "s3_bucket_require_ssl",
+  "deploy_image_tag": "20260401T232040Z-s35-hotfix2",
+  "grouped_rerun_result": "deduped_409_no_changes",
+  "single_action_run_id": "b926c7bc-0080-4a0e-832b-321b144b2b46",
+  "generation_status": "success",
+  "apply_status": "skipped",
+  "old_bpa_failure_absent": true,
+  "bounded_blocker": "Current bucket policy is public and S3 Block Public Access prevents public policies, so merge-preserving SSL enforcement would be rejected by PutBucketPolicy.",
+  "summary": "Production no longer emits the old BPA-rejected executable S3.5 bundle for the affected bucket. The live rerun now fails closed earlier with a review_required decision package for the real public-policy plus Block Public Access conflict."
+}

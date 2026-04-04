@@ -1,0 +1,14 @@
+[
+  {
+    "bucket_creation_acknowledged": false,
+    "repo_target": {
+      "base_branch": "main",
+      "head_branch": "20260401t004147z-all-groups-pr-bundle-live-06-eu-north-1-s3-bucket-encryption-kms-s3-enable-sse-kms-guided",
+      "provider": "github",
+      "repository": "example/security-autopilot-remediations"
+    },
+    "risk_acknowledged": true,
+    "strategy_id": "s3_enable_sse_kms_guided",
+    "strategy_inputs": {}
+  }
+]

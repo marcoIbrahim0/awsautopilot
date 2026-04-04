@@ -1,0 +1,154 @@
+{
+  "action_id": "456f845e-da64-43cf-8dc2-d738c3a770df",
+  "action_type": "cloudtrail_enabled",
+  "manual_high_risk": false,
+  "mode_options": [
+    "pr_only"
+  ],
+  "pre_execution_notice": null,
+  "recommendation": {
+    "advisory": true,
+    "default_mode": "pr_only",
+    "enforced_by_policy": null,
+    "evidence": {
+      "context_incomplete": true,
+      "data_sensitivity": 0.55,
+      "exploit_signals": 0.0,
+      "internet_exposure": 0.0,
+      "matched_signals": [],
+      "privilege_level": 1.0,
+      "score": 23
+    },
+    "matrix_position": {
+      "business_criticality": "high",
+      "cell": "risk_low__criticality_high",
+      "risk_tier": "low"
+    },
+    "mode": "pr_only",
+    "rationale": "Matrix cell risk_low__criticality_high maps to default recommendation 'pr_only'. Risk is low and business criticality is high. Criticality evidence: data_sensitivity=0.55, privilege_level=1.00, internet_exposure=0.00, matched_signals=none. Relationship context is incomplete, so the recommendation remains conservative and advisory unless policy overrides it. Current execution surfaces stay PR-only, so this recommendation remains advisory until the reviewed bundle is applied."
+  },
+  "runbook_url": null,
+  "strategies": [
+    {
+      "blast_radius": "resource",
+      "blocked_reasons": [
+        "CloudTrail log bucket could not be verified from this account context."
+      ],
+      "context": {
+        "default_inputs": {
+          "create_bucket_if_missing": false,
+          "create_bucket_policy": true,
+          "multi_region": true,
+          "trail_bucket_name": "ocypheris-live-ct-20260323162333-eu-north-1",
+          "trail_name": "security-autopilot-trail"
+        }
+      },
+      "decision_rationale": "Family resolver kept compatibility profile 'cloudtrail_enable_guided' for strategy 'cloudtrail_enable_guided' but downgraded executability. CloudTrail log bucket could not be verified from this account context.",
+      "dependency_checks": [
+        {
+          "code": "cloudtrail_cost_impact",
+          "message": "CloudTrail log delivery and retention increase S3 storage and request costs.",
+          "status": "warn"
+        },
+        {
+          "code": "cloudtrail_log_bucket_prereq",
+          "message": "This PR bundle requires a log-delivery S3 bucket. Create or identify the bucket and set trail_bucket_name before apply.",
+          "status": "warn"
+        },
+        {
+          "code": "cloudtrail_existing_trail_present",
+          "message": "CloudTrail trail 'security-autopilot-trail' already exists in this account/region view. Review whether to reuse it, update it, or create a separate trail.",
+          "status": "warn"
+        }
+      ],
+      "estimated_resolution_time": "1-6 hours",
+      "exception_only": false,
+      "impact_text": null,
+      "input_schema": {
+        "fields": [
+          {
+            "default_value": "security-autopilot-trail",
+            "description": "Name for the CloudTrail trail.",
+            "group": "Trail Settings",
+            "key": "trail_name",
+            "required": false,
+            "safe_default_label": "Use the standard trail name",
+            "safe_default_value": "security-autopilot-trail",
+            "type": "string"
+          },
+          {
+            "description": "CloudTrail log bucket.",
+            "group": "Delivery Settings",
+            "help_text": "Enter the S3 bucket CloudTrail should use for log delivery. When 'Create bucket if missing' is off, this must be an existing reachable bucket. When it is on, this becomes the exact bucket name to create and use.",
+            "key": "trail_bucket_name",
+            "required": false,
+            "safe_default_label": "Auto-generate a dedicated CloudTrail log bucket",
+            "safe_default_value": "security-autopilot-trail-logs-{{account_id}}-{{region}}",
+            "type": "string"
+          },
+          {
+            "default_value": true,
+            "description": "Create a new CloudTrail log bucket if the named bucket does not already exist.",
+            "group": "Delivery Settings",
+            "key": "create_bucket_if_missing",
+            "required": false,
+            "type": "boolean"
+          },
+          {
+            "default_value": true,
+            "description": "Automatically add required S3 bucket policy statements for CloudTrail delivery.",
+            "group": "Delivery Settings",
+            "key": "create_bucket_policy",
+            "required": false,
+            "type": "boolean"
+          },
+          {
+            "default_value": true,
+            "description": "Enable CloudTrail logging across all regions.",
+            "group": "Trail Settings",
+            "key": "multi_region",
+            "required": false,
+            "type": "boolean"
+          }
+        ]
+      },
+      "label": "Enable CloudTrail logging (guided choices)",
+      "missing_defaults": [],
+      "mode": "pr_only",
+      "preservation_summary": {
+        "bucket_creation_requested": false,
+        "external_bucket_policy_management": false,
+        "kms_delivery_requested": false,
+        "log_bucket_reachable": false,
+        "multi_region_requested": true,
+        "single_profile_compatible": true,
+        "strategy_only_supported": true,
+        "support_bucket_safe": false,
+        "trail_bucket_mode": "existing",
+        "trail_bucket_name_resolved": true,
+        "trail_bucket_source": "existing_trail"
+      },
+      "profiles": [
+        {
+          "exception_only": false,
+          "profile_id": "cloudtrail_enable_guided",
+          "recommended": true,
+          "requires_inputs": true,
+          "support_tier": "review_required_bundle",
+          "supports_exception_flow": false
+        }
+      ],
+      "recommended": true,
+      "recommended_profile_id": "cloudtrail_enable_guided",
+      "requires_inputs": true,
+      "risk_level": "medium",
+      "rollback_command": "aws cloudtrail stop-logging --name <TRAIL_NAME>",
+      "strategy_id": "cloudtrail_enable_guided",
+      "supports_exception_flow": false,
+      "supports_immediate_reeval": true,
+      "warnings": [
+        "CloudTrail log delivery and retention can increase storage costs."
+      ]
+    }
+  ]
+}

@@ -37,6 +37,8 @@ sequenceDiagram
 
 - `ReadRole` is the only active customer AWS role in scope.
 - Grouped/customer-run bundles always use the checked-in [`run_all.sh` template](/Users/marcomaher/AWS%20Security%20Autopilot/infrastructure/templates/run_all.sh); the old S3 override path is removed from current code, config, and deploy surfaces.
+- `Tenant.external_id` is the canonical AssumeRole `ExternalId` for connected-account trust. `aws_accounts.external_id` is a mirrored compatibility field plus audit surface, not the authority for runtime AssumeRole decisions.
+- STS trust drift now has an explicit operator recovery contract: validation/service-readiness return `ReadRole trust update required` with the current tenant `ExternalId`, latest template URL, stack name default, SaaS account ID, and SaaS execution role ARNs needed to repair the customer `ReadRole` trust.
 - Customer remediation remains PR-only. `WriteRole` and `direct_fix` are retained only as deprecated appendix surfaces, not as active product trust claims.
 
 ## Historical Note

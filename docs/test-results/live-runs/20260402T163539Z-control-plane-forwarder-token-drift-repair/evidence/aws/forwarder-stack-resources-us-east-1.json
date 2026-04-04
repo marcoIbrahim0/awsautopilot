@@ -1,0 +1,100 @@
+{
+    "StackResources": [
+        {
+            "StackName": "SecurityAutopilotControlPlaneForwarder",
+            "StackId": "arn:aws:cloudformation:us-east-1:696505809372:stack/SecurityAutopilotControlPlaneForwarder/b39a3ea0-1d77-11f1-9578-12c8af93ad29",
+            "LogicalResourceId": "ControlPlaneApiCallsRule",
+            "PhysicalResourceId": "SecurityAutopilotControlPlaneApiCallsRule-us-east-1",
+            "ResourceType": "AWS::Events::Rule",
+            "Timestamp": "2026-04-02T16:26:50.411000+00:00",
+            "ResourceStatus": "UPDATE_COMPLETE",
+            "DriftInformation": {
+                "StackResourceDriftStatus": "NOT_CHECKED"
+            }
+        },
+        {
+            "StackName": "SecurityAutopilotControlPlaneForwarder",
+            "StackId": "arn:aws:cloudformation:us-east-1:696505809372:stack/SecurityAutopilotControlPlaneForwarder/b39a3ea0-1d77-11f1-9578-12c8af93ad29",
+            "LogicalResourceId": "ControlPlaneApiDestination",
+            "PhysicalResourceId": "SecurityAutopilotControlPlaneApiDestination-us-east-1",
+            "ResourceType": "AWS::Events::ApiDestination",
+            "Timestamp": "2026-03-11T18:25:44.831000+00:00",
+            "ResourceStatus": "CREATE_COMPLETE",
+            "DriftInformation": {
+                "StackResourceDriftStatus": "NOT_CHECKED"
+            }
+        },
+        {
+            "StackName": "SecurityAutopilotControlPlaneForwarder",
+            "StackId": "arn:aws:cloudformation:us-east-1:696505809372:stack/SecurityAutopilotControlPlaneForwarder/b39a3ea0-1d77-11f1-9578-12c8af93ad29",
+            "LogicalResourceId": "ControlPlaneConnection",
+            "PhysicalResourceId": "SecurityAutopilotControlPlaneConnection-us-east-1",
+            "ResourceType": "AWS::Events::Connection",
+            "Timestamp": "2026-04-02T16:25:17.884000+00:00",
+            "ResourceStatus": "UPDATE_COMPLETE",
+            "DriftInformation": {
+                "StackResourceDriftStatus": "NOT_CHECKED"
+            }
+        },
+        {
+            "StackName": "SecurityAutopilotControlPlaneForwarder",
+            "StackId": "arn:aws:cloudformation:us-east-1:696505809372:stack/SecurityAutopilotControlPlaneForwarder/b39a3ea0-1d77-11f1-9578-12c8af93ad29",
+            "LogicalResourceId": "ControlPlaneRuleFailedInvocationsAlarm",
+            "PhysicalResourceId": "security-autopilot-control-plane-failed-invocations-us-east-1",
+            "ResourceType": "AWS::CloudWatch::Alarm",
+            "Timestamp": "2026-04-02T16:26:53.783000+00:00",
+            "ResourceStatus": "CREATE_COMPLETE",
+            "DriftInformation": {
+                "StackResourceDriftStatus": "NOT_CHECKED"
+            }
+        },
+        {
+            "StackName": "SecurityAutopilotControlPlaneForwarder",
+            "StackId": "arn:aws:cloudformation:us-east-1:696505809372:stack/SecurityAutopilotControlPlaneForwarder/b39a3ea0-1d77-11f1-9578-12c8af93ad29",
+            "LogicalResourceId": "ControlPlaneTargetDLQ",
+            "PhysicalResourceId": "https://sqs.us-east-1.amazonaws.com/696505809372/security-autopilot-control-plane-target-dlq-us-east-1",
+            "ResourceType": "AWS::SQS::Queue",
+            "Timestamp": "2026-04-02T16:26:17.145000+00:00",
+            "ResourceStatus": "CREATE_COMPLETE",
+            "DriftInformation": {
+                "StackResourceDriftStatus": "NOT_CHECKED"
+            }
+        },
+        {
+            "StackName": "SecurityAutopilotControlPlaneForwarder",
+            "StackId": "arn:aws:cloudformation:us-east-1:696505809372:stack/SecurityAutopilotControlPlaneForwarder/b39a3ea0-1d77-11f1-9578-12c8af93ad29",
+            "LogicalResourceId": "ControlPlaneTargetDLQDepthAlarm",
+            "PhysicalResourceId": "security-autopilot-control-plane-target-dlq-depth-us-east-1",
+            "ResourceType": "AWS::CloudWatch::Alarm",
+            "Timestamp": "2026-04-02T16:26:25.002000+00:00",
+            "ResourceStatus": "CREATE_COMPLETE",
+            "DriftInformation": {
+                "StackResourceDriftStatus": "NOT_CHECKED"
+            }
+        },
+        {
+            "StackName": "SecurityAutopilotControlPlaneForwarder",
+            "StackId": "arn:aws:cloudformation:us-east-1:696505809372:stack/SecurityAutopilotControlPlaneForwarder/b39a3ea0-1d77-11f1-9578-12c8af93ad29",
+            "LogicalResourceId": "ControlPlaneTargetDLQPolicy",
+            "PhysicalResourceId": "SecurityAutopilotControlPlaneForwarder-ControlPlaneTargetDLQPolicy-BKsMUxJqT5tI",
+            "ResourceType": "AWS::SQS::QueuePolicy",
+            "Timestamp": "2026-04-02T16:27:22.447000+00:00",
+            "ResourceStatus": "CREATE_COMPLETE",
+            "DriftInformation": {
+                "StackResourceDriftStatus": "NOT_CHECKED"
+            }
+        },
+        {
+            "StackName": "SecurityAutopilotControlPlaneForwarder",
+            "StackId": "arn:aws:cloudformation:us-east-1:696505809372:stack/SecurityAutopilotControlPlaneForwarder/b39a3ea0-1d77-11f1-9578-12c8af93ad29",
+            "LogicalResourceId": "EventBridgeInvokeApiDestinationRole",
+            "PhysicalResourceId": "SecurityAutopilotControlP-EventBridgeInvokeApiDesti-iWCXNvMZxVmQ",
+            "ResourceType": "AWS::IAM::Role",
+            "Timestamp": "2026-03-11T18:26:08.631000+00:00",
+            "ResourceStatus": "CREATE_COMPLETE",
+            "DriftInformation": {
+                "StackResourceDriftStatus": "NOT_CHECKED"
+            }
+        }
+    ]
+}

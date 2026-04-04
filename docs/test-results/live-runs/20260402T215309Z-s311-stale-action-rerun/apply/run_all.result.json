@@ -1,0 +1,7 @@
+{
+  "command": "bash ./run_all.sh",
+  "workdir": "docs/test-results/live-runs/20260402T215309Z-s311-stale-action-rerun/bundle/extracted",
+  "exit_code": 0,
+  "stdout_summary": "No executable Terraform action folders found under executable/actions.",
+  "reason_no_mutation": "Fresh bundle contained zero executable action folders; local run only terminalized metadata-only grouped results."
+}

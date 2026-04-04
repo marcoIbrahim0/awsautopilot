@@ -1,0 +1,18 @@
+{
+  "status": "success",
+  "database_source": "fallback_only",
+  "elapsed_sec": 18.2,
+  "returncode": 0,
+  "result": {
+    "actions_created": 0,
+    "actions_updated": 0,
+    "actions_resolved": 0,
+    "actions_reopened_with_open_findings": 0,
+    "phase_timings_ms": {
+      "grouping": 2561,
+      "resolve_reopen": 433,
+      "security_graph": 3796,
+      "total": 6791
+    }
+  }
+}

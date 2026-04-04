@@ -1,0 +1,13 @@
+{
+  "collected_at": "2026-04-01T18:46:32.098185+00:00",
+  "context": {
+    "kms_key_options_error": "An error occurred (AccessDenied) when calling the AssumeRole operation: Access denied. Check role ARN and trust policy."
+  },
+  "evidence": {
+    "target_bucket": "phase2-wi1-lifecycle-696505809372-20260329004157"
+  },
+  "s3_policy_size_limit_bytes": 20480,
+  "s3_target_bucket_name": "phase2-wi1-lifecycle-696505809372-20260329004157",
+  "s3_target_bucket_probe_error": "Target bucket existence could not be verified because ReadRole runtime probe is unavailable.",
+  "strategy_id": "s3_enable_sse_kms_guided"
+}

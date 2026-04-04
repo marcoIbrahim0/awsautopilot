@@ -1,0 +1,11 @@
+{
+  "strategy_id": "config_enable_account_local_delivery",
+  "risk_acknowledged": true,
+  "bucket_creation_acknowledged": true,
+  "repo_target": {
+    "repository": "live-validation/config-live",
+    "base_branch": "main",
+    "head_branch": "config-live-20260401",
+    "root_path": "evidence/config-live"
+  }
+}

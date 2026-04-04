@@ -1,0 +1,29 @@
+{
+  "action_results": [
+    {
+      "action_id": "fb27abe2-d234-4627-9ee2-6227b8447efd",
+      "execution_error_code": "bundle_runner_plan",
+      "execution_error_message": "run_all.sh failed during plan for folder tail-run/actions/30-arn-aws-s3-phase2-wi1-lifecycle-696505809372-202-fb27abe2",
+      "execution_status": "failed"
+    },
+    {
+      "action_id": "fddd2631-0898-48d7-8bf8-5e638c4ac493",
+      "execution_error_code": "bundle_runner_plan",
+      "execution_error_message": "run_all.sh failed during plan for folder tail-run/actions/31-arn-aws-s3-arch1-bucket-evidence-b1-696505809372-fddd2631",
+      "execution_status": "failed"
+    },
+    {
+      "action_id": "abf5eb48-ea9b-48d0-a534-236cf8818bf9",
+      "execution_error_code": "bundle_runner_plan",
+      "execution_error_message": "run_all.sh failed during plan for folder tail-run/actions/32-arn-aws-s3-security-autopilot-w6-envready-s311-r-abf5eb48",
+      "execution_status": "failed"
+    },
+    {
+      "action_id": "f497bc0c-ddcb-4191-8fa5-c6ed21bbe134",
+      "execution_error_code": "bundle_runner_plan",
+      "execution_error_message": "run_all.sh failed during plan for folder tail-run/actions/33-arn-aws-s3-security-autopilot-w6-envready-s315-e-f497bc0c",
+      "execution_status": "failed"
+    }
+  ],
+  "shared_execution_results": []
+}
