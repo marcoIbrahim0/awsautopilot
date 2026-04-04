@@ -154,6 +154,7 @@ def build_grouped_run_persistence_plan(
     group_bundle_seed: Mapping[str, Any] | None = None,
     account: Any | None = None,
     tenant_settings: Mapping[str, Any] | None = None,
+    tenant_external_id: str | None = None,
 ) -> GroupedRunPersistencePlan:
     """Build grouped artifacts and normalized queue-compatible mirrors."""
     sorted_actions = _validate_grouped_action_set(actions, scope=scope)
@@ -191,6 +192,7 @@ def build_grouped_run_persistence_plan(
         account=account,
         tenant_settings=tenant_settings,
         risk_acknowledged=normalized_request.risk_acknowledged,
+        tenant_external_id=tenant_external_id,
     )
     artifacts = _build_grouped_artifacts(
         scope=scope,
@@ -597,6 +599,7 @@ def _build_action_resolutions(
     account: Any | None,
     tenant_settings: Mapping[str, Any] | None,
     risk_acknowledged: bool,
+    tenant_external_id: str | None = None,
 ) -> tuple[GroupedActionResolutionEntry, ...]:
     return tuple(
         _build_action_resolution(
@@ -605,6 +608,7 @@ def _build_action_resolutions(
             account=account,
             tenant_settings=tenant_settings,
             risk_acknowledged=risk_acknowledged,
+            tenant_external_id=tenant_external_id,
         )
         for action in actions
     )
@@ -631,6 +635,7 @@ def _build_action_resolution(
     account: Any | None,
     tenant_settings: Mapping[str, Any] | None,
     risk_acknowledged: bool,
+    tenant_external_id: str | None = None,
 ) -> GroupedActionResolutionEntry:
     try:
         probe_inputs = resolve_runtime_probe_inputs(
@@ -651,6 +656,7 @@ def _build_action_resolution(
         strategy=selection.strategy,
         strategy_inputs=probe_inputs,
         account=account,
+        tenant_external_id=tenant_external_id,
     )
     try:
         profile_selection = resolve_create_profile_selection(

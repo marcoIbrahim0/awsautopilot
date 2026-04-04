@@ -159,10 +159,10 @@ def test_validate_404_account_not_found(client: TestClient) -> None:
 
 
 # ---------------------------------------------------------------------------
-# 200 — STS failure → status=error, permissions_ok=False
+# 400 — STS trust drift → recovery payload
 # ---------------------------------------------------------------------------
-def test_validate_200_sts_failure(client: TestClient) -> None:
-    """STS failure updates status to error and returns permissions_ok=False."""
+def test_validate_400_trust_update_required_on_sts_access_denied(client: TestClient) -> None:
+    """STS access denied returns a trust-update-required recovery payload."""
     tenant = MagicMock()
     tenant.external_id = "ext-123"
     acc = _mock_account()
@@ -191,10 +191,14 @@ def test_validate_200_sts_failure(client: TestClient) -> None:
             app.dependency_overrides.pop(get_db, None)
             app.dependency_overrides.pop(get_optional_user, None)
     
-    assert r.status_code == 200
+    assert r.status_code == 400
     data = r.json()
-    assert data["status"] == "error"
-    assert data["permissions_ok"] is False
+    assert data["detail"]["error"] == "ReadRole trust update required"
+    recovery = data["detail"]["recovery"]
+    assert recovery["account_id"] == "123456789012"
+    assert recovery["stack_name"] == "SecurityAutopilotReadRole"
+    assert recovery["tenant_external_id"] == "ext-123"
+    assert recovery["role_read_arn"] == "arn:aws:iam::123456789012:role/TestRole"
     assert acc.status == AwsAccountStatus.error
 
 

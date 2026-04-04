@@ -66,6 +66,13 @@ class Settings(BaseSettings):
             "resynchronized from fallback."
         ),
     )
+    DATABASE_FAILOVER_CONNECT_TIMEOUT_SECONDS: int = Field(
+        default=10,
+        description=(
+            "Seconds to wait for sync/async Postgres connection establishment before treating the "
+            "candidate as unavailable for failover purposes."
+        ),
+    )
     DB_REVISION_GUARD_ENABLED: bool = Field(
         default=True,
         description=(

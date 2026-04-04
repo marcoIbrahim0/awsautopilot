@@ -18,7 +18,7 @@ This document defines the production-readiness contract for PR bundle generation
 
 Cross-reference:
 - [Remediation adjacency hardening plan](/Users/marcomaher/AWS%20Security%20Autopilot/docs/prod-readiness/remediation-adjacency-hardening-plan.md)
-- [Remediation determinism hardening implementation plan](/Users/marcomaher/AWS%20Security%20Autopilot/docs/prod-readiness/remediation-determinism-hardening-implementation-plan.md)
+- [Remediation determinism hardening implementation plan (`implemented`, production signoff closed March 30, 2026)](/Users/marcomaher/AWS%20Security%20Autopilot/docs/prod-readiness/remediation-determinism-hardening-implementation-plan.md)
 - [Remediation determinism frontend UI coverage status (March 30, 2026)](/Users/marcomaher/AWS%20Security%20Autopilot/docs/prod-readiness/remediation-determinism-hardening-implementation-plan.md#frontend-ui-coverage-status)
 - [Remediation determinism production signoff (`PASS`, umbrella closure index, March 30, 2026)](/Users/marcomaher/AWS%20Security%20Autopilot/docs/test-results/live-runs/20260330T021500Z-remediation-determinism-production-signoff/README.md)
 - [Phase 1 action-resolution lag closure (`PASS`, Gate 1 closed on production, March 30, 2026)](/Users/marcomaher/AWS%20Security%20Autopilot/docs/test-results/live-runs/20260330T011601Z-phase1-action-resolution-closure/README.md)

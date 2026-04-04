@@ -4,9 +4,9 @@
 **Excluded:** IAM.4  
 **Contract:** PR/Patch-bundle only. No direct-fix execution. No `WriteRole` mutations.
 
-> ⚠️ Status: Planned — not yet implemented
+> Status: Implemented and production-signoff complete.
 >
-> This repo copy was imported from `/Users/marcomaher/Desktop/implementation_plan.md` on March 27, 2026 and extended with the enterprise-grade validation scope required before any "production-ready" claim for this hardening wave.
+> This repo copy was imported from `/Users/marcomaher/Desktop/implementation_plan.md` on March 27, 2026 and later updated with the retained Gate 1, Gate 2, and Gate 3 production closure results from March 28-30, 2026. Treat this repo copy and the linked retained evidence packages as authoritative; the desktop source file is a historical handoff snapshot.
 
 ---
 
@@ -1030,9 +1030,9 @@ terraform plan        # with customer credentials, NOT ReadRole
 
 ## Production-Ready Validation Gates
 
-> ⚠️ Status: Planned — not yet implemented
+> Status: Closed on production.
 >
-> This section replaces the earlier generic enterprise-grade expansion with a phase-scoped production-readiness gate for the implemented March 28, 2026 scope only.
+> This section records the retained phase-scoped production-readiness signoff for the March 28-30, 2026 remediation-determinism wave rather than future planned work.
 >
 > Scope locked for this signoff:
 > - Phase 1: `WI-3`, `WI-6`, `WI-7`, `WI-12`, `WI-13`, `WI-14`
@@ -1044,7 +1044,7 @@ terraform plan        # with customer credentials, NOT ReadRole
 
 ### Validation Scope Notes
 
-- This is a documentation-only planning change. No backend or frontend API contract changes are part of this section.
+- This is a retained signoff record. No new backend or frontend API contract changes are introduced by this section.
 - Treat the restored March 28, 2026 production runtime as the surface being signed off.
 - Use the dedicated production-connected canary account `696505809372` in `eu-north-1`.
 - Use the [No-UI PR Bundle Agent Runbook](/Users/marcomaher/AWS%20Security%20Autopilot/docs/runbooks/no-ui-pr-bundle-agent.md) as the default operator workflow and [Live SaaS E2E Testing Docs](/Users/marcomaher/AWS%20Security%20Autopilot/docs/live-e2e-testing/README.md) as the retained evidence convention.

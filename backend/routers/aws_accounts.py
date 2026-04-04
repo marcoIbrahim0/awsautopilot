@@ -38,6 +38,7 @@ from backend.services.aws_account_orchestration import (
     run_validation_probes,
     validate_registration_role_accounts,
 )
+from backend.services.account_trust import canonical_tenant_external_id_async
 from backend.services.aws import (
     API_ASSUME_ROLE_SOURCE_IDENTITY,
     assume_role,
@@ -95,6 +96,60 @@ def _assume_role_failure_detail(error_message: str) -> str:
         "role, (3) the role trust policy allows your configured SaaS execution role "
         "(or the temporary SaaS account fallback) and the ExternalId matches."
     )
+
+
+_ASSUME_ROLE_ACCESS_DENIED_CODES = {
+    "AccessDenied",
+    "AccessDeniedException",
+    "UnauthorizedOperation",
+    "UnauthorizedAccess",
+}
+
+
+def _is_assume_role_access_denied(error: ClientError) -> bool:
+    code = str(error.response.get("Error", {}).get("Code") or "").strip()
+    return code in _ASSUME_ROLE_ACCESS_DENIED_CODES
+
+
+def _latest_read_role_template_url() -> str | None:
+    configured_template_url = (settings.CLOUDFORMATION_READ_ROLE_TEMPLATE_URL or "").strip()
+    if not configured_template_url:
+        return None
+    return get_latest_template_version(configured_template_url) or configured_template_url
+
+
+def _read_role_trust_update_required_detail(
+    *,
+    account_id: str,
+    tenant: Tenant,
+    role_read_arn: str,
+    error_message: str,
+) -> dict[str, object]:
+    latest_template_url = _latest_read_role_template_url()
+    execution_role_arns = [
+        item.strip()
+        for item in str(settings.saas_execution_role_arns_csv or "").split(",")
+        if item and item.strip()
+    ]
+    return {
+        "error": "ReadRole trust update required",
+        "detail": (
+            f"Failed to assume the connected ReadRole for account {account_id}. "
+            "The trust policy may be stale or using the wrong ExternalId."
+        ),
+        "recovery": {
+            "account_id": account_id,
+            "role_read_arn": role_read_arn,
+            "stack_name": "SecurityAutopilotReadRole",
+            "tenant_external_id": tenant.external_id,
+            "saas_account_id": (settings.SAAS_AWS_ACCOUNT_ID or "").strip(),
+            "saas_execution_role_arns": execution_role_arns,
+            "latest_template_url": latest_template_url,
+            "update_status_path": f"/api/aws/accounts/{account_id}/read-role/update-status",
+            "update_path": f"/api/aws/accounts/{account_id}/read-role/update",
+        },
+        "aws_error": error_message,
+    }
 
 
 def _api_assume_role_tags(tenant_id: uuid.UUID) -> list[dict[str, str]]:
@@ -1637,6 +1692,16 @@ async def validate_account(
         acc.last_validated_at = now
         await db.commit()
         await db.refresh(acc)
+        if _is_assume_role_access_denied(e):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=_read_role_trust_update_required_detail(
+                    account_id=account_id,
+                    tenant=tenant,
+                    role_read_arn=acc.role_read_arn,
+                    error_message=error_message,
+                ),
+            ) from e
         return ValidationResponse(
             status="error",
             account_id=acc.account_id,
@@ -1735,6 +1800,16 @@ async def check_account_service_readiness(
         raise
     except ClientError as e:
         error_message = e.response.get("Error", {}).get("Message", str(e))
+        if _is_assume_role_access_denied(e):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=_read_role_trust_update_required_detail(
+                    account_id=account_id,
+                    tenant=tenant,
+                    role_read_arn=acc.role_read_arn,
+                    error_message=error_message,
+                ),
+            ) from e
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f"Failed to check service readiness: {error_message}",
@@ -1814,6 +1889,16 @@ async def trigger_onboarding_fast_path(
         ) from exc
     except ClientError as exc:
         error_message = exc.response.get("Error", {}).get("Message", str(exc))
+        if _is_assume_role_access_denied(exc):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=_read_role_trust_update_required_detail(
+                    account_id=account_id,
+                    tenant=tenant,
+                    role_read_arn=acc.role_read_arn,
+                    error_message=error_message,
+                ),
+            ) from exc
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f"Failed to evaluate fast-path readiness: {error_message}",

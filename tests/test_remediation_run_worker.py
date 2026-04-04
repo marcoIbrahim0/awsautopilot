@@ -677,8 +677,9 @@ def test_pr_only_apply_time_merge_resolution_generates_executable_s3_ssl_bundle(
     files_by_path = _bundle_files_by_path(run)
     assert "s3_bucket_require_ssl.tf" in files_by_path
     assert "terraform.auto.tfvars.json" not in files_by_path
+    assert "scripts/s3_policy_fetch.py" in files_by_path
     assert "scripts/s3_policy_capture.py" in files_by_path
-    assert 'data "aws_s3_bucket_policy" "existing"' in files_by_path["s3_bucket_require_ssl.tf"]
+    assert 'data "external" "existing_policy"' in files_by_path["s3_bucket_require_ssl.tf"]
 
 
 def test_pr_only_apply_time_merge_resolution_generates_executable_s3_11_bundle() -> None:
@@ -945,8 +946,18 @@ def test_pr_only_group_bundle_generates_single_combined_bundle() -> None:
     assert 'terraform init -input=false -lockfile=readonly' in content
     assert 'grep -q "Provider dependency changes detected" "$log_file"' in content
     assert "refreshing lockfile." in content
+    assert 'CLOUDFRONT_OAC_ACTION_TIMEOUT_SECS="${CLOUDFRONT_OAC_ACTION_TIMEOUT_SECS:-1800}"' in content
+    assert "bundle_uses_cloudfront_oac()" in content
+    assert "bundle_timeout_secs()" in content
+    assert 'cloudfront_oac_bundles=${HAS_CLOUDFRONT_OAC_BUNDLES}' in content
     assert "prepare_action_workspace" in content
     assert "cleanup_action_workspace" in content
+    assert "prepare_s3_access_logging_tfvars" in content
+    assert "prepare_cloudfront_oac_tfvars" in content
+    assert "merge_cloudfront_oac_tfvars_json" in content
+    assert "cloudfront_reuse_query.json" in content
+    assert "adopt_existing_log_bucket" in content
+    assert "aws s3api get-bucket-location --bucket" in content
     assert "aws-security-autopilot-tf-" in content
     assert 'include = ["registry.terraform.io/hashicorp/aws"]' in content
     assert 'version = "= 5.100.0"' in content
@@ -1393,7 +1404,7 @@ def test_group_pr_bundle_mixed_tier_layout_for_executable_and_review_required_ac
     assert review_entry["outcome"] == "review_required_metadata_only"
     assert review_entry["has_runnable_terraform"] is False
     run_all = files_by_path["run_all.sh"]
-    assert 'EXECUTION_ROOT="executable/actions"' in run_all
+    assert 'EXECUTION_ROOT="${EXECUTION_ROOT:-executable/actions}"' in run_all
     assert "prepare_action_workspace" in run_all
     assert "review_required/actions" not in run_all
     assert "manual_guidance/actions" not in run_all
@@ -1633,7 +1644,7 @@ def test_group_pr_bundle_reporting_wrapper_includes_non_executable_results() -> 
     assert "--retry-all-errors" in files_by_path["run_all.sh"]
     assert "--connect-timeout 5" in files_by_path["run_all.sh"]
     assert "group_run_report_replay" in files_by_path["replay_group_run_reports.sh"]
-    assert 'EXECUTION_ROOT="executable/actions"' in files_by_path["run_actions.sh"]
+    assert 'EXECUTION_ROOT="${EXECUTION_ROOT:-executable/actions}"' in files_by_path["run_actions.sh"]
     assert "prepare_action_workspace" in files_by_path["run_actions.sh"]
     assert 'export TF_DATA_DIR="${dir}/.terraform-data"' in files_by_path["run_actions.sh"]
 
@@ -1790,6 +1801,88 @@ def test_reporting_wrapper_script_posts_finished_failed_on_runner_error(tmp_path
     assert "finished_at" in payloads[1]
 
 
+def test_reporting_wrapper_script_uses_execution_summary_for_partial_failures(tmp_path: Path) -> None:
+    first_action_id = uuid.uuid4()
+    second_action_id = uuid.uuid4()
+    payload_log = tmp_path / "payloads.jsonl"
+    run_all_path = tmp_path / "run_all.sh"
+    run_actions_path = tmp_path / "run_actions.sh"
+    bin_dir = tmp_path / "bin"
+    curl_path = bin_dir / "curl"
+    summary = {
+        "action_results": [
+            {
+                "action_id": str(first_action_id),
+                "execution_status": "success",
+            },
+            {
+                "action_id": str(second_action_id),
+                "execution_status": "failed",
+                "execution_error_code": "bundle_runner_plan",
+                "execution_error_message": "run_all.sh failed during plan for folder executable/actions/02-two",
+            },
+        ],
+        "shared_execution_results": [],
+    }
+
+    bin_dir.mkdir()
+    run_all_path.write_text(
+        build_reporting_wrapper_script(
+            callback_url="https://api.example.com/api/internal/group-runs/report",
+            report_token="signed-token",
+            action_ids=[first_action_id, second_action_id],
+        ),
+        encoding="utf-8",
+    )
+    run_all_path.chmod(0o755)
+    run_actions_path.write_text(
+        "#!/usr/bin/env bash\n"
+        "cat > .bundle-execution-summary.json <<'EOF'\n"
+        f"{json.dumps(summary)}\n"
+        "EOF\n"
+        "exit 1\n",
+        encoding="utf-8",
+    )
+    run_actions_path.chmod(0o755)
+    curl_path.write_text(
+        "#!/usr/bin/env bash\n"
+        "set -euo pipefail\n"
+        "payload=\"\"\n"
+        "while [ \"$#\" -gt 0 ]; do\n"
+        "  case \"$1\" in\n"
+        "    -d)\n"
+        "      shift\n"
+        "      payload=\"$1\"\n"
+        "      ;;\n"
+        "  esac\n"
+        "  shift || true\n"
+        "done\n"
+        "printf '%s\\n' \"$payload\" >> \"$BUNDLE_TEST_PAYLOADS\"\n"
+        "printf '200'\n",
+        encoding="utf-8",
+    )
+    curl_path.chmod(0o755)
+
+    env = os.environ.copy()
+    env["BUNDLE_TEST_PAYLOADS"] = str(payload_log)
+    env["PATH"] = f"{bin_dir}:{env['PATH']}"
+
+    completed = subprocess.run(
+        [str(run_all_path)],
+        cwd=tmp_path,
+        capture_output=True,
+        check=False,
+        env=env,
+        text=True,
+    )
+
+    assert completed.returncode == 1
+    payloads = [json.loads(line) for line in payload_log.read_text(encoding="utf-8").splitlines()]
+    assert [payload["event"] for payload in payloads] == ["started", "finished"]
+    assert payloads[1]["action_results"] == summary["action_results"]
+    assert "finished_at" in payloads[1]
+
+
 def test_reporting_replay_script_replays_and_deletes_payloads(tmp_path: Path) -> None:
     replay_path = tmp_path / "replay_group_run_reports.sh"
     replay_dir = tmp_path / ".bundle-callback-replay"
@@ -1896,9 +1989,242 @@ def test_group_pr_bundle_run_actions_script_includes_timeout_guards() -> None:
     files_by_path = _bundle_files_by_path(run)
     content = files_by_path["run_actions.sh"]
     assert 'ACTION_TIMEOUT_SECS="${ACTION_TIMEOUT_SECS:-300}"' in content
+    assert 'CLOUDFRONT_OAC_ACTION_TIMEOUT_SECS="${CLOUDFRONT_OAC_ACTION_TIMEOUT_SECS:-1800}"' in content
+    assert "bundle_timeout_secs()" in content
     assert "run_with_timeout()" in content
-    assert 'run_with_timeout "$ACTION_TIMEOUT_SECS" terraform plan -input=false' in content
-    assert 'apply_with_duplicate_tolerance "$workspace_dir" "$ACTION_TIMEOUT_SECS"' in content
+    assert 'timeout_secs=$(bundle_timeout_secs "$dir")' in content
+    assert 'run_with_timeout "$timeout_secs" terraform plan -input=false' in content
+    assert "apply_with_duplicate_tolerance" in content
+    assert "prepare_cloudfront_oac_tfvars" in content
+    assert "merge_cloudfront_oac_tfvars_json" in content
+    assert '"$timeout_secs"' in content
+
+
+def test_run_all_templates_keep_s3_9_owned_bucket_tolerance_but_fail_closed_for_oac_duplicates() -> None:
+    worker_template = Path("backend/workers/jobs/run_all_template.sh").read_text(encoding="utf-8")
+    infra_template = Path("infrastructure/templates/run_all.sh").read_text(encoding="utf-8")
+
+    for content in (worker_template, infra_template):
+        assert "OriginAccessControlAlreadyExists" in content
+        assert "origin access control[^[:cntrl:]]*already exists" in content
+        assert "WARNING: duplicate/already-existing resource detected; continuing without failure." in content
+
+    assert "BucketAlreadyOwnedByYou" in worker_template
+    assert "shared S3.9 destination bucket already exists and is owned" in worker_template
+
+
+def test_infra_run_all_template_merges_cloudfront_oac_preflight_tfvars(tmp_path: Path) -> None:
+    run_all_path = tmp_path / "run_all.sh"
+    actions_dir = tmp_path / "actions" / "action-one"
+    scripts_dir = actions_dir / "scripts"
+    bin_dir = tmp_path / "bin"
+    capture_path = tmp_path / "captured.auto.tfvars.json"
+    terraform_log = tmp_path / "terraform.log"
+
+    run_all_path.write_text(
+        Path("infrastructure/templates/run_all.sh").read_text(encoding="utf-8"),
+        encoding="utf-8",
+    )
+    run_all_path.chmod(0o755)
+    scripts_dir.mkdir(parents=True)
+    bin_dir.mkdir()
+
+    (actions_dir / "s3_cloudfront_oac_private_s3.tf").write_text("# oac bundle\n", encoding="utf-8")
+    (actions_dir / "providers.tf").write_text("# providers\n", encoding="utf-8")
+    (actions_dir / "terraform.auto.tfvars.json").write_text(
+        json.dumps({"existing_bucket_policy_json": "{\"Version\":\"2012-10-17\"}"}) + "\n",
+        encoding="utf-8",
+    )
+    (actions_dir / "security_autopilot.auto.tfvars.json").write_text(
+        json.dumps({"preserve_me": "yes"}) + "\n",
+        encoding="utf-8",
+    )
+    (actions_dir / "cloudfront_reuse_query.json").write_text(
+        json.dumps({"bucket_name": "my-bucket"}) + "\n",
+        encoding="utf-8",
+    )
+    (scripts_dir / "cloudfront_oac_discovery.py").write_text(
+        (
+            "#!/usr/bin/env python3\n"
+            "import json\n"
+            "import sys\n"
+            "json.load(sys.stdin)\n"
+            "print(json.dumps({\n"
+            "  'cloudfront_reuse_mode': 'reuse_distribution',\n"
+            "  'reuse_oac_id': 'OAC123',\n"
+            "  'reuse_distribution_id': 'DIST123',\n"
+            "  'reuse_distribution_arn': 'arn:aws:cloudfront::123456789012:distribution/DIST123',\n"
+            "  'reuse_distribution_domain_name': 'd123.cloudfront.net'\n"
+            "}))\n"
+        ),
+        encoding="utf-8",
+    )
+    (scripts_dir / "cloudfront_oac_discovery.py").chmod(0o755)
+
+    (bin_dir / "aws").write_text("#!/usr/bin/env bash\nexit 0\n", encoding="utf-8")
+    (bin_dir / "aws").chmod(0o755)
+    (bin_dir / "terraform").write_text(
+        (
+            "#!/usr/bin/env python3\n"
+            "import os\n"
+            "import shutil\n"
+            "import sys\n"
+            "from pathlib import Path\n"
+            "\n"
+            "args = sys.argv[1:]\n"
+            "Path(os.environ['BUNDLE_TEST_TERRAFORM_LOG']).open('a', encoding='utf-8').write(' '.join(args) + '\\n')\n"
+            "if args[:2] == ['providers', 'mirror']:\n"
+            "    mirror_dir = Path(args[-1])\n"
+            "    provider_dir = mirror_dir / 'registry.terraform.io/hashicorp/aws/5.100.0/test'\n"
+            "    provider_dir.mkdir(parents=True, exist_ok=True)\n"
+            "    (provider_dir / 'terraform-provider-aws_v5.100.0_x5').write_text('provider', encoding='utf-8')\n"
+            "    sys.exit(0)\n"
+            "if args[:2] == ['providers', 'lock']:\n"
+            "    Path('.terraform.lock.hcl').write_text('# lock\\n', encoding='utf-8')\n"
+            "    sys.exit(0)\n"
+            "if args and args[0] == 'init':\n"
+            "    sys.exit(0)\n"
+            "if args and args[0] in {'plan', 'apply'}:\n"
+            "    src = Path('security_autopilot.auto.tfvars.json')\n"
+            "    if src.is_file() and os.environ.get('BUNDLE_TEST_CAPTURE_TFVARS'):\n"
+            "        shutil.copyfile(src, os.environ['BUNDLE_TEST_CAPTURE_TFVARS'])\n"
+            "    sys.exit(0)\n"
+            "sys.exit(0)\n"
+        ),
+        encoding="utf-8",
+    )
+    (bin_dir / "terraform").chmod(0o755)
+
+    env = os.environ.copy()
+    env["HOME"] = str(tmp_path / "home")
+    env["PATH"] = f"{bin_dir}:{env['PATH']}"
+    env["BUNDLE_TEST_CAPTURE_TFVARS"] = str(capture_path)
+    env["BUNDLE_TEST_TERRAFORM_LOG"] = str(terraform_log)
+
+    completed = subprocess.run(
+        [str(run_all_path)],
+        cwd=tmp_path,
+        capture_output=True,
+        check=False,
+        env=env,
+        text=True,
+    )
+
+    assert completed.returncode == 0, completed.stderr or completed.stdout
+    merged = json.loads(capture_path.read_text(encoding="utf-8"))
+    assert merged["preserve_me"] == "yes"
+    assert merged["cloudfront_reuse_mode"] == "reuse_distribution"
+    assert merged["reuse_oac_id"] == "OAC123"
+    assert merged["reuse_distribution_id"] == "DIST123"
+    assert merged["reuse_distribution_arn"].endswith("/DIST123")
+    assert merged["reuse_distribution_domain_name"] == "d123.cloudfront.net"
+    original_tfvars = json.loads((actions_dir / "terraform.auto.tfvars.json").read_text(encoding="utf-8"))
+    assert original_tfvars["existing_bucket_policy_json"] == "{\"Version\":\"2012-10-17\"}"
+    assert "INFO: CloudFront/OAC reuse preflight mode=reuse_distribution" in completed.stdout
+
+
+def test_infra_run_all_template_fails_closed_when_cloudfront_oac_preflight_fails(tmp_path: Path) -> None:
+    run_all_path = tmp_path / "run_all.sh"
+    actions_dir = tmp_path / "actions" / "action-one"
+    scripts_dir = actions_dir / "scripts"
+    bin_dir = tmp_path / "bin"
+    summary_path = tmp_path / ".bundle-execution-summary.json"
+    terraform_log = tmp_path / "terraform.log"
+    action_id = str(uuid.uuid4())
+
+    run_all_path.write_text(
+        Path("infrastructure/templates/run_all.sh").read_text(encoding="utf-8"),
+        encoding="utf-8",
+    )
+    run_all_path.chmod(0o755)
+    scripts_dir.mkdir(parents=True)
+    bin_dir.mkdir()
+    (tmp_path / "bundle_manifest.json").write_text(
+        json.dumps(
+            {
+                "actions": [
+                    {
+                        "action_id": action_id,
+                        "folder": "actions/action-one",
+                        "has_runnable_terraform": True,
+                    }
+                ],
+                "shared_execution_folders": [],
+            }
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+
+    (actions_dir / "s3_cloudfront_oac_private_s3.tf").write_text("# oac bundle\n", encoding="utf-8")
+    (actions_dir / "cloudfront_reuse_query.json").write_text("{}\n", encoding="utf-8")
+    (scripts_dir / "cloudfront_oac_discovery.py").write_text(
+        "#!/usr/bin/env python3\nimport sys\nsys.stderr.write('boom\\n')\nsys.exit(1)\n",
+        encoding="utf-8",
+    )
+    (scripts_dir / "cloudfront_oac_discovery.py").chmod(0o755)
+
+    (bin_dir / "aws").write_text("#!/usr/bin/env bash\nexit 0\n", encoding="utf-8")
+    (bin_dir / "aws").chmod(0o755)
+    (bin_dir / "terraform").write_text(
+        (
+            "#!/usr/bin/env python3\n"
+            "import os\n"
+            "import sys\n"
+            "from pathlib import Path\n"
+            "\n"
+            "args = sys.argv[1:]\n"
+            "Path(os.environ['BUNDLE_TEST_TERRAFORM_LOG']).open('a', encoding='utf-8').write(' '.join(args) + '\\n')\n"
+            "if args[:2] == ['providers', 'mirror']:\n"
+            "    mirror_dir = Path(args[-1])\n"
+            "    provider_dir = mirror_dir / 'registry.terraform.io/hashicorp/aws/5.100.0/test'\n"
+            "    provider_dir.mkdir(parents=True, exist_ok=True)\n"
+            "    (provider_dir / 'terraform-provider-aws_v5.100.0_x5').write_text('provider', encoding='utf-8')\n"
+            "    sys.exit(0)\n"
+            "if args[:2] == ['providers', 'lock']:\n"
+            "    Path('.terraform.lock.hcl').write_text('# lock\\n', encoding='utf-8')\n"
+            "    sys.exit(0)\n"
+            "if args and args[0] == 'init':\n"
+            "    sys.exit(0)\n"
+            "if args and args[0] in {'plan', 'apply'}:\n"
+            "    sys.exit(0)\n"
+            "sys.exit(0)\n"
+        ),
+        encoding="utf-8",
+    )
+    (bin_dir / "terraform").chmod(0o755)
+
+    env = os.environ.copy()
+    env["HOME"] = str(tmp_path / "home")
+    env["PATH"] = f"{bin_dir}:{env['PATH']}"
+    env["BUNDLE_TEST_TERRAFORM_LOG"] = str(terraform_log)
+
+    completed = subprocess.run(
+        [str(run_all_path)],
+        cwd=tmp_path,
+        capture_output=True,
+        check=False,
+        env=env,
+        text=True,
+    )
+
+    assert completed.returncode == 1
+    assert "CloudFront/OAC reuse preflight failed" in completed.stdout
+    assert "cloudfront_oac_preflight" in completed.stdout
+    summary = json.loads(summary_path.read_text(encoding="utf-8"))
+    assert summary["action_results"] == [
+        {
+            "action_id": action_id,
+            "execution_status": "failed",
+            "execution_error_code": "bundle_runner_cloudfront_oac_preflight",
+            "execution_error_message": "run_all.sh failed during cloudfront_oac_preflight for folder actions/action-one",
+        }
+    ]
+    if terraform_log.exists():
+        terraform_invocations = terraform_log.read_text(encoding="utf-8").splitlines()
+        assert not any(line.startswith("init") for line in terraform_invocations)
+        assert not any(line.startswith("plan") for line in terraform_invocations)
+        assert not any(line.startswith("apply") for line in terraform_invocations)
 
 
 def test_group_pr_bundle_manual_guidance_metadata_only_and_zero_executable_success() -> None:

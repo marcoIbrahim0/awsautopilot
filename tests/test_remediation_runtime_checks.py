@@ -154,6 +154,26 @@ class _FakeS3Client:
         return {"Status": self._versioning_status}
 
 
+class _BucketAwareFakeS3Client(_FakeS3Client):
+    def __init__(
+        self,
+        *,
+        head_bucket_error_codes: dict[str, str] | None = None,
+        **kwargs: Any,
+    ) -> None:
+        super().__init__(**kwargs)
+        self._head_bucket_error_codes = head_bucket_error_codes or {}
+
+    def head_bucket(self, *, Bucket: str) -> dict[str, Any]:
+        code = self._head_bucket_error_codes.get(Bucket)
+        if code:
+            raise ClientError(
+                {"Error": {"Code": code, "Message": "simulated failure"}},
+                "HeadBucket",
+            )
+        return super().head_bucket(Bucket=Bucket)
+
+
 class _FakeSession:
     def __init__(self, clients: dict[str, Any] | _FakeS3Client) -> None:
         if isinstance(clients, dict):
@@ -163,8 +183,34 @@ class _FakeSession:
 
     def client(self, service_name: str, **kwargs) -> Any:
         client = self._clients.get(service_name)
+        if client is None and service_name == "s3control":
+            client = _FakeS3ControlClient(block_public_policy=True)
+            self._clients[service_name] = client
         assert client is not None, f"Unexpected service_name: {service_name}"
         return client
+
+
+class _FakeS3ControlClient:
+    def __init__(self, *, block_public_policy: bool | None = True, error_code: str | None = None) -> None:
+        self._block_public_policy = block_public_policy
+        self._error_code = error_code
+
+    def get_public_access_block(self, *, AccountId: str) -> dict[str, Any]:
+        if self._error_code:
+            raise ClientError(
+                {"Error": {"Code": self._error_code, "Message": "simulated failure"}},
+                "GetPublicAccessBlock",
+            )
+        if self._block_public_policy is None:
+            raise ClientError(
+                {"Error": {"Code": "NoSuchPublicAccessBlockConfiguration", "Message": "simulated failure"}},
+                "GetPublicAccessBlock",
+            )
+        return {
+            "PublicAccessBlockConfiguration": {
+                "BlockPublicPolicy": self._block_public_policy,
+            }
+        }
 
 
 class _FakeKmsClient:
@@ -415,6 +461,116 @@ def test_collect_runtime_risk_signals_s35_access_denied_but_status_no_such_polic
     assert "access_path_evidence_reason" not in signals
 
 
+def test_collect_runtime_risk_signals_s35_captures_public_policy_and_bpa_state(monkeypatch) -> None:
+    existing_policy = {
+        "Version": "2012-10-17",
+        "Statement": [
+            {
+                "Sid": "PublicReadWebsiteObjects",
+                "Effect": "Allow",
+                "Principal": "*",
+                "Action": "s3:GetObject",
+                "Resource": "arn:aws:s3:::bucket/*",
+            }
+        ],
+    }
+    session = _FakeSession(
+        {
+            "s3": _FakeS3Client(policy_json=json.dumps(existing_policy), policy_public=True),
+            "s3control": _FakeS3ControlClient(block_public_policy=True),
+        }
+    )
+    monkeypatch.setattr(
+        "backend.services.remediation_runtime_checks.assume_role",
+        lambda **kwargs: session,
+    )
+
+    signals = collect_runtime_risk_signals(
+        action=_make_action(),
+        strategy=_strict_ssl_strategy(),
+        strategy_inputs={},
+        account=_make_account(),
+    )
+
+    assert signals["s3_bucket_policy_public"] is True
+    assert signals["s3_bucket_block_public_policy_enabled"] is True
+    assert signals["s3_account_block_public_policy_enabled"] is True
+    assert signals["s3_effective_block_public_policy_enabled"] is True
+
+
+def test_collect_runtime_risk_signals_s3_2_oac_captures_public_website_and_bpa_state(monkeypatch) -> None:
+    existing_policy = {
+        "Version": "2012-10-17",
+        "Statement": [
+            {
+                "Sid": "PublicReadWebsiteObjects",
+                "Effect": "Allow",
+                "Principal": "*",
+                "Action": "s3:GetObject",
+                "Resource": "arn:aws:s3:::bucket/*",
+            }
+        ],
+    }
+    session = _FakeSession(
+        {
+            "s3": _FakeS3Client(
+                policy_json=json.dumps(existing_policy),
+                policy_public=True,
+                website_error_code=None,
+                website_document={"IndexDocument": {"Suffix": "index.html"}},
+            ),
+            "s3control": _FakeS3ControlClient(block_public_policy=True),
+        }
+    )
+    monkeypatch.setattr(
+        "backend.services.remediation_runtime_checks.assume_role",
+        lambda **kwargs: session,
+    )
+
+    signals = collect_runtime_risk_signals(
+        action=_make_action(action_type="s3_bucket_block_public_access"),
+        strategy={"strategy_id": "s3_migrate_cloudfront_oac_private"},
+        strategy_inputs={},
+        account=_make_account(),
+    )
+
+    assert signals["s3_bucket_policy_public"] is True
+    assert signals["s3_bucket_website_configured"] is True
+    assert signals["s3_bucket_block_public_policy_enabled"] is True
+    assert signals["s3_account_block_public_policy_enabled"] is True
+    assert signals["s3_effective_block_public_policy_enabled"] is True
+    assert signals["evidence"]["existing_bucket_policy_statement_count"] == 1
+    assert "existing_bucket_website_configuration_json" in signals["evidence"]
+
+
+def test_collect_runtime_risk_signals_s35_marks_missing_target_bucket(monkeypatch) -> None:
+    session = _FakeSession(
+        {
+            "s3": _FakeS3Client(
+                head_bucket_error_code="NoSuchBucket",
+                error_code="NoSuchBucket",
+                policy_status_error_code="NoSuchBucket",
+            ),
+            "s3control": _FakeS3ControlClient(block_public_policy=True),
+        }
+    )
+    monkeypatch.setattr(
+        "backend.services.remediation_runtime_checks.assume_role",
+        lambda **kwargs: session,
+    )
+
+    signals = collect_runtime_risk_signals(
+        action=_make_action(),
+        strategy=_strict_ssl_strategy(),
+        strategy_inputs={},
+        account=_make_account(),
+    )
+
+    assert signals["s3_target_bucket_missing"] is True
+    assert signals["s3_target_bucket_creation_possible"] is True
+    assert signals["context"]["default_inputs"]["create_bucket_if_missing"] is True
+
+
 def test_collect_runtime_risk_signals_s35_uses_resource_id_fallback_for_bucket_scope(monkeypatch) -> None:
     existing_policy = {
         "Version": "2012-10-17",
@@ -536,6 +692,43 @@ def test_collect_runtime_risk_signals_s3_2_oac_access_denied_but_status_no_such_
     assert "existing_bucket_policy_capture_error" not in evidence
     assert "existing_bucket_policy_json" not in evidence
     assert signals["s3_bucket_policy_public"] is False
+
+
+def test_collect_runtime_risk_signals_s3_2_oac_proves_bucket_when_head_bucket_is_denied_but_policy_reads_work(
+    monkeypatch,
+) -> None:
+    session = _FakeSession(
+        _FakeS3Client(
+            policy_public=False,
+            website_error_code="NoSuchWebsiteConfiguration",
+            head_bucket_error_code="403",
+        )
+    )
+    monkeypatch.setattr(
+        "backend.services.remediation_runtime_checks.assume_role",
+        lambda **kwargs: session,
+    )
+
+    action = _make_action(action_type="s3_bucket_block_public_access")
+    action.target_id = "123456789012|us-east-1|arn:aws:s3:::safe-bucket|S3.2"
+    action.resource_id = "arn:aws:s3:::safe-bucket"
+    signals = collect_runtime_risk_signals(
+        action=action,
+        strategy={"strategy_id": "s3_migrate_cloudfront_oac_private"},
+        strategy_inputs={},
+        account=_make_account(),
+    )
+
+    assert signals["s3_target_bucket_verification_available"] is True
+    assert signals["s3_target_bucket_exists"] is True
+    assert signals["s3_target_bucket_missing"] is False
+    assert "s3_target_bucket_verification_reason" not in signals
+    assert "s3_target_bucket_reason" not in signals
+    assert signals["s3_bucket_policy_public"] is False
+    assert signals["s3_bucket_website_configured"] is False
+    evidence = signals["evidence"]
+    assert evidence["existing_bucket_policy_statement_count"] == 1
+    assert isinstance(evidence["existing_bucket_policy_json"], str)
 
 
 def test_collect_runtime_risk_signals_s3_2_oac_access_denied_with_status_denied_keeps_capture_error(
@@ -739,6 +932,74 @@ def test_collect_runtime_risk_signals_s3_11_access_denied_marks_lifecycle_path_u
     assert signals["evidence"]["existing_lifecycle_capture_error"] == "AccessDenied"
 
 
+def test_collect_runtime_risk_signals_s3_11_missing_target_bucket_sets_create_defaults(monkeypatch) -> None:
+    session = _FakeSession(_FakeS3Client(head_bucket_error_code="404"))
+    monkeypatch.setattr(
+        "backend.services.remediation_runtime_checks.assume_role",
+        lambda **kwargs: session,
+    )
+
+    signals = collect_runtime_risk_signals(
+        action=_make_action(
+            target_id="123456789012|us-east-1|arn:aws:s3:::missing-lifecycle-bucket|S3.11",
+            action_type="s3_bucket_lifecycle_configuration",
+            resource_id="arn:aws:s3:::missing-lifecycle-bucket",
+        ),
+        strategy=_s3_11_strategy(),
+        strategy_inputs={},
+        account=_make_account(),
+    )
+
+    assert signals["s3_target_bucket_exists"] is False
+    assert signals["s3_target_bucket_missing"] is True
+    assert signals["s3_target_bucket_creation_possible"] is True
+    assert "missing-lifecycle-bucket" in signals["s3_target_bucket_reason"]
+    assert signals["context"]["default_inputs"]["create_bucket_if_missing"] is True
+    assert signals["s3_target_bucket_name"] == "missing-lifecycle-bucket"
+
+
+def test_collect_runtime_risk_signals_s3_15_marks_target_bucket_unverified_when_read_probe_is_unavailable(
+    monkeypatch,
+) -> None:
+    def _raise_access_denied(**kwargs):
+        raise ClientError(
+            {
+                "Error": {
+                    "Code": "AccessDenied",
+                    "Message": "Access denied. Check role ARN and trust policy.",
+                }
+            },
+            "AssumeRole",
+        )
+
+    monkeypatch.setattr(
+        "backend.services.remediation_runtime_checks.assume_role",
+        _raise_access_denied,
+    )
+
+    signals = collect_runtime_risk_signals(
+        action=_make_action(
+            target_id="123456789012|us-east-1|arn:aws:s3:::missing-kms-bucket|S3.15",
+            action_type="s3_bucket_encryption_kms",
+            resource_id="arn:aws:s3:::missing-kms-bucket",
+        ),
+        strategy=_s3_kms_strategy(),
+        strategy_inputs={},
+        account=_make_account(),
+    )
+
+    assert signals["s3_target_bucket_probe_error"] == (
+        "Target bucket existence could not be verified because ReadRole runtime probe is unavailable."
+    )
+    assert signals["s3_target_bucket_verification_available"] is False
+    assert signals["s3_target_bucket_creation_possible"] is False
+    assert "missing-kms-bucket" in signals["s3_target_bucket_verification_reason"]
+    assert "existing-bucket remediation path executable" in signals["s3_target_bucket_verification_reason"]
+    assert signals["s3_target_bucket_reason"] == signals["s3_target_bucket_verification_reason"]
+    default_inputs = signals.get("context", {}).get("default_inputs", {})
+    assert "create_bucket_if_missing" not in default_inputs
+
+
 def test_collect_runtime_risk_signals_s3_11_uses_resource_id_fallback_for_bucket_scope(monkeypatch) -> None:
     lifecycle_document = {
         "Rules": [
@@ -792,6 +1053,36 @@ def test_collect_runtime_risk_signals_s3_9_proves_destination_safety(monkeypatch
     assert signals["s3_access_logging_destination_bucket_reachable"] is True
     assert signals["s3_access_logging_destination_safe"] is True
     assert signals["support_bucket_probe"]["safe"] is True
+    assert signals["evidence"]["target_bucket"] == "source-bucket"
+    assert signals["evidence"]["log_bucket_name"] == "dedicated-access-log-bucket"
+
+
+def test_collect_runtime_risk_signals_s3_9_missing_source_bucket_sets_create_defaults(monkeypatch) -> None:
+    session = _FakeSession(
+        _BucketAwareFakeS3Client(head_bucket_error_codes={"source-bucket": "404"})
+    )
+    monkeypatch.setattr(
+        "backend.services.remediation_runtime_checks.assume_role",
+        lambda **kwargs: session,
+    )
+
+    signals = collect_runtime_risk_signals(
+        action=_make_action(
+            target_id="123456789012|us-east-1|arn:aws:s3:::source-bucket|S3.9",
+            action_type="s3_bucket_access_logging",
+            resource_id="arn:aws:s3:::source-bucket",
+        ),
+        strategy=_s3_9_strategy(),
+        strategy_inputs={"log_bucket_name": "dedicated-access-log-bucket"},
+        account=_make_account(),
+    )
+
+    assert signals["s3_target_bucket_exists"] is False
+    assert signals["s3_target_bucket_missing"] is True
+    assert signals["s3_target_bucket_creation_possible"] is True
+    assert signals["context"]["default_inputs"]["create_bucket_if_missing"] is True
+    assert signals["s3_access_logging_destination_safe"] is True
+    assert signals["s3_access_logging_destination_bucket_reachable"] is True
     assert signals["evidence"]["target_bucket"] == "source-bucket"
     assert signals["evidence"]["log_bucket_name"] == "dedicated-access-log-bucket"
 
@@ -954,7 +1245,8 @@ def test_collect_runtime_risk_signals_s3_kms_exposes_kms_key_options_context(mon
                         "TargetKeyId": "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee",
                     },
                 ]
-            )
+            ),
+            "s3": _FakeS3Client(),
         }
     )
     monkeypatch.setattr(
@@ -975,6 +1267,36 @@ def test_collect_runtime_risk_signals_s3_kms_exposes_kms_key_options_context(mon
     assert context["kms_key_options"][1]["value"] == "arn:aws:kms:us-east-1:123456789012:alias/security-autopilot"
 
 
+def test_collect_runtime_risk_signals_s3_kms_missing_target_bucket_sets_create_defaults(monkeypatch) -> None:
+    session = _FakeSession(
+        {
+            "kms": _FakeKmsClient(aliases=[]),
+            "s3": _FakeS3Client(head_bucket_error_code="404"),
+        }
+    )
+    monkeypatch.setattr(
+        "backend.services.remediation_runtime_checks.assume_role",
+        lambda **kwargs: session,
+    )
+
+    signals = collect_runtime_risk_signals(
+        action=_make_action(
+            target_id="123456789012|us-east-1|arn:aws:s3:::missing-kms-bucket|S3.15",
+            action_type="s3_bucket_encryption_kms",
+            resource_id="arn:aws:s3:::missing-kms-bucket",
+        ),
+        strategy=_s3_kms_strategy(),
+        strategy_inputs={},
+        account=_make_account(),
+    )
+
+    assert signals["s3_target_bucket_exists"] is False
+    assert signals["s3_target_bucket_missing"] is True
+    assert signals["s3_target_bucket_creation_possible"] is True
+    assert signals["context"]["default_inputs"]["create_bucket_if_missing"] is True
+    assert signals["s3_target_bucket_name"] == "missing-kms-bucket"
+
+
 def test_collect_runtime_risk_signals_s3_kms_custom_key_captures_dependency_proof(monkeypatch) -> None:
     session = _FakeSession(
         {
@@ -982,7 +1304,8 @@ def test_collect_runtime_risk_signals_s3_kms_custom_key_captures_dependency_proo
                 aliases=[],
                 key_policy='{"Version":"2012-10-17","Statement":[]}',
                 grants=[{"GrantId": "grant-1"}],
-            )
+            ),
+            "s3": _FakeS3Client(),
         }
     )
     monkeypatch.setattr(

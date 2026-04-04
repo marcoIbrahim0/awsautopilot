@@ -164,3 +164,19 @@ def test_run_pending_primary_resync_once_keeps_sync_pending_when_sync_skipped(mo
     assert synced is False
     assert failover.primary_sync_pending() is True
     assert [candidate.source for candidate in failover._candidate_urls()] == ["fallback", "primary"]
+
+
+def test_build_sync_connect_args_adds_timeout_for_neon(monkeypatch) -> None:
+    monkeypatch.setattr(failover.settings, "DATABASE_FAILOVER_CONNECT_TIMEOUT_SECONDS", 7)
+
+    args = failover.build_sync_connect_args("postgresql://neon-host/app")
+
+    assert args == {"connect_timeout": 7, "sslmode": "require"}
+
+
+def test_build_async_connect_args_adds_timeout_without_ssl_for_plain_postgres(monkeypatch) -> None:
+    monkeypatch.setattr(failover.settings, "DATABASE_FAILOVER_CONNECT_TIMEOUT_SECONDS", 9)
+
+    args = failover.build_async_connect_args("postgresql+asyncpg://postgres-host/app")
+
+    assert args == {"timeout": 9}

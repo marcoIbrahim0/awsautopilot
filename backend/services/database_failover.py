@@ -78,19 +78,30 @@ def normalize_async_url(url: str) -> str:
 
 def build_async_connect_args(url: str) -> dict[str, object]:
     lowered = url.lower()
+    args: dict[str, object] = {}
+    timeout_seconds = max(int(settings.DATABASE_FAILOVER_CONNECT_TIMEOUT_SECONDS or 0), 0)
+    if timeout_seconds:
+        args["timeout"] = timeout_seconds
     if "neon" not in lowered and "sslmode=require" not in lowered:
-        return {}
+        return args
     try:
         context = ssl.create_default_context()
     except Exception:
         context = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
     context.check_hostname = False
     context.verify_mode = ssl.CERT_NONE
-    return {"ssl": context}
+    args["ssl"] = context
+    return args
 
 
 def build_sync_connect_args(url: str) -> dict[str, object]:
-    return {"sslmode": "require"} if "neon" in url.lower() else {}
+    args: dict[str, object] = {}
+    timeout_seconds = max(int(settings.DATABASE_FAILOVER_CONNECT_TIMEOUT_SECONDS or 0), 0)
+    if timeout_seconds:
+        args["connect_timeout"] = timeout_seconds
+    if "neon" in url.lower():
+        args["sslmode"] = "require"
+    return args
 
 
 def _running_under_pytest() -> bool:
@@ -205,7 +216,7 @@ def _log_sync_guidance() -> None:
 
 def _mark_sync_pending_locked(reason: str) -> None:
     global _SYNC_PENDING
-    if not _has_fallback():
+    if not _has_fallback() or not _sync_enabled():
         return
     _SYNC_PENDING = True
     logger.warning(

@@ -15,11 +15,17 @@ from backend.services.remediation_profile_catalog import (
 )
 from backend.services.root_key_resolution_adapter import ROOT_KEY_FAMILY_RESOLVER_KIND
 from backend.services.s3_family_resolution_adapter import (
+    S3_11_CREATE_PROFILE_ID,
     S3_11_FAMILY_RESOLVER_KIND,
+    S3_15_CREATE_PROFILE_ID,
     S3_15_CUSTOMER_MANAGED_PROFILE_ID,
     S3_15_FAMILY_RESOLVER_KIND,
+    S3_2_OAC_CREATE_PROFILE_ID,
     S3_2_FAMILY_RESOLVER_KIND,
+    S3_5_EXEMPTION_CREATE_PROFILE_ID,
     S3_5_FAMILY_RESOLVER_KIND,
+    S3_5_STRICT_CREATE_PROFILE_ID,
+    S3_9_CREATE_PROFILE_ID,
     S3_9_FAMILY_RESOLVER_KIND,
 )
 from backend.services.remediation_strategy import STRATEGY_REGISTRY, RemediationStrategy
@@ -46,6 +52,7 @@ S3_2_STANDARD_PROFILE_IDS = [
 ]
 S3_2_OAC_PROFILE_IDS = [
     "s3_migrate_cloudfront_oac_private",
+    S3_2_OAC_CREATE_PROFILE_ID,
     "s3_migrate_cloudfront_oac_private_manual_preservation",
 ]
 S3_2_WEBSITE_PROFILE_IDS = [
@@ -54,10 +61,24 @@ S3_2_WEBSITE_PROFILE_IDS = [
 ]
 S3_9_PROFILE_IDS = [
     "s3_enable_access_logging_guided",
+    S3_9_CREATE_PROFILE_ID,
     "s3_enable_access_logging_review_destination_safety",
+]
+S3_5_STRICT_PROFILE_IDS = [
+    "s3_enforce_ssl_strict_deny",
+    S3_5_STRICT_CREATE_PROFILE_ID,
+]
+S3_5_EXEMPTION_PROFILE_IDS = [
+    "s3_enforce_ssl_with_principal_exemptions",
+    S3_5_EXEMPTION_CREATE_PROFILE_ID,
+]
+S3_11_PROFILE_IDS = [
+    "s3_enable_abort_incomplete_uploads",
+    S3_11_CREATE_PROFILE_ID,
 ]
 S3_15_PROFILE_IDS = [
     "s3_enable_sse_kms_guided",
+    S3_15_CREATE_PROFILE_ID,
     S3_15_CUSTOMER_MANAGED_PROFILE_ID,
 ]
 
@@ -81,6 +102,12 @@ def _expected_profile_ids(action_type: str, strategy: RemediationStrategy) -> li
         return list(S3_2_WEBSITE_PROFILE_IDS)
     if action_type == "s3_bucket_access_logging" and strategy["strategy_id"] == "s3_enable_access_logging_guided":
         return list(S3_9_PROFILE_IDS)
+    if action_type == "s3_bucket_require_ssl" and strategy["strategy_id"] == "s3_enforce_ssl_strict_deny":
+        return list(S3_5_STRICT_PROFILE_IDS)
+    if action_type == "s3_bucket_require_ssl" and strategy["strategy_id"] == "s3_enforce_ssl_with_principal_exemptions":
+        return list(S3_5_EXEMPTION_PROFILE_IDS)
+    if action_type == "s3_bucket_lifecycle_configuration" and strategy["strategy_id"] == "s3_enable_abort_incomplete_uploads":
+        return list(S3_11_PROFILE_IDS)
     if action_type == "s3_bucket_encryption_kms" and strategy["strategy_id"] == "s3_enable_sse_kms_guided":
         return list(S3_15_PROFILE_IDS)
     return [strategy["strategy_id"]]
@@ -128,6 +155,12 @@ def _profile_expected_recommended(strategy: RemediationStrategy, profile_id: str
         "s3_migrate_cloudfront_oac_private_manual_preservation",
         "s3_migrate_website_cloudfront_private_review_required",
         "s3_enable_access_logging_review_destination_safety",
+        S3_2_OAC_CREATE_PROFILE_ID,
+        S3_5_STRICT_CREATE_PROFILE_ID,
+        S3_5_EXEMPTION_CREATE_PROFILE_ID,
+        S3_9_CREATE_PROFILE_ID,
+        S3_11_CREATE_PROFILE_ID,
+        S3_15_CREATE_PROFILE_ID,
         S3_15_CUSTOMER_MANAGED_PROFILE_ID,
     }:
         return False
@@ -238,18 +271,27 @@ def test_s3_family_profiles_use_resolver_owned_family_kinds() -> None:
     assert [profile.family_resolver_kind for profile in s3_2_oac] == [
         S3_2_FAMILY_RESOLVER_KIND,
         S3_2_FAMILY_RESOLVER_KIND,
+        S3_2_FAMILY_RESOLVER_KIND,
     ]
     assert [profile.profile_id for profile in s3_9] == S3_9_PROFILE_IDS
     assert [profile.family_resolver_kind for profile in s3_9] == [
         S3_9_FAMILY_RESOLVER_KIND,
         S3_9_FAMILY_RESOLVER_KIND,
+        S3_9_FAMILY_RESOLVER_KIND,
     ]
-    assert len(s3_5_strict) == 1
-    assert s3_5_strict[0].family_resolver_kind == S3_5_FAMILY_RESOLVER_KIND
-    assert len(s3_11) == 1
-    assert s3_11[0].family_resolver_kind == S3_11_FAMILY_RESOLVER_KIND
+    assert [profile.profile_id for profile in s3_5_strict] == S3_5_STRICT_PROFILE_IDS
+    assert [profile.family_resolver_kind for profile in s3_5_strict] == [
+        S3_5_FAMILY_RESOLVER_KIND,
+        S3_5_FAMILY_RESOLVER_KIND,
+    ]
+    assert [profile.profile_id for profile in s3_11] == S3_11_PROFILE_IDS
+    assert [profile.family_resolver_kind for profile in s3_11] == [
+        S3_11_FAMILY_RESOLVER_KIND,
+        S3_11_FAMILY_RESOLVER_KIND,
+    ]
     assert [profile.profile_id for profile in s3_15] == S3_15_PROFILE_IDS
     assert [profile.family_resolver_kind for profile in s3_15] == [
+        S3_15_FAMILY_RESOLVER_KIND,
         S3_15_FAMILY_RESOLVER_KIND,
         S3_15_FAMILY_RESOLVER_KIND,
     ]

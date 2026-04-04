@@ -196,6 +196,221 @@ cleanup_action_workspace() {
   rm -rf "$workspace_root"
 }
 
+merge_auto_tfvars_json() {
+  local tfvars_path="$1"
+  local create_log_bucket="$2"
+  local adopt_existing_log_bucket="$3"
+  python3 - "$tfvars_path" "$create_log_bucket" "$adopt_existing_log_bucket" <<'PY'
+import json
+import sys
+from pathlib import Path
+
+path = Path(sys.argv[1])
+payload = {}
+if path.is_file():
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8"))
+    except Exception:
+        payload = {}
+payload["create_log_bucket"] = sys.argv[2].strip().lower() == "true"
+payload["adopt_existing_log_bucket"] = sys.argv[3].strip().lower() == "true"
+path.write_text(json.dumps(payload, separators=(",", ":")) + "\n", encoding="utf-8")
+PY
+}
+
+merge_cloudfront_oac_tfvars_json() {
+  local tfvars_path="$1"
+  local discovery_json_path="$2"
+  python3 - "$tfvars_path" "$discovery_json_path" <<'PY'
+import json
+import sys
+from pathlib import Path
+
+tfvars_path = Path(sys.argv[1])
+discovery_path = Path(sys.argv[2])
+
+payload = {}
+if tfvars_path.is_file():
+    try:
+        payload = json.loads(tfvars_path.read_text(encoding="utf-8"))
+    except Exception as exc:
+        raise SystemExit(f"Unable to parse existing tfvars JSON: {exc}")
+
+try:
+    discovery = json.loads(discovery_path.read_text(encoding="utf-8"))
+except Exception as exc:
+    raise SystemExit(f"Unable to parse CloudFront/OAC discovery JSON: {exc}")
+
+if not isinstance(discovery, dict):
+    raise SystemExit("CloudFront/OAC discovery output must be a JSON object.")
+
+allowed_keys = {
+    "cloudfront_reuse_mode",
+    "reuse_oac_id",
+    "reuse_distribution_id",
+    "reuse_distribution_arn",
+    "reuse_distribution_domain_name",
+}
+unexpected = sorted(set(discovery) - allowed_keys)
+if unexpected:
+    raise SystemExit(f"Unexpected CloudFront/OAC discovery keys: {', '.join(unexpected)}")
+
+mode = str(discovery.get("cloudfront_reuse_mode") or "").strip() or "create"
+if mode not in {"create", "reuse_oac_only", "reuse_distribution"}:
+    raise SystemExit(f"Unsupported cloudfront_reuse_mode: {mode!r}")
+
+merged = dict(payload)
+merged["cloudfront_reuse_mode"] = mode
+for key in (
+    "reuse_oac_id",
+    "reuse_distribution_id",
+    "reuse_distribution_arn",
+    "reuse_distribution_domain_name",
+):
+    value = discovery.get(key, "")
+    if value is None:
+        value = ""
+    if not isinstance(value, str):
+        raise SystemExit(f"CloudFront/OAC discovery value for {key} must be a string.")
+    merged[key] = value.strip()
+
+if mode == "create":
+    merged["reuse_oac_id"] = ""
+    merged["reuse_distribution_id"] = ""
+    merged["reuse_distribution_arn"] = ""
+    merged["reuse_distribution_domain_name"] = ""
+elif mode == "reuse_oac_only":
+    if not merged["reuse_oac_id"]:
+        raise SystemExit("CloudFront/OAC discovery mode reuse_oac_only requires reuse_oac_id.")
+    merged["reuse_distribution_id"] = ""
+    merged["reuse_distribution_arn"] = ""
+    merged["reuse_distribution_domain_name"] = ""
+else:
+    required = (
+        "reuse_oac_id",
+        "reuse_distribution_id",
+        "reuse_distribution_arn",
+        "reuse_distribution_domain_name",
+    )
+    missing = [key for key in required if not merged[key]]
+    if missing:
+        raise SystemExit(
+            "CloudFront/OAC discovery mode reuse_distribution is missing required values: "
+            + ", ".join(missing)
+        )
+
+tfvars_path.write_text(json.dumps(merged, separators=(",", ":")) + "\n", encoding="utf-8")
+print(mode)
+PY
+}
+
+extract_s3_access_logging_defaults() {
+  local source_dir="$1"
+  python3 - "$source_dir" <<'PY'
+import re
+import sys
+from pathlib import Path
+
+path = Path(sys.argv[1]) / "s3_bucket_access_logging.tf"
+if not path.is_file():
+    sys.exit(0)
+text = path.read_text(encoding="utf-8")
+
+def find_default(name: str) -> str:
+    quoted = re.search(rf'variable "{re.escape(name)}" \{{.*?default\s*=\s*"([^"]+)"', text, re.S)
+    if quoted:
+        return quoted.group(1)
+    boolean = re.search(rf'variable "{re.escape(name)}" \{{.*?default\s*=\s*(true|false)', text, re.S)
+    if boolean:
+        return boolean.group(1)
+    return ""
+
+print(find_default("log_bucket_name"))
+print(find_default("create_log_bucket"))
+PY
+}
+
+prepare_s3_access_logging_tfvars() {
+  local source_dir="$1"
+  local workspace_dir="$2"
+  local tfvars_path bucket_name create_log_bucket_default error_file
+  local -a defaults=()
+
+  if [ ! -f "${source_dir}/s3_bucket_access_logging.tf" ]; then
+    return 0
+  fi
+  if ! command -v aws >/dev/null 2>&1; then
+    return 0
+  fi
+  mapfile -t defaults < <(extract_s3_access_logging_defaults "$source_dir")
+  bucket_name="${defaults[0]:-}"
+  create_log_bucket_default="${defaults[1]:-false}"
+  if [ -z "$bucket_name" ] || [ "$create_log_bucket_default" != "true" ]; then
+    return 0
+  fi
+
+  error_file=$(mktemp)
+  if aws s3api get-bucket-location --bucket "$bucket_name" >/dev/null 2>"$error_file"; then
+    tfvars_path="${workspace_dir}/security_autopilot.auto.tfvars.json"
+    merge_auto_tfvars_json "$tfvars_path" false true
+    echo "INFO: reusing existing owned S3.9 destination bucket ${bucket_name}; applying the shared support-bucket baseline without re-creating it."
+    rm -f "$error_file"
+    return 0
+  fi
+  rm -f "$error_file"
+  return 0
+}
+
+prepare_cloudfront_oac_tfvars() {
+  local source_dir="$1"
+  local workspace_dir="$2"
+  local tfvars_path output_file error_file mode
+
+  if [ ! -f "${source_dir}/s3_cloudfront_oac_private_s3.tf" ]; then
+    return 0
+  fi
+
+  if ! command -v python3 >/dev/null 2>&1; then
+    echo "ERROR: python3 is required for CloudFront/OAC reuse preflight."
+    return 1
+  fi
+  if ! command -v aws >/dev/null 2>&1; then
+    echo "ERROR: aws CLI is required for CloudFront/OAC reuse preflight."
+    return 1
+  fi
+  if [ ! -f "${workspace_dir}/scripts/cloudfront_oac_discovery.py" ]; then
+    echo "ERROR: bundled CloudFront/OAC discovery script is missing for ${source_dir}."
+    return 1
+  fi
+  if [ ! -f "${workspace_dir}/cloudfront_reuse_query.json" ]; then
+    echo "ERROR: bundled CloudFront/OAC discovery query is missing for ${source_dir}."
+    return 1
+  fi
+
+  output_file=$(mktemp)
+  error_file=$(mktemp)
+  if ! python3 "${workspace_dir}/scripts/cloudfront_oac_discovery.py" \
+      < "${workspace_dir}/cloudfront_reuse_query.json" \
+      > "${output_file}" 2> "${error_file}"; then
+    echo "ERROR: CloudFront/OAC reuse preflight failed for ${source_dir}."
+    cat "${error_file}"
+    rm -f "${output_file}" "${error_file}"
+    return 1
+  fi
+
+  tfvars_path="${workspace_dir}/security_autopilot.auto.tfvars.json"
+  if ! mode=$(merge_cloudfront_oac_tfvars_json "${tfvars_path}" "${output_file}" 2> "${error_file}"); then
+    echo "ERROR: CloudFront/OAC reuse preflight produced invalid output for ${source_dir}."
+    cat "${error_file}"
+    rm -f "${output_file}" "${error_file}"
+    return 1
+  fi
+
+  echo "INFO: CloudFront/OAC reuse preflight mode=${mode} for ${source_dir}."
+  rm -f "${output_file}" "${error_file}"
+  return 0
+}
+
 manifest_shared_field() {
   local folder="$1"
   local field="$2"
@@ -353,6 +568,10 @@ ACTION_TIMEOUT_SECS="${ACTION_TIMEOUT_SECS:-300}"
 if ! [[ "${ACTION_TIMEOUT_SECS}" =~ ^[0-9]+$ ]] || [ "${ACTION_TIMEOUT_SECS}" -le 0 ]; then
   ACTION_TIMEOUT_SECS=300
 fi
+CLOUDFRONT_OAC_ACTION_TIMEOUT_SECS="${CLOUDFRONT_OAC_ACTION_TIMEOUT_SECS:-1800}"
+if ! [[ "${CLOUDFRONT_OAC_ACTION_TIMEOUT_SECS}" =~ ^[0-9]+$ ]] || [ "${CLOUDFRONT_OAC_ACTION_TIMEOUT_SECS}" -le 0 ]; then
+  CLOUDFRONT_OAC_ACTION_TIMEOUT_SECS=1800
+fi
 
 START_TS=$(date +%s)
 SUCCESS_COUNT=0
@@ -361,7 +580,35 @@ FAILED_ACTIONS=()
 
 DEFAULT_PARALLEL_BUNDLES=3
 MAX_PARALLEL_BUNDLES=5
-REQUESTED_PARALLEL="${PARALLEL_BUNDLES:-$DEFAULT_PARALLEL_BUNDLES}"
+bundle_uses_cloudfront_oac() {
+  local dir="$1"
+  [ -f "${dir}/s3_cloudfront_oac_private_s3.tf" ]
+}
+
+bundle_timeout_secs() {
+  local dir="$1"
+  if bundle_uses_cloudfront_oac "$dir"; then
+    printf '%s\n' "$CLOUDFRONT_OAC_ACTION_TIMEOUT_SECS"
+    return 0
+  fi
+  printf '%s\n' "$ACTION_TIMEOUT_SECS"
+}
+
+HAS_CLOUDFRONT_OAC_BUNDLES=0
+for dir in "${ACTION_DIRS[@]}"; do
+  if bundle_uses_cloudfront_oac "$dir"; then
+    HAS_CLOUDFRONT_OAC_BUNDLES=1
+    break
+  fi
+done
+
+REQUESTED_PARALLEL="${PARALLEL_BUNDLES:-}"
+if [ -z "${REQUESTED_PARALLEL}" ]; then
+  REQUESTED_PARALLEL="$DEFAULT_PARALLEL_BUNDLES"
+  if [ "${HAS_CLOUDFRONT_OAC_BUNDLES}" -eq 1 ]; then
+    REQUESTED_PARALLEL=1
+  fi
+fi
 if ! [[ "${REQUESTED_PARALLEL}" =~ ^[0-9]+$ ]] || [ "${REQUESTED_PARALLEL}" -le 0 ]; then
   REQUESTED_PARALLEL="$DEFAULT_PARALLEL_BUNDLES"
 fi
@@ -381,6 +628,9 @@ is_known_duplicate_only() {
   error_lines=$(sed -E $'s/\x1B\\[[0-9;]*[[:alpha:]]//g' "$log_file" | grep -E '^[[:space:]]*(Error:|│)' || true)
 
   if [ -z "$error_lines" ]; then
+    return 1
+  fi
+  if printf '%s\n' "$error_lines" | grep -Eiq 'OriginAccessControlAlreadyExists|origin access control[^[:cntrl:]]*already exists'; then
     return 1
   fi
   if ! printf '%s\n' "$error_lines" | grep -Eiq "$duplicate_pattern"; then
@@ -674,6 +924,7 @@ run_one_bundle() {
   local dir="$1"
   local status_file="$2"
   local workspace_dir=""
+  local timeout_secs
 
   echo ""
   echo "=== Running terraform in $dir ==="
@@ -695,6 +946,13 @@ run_one_bundle() {
     printf "failed|%s|shared_preflight\n" "$dir" > "$status_file"
     return 0
   fi
+  prepare_s3_access_logging_tfvars "$dir" "$workspace_dir"
+  if ! prepare_cloudfront_oac_tfvars "$dir" "$workspace_dir"; then
+    cleanup_action_workspace "$workspace_dir"
+    printf "failed|%s|cloudfront_oac_preflight\n" "$dir" > "$status_file"
+    return 0
+  fi
+  timeout_secs=$(bundle_timeout_secs "$dir")
 
   if ! run_terraform_init_with_retry "$workspace_dir"; then
     echo "ERROR: terraform init failed for $dir after retries. Skipping this action folder."
@@ -706,7 +964,7 @@ run_one_bundle() {
   set +e
   (
     cd "$workspace_dir"
-    run_with_timeout "$ACTION_TIMEOUT_SECS" terraform plan -input=false
+    run_with_timeout "$timeout_secs" terraform plan -input=false
   )
   plan_rc=$?
   set -e
@@ -717,7 +975,7 @@ run_one_bundle() {
     return 0
   fi
 
-  if ! apply_with_duplicate_tolerance "$workspace_dir" "$dir" "$ACTION_TIMEOUT_SECS"; then
+  if ! apply_with_duplicate_tolerance "$workspace_dir" "$dir" "$timeout_secs"; then
     echo "ERROR: terraform apply failed for $dir. Continuing with remaining action folders."
     cleanup_action_workspace "$workspace_dir"
     printf "failed|%s|apply\n" "$dir" > "$status_file"
@@ -775,7 +1033,7 @@ wait_for_one_bundle() {
   done
 }
 
-echo "Running ${TOTAL} bundle folder(s) from ${EXECUTION_ROOT} with shared folders=${#SHARED_DIRS[@]} and parallel action executions=${PARALLEL_BUNDLE_EXECUTIONS} (max=${MAX_PARALLEL_BUNDLES})"
+echo "Running ${TOTAL} bundle folder(s) from ${EXECUTION_ROOT} with shared folders=${#SHARED_DIRS[@]} and parallel action executions=${PARALLEL_BUNDLE_EXECUTIONS} (max=${MAX_PARALLEL_BUNDLES}) cloudfront_oac_bundles=${HAS_CLOUDFRONT_OAC_BUNDLES}"
 for dir in "${SHARED_DIRS[@]}"; do
   i=$((i + 1))
   render_progress "$COMPLETED_COUNT" "(${i}/${TOTAL}) shared ${dir}"

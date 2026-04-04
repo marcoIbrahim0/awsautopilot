@@ -3229,6 +3229,7 @@ async def get_remediation_options(
                 strategy=strategy,
                 strategy_inputs=probe_inputs,
                 account=account,
+                tenant_external_id=tenant.external_id,
             )
         runtime_context = runtime_signals.get("context")
         if not isinstance(runtime_context, dict):
@@ -3604,6 +3605,7 @@ async def get_remediation_preview(
             strategy=selected_strategy,
             strategy_inputs=probe_inputs,
             account=account,
+            tenant_external_id=tenant.external_id,
         )
     runtime_context = runtime_signals.get("context")
     if not isinstance(runtime_context, dict):

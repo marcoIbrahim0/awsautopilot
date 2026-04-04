@@ -216,6 +216,14 @@ def _helper_bucket_creation_planned(
         return delivery_mode == "create_new" and isinstance(strategy_inputs.get("delivery_bucket"), str) and bool(
             str(strategy_inputs.get("delivery_bucket")).strip()
         )
+    if action_type in {
+        "s3_bucket_access_logging",
+        "s3_bucket_block_public_access",
+        "s3_bucket_require_ssl",
+        "s3_bucket_lifecycle_configuration",
+        "s3_bucket_encryption_kms",
+    }:
+        return strategy_inputs.get("create_bucket_if_missing") is True
     return False
 
 

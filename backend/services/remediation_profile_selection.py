@@ -437,6 +437,15 @@ def _resolve_s3_2_family_selection(
         explicit_inputs=explicit_inputs,
         runtime_signals=runtime_signals,
     )
+    selected_profile = _profile_or_error(action_type, strategy["strategy_id"], str(outcome["profile_id"]))
+    resolved_inputs = _resolved_inputs(
+        strategy=strategy,
+        profile=selected_profile,
+        explicit_inputs=explicit_inputs,
+        tenant_settings=tenant_settings,
+        runtime_signals=runtime_signals,
+        action=action,
+    )
     return _family_selection_resolution(
         action_type=action_type,
         strategy=strategy,
@@ -445,7 +454,9 @@ def _resolve_s3_2_family_selection(
         runtime_signals=runtime_signals,
         action=action,
         outcome=outcome,
+        resolved_inputs=resolved_inputs,
         persisted_strategy_inputs=_s3_2_persisted_inputs(
+            resolved_inputs=resolved_inputs,
             explicit_inputs=explicit_inputs,
             runtime_signals=runtime_signals,
         ),
@@ -525,6 +536,15 @@ def _resolve_s3_5_family_selection(
         explicit_inputs=explicit_inputs,
         runtime_signals=runtime_signals,
     )
+    selected_profile = _profile_or_error(action_type, strategy["strategy_id"], str(outcome["profile_id"]))
+    resolved_inputs = _resolved_inputs(
+        strategy=strategy,
+        profile=selected_profile,
+        explicit_inputs=explicit_inputs,
+        tenant_settings=tenant_settings,
+        runtime_signals=runtime_signals,
+        action=action,
+    )
     return _family_selection_resolution(
         action_type=action_type,
         strategy=strategy,
@@ -533,8 +553,13 @@ def _resolve_s3_5_family_selection(
         runtime_signals=runtime_signals,
         action=action,
         outcome=outcome,
+        resolved_inputs=resolved_inputs,
         persisted_strategy_inputs=_s3_policy_preservation_persisted_inputs(
-            explicit_inputs=explicit_inputs,
+            resolved_inputs=resolved_inputs,
+            explicit_inputs=_s3_5_persisted_inputs(
+                resolved_inputs=resolved_inputs,
+                explicit_inputs=explicit_inputs,
+            ),
             runtime_signals=runtime_signals,
         ),
     )
@@ -556,6 +581,15 @@ def _resolve_s3_11_family_selection(
         explicit_inputs=explicit_inputs,
         runtime_signals=runtime_signals,
     )
+    selected_profile = _profile_or_error(action_type, strategy["strategy_id"], str(outcome["profile_id"]))
+    resolved_inputs = _resolved_inputs(
+        strategy=strategy,
+        profile=selected_profile,
+        explicit_inputs=explicit_inputs,
+        tenant_settings=tenant_settings,
+        runtime_signals=runtime_signals,
+        action=action,
+    )
     return _family_selection_resolution(
         action_type=action_type,
         strategy=strategy,
@@ -564,6 +598,11 @@ def _resolve_s3_11_family_selection(
         runtime_signals=runtime_signals,
         action=action,
         outcome=outcome,
+        resolved_inputs=resolved_inputs,
+        persisted_strategy_inputs=_s3_11_persisted_inputs(
+            resolved_inputs=resolved_inputs,
+            explicit_inputs=explicit_inputs,
+        ),
     )
 
 
@@ -840,9 +879,20 @@ def _helper_bucket_creation_planned(
             resolved_inputs.get("trail_bucket_name")
         )
     if action_type == "s3_bucket_access_logging":
-        return resolved_inputs.get("create_log_bucket") is True and _present(
-            resolved_inputs.get("log_bucket_name")
+        return (
+            resolved_inputs.get("create_bucket_if_missing") is True
+            or (
+                resolved_inputs.get("create_log_bucket") is True
+                and _present(resolved_inputs.get("log_bucket_name"))
+            )
         )
+    if action_type in {
+        "s3_bucket_block_public_access",
+        "s3_bucket_require_ssl",
+        "s3_bucket_lifecycle_configuration",
+        "s3_bucket_encryption_kms",
+    }:
+        return resolved_inputs.get("create_bucket_if_missing") is True
     return False
 
 
@@ -1497,6 +1547,8 @@ def _s3_9_persisted_inputs(
     explicit_inputs: Mapping[str, Any] | None,
 ) -> dict[str, Any]:
     values = copy.deepcopy(dict(explicit_inputs or {}))
+    if resolved_inputs.get("create_bucket_if_missing") is True:
+        values["create_bucket_if_missing"] = True
     if _present(resolved_inputs.get("log_bucket_name")):
         values["log_bucket_name"] = resolved_inputs["log_bucket_name"]
     if resolved_inputs.get("create_log_bucket") is True:
@@ -1504,12 +1556,58 @@ def _s3_9_persisted_inputs(
     return values
 
 
+def _s3_5_persisted_inputs(
+    *,
+    resolved_inputs: Mapping[str, Any],
+    explicit_inputs: Mapping[str, Any] | None,
+) -> dict[str, Any]:
+    values = copy.deepcopy(dict(explicit_inputs or {}))
+    if resolved_inputs.get("create_bucket_if_missing") is True:
+        values["create_bucket_if_missing"] = True
+    if "preserve_existing_policy" in resolved_inputs:
+        values["preserve_existing_policy"] = resolved_inputs["preserve_existing_policy"]
+    if _present(resolved_inputs.get("exempt_principals")):
+        values["exempt_principals"] = copy.deepcopy(resolved_inputs["exempt_principals"])
+    return values
+
+
+def _s3_11_persisted_inputs(
+    *,
+    resolved_inputs: Mapping[str, Any],
+    explicit_inputs: Mapping[str, Any] | None,
+) -> dict[str, Any]:
+    values = copy.deepcopy(dict(explicit_inputs or {}))
+    if resolved_inputs.get("create_bucket_if_missing") is True:
+        values["create_bucket_if_missing"] = True
+    if _present(resolved_inputs.get("abort_days")):
+        values["abort_days"] = resolved_inputs["abort_days"]
+    return values
+
+
+def _s3_15_persisted_inputs(
+    *,
+    resolved_inputs: Mapping[str, Any],
+    explicit_inputs: Mapping[str, Any] | None,
+) -> dict[str, Any]:
+    values = copy.deepcopy(dict(explicit_inputs or {}))
+    if resolved_inputs.get("create_bucket_if_missing") is True:
+        values["create_bucket_if_missing"] = True
+    if _present(resolved_inputs.get("kms_key_mode")):
+        values["kms_key_mode"] = resolved_inputs["kms_key_mode"]
+    if _present(resolved_inputs.get("kms_key_arn")):
+        values["kms_key_arn"] = resolved_inputs["kms_key_arn"]
+    return values
+
+
 def _s3_2_persisted_inputs(
     *,
+    resolved_inputs: Mapping[str, Any],
     explicit_inputs: Mapping[str, Any] | None,
     runtime_signals: Mapping[str, Any] | None,
 ) -> dict[str, Any]:
     values = copy.deepcopy(dict(explicit_inputs or {}))
+    if resolved_inputs.get("create_bucket_if_missing") is True:
+        values["create_bucket_if_missing"] = True
     evidence = _mapping_value(runtime_signals, "evidence")
     if not isinstance(evidence, Mapping):
         return values
@@ -1527,10 +1625,12 @@ def _s3_2_persisted_inputs(
 
 def _s3_policy_preservation_persisted_inputs(
     *,
+    resolved_inputs: Mapping[str, Any],
     explicit_inputs: Mapping[str, Any] | None,
     runtime_signals: Mapping[str, Any] | None,
 ) -> dict[str, Any]:
     return _s3_2_persisted_inputs(
+        resolved_inputs=resolved_inputs,
         explicit_inputs=explicit_inputs,
         runtime_signals=runtime_signals,
     )

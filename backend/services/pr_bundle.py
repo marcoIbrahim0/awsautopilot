@@ -13,6 +13,8 @@ from __future__ import annotations
 import re
 import uuid
 import json
+import copy
+import hashlib
 from ipaddress import ip_network
 from datetime import datetime, timezone
 from typing import Any, Literal, Mapping, NoReturn, Protocol, TypedDict
@@ -34,11 +36,18 @@ from backend.services.aws_sg_bundle_support import (
     aws_sg_capture_script_content,
     aws_sg_restore_script_content,
 )
+from backend.services.aws_cloudfront_bundle_support import (
+    AWS_CLOUDFRONT_OAC_DISCOVERY_SCRIPT_PATH,
+    AWS_CLOUDFRONT_OAC_DISCOVERY_QUERY_PATH,
+    aws_cloudfront_oac_discovery_script_content,
+)
 from backend.services.aws_s3_bundle_support import (
     AWS_S3_POLICY_CAPTURE_SCRIPT_PATH,
+    AWS_S3_POLICY_FETCH_SCRIPT_PATH,
     AWS_S3_POLICY_RESTORE_SCRIPT_PATH,
     aws_s3_bundle_rollback_metadata,
     aws_s3_policy_capture_script_content,
+    aws_s3_policy_fetch_script_content,
     aws_s3_policy_restore_script_content,
 )
 from backend.services.aws_s3_lifecycle_bundle_support import (
@@ -55,7 +64,12 @@ from backend.services.aws_s3_encryption_bundle_support import (
     aws_s3_encryption_capture_script_content,
     aws_s3_encryption_restore_script_content,
 )
-from backend.services.remediation_support_bucket import terraform_support_bucket_blocks
+from backend.services.remediation_support_bucket import (
+    SUPPORT_BUCKET_ROLE_AWS_CONFIG_DELIVERY,
+    SUPPORT_BUCKET_ROLE_CLOUDTRAIL_LOGS,
+    SUPPORT_BUCKET_ROLE_S3_ACCESS_LOGS,
+    terraform_support_bucket_blocks,
+)
 from backend.services.s3_lifecycle_preservation import (
     analyze_lifecycle_preservation,
     lifecycle_rules_to_terraform,
@@ -75,6 +89,7 @@ PRBundleFormat = Literal["terraform", "cloudformation"]
 TERRAFORM_FORMAT: PRBundleFormat = "terraform"
 CLOUDFORMATION_FORMAT: PRBundleFormat = "cloudformation"
 TERRAFORM_AWS_PROVIDER_VERSION_CONSTRAINT = "= 5.100.0"
+TERRAFORM_EXTERNAL_PROVIDER_VERSION_CONSTRAINT = "= 2.3.5"
 TERRAFORM_NULL_PROVIDER_VERSION_CONSTRAINT = "= 3.2.4"
 
 
@@ -120,6 +135,110 @@ class PRBundleGenerationError(RuntimeError):
 
     def as_dict(self) -> PRBundleErrorPayload:
         return PRBundleErrorPayload(**self.payload)
+
+
+def _create_bucket_if_missing_enabled(strategy_inputs: Mapping[str, Any] | None) -> bool:
+    return _coerce_bool((strategy_inputs or {}).get("create_bucket_if_missing"), default=False)
+
+
+def _terraform_minimal_private_bucket_blocks(
+    *,
+    resource_suffix: str,
+    bucket_name_ref: str,
+    count_expr: str,
+    include_public_access_block: bool = True,
+    include_encryption: bool = True,
+) -> str:
+    """Return Terraform blocks that create a minimal private bucket baseline."""
+    public_access_block = ""
+    public_access_dep = f"aws_s3_bucket_ownership_controls.{resource_suffix}"
+    if include_public_access_block:
+        public_access_block = f"""
+resource "aws_s3_bucket_public_access_block" "{resource_suffix}" {{
+  count  = {count_expr}
+  bucket = aws_s3_bucket.{resource_suffix}[0].id
+
+  block_public_acls       = true
+  block_public_policy     = true
+  ignore_public_acls      = true
+  restrict_public_buckets = true
+
+  depends_on = [aws_s3_bucket_ownership_controls.{resource_suffix}]
+}}
+"""
+        public_access_dep = f"aws_s3_bucket_public_access_block.{resource_suffix}"
+    encryption_block = ""
+    if include_encryption:
+        encryption_block = f"""
+resource "aws_s3_bucket_server_side_encryption_configuration" "{resource_suffix}" {{
+  count  = {count_expr}
+  bucket = aws_s3_bucket.{resource_suffix}[0].id
+
+  rule {{
+    apply_server_side_encryption_by_default {{
+      sse_algorithm     = "aws:kms"
+      kms_master_key_id = "alias/aws/s3"
+    }}
+    bucket_key_enabled = true
+  }}
+
+  depends_on = [{public_access_dep}]
+}}
+"""
+    return f"""
+resource "aws_s3_bucket" "{resource_suffix}" {{
+  count  = {count_expr}
+  bucket = {bucket_name_ref}
+}}
+
+resource "aws_s3_bucket_ownership_controls" "{resource_suffix}" {{
+  count  = {count_expr}
+  bucket = aws_s3_bucket.{resource_suffix}[0].id
+
+  rule {{
+    object_ownership = "BucketOwnerEnforced"
+  }}
+}}
+{public_access_block}{encryption_block}"""
+
+
+def _terraform_minimal_private_bucket_dependency(resource_suffix: str) -> str:
+    """Return an always-declared helper resource reference for create-if-missing ordering."""
+    return f"aws_s3_bucket_ownership_controls.{resource_suffix}"
+
+
+def _merge_bundle_metadata(*parts: Mapping[str, Any] | None) -> dict[str, Any]:
+    merged: dict[str, Any] = {}
+    helper_bucket_inventory: list[dict[str, Any]] = []
+    for part in parts:
+        if not isinstance(part, Mapping):
+            continue
+        helper_items = part.get("helper_bucket_inventory")
+        if isinstance(helper_items, list):
+            for item in helper_items:
+                if isinstance(item, Mapping):
+                    helper_bucket_inventory.append(copy.deepcopy(dict(item)))
+        for key, value in part.items():
+            if key == "helper_bucket_inventory":
+                continue
+            merged[key] = copy.deepcopy(value)
+    if helper_bucket_inventory:
+        merged["helper_bucket_inventory"] = helper_bucket_inventory
+    return merged
+
+
+def _helper_bucket_inventory_entry(
+    *,
+    bucket_name: str,
+    helper_bucket_role: str,
+    created: bool,
+) -> dict[str, Any]:
+    return {
+        "bucket_name": str(bucket_name or "").strip(),
+        "helper_bucket_role": str(helper_bucket_role or "").strip(),
+        "created": bool(created),
+        "reused": not bool(created),
+    }
 
 class ActionLike(Protocol):
     """
@@ -197,6 +316,7 @@ _S3_BUCKET_NAME_PATTERN = re.compile(
 _S3_MIGRATE_POLICY_JSON_KEY = "existing_bucket_policy_json"
 _S3_MIGRATE_POLICY_STATEMENT_COUNT_KEY = "existing_bucket_policy_statement_count"
 _S3_WEBSITE_CONFIGURATION_JSON_KEY = "existing_bucket_website_configuration_json"
+_S3_CLOUDFRONT_READONLY_POLICY_SID = "AllowCloudFrontReadOnly"
 
 
 def _normalize_policy_json_document(policy_json: object) -> str | None:
@@ -236,6 +356,24 @@ def _policy_statement_count(policy_json: str | None) -> int:
     if isinstance(statements, dict):
         return 1
     return 0
+
+
+def _policy_json_without_sid(policy_json: str | None, sid: str) -> str | None:
+    normalized = _normalize_policy_json_document(policy_json)
+    if normalized is None:
+        return None
+    parsed = json.loads(normalized)
+    statements = parsed.get("Statement") or []
+    parsed["Statement"] = [
+        statement
+        for statement in statements
+        if str((statement or {}).get("Sid") or "").strip().lower() != sid.strip().lower()
+    ]
+    return json.dumps(parsed, separators=(",", ":"), sort_keys=True)
+
+
+def _strip_s3_2_managed_policy_statement(policy_json: str | None) -> str | None:
+    return _policy_json_without_sid(policy_json, _S3_CLOUDFRONT_READONLY_POLICY_SID)
 
 
 def _coerce_non_negative_int(value: object) -> int | None:
@@ -1281,6 +1419,28 @@ def _action_meta(action: ActionLike | None) -> dict[str, str]:
     }
 
 
+def _s3_cloudfront_oac_name(meta: Mapping[str, Any]) -> str:
+    bucket_name = _s3_bucket_name_from_target_id(str(meta.get("target_id", "")))
+    action_id_seed = str(meta.get("action_id", "")).replace("-", "")
+    bundle_nonce = str(meta.get("bundle_nonce", ""))
+    seed = f"{bucket_name}-{action_id_seed}-{bundle_nonce}"
+    digest = hashlib.md5(seed.encode("utf-8")).hexdigest()[:12]
+    return f"security-autopilot-oac-{digest}"[:64]
+
+
+def _cloudfront_oac_discovery_query_content(meta: Mapping[str, Any], *, oac_name: str) -> str:
+    bucket_name = _s3_bucket_name_from_target_id(str(meta.get("target_id", "")))
+    region = str(meta.get("region", "")).strip()
+    payload = {
+        "bucket_name": bucket_name,
+        "expected_bucket_regional_domain_name": f"{bucket_name}.s3.{region}.amazonaws.com",
+        "expected_distribution_comment": f"Security Autopilot migration for {bucket_name}",
+        "expected_oac_name": oac_name,
+        "expected_origin_id": f"s3-{bucket_name}",
+    }
+    return json.dumps(payload, indent=2, sort_keys=True) + "\n"
+
+
 def _s3_bucket_name_from_target_id(target_id: str) -> str:
     """
     Extract S3 bucket name from target_id.
@@ -1914,6 +2074,8 @@ def _generate_for_s3_cloudfront_oac_private(
     meta = _action_meta(action)
     region = meta["region"]
     bucket_name = _s3_bucket_name_from_target_id(meta["target_id"])
+    oac_name = _s3_cloudfront_oac_name(meta)
+    create_bucket_if_missing = _create_bucket_if_missing_enabled(strategy_inputs)
 
     if format == CLOUDFORMATION_FORMAT:
         _raise_pr_bundle_error(
@@ -1927,20 +2089,39 @@ def _generate_for_s3_cloudfront_oac_private(
             variant=PR_BUNDLE_VARIANT_CLOUDFRONT_OAC_PRIVATE_S3,
         )
 
-    apply_time_merge = _s3_2_apply_time_merge_requested(resolution)
+    apply_time_merge = _s3_2_apply_time_merge_requested(resolution) and not create_bucket_if_missing
     files = [
-        PRBundleFile(path="providers.tf", content=_terraform_regional_providers_content(meta)),
+        PRBundleFile(
+            path="providers.tf",
+            content=_terraform_regional_providers_content(meta),
+        ),
         PRBundleFile(
             path="s3_cloudfront_oac_private_s3.tf",
             content=(
-                _terraform_s3_cloudfront_oac_private_apply_time_content(meta)
+                _terraform_s3_cloudfront_oac_private_apply_time_content(
+                    meta,
+                    oac_name=oac_name,
+                    create_bucket_if_missing=create_bucket_if_missing,
+                )
                 if apply_time_merge
-                else _terraform_s3_cloudfront_oac_private_content(meta)
+                else _terraform_s3_cloudfront_oac_private_content(
+                    meta,
+                    oac_name=oac_name,
+                    create_bucket_if_missing=create_bucket_if_missing,
+                )
             ),
+        ),
+        PRBundleFile(
+            path=AWS_CLOUDFRONT_OAC_DISCOVERY_SCRIPT_PATH,
+            content=aws_cloudfront_oac_discovery_script_content(),
+        ),
+        PRBundleFile(
+            path=AWS_CLOUDFRONT_OAC_DISCOVERY_QUERY_PATH,
+            content=_cloudfront_oac_discovery_query_content(meta, oac_name=oac_name),
         ),
     ]
     preservation_policy: str | None = None
-    if not apply_time_merge:
+    if not apply_time_merge and not create_bucket_if_missing:
         preservation_policy = _resolve_s3_migrate_policy_preservation(
             strategy_inputs=strategy_inputs,
             risk_snapshot=risk_snapshot,
@@ -1949,6 +2130,7 @@ def _generate_for_s3_cloudfront_oac_private(
             strategy_id=strategy_id,
             variant=variant,
         )
+        preservation_policy = _strip_s3_2_managed_policy_statement(preservation_policy)
     if preservation_policy is not None:
         files.append(
             PRBundleFile(
@@ -1969,6 +2151,12 @@ def _generate_for_s3_cloudfront_oac_private(
         f"Configure AWS provider for account {meta['account_id']} and region {region}.",
         f"Review variables in s3_cloudfront_oac_private_s3.tf (target bucket: {bucket_name}).",
         (
+            "This bundle will create the missing target bucket with a minimal private baseline before creating CloudFront + OAC."
+            if create_bucket_if_missing
+            else (
+            "When safe, this bundle will adopt the existing Security Autopilot CloudFront distribution/OAC for the target bucket instead of creating duplicates."
+            if not apply_time_merge and preservation_policy is None
+            else (
             "Current bucket policy will be fetched and merged at terraform plan/apply time with customer credentials."
             if apply_time_merge
             else (
@@ -1976,6 +2164,8 @@ def _generate_for_s3_cloudfront_oac_private(
                 "for safe preservation."
                 if preservation_policy is not None
                 else "No existing bucket policy statements were detected; existing_bucket_policy_json remains empty."
+            )
+            )
             )
         ),
         "If needed, set additional_read_principal_arns before apply.",
@@ -2580,21 +2770,34 @@ resource "aws_s3_bucket_policy" "security_autopilot" {
     )
 
 
-def _terraform_s3_cloudfront_oac_private_content(meta: dict[str, str]) -> str:
-    """Terraform for S3.2 migration variant: CloudFront + OAC + private S3."""
+def _terraform_s3_cloudfront_oac_private_common_content(
+    meta: dict[str, str],
+    *,
+    oac_name: str,
+    create_bucket_if_missing: bool,
+    existing_policy_source: str,
+    existing_policy_document_expr: str,
+) -> str:
     bucket = _s3_bucket_name_from_target_id(meta.get("target_id", ""))
-    action_id_seed = (meta.get("action_id") or "").replace("-", "")
-    bundle_nonce = meta.get("bundle_nonce", "")
+    create_bucket_if_missing_text = "true" if create_bucket_if_missing else "false"
+    create_bucket_blocks = _terraform_minimal_private_bucket_blocks(
+        resource_suffix="target_bucket",
+        bucket_name_ref='local.bucket_name',
+        count_expr="var.create_bucket_if_missing ? 1 : 0",
+        include_public_access_block=False,
+    )
     return f"""# S3.2 migration variant (CloudFront + OAC + private S3) - Action: {meta["action_id"]}
 # Remediation for: {meta["action_title"]}
 # Account: {meta["account_id"]} | Region: {meta["region"]} | Bucket: {bucket}
 # Control: {meta["control_id"]}
 
 locals {{
-  bucket_name = "{bucket}"
-  # Include action/run-level entropy to avoid account-wide OAC name collisions on reruns.
-  oac_name_seed = "${{local.bucket_name}}-{action_id_seed}-{bundle_nonce}"
-  oac_name      = substr("security-autopilot-oac-${{substr(md5(local.oac_name_seed), 0, 12)}}", 0, 64)
+  bucket_name                         = "{bucket}"
+  remediation_region                  = "{meta["region"]}"
+  expected_bucket_regional_domain_name = "${{local.bucket_name}}.s3.${{local.remediation_region}}.amazonaws.com"
+  expected_distribution_comment       = "Security Autopilot migration for ${{local.bucket_name}}"
+  expected_origin_id                  = "s3-${{local.bucket_name}}"
+  oac_name                            = "{oac_name}"
 }}
 
 variable "default_root_object" {{
@@ -2627,162 +2830,10 @@ variable "existing_bucket_policy_json" {{
   default     = ""
 }}
 
-variable "additional_read_principal_arns" {{
-  type        = list(string)
-  description = "Optional IAM principal ARNs that still require direct S3 GetObject access."
-  default     = []
-}}
-
-data "aws_s3_bucket" "target" {{
-  bucket = local.bucket_name
-}}
-
-resource "aws_cloudfront_origin_access_control" "security_autopilot" {{
-  name                              = local.oac_name
-  description                       = "OAC for Security Autopilot remediation"
-  origin_access_control_origin_type = "s3"
-  signing_behavior                  = "always"
-  signing_protocol                  = "sigv4"
-}}
-
-resource "aws_cloudfront_distribution" "security_autopilot" {{
-  enabled             = true
-  is_ipv6_enabled     = true
-  comment             = "Security Autopilot migration for ${{local.bucket_name}}"
-  default_root_object = var.default_root_object
-  price_class         = var.price_class
-
-  origin {{
-    domain_name              = data.aws_s3_bucket.target.bucket_regional_domain_name
-    origin_id                = "s3-${{local.bucket_name}}"
-    origin_access_control_id = aws_cloudfront_origin_access_control.security_autopilot.id
-  }}
-
-  default_cache_behavior {{
-    target_origin_id       = "s3-${{local.bucket_name}}"
-    viewer_protocol_policy = "redirect-to-https"
-    allowed_methods        = ["GET", "HEAD", "OPTIONS"]
-    cached_methods         = ["GET", "HEAD", "OPTIONS"]
-    compress               = true
-    cache_policy_id        = var.cache_policy_id
-    origin_request_policy_id = var.origin_request_policy_id
-  }}
-
-  restrictions {{
-    geo_restriction {{
-      restriction_type = "none"
-    }}
-  }}
-
-  viewer_certificate {{
-    cloudfront_default_certificate = true
-  }}
-}}
-
-data "aws_iam_policy_document" "bucket_policy" {{
-  source_policy_documents = var.existing_bucket_policy_json == "" ? [] : [var.existing_bucket_policy_json]
-
-  statement {{
-    sid    = "AllowCloudFrontReadOnly"
-    effect = "Allow"
-    principals {{
-      type        = "Service"
-      identifiers = ["cloudfront.amazonaws.com"]
-    }}
-    actions   = ["s3:GetObject"]
-    resources = ["${{data.aws_s3_bucket.target.arn}}/*"]
-    condition {{
-      test     = "StringEquals"
-      variable = "AWS:SourceArn"
-      values   = [aws_cloudfront_distribution.security_autopilot.arn]
-    }}
-  }}
-
-  dynamic "statement" {{
-    for_each = var.additional_read_principal_arns
-    content {{
-      sid    = "AllowAdditionalRead${{substr(md5(statement.value), 0, 8)}}"
-      effect = "Allow"
-      principals {{
-        type        = "AWS"
-        identifiers = [statement.value]
-      }}
-      actions   = ["s3:GetObject"]
-      resources = ["${{data.aws_s3_bucket.target.arn}}/*"]
-    }}
-  }}
-}}
-
-resource "aws_s3_bucket_policy" "security_autopilot" {{
-  bucket = data.aws_s3_bucket.target.id
-  policy = data.aws_iam_policy_document.bucket_policy.json
-}}
-
-resource "aws_s3_bucket_public_access_block" "security_autopilot" {{
-  bucket = data.aws_s3_bucket.target.id
-
-  block_public_acls       = true
-  block_public_policy     = true
-  ignore_public_acls      = true
-  restrict_public_buckets = true
-}}
-
-output "cloudfront_distribution_id" {{
-  value       = aws_cloudfront_distribution.security_autopilot.id
-  description = "CloudFront distribution ID."
-}}
-
-output "cloudfront_domain_name" {{
-  value       = aws_cloudfront_distribution.security_autopilot.domain_name
-  description = "Use this domain in clients instead of direct S3 public URLs."
-}}
-
-output "bucket_name" {{
-  value       = data.aws_s3_bucket.target.id
-  description = "Target S3 bucket migrated to private access via CloudFront OAC."
-}}
-"""
-
-
-def _terraform_s3_cloudfront_oac_private_apply_time_content(meta: dict[str, str]) -> str:
-    """Terraform for S3.2 OAC variant with apply-time policy capture."""
-    bucket = _s3_bucket_name_from_target_id(meta.get("target_id", ""))
-    action_id_seed = (meta.get("action_id") or "").replace("-", "")
-    bundle_nonce = meta.get("bundle_nonce", "")
-    return f"""# S3.2 migration variant (CloudFront + OAC + private S3) - Action: {meta["action_id"]}
-# Remediation for: {meta["action_title"]}
-# Account: {meta["account_id"]} | Region: {meta["region"]} | Bucket: {bucket}
-# Control: {meta["control_id"]}
-
-locals {{
-  bucket_name = "{bucket}"
-  # Include action/run-level entropy to avoid account-wide OAC name collisions on reruns.
-  oac_name_seed = "${{local.bucket_name}}-{action_id_seed}-{bundle_nonce}"
-  oac_name      = substr("security-autopilot-oac-${{substr(md5(local.oac_name_seed), 0, 12)}}", 0, 64)
-}}
-
-variable "default_root_object" {{
-  type        = string
-  description = "Default object served by CloudFront at /"
-  default     = "index.html"
-}}
-
-variable "price_class" {{
-  type        = string
-  description = "CloudFront price class"
-  default     = "PriceClass_100"
-}}
-
-variable "cache_policy_id" {{
-  type        = string
-  description = "CloudFront cache policy (Managed-CachingOptimized default)"
-  default     = "658327ea-f89d-4fab-a63d-7e88639e58f6"
-}}
-
-variable "origin_request_policy_id" {{
-  type        = string
-  description = "CloudFront origin request policy (Managed-CORS-S3Origin default)"
-  default     = "88a5eaf4-2fd4-4709-b370-b4c650ea3fcf"
+variable "create_bucket_if_missing" {{
+  type        = bool
+  description = "When true, create the target bucket with a minimal private baseline before creating CloudFront + OAC."
+  default     = {create_bucket_if_missing_text}
 }}
 
 variable "additional_read_principal_arns" {{
@@ -2791,17 +2842,51 @@ variable "additional_read_principal_arns" {{
   default     = []
 }}
 
-data "aws_s3_bucket" "target" {{
+variable "cloudfront_reuse_mode" {{
+  type        = string
+  description = "Precomputed CloudFront/OAC reuse mode from the runner preflight."
+  default     = "create"
+}}
+
+variable "reuse_oac_id" {{
+  type        = string
+  description = "Precomputed OAC ID to reuse when cloudfront_reuse_mode requires it."
+  default     = ""
+}}
+
+variable "reuse_distribution_id" {{
+  type        = string
+  description = "Precomputed CloudFront distribution ID to reuse when cloudfront_reuse_mode=reuse_distribution."
+  default     = ""
+}}
+
+variable "reuse_distribution_arn" {{
+  type        = string
+  description = "Precomputed CloudFront distribution ARN to reuse when cloudfront_reuse_mode=reuse_distribution."
+  default     = ""
+}}
+
+variable "reuse_distribution_domain_name" {{
+  type        = string
+  description = "Precomputed CloudFront domain name to reuse when cloudfront_reuse_mode=reuse_distribution."
+  default     = ""
+}}
+
+{create_bucket_blocks}
+
+data "aws_s3_bucket" "existing_target" {{
+  count  = var.create_bucket_if_missing ? 0 : 1
   bucket = local.bucket_name
 }}
 
-data "aws_s3_bucket_policy" "existing" {{
-  bucket = local.bucket_name
-}}
+{existing_policy_source}
 
 locals {{
+  target_bucket_id                   = var.create_bucket_if_missing ? aws_s3_bucket.target_bucket[0].id : data.aws_s3_bucket.existing_target[0].id
+  target_bucket_arn                  = var.create_bucket_if_missing ? aws_s3_bucket.target_bucket[0].arn : data.aws_s3_bucket.existing_target[0].arn
+  target_bucket_regional_domain_name = var.create_bucket_if_missing ? aws_s3_bucket.target_bucket[0].bucket_regional_domain_name : data.aws_s3_bucket.existing_target[0].bucket_regional_domain_name
   existing_policy_document = try(
-    jsondecode(data.aws_s3_bucket_policy.existing.policy),
+    {existing_policy_document_expr},
     {{
       Version   = "2012-10-17"
       Statement = []
@@ -2811,7 +2896,7 @@ locals {{
   existing_policy_statements = try(local.existing_policy_document.Statement, [])
   filtered_existing_policy_statements = [
     for stmt in local.existing_policy_statements : stmt
-    if lower(try(tostring(stmt.Sid), "")) != "allowcloudfrontreadonly"
+    if lower(try(tostring(stmt.Sid), "")) != "{_S3_CLOUDFRONT_READONLY_POLICY_SID.lower()}"
   ]
   filtered_existing_policy_document = merge(
     {{
@@ -2820,9 +2905,34 @@ locals {{
     }},
     local.existing_policy_id == null ? {{}} : {{ Id = local.existing_policy_id }}
   )
+  cloudfront_reuse_mode = var.cloudfront_reuse_mode
+  reuse_distribution    = local.cloudfront_reuse_mode == "reuse_distribution"
+  reuse_oac_only        = local.cloudfront_reuse_mode == "reuse_oac_only"
+  reuse_oac             = local.reuse_distribution || local.reuse_oac_only
+  effective_oac_id = (
+    local.reuse_oac
+    ? var.reuse_oac_id
+    : aws_cloudfront_origin_access_control.security_autopilot[0].id
+  )
+  effective_distribution_id = (
+    local.reuse_distribution
+    ? var.reuse_distribution_id
+    : aws_cloudfront_distribution.security_autopilot[0].id
+  )
+  effective_distribution_arn = (
+    local.reuse_distribution
+    ? var.reuse_distribution_arn
+    : aws_cloudfront_distribution.security_autopilot[0].arn
+  )
+  effective_distribution_domain_name = (
+    local.reuse_distribution
+    ? var.reuse_distribution_domain_name
+    : aws_cloudfront_distribution.security_autopilot[0].domain_name
+  )
 }}
 
 resource "aws_cloudfront_origin_access_control" "security_autopilot" {{
+  count                             = local.reuse_oac ? 0 : 1
   name                              = local.oac_name
   description                       = "OAC for Security Autopilot remediation"
   origin_access_control_origin_type = "s3"
@@ -2831,20 +2941,21 @@ resource "aws_cloudfront_origin_access_control" "security_autopilot" {{
 }}
 
 resource "aws_cloudfront_distribution" "security_autopilot" {{
+  count               = local.reuse_distribution ? 0 : 1
   enabled             = true
   is_ipv6_enabled     = true
-  comment             = "Security Autopilot migration for ${{local.bucket_name}}"
+  comment             = local.expected_distribution_comment
   default_root_object = var.default_root_object
   price_class         = var.price_class
 
   origin {{
-    domain_name              = data.aws_s3_bucket.target.bucket_regional_domain_name
-    origin_id                = "s3-${{local.bucket_name}}"
-    origin_access_control_id = aws_cloudfront_origin_access_control.security_autopilot.id
+    domain_name              = local.target_bucket_regional_domain_name
+    origin_id                = local.expected_origin_id
+    origin_access_control_id = local.effective_oac_id
   }}
 
   default_cache_behavior {{
-    target_origin_id         = "s3-${{local.bucket_name}}"
+    target_origin_id         = local.expected_origin_id
     viewer_protocol_policy   = "redirect-to-https"
     allowed_methods          = ["GET", "HEAD", "OPTIONS"]
     cached_methods           = ["GET", "HEAD", "OPTIONS"]
@@ -2868,18 +2979,18 @@ data "aws_iam_policy_document" "bucket_policy" {{
   source_policy_documents = [jsonencode(local.filtered_existing_policy_document)]
 
   statement {{
-    sid    = "AllowCloudFrontReadOnly"
+    sid    = "{_S3_CLOUDFRONT_READONLY_POLICY_SID}"
     effect = "Allow"
     principals {{
       type        = "Service"
       identifiers = ["cloudfront.amazonaws.com"]
     }}
     actions   = ["s3:GetObject"]
-    resources = ["${{data.aws_s3_bucket.target.arn}}/*"]
+    resources = ["${{local.target_bucket_arn}}/*"]
     condition {{
       test     = "StringEquals"
       variable = "AWS:SourceArn"
-      values   = [aws_cloudfront_distribution.security_autopilot.arn]
+      values   = [local.effective_distribution_arn]
     }}
   }}
 
@@ -2893,18 +3004,19 @@ data "aws_iam_policy_document" "bucket_policy" {{
         identifiers = [statement.value]
       }}
       actions   = ["s3:GetObject"]
-      resources = ["${{data.aws_s3_bucket.target.arn}}/*"]
+      resources = ["${{local.target_bucket_arn}}/*"]
     }}
   }}
 }}
 
 resource "aws_s3_bucket_policy" "security_autopilot" {{
-  bucket = data.aws_s3_bucket.target.id
+  bucket = local.target_bucket_id
   policy = data.aws_iam_policy_document.bucket_policy.json
+  depends_on = [{_terraform_minimal_private_bucket_dependency("target_bucket")}]
 }}
 
 resource "aws_s3_bucket_public_access_block" "security_autopilot" {{
-  bucket = data.aws_s3_bucket.target.id
+  bucket = local.target_bucket_id
 
   block_public_acls       = true
   block_public_policy     = true
@@ -2913,20 +3025,58 @@ resource "aws_s3_bucket_public_access_block" "security_autopilot" {{
 }}
 
 output "cloudfront_distribution_id" {{
-  value       = aws_cloudfront_distribution.security_autopilot.id
+  value       = local.effective_distribution_id
   description = "CloudFront distribution ID."
 }}
 
 output "cloudfront_domain_name" {{
-  value       = aws_cloudfront_distribution.security_autopilot.domain_name
+  value       = local.effective_distribution_domain_name
   description = "Use this domain in clients instead of direct S3 public URLs."
 }}
 
 output "bucket_name" {{
-  value       = data.aws_s3_bucket.target.id
+  value       = local.target_bucket_id
   description = "Target S3 bucket migrated to private access via CloudFront OAC."
 }}
 """
+
+
+def _terraform_s3_cloudfront_oac_private_content(
+    meta: dict[str, str],
+    *,
+    oac_name: str,
+    create_bucket_if_missing: bool = False,
+) -> str:
+    """Terraform for S3.2 migration variant: CloudFront + OAC + private S3."""
+    return _terraform_s3_cloudfront_oac_private_common_content(
+        meta,
+        oac_name=oac_name,
+        create_bucket_if_missing=create_bucket_if_missing,
+        existing_policy_source="",
+        existing_policy_document_expr=(
+            'var.existing_bucket_policy_json == "" ? { Version = "2012-10-17", Statement = [] } '
+            ": jsondecode(var.existing_bucket_policy_json)"
+        ),
+    )
+
+
+def _terraform_s3_cloudfront_oac_private_apply_time_content(
+    meta: dict[str, str],
+    *,
+    oac_name: str,
+    create_bucket_if_missing: bool = False,
+) -> str:
+    """Terraform for S3.2 OAC variant with apply-time policy capture."""
+    return _terraform_s3_cloudfront_oac_private_common_content(
+        meta,
+        oac_name=oac_name,
+        create_bucket_if_missing=create_bucket_if_missing,
+        existing_policy_source="""data "aws_s3_bucket_policy" "existing" {
+  count  = var.create_bucket_if_missing ? 0 : 1
+  bucket = local.bucket_name
+}""",
+        existing_policy_document_expr="jsondecode(data.aws_s3_bucket_policy.existing[0].policy)",
+    )
 
 
 def _cloudformation_s3_bucket_block_content(meta: dict[str, str]) -> str:
@@ -3106,7 +3256,7 @@ def _resolve_s3_access_logging_defaults(
     format: str,
     strategy_id: str | None,
     variant: str | None,
-) -> tuple[str, bool]:
+) -> tuple[str, bool, bool]:
     log_bucket = _resolve_s3_access_logging_log_bucket(
         source_bucket=source_bucket,
         strategy_inputs=strategy_inputs,
@@ -3116,7 +3266,8 @@ def _resolve_s3_access_logging_defaults(
         variant=variant,
     )
     create_log_bucket = _coerce_bool((strategy_inputs or {}).get("create_log_bucket"), default=False)
-    return log_bucket, create_log_bucket
+    create_bucket_if_missing = _create_bucket_if_missing_enabled(strategy_inputs)
+    return log_bucket, create_log_bucket, create_bucket_if_missing
 
 
 def _generate_for_s3_bucket_access_logging(
@@ -3131,7 +3282,7 @@ def _generate_for_s3_bucket_access_logging(
     meta = _action_meta(action)
     region = meta["region"]
     source_bucket_name = _s3_bucket_name_from_target_id(meta["target_id"])
-    log_bucket_name, create_log_bucket = _resolve_s3_access_logging_defaults(
+    log_bucket_name, create_log_bucket, create_bucket_if_missing = _resolve_s3_access_logging_defaults(
         source_bucket=source_bucket_name,
         strategy_inputs=strategy_inputs,
         action_type=ACTION_TYPE_S3_BUCKET_ACCESS_LOGGING,
@@ -3140,6 +3291,17 @@ def _generate_for_s3_bucket_access_logging(
         variant=variant,
     )
     if format == CLOUDFORMATION_FORMAT:
+        if create_bucket_if_missing:
+            _raise_pr_bundle_error(
+                code="unsupported_variant_format",
+                detail=(
+                    "Create-missing-bucket S3.9 bundles are only supported for terraform format."
+                ),
+                action_type=ACTION_TYPE_S3_BUCKET_ACCESS_LOGGING,
+                format=format,
+                strategy_id=strategy_id,
+                variant=variant,
+            )
         files = [
             PRBundleFile(
                 path="s3_bucket_access_logging.yaml",
@@ -3171,6 +3333,7 @@ def _generate_for_s3_bucket_access_logging(
                     meta,
                     log_bucket_name=log_bucket_name,
                     create_log_bucket=create_log_bucket,
+                    create_bucket_if_missing=create_bucket_if_missing,
                 ),
             ),
         ]
@@ -3178,16 +3341,40 @@ def _generate_for_s3_bucket_access_logging(
             f"Configure AWS provider for account {meta['account_id']} and region {region}.",
             "Set log_bucket_name to a dedicated destination bucket.",
             (
+                "This bundle will create the missing source bucket with a minimal private baseline before enabling access logging."
+                if create_bucket_if_missing
+                else "This bundle assumes the source bucket already exists."
+            ),
+            (
                 "This bundle will create the destination bucket with the shared support-bucket baseline before enabling access logging."
                 if create_log_bucket
                 else "This bundle assumes the destination bucket already exists and already meets the shared support-bucket baseline."
+            ),
+            (
+                "If the destination bucket already exists and is already owned, set create_log_bucket=false and adopt_existing_log_bucket=true to reuse it while still applying the shared support-bucket baseline."
+                if create_log_bucket
+                else "If you need to harden an already-owned destination bucket in place, set adopt_existing_log_bucket=true."
             ),
             "Do not use the source bucket as the log destination.",
             "Run `terraform init` and `terraform plan`.",
             "Run `terraform apply` to enable S3 server access logging.",
             "Return to the action and click **Recompute actions** or trigger ingest to verify.",
         ]
-    return PRBundleResult(format=format, files=files, steps=steps)
+    result = PRBundleResult(format=format, files=files, steps=steps)
+    if format == TERRAFORM_FORMAT:
+        result["metadata"] = _merge_bundle_metadata(
+            result.get("metadata"),
+            {
+                "helper_bucket_inventory": [
+                    _helper_bucket_inventory_entry(
+                        bucket_name=log_bucket_name,
+                        helper_bucket_role=SUPPORT_BUCKET_ROLE_S3_ACCESS_LOGS,
+                        created=create_log_bucket,
+                    )
+                ]
+            },
+        )
+    return result
 
 
 def _terraform_s3_bucket_access_logging_content(
@@ -3195,15 +3382,23 @@ def _terraform_s3_bucket_access_logging_content(
     *,
     log_bucket_name: str,
     create_log_bucket: bool,
+    create_bucket_if_missing: bool,
 ) -> str:
     """Terraform for S3 bucket server access logging (S3.9)."""
     bucket = _s3_bucket_name_from_target_id(meta.get("target_id", ""))
     create_log_bucket_text = "true" if create_log_bucket else "false"
+    create_bucket_if_missing_text = "true" if create_bucket_if_missing else "false"
+    create_bucket_blocks = _terraform_minimal_private_bucket_blocks(
+        resource_suffix="source_bucket",
+        bucket_name_ref='var.source_bucket_name',
+        count_expr="var.create_bucket_if_missing ? 1 : 0",
+    )
     support_bucket_blocks = terraform_support_bucket_blocks(
         resource_suffix="access_logs",
-        bucket_id_ref="aws_s3_bucket.access_logs[0].id",
+        bucket_id_ref="local.log_bucket_id",
         bucket_name_ref='var.log_bucket_name',
-        count_expr="var.create_log_bucket ? 1 : 0",
+        count_expr="local.manage_log_bucket_baseline ? 1 : 0",
+        support_bucket_role=SUPPORT_BUCKET_ROLE_S3_ACCESS_LOGS,
     )
     return f"""# S3 bucket access logging - Action: {meta["action_id"]}
 # Remediation for: {meta["action_title"]}
@@ -3222,10 +3417,22 @@ variable "log_bucket_name" {{
   default     = "{log_bucket_name}"
 }}
 
+variable "create_bucket_if_missing" {{
+  type        = bool
+  description = "When true, create the source bucket with a minimal private baseline before enabling access logging."
+  default     = {create_bucket_if_missing_text}
+}}
+
 variable "create_log_bucket" {{
   type        = bool
   description = "When true, create the destination bucket with the shared support-bucket baseline."
   default     = {create_log_bucket_text}
+}}
+
+variable "adopt_existing_log_bucket" {{
+  type        = bool
+  description = "When true, reuse an already-owned destination bucket and apply the shared support-bucket baseline without creating the bucket."
+  default     = false
 }}
 
 variable "log_prefix" {{
@@ -3233,6 +3440,14 @@ variable "log_prefix" {{
   description = "Prefix for delivered access logs"
   default     = "s3-access-logs/"
 }}
+
+locals {{
+  source_bucket_name          = var.create_bucket_if_missing ? aws_s3_bucket.source_bucket[0].bucket : var.source_bucket_name
+  manage_log_bucket_baseline = var.create_log_bucket || var.adopt_existing_log_bucket
+  log_bucket_id              = var.create_log_bucket ? aws_s3_bucket.access_logs[0].id : var.log_bucket_name
+}}
+
+{create_bucket_blocks}
 
 resource "aws_s3_bucket" "access_logs" {{
   count  = var.create_log_bucket ? 1 : 0
@@ -3242,10 +3457,13 @@ resource "aws_s3_bucket" "access_logs" {{
 {support_bucket_blocks}
 
 resource "aws_s3_bucket_logging" "security_autopilot" {{
-  bucket        = var.source_bucket_name
+  bucket        = local.source_bucket_name
   target_bucket = var.log_bucket_name
   target_prefix = var.log_prefix
-  depends_on    = [aws_s3_bucket_policy.access_logs]
+  depends_on    = [
+    aws_s3_bucket_policy.access_logs,
+    {_terraform_minimal_private_bucket_dependency("source_bucket")},
+  ]
 }}
 """
 
@@ -3366,8 +3584,19 @@ def _generate_for_s3_bucket_lifecycle_configuration(
         risk_snapshot,
         abort_days=abort_days,
     )
+    create_bucket_if_missing = _create_bucket_if_missing_enabled(strategy_inputs)
     apply_time_merge = _s3_11_apply_time_merge_requested(resolution)
     if format == CLOUDFORMATION_FORMAT:
+        if create_bucket_if_missing:
+            _raise_pr_bundle_error(
+                code="unsupported_variant_format",
+                detail=(
+                    "Create-missing-bucket S3.11 bundles are only supported for terraform format."
+                ),
+                action_type=action.action_type,
+                format=format,
+                strategy_id="s3_enable_abort_incomplete_uploads",
+            )
         if apply_time_merge:
             _raise_pr_bundle_error(
                 code="cloudformation_lifecycle_additive_merge_unsupported",
@@ -3403,7 +3632,7 @@ def _generate_for_s3_bucket_lifecycle_configuration(
             "Return to the action and click **Recompute actions** or trigger ingest to verify.",
         ]
     else:
-        if apply_time_merge:
+        if apply_time_merge and not create_bucket_if_missing:
             files = [
                 PRBundleFile(path="providers.tf", content=_terraform_regional_providers_content(meta)),
                 PRBundleFile(
@@ -3456,6 +3685,7 @@ def _generate_for_s3_bucket_lifecycle_configuration(
                     abort_days=abort_days,
                     existing_rules=lifecycle_analysis["preserved_rules"],
                     bucket_name=bucket_name,
+                    create_bucket_if_missing=create_bucket_if_missing,
                 ),
             ),
         ]
@@ -3464,6 +3694,11 @@ def _generate_for_s3_bucket_lifecycle_configuration(
             (
                 f"Set bucket name (target: {bucket_name}) and lifecycle day threshold "
                 f"(default: {abort_days}) if needed."
+            ),
+            (
+                "This bundle will create the missing target bucket with a minimal private baseline before applying the lifecycle rule."
+                if create_bucket_if_missing
+                else "This bundle assumes the target bucket already exists."
             ),
             "Run `terraform init` and `terraform plan`.",
             "Run `terraform apply` to configure lifecycle policy.",
@@ -3478,16 +3713,33 @@ def _terraform_s3_bucket_lifecycle_configuration_content(
     abort_days: int,
     existing_rules: list[dict[str, Any]] | None = None,
     bucket_name: str | None = None,
+    create_bucket_if_missing: bool = False,
 ) -> str:
     """Terraform for S3 bucket lifecycle configuration (S3.11)."""
     bucket = bucket_name or _s3_bucket_name_from_target_id(meta.get("target_id", ""))
     rendered_existing_rules = lifecycle_rules_to_terraform(existing_rules or [])
     managed_rule = _managed_abort_rule_block()
     rule_blocks = "\n\n".join(block for block in (rendered_existing_rules, managed_rule) if block)
+    create_bucket_if_missing_text = "true" if create_bucket_if_missing else "false"
+    create_bucket_blocks = _terraform_minimal_private_bucket_blocks(
+        resource_suffix="target_bucket",
+        bucket_name_ref='local.target_bucket_name',
+        count_expr="var.create_bucket_if_missing ? 1 : 0",
+    )
     return f"""# S3 bucket lifecycle configuration - Action: {meta["action_id"]}
 # Remediation for: {meta["action_title"]}
 # Account: {meta["account_id"]} | Region: {meta["region"]} | Bucket: {bucket}
 # Control: {meta["control_id"]}
+
+locals {{
+  target_bucket_name = "{bucket}"
+}}
+
+variable "create_bucket_if_missing" {{
+  type        = bool
+  description = "When true, create the target bucket with a minimal private baseline before applying the lifecycle rule."
+  default     = {create_bucket_if_missing_text}
+}}
 
 variable "abort_incomplete_multipart_days" {{
   type        = number
@@ -3495,8 +3747,11 @@ variable "abort_incomplete_multipart_days" {{
   default     = {abort_days}
 }}
 
+{create_bucket_blocks}
+
 resource "aws_s3_bucket_lifecycle_configuration" "security_autopilot" {{
-  bucket = "{bucket}"
+  bucket = local.target_bucket_name
+  depends_on = [{_terraform_minimal_private_bucket_dependency("target_bucket")}]
 
 {rule_blocks}
 }}
@@ -3758,12 +4013,23 @@ def _generate_for_s3_bucket_encryption_kms(
     meta = _action_meta(action)
     region = meta["region"]
     bucket_name = _s3_bucket_name_from_target_id(meta["target_id"])
+    create_bucket_if_missing = _create_bucket_if_missing_enabled(strategy_inputs)
     kms_key_arn, kms_key_mode = _resolve_s3_kms_defaults(
         meta=meta,
         strategy_inputs=strategy_inputs,
         format=format,
     )
     if format == CLOUDFORMATION_FORMAT:
+        if create_bucket_if_missing:
+            _raise_pr_bundle_error(
+                code="unsupported_variant_format",
+                detail=(
+                    "Create-missing-bucket S3.15 bundles are only supported for terraform format."
+                ),
+                action_type=ACTION_TYPE_S3_BUCKET_ENCRYPTION_KMS,
+                format=format,
+                strategy_id="s3_enable_sse_kms_guided",
+            )
         files = [
             PRBundleFile(
                 path="s3_bucket_encryption_kms.yaml",
@@ -3790,38 +4056,54 @@ def _generate_for_s3_bucket_encryption_kms(
                 content=_terraform_s3_bucket_encryption_kms_content(
                     meta,
                     kms_key_arn=kms_key_arn,
+                    create_bucket_if_missing=create_bucket_if_missing,
                 ),
-            ),
-            PRBundleFile(
-                path=AWS_S3_ENCRYPTION_CAPTURE_SCRIPT_PATH,
-                content=aws_s3_encryption_capture_script_content(
-                    bucket_name=bucket_name,
-                    region=region,
-                ),
-            ),
-            PRBundleFile(
-                path=AWS_S3_ENCRYPTION_RESTORE_SCRIPT_PATH,
-                content=aws_s3_encryption_restore_script_content(),
             ),
         ]
+        if not create_bucket_if_missing:
+            files.extend(
+                [
+                    PRBundleFile(
+                        path=AWS_S3_ENCRYPTION_CAPTURE_SCRIPT_PATH,
+                        content=aws_s3_encryption_capture_script_content(
+                            bucket_name=bucket_name,
+                            region=region,
+                        ),
+                    ),
+                    PRBundleFile(
+                        path=AWS_S3_ENCRYPTION_RESTORE_SCRIPT_PATH,
+                        content=aws_s3_encryption_restore_script_content(),
+                    ),
+                ]
+            )
         steps = [
             f"Configure AWS provider for account {meta['account_id']} and region {region}.",
             f"Bucket defaults to target ({bucket_name}); generated key mode is {kms_key_mode}.",
             (
-                f"Run `BUCKET_NAME={bucket_name} REGION={region} python3 {AWS_S3_ENCRYPTION_CAPTURE_SCRIPT_PATH}` "
-                "BEFORE terraform apply to snapshot exact bucket encryption pre-state "
-                "to .s3-encryption-rollback/encryption_snapshot.json."
+                "This bundle will create the missing target bucket with a minimal private baseline before enforcing SSE-KMS."
+                if create_bucket_if_missing
+                else "This bundle assumes the target bucket already exists."
+            ),
+            *(
+                [
+                    f"Run `BUCKET_NAME={bucket_name} REGION={region} python3 {AWS_S3_ENCRYPTION_CAPTURE_SCRIPT_PATH}` BEFORE terraform apply to snapshot exact bucket encryption pre-state to .s3-encryption-rollback/encryption_snapshot.json.",
+                ]
+                if not create_bucket_if_missing
+                else []
             ),
             "Run `terraform init` and `terraform plan`.",
             "Run `terraform apply` to enforce SSE-KMS default encryption.",
-            (
-                f"Rollback: run `terraform destroy` then `python3 {AWS_S3_ENCRYPTION_RESTORE_SCRIPT_PATH}` "
-                "to restore the captured bucket encryption exactly."
+            *(
+                [
+                    f"Rollback: run `terraform destroy` then `python3 {AWS_S3_ENCRYPTION_RESTORE_SCRIPT_PATH}` to restore the captured bucket encryption exactly.",
+                ]
+                if not create_bucket_if_missing
+                else []
             ),
             "Return to the action and click **Recompute actions** or trigger ingest to verify.",
         ]
     result = PRBundleResult(format=format, files=files, steps=steps)
-    if format == TERRAFORM_FORMAT:
+    if format == TERRAFORM_FORMAT and not create_bucket_if_missing:
         result["metadata"] = aws_s3_encryption_bundle_rollback_metadata(str(action.id))
     return result
 
@@ -3830,13 +4112,31 @@ def _terraform_s3_bucket_encryption_kms_content(
     meta: dict[str, str],
     *,
     kms_key_arn: str,
+    create_bucket_if_missing: bool = False,
 ) -> str:
     """Terraform for S3 bucket SSE-KMS encryption (S3.15)."""
     bucket = _s3_bucket_name_from_target_id(meta.get("target_id", ""))
+    create_bucket_if_missing_text = "true" if create_bucket_if_missing else "false"
+    create_bucket_blocks = _terraform_minimal_private_bucket_blocks(
+        resource_suffix="target_bucket",
+        bucket_name_ref='local.target_bucket_name',
+        count_expr="var.create_bucket_if_missing ? 1 : 0",
+        include_encryption=False,
+    )
     return f"""# S3 bucket SSE-KMS encryption - Action: {meta["action_id"]}
 # Remediation for: {meta["action_title"]}
 # Account: {meta["account_id"]} | Region: {meta["region"]} | Bucket: {bucket}
 # Control: {meta["control_id"]}
+
+locals {{
+  target_bucket_name = "{bucket}"
+}}
+
+variable "create_bucket_if_missing" {{
+  type        = bool
+  description = "When true, create the target bucket with a minimal private baseline before enforcing SSE-KMS."
+  default     = {create_bucket_if_missing_text}
+}}
 
 variable "kms_key_arn" {{
   type        = string
@@ -3844,8 +4144,11 @@ variable "kms_key_arn" {{
   default     = "{kms_key_arn}"
 }}
 
+{create_bucket_blocks}
+
 resource "aws_s3_bucket_server_side_encryption_configuration" "security_autopilot" {{
-  bucket = "{bucket}"
+  bucket = local.target_bucket_name
+  depends_on = [{_terraform_minimal_private_bucket_dependency("target_bucket")}]
 
   rule {{
     apply_server_side_encryption_by_default {{
@@ -5003,12 +5306,27 @@ def _generate_for_cloudtrail_enabled(
             "Run `terraform apply` to enable CloudTrail (multi-region).",
             "Return to the action and click **Recompute actions** or trigger ingest to verify.",
         ]
-    return PRBundleResult(format=format, files=files, steps=steps)
+    result = PRBundleResult(format=format, files=files, steps=steps)
+    if format == TERRAFORM_FORMAT:
+        result["metadata"] = _merge_bundle_metadata(
+            result.get("metadata"),
+            {
+                "helper_bucket_inventory": [
+                    _helper_bucket_inventory_entry(
+                        bucket_name=trail_bucket_name,
+                        helper_bucket_role=SUPPORT_BUCKET_ROLE_CLOUDTRAIL_LOGS,
+                        created=create_bucket_if_missing,
+                    )
+                ]
+            },
+        )
+    return result
 
 
 def _terraform_regional_providers_content(
     meta: dict[str, str],
     *,
+    include_external_provider: bool = False,
     include_null_provider: bool = False,
 ) -> str:
     """Shared provider block with region for regional resources (9.9–9.12). Uses default credential chain (no profile)."""
@@ -5021,6 +5339,13 @@ def _terraform_regional_providers_content(
       source  = "hashicorp/null"
       version = "{TERRAFORM_NULL_PROVIDER_VERSION_CONSTRAINT}"
     }}"""
+    external_provider_block = ""
+    if include_external_provider:
+        external_provider_block = f"""
+    external = {{
+      source  = "hashicorp/external"
+      version = "{TERRAFORM_EXTERNAL_PROVIDER_VERSION_CONSTRAINT}"
+    }}"""
     return f"""# Configure AWS provider for account {account_id} and region {region}.
 # Credentials: default chain (AWS_ACCESS_KEY_ID/AWS_SECRET_ACCESS_KEY, or ~/.aws/credentials [default]).
 # If you use a named profile, add: profile = "your-profile-name" (do not use account ID as profile name).
@@ -5032,7 +5357,7 @@ terraform {{
     aws = {{
       source  = "hashicorp/aws"
       version = "{TERRAFORM_AWS_PROVIDER_VERSION_CONSTRAINT}"
-    }}{null_provider_block}
+    }}{external_provider_block}{null_provider_block}
   }}
 }}
 
@@ -5211,6 +5536,7 @@ EOT
         count_expr="var.create_bucket_if_missing ? 1 : 0",
         enable_versioning=True,
         service_write_data_source="data.aws_iam_policy_document.cloudtrail_delivery",
+        support_bucket_role=SUPPORT_BUCKET_ROLE_CLOUDTRAIL_LOGS,
     )
     return f"""# CloudTrail enabled - Action: {meta["action_id"]}
 # Remediation for: {meta["action_title"]}
@@ -5543,7 +5869,18 @@ def _generate_for_aws_config_enabled(
             ),
         ],
         steps=steps,
-        metadata=aws_config_bundle_rollback_metadata(str(action.id)),
+        metadata=_merge_bundle_metadata(
+            aws_config_bundle_rollback_metadata(str(action.id)),
+            {
+                "helper_bucket_inventory": [
+                    _helper_bucket_inventory_entry(
+                        bucket_name=bucket,
+                        helper_bucket_role=SUPPORT_BUCKET_ROLE_AWS_CONFIG_DELIVERY,
+                        created=create_local_bucket,
+                    )
+                ]
+            },
+        ),
     )
 
 
@@ -5719,10 +6056,11 @@ def _generate_for_s3_bucket_require_ssl(
         return _generate_for_exception_guidance(action, format, "Keep non-SSL S3 access (exception path)")
 
     inputs = strategy_inputs or {}
+    create_bucket_if_missing = _create_bucket_if_missing_enabled(strategy_inputs)
     preserve_existing_policy = _coerce_bool(inputs.get("preserve_existing_policy"), default=True)
-    apply_time_merge = _s3_5_apply_time_merge_requested(resolution)
+    apply_time_merge = _s3_5_apply_time_merge_requested(resolution) and not create_bucket_if_missing
     preservation_policy: str | None = None
-    if preserve_existing_policy and not apply_time_merge:
+    if preserve_existing_policy and not apply_time_merge and not create_bucket_if_missing:
         preservation_policy = _resolve_s3_migrate_policy_preservation(
             strategy_inputs=strategy_inputs,
             risk_snapshot=risk_snapshot,
@@ -5744,6 +6082,16 @@ def _generate_for_s3_bucket_require_ssl(
         exempt_principals = []
 
     if format == CLOUDFORMATION_FORMAT:
+        if create_bucket_if_missing:
+            _raise_pr_bundle_error(
+                code="unsupported_variant_format",
+                detail=(
+                    "Create-missing-bucket S3.5 bundles are only supported for terraform format."
+                ),
+                action_type=ACTION_TYPE_S3_BUCKET_REQUIRE_SSL,
+                format=format,
+                strategy_id=strategy_id,
+            )
         if apply_time_merge and preservation_policy is None:
             _raise_pr_bundle_error(
                 code="bucket_policy_preservation_evidence_missing",
@@ -5793,7 +6141,13 @@ def _generate_for_s3_bucket_require_ssl(
         )
 
     files: list[PRBundleFile] = [
-        PRBundleFile(path="providers.tf", content=_terraform_regional_providers_content(meta)),
+        PRBundleFile(
+            path="providers.tf",
+            content=_terraform_regional_providers_content(
+                meta,
+                include_external_provider=apply_time_merge,
+            ),
+        ),
         PRBundleFile(
             path="s3_bucket_require_ssl.tf",
             content=(
@@ -5805,6 +6159,7 @@ def _generate_for_s3_bucket_require_ssl(
                 else _terraform_s3_bucket_require_ssl_content(
                     meta,
                     exempt_principals=exempt_principals,
+                    create_bucket_if_missing=create_bucket_if_missing,
                 )
             ),
         ),
@@ -5825,8 +6180,19 @@ def _generate_for_s3_bucket_require_ssl(
                 ),
             )
         )
+    if apply_time_merge:
+        files.append(
+            PRBundleFile(
+                path=AWS_S3_POLICY_FETCH_SCRIPT_PATH,
+                content=aws_s3_policy_fetch_script_content(),
+            )
+        )
 
-    include_policy_capture_helpers = preserve_existing_policy and (preservation_policy is not None or apply_time_merge)
+    include_policy_capture_helpers = (
+        not create_bucket_if_missing
+        and preserve_existing_policy
+        and (preservation_policy is not None or apply_time_merge)
+    )
     rollback_metadata: dict[str, Any] | None = None
     if include_policy_capture_helpers:
         files.extend(
@@ -5853,11 +6219,15 @@ def _generate_for_s3_bucket_require_ssl(
                 "Current bucket policy will be fetched and merged at terraform plan/apply time with customer credentials."
                 if apply_time_merge and preserve_existing_policy
                 else (
+                "This bundle will create the missing target bucket with a minimal private baseline before enforcing SSL-only requests."
+                if create_bucket_if_missing
+                else (
                 "No existing bucket policy statements were detected; "
                 "existing_bucket_policy_json remains empty."
                 if preserve_existing_policy
                 else "preserve_existing_policy=false selected; existing bucket policy statements "
                 "are not preloaded."
+                )
                 )
             )
         ),
@@ -6324,12 +6694,29 @@ Resources:
 """
 
 
-def _terraform_s3_bucket_require_ssl_content(meta: dict[str, str], exempt_principals: list[str]) -> str:
+def _terraform_s3_bucket_require_ssl_content(
+    meta: dict[str, str],
+    exempt_principals: list[str],
+    *,
+    create_bucket_if_missing: bool = False,
+) -> str:
     bucket = _s3_bucket_name_from_target_id(meta.get("target_id", ""))
     exempt_principals_json = json.dumps(exempt_principals)
+    create_bucket_if_missing_text = "true" if create_bucket_if_missing else "false"
+    create_bucket_blocks = _terraform_minimal_private_bucket_blocks(
+        resource_suffix="target_bucket",
+        bucket_name_ref='local.target_bucket_name',
+        count_expr="var.create_bucket_if_missing ? 1 : 0",
+    )
     return f"""# Enforce SSL-only S3 requests - Action: {meta["action_id"]}
 locals {{
   target_bucket_name = "{bucket}"
+}}
+
+variable "create_bucket_if_missing" {{
+  type        = bool
+  default     = {create_bucket_if_missing_text}
+  description = "When true, create the target bucket with a minimal private baseline before enforcing SSL-only requests."
 }}
 
 variable "existing_bucket_policy_json" {{
@@ -6343,6 +6730,8 @@ variable "exempt_principal_arns" {{
   default     = {exempt_principals_json}
   description = "Optional IAM principal ARNs exempted from strict SSL deny."
 }}
+
+{create_bucket_blocks}
 
 data "aws_iam_policy_document" "required_ssl" {{
   statement {{
@@ -6390,6 +6779,7 @@ data "aws_iam_policy_document" "merged_policy" {{
 resource "aws_s3_bucket_policy" "security_autopilot" {{
   bucket = local.target_bucket_name
   policy = data.aws_iam_policy_document.merged_policy.json
+  depends_on = [{_terraform_minimal_private_bucket_dependency("target_bucket")}]
 }}
 """
 
@@ -6411,13 +6801,18 @@ variable "exempt_principal_arns" {{
   description = "Optional IAM principal ARNs exempted from strict SSL deny."
 }}
 
-data "aws_s3_bucket_policy" "existing" {{
-  bucket = local.target_bucket_name
+data "external" "existing_policy" {{
+  program = ["python3", "${{path.module}}/{AWS_S3_POLICY_FETCH_SCRIPT_PATH}"]
+
+  query = {{
+    bucket_name = local.target_bucket_name
+    region      = "{meta["region"]}"
+  }}
 }}
 
 locals {{
   existing_policy_document = try(
-    jsondecode(data.aws_s3_bucket_policy.existing.policy),
+    jsondecode(lookup(data.external.existing_policy.result, "policy_json", "")),
     {{
       Version   = "2012-10-17"
       Statement = []

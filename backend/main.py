@@ -33,6 +33,7 @@ from backend.routers.users import router as users_router
 from backend.services.health_checks import build_readiness_report
 from backend.services.help_center import ensure_help_articles_synced
 from backend.services.migration_guard import assert_database_revision_at_head
+from backend.services.account_trust import log_external_id_mismatch_audit_async
 
 
 @asynccontextmanager
@@ -40,6 +41,7 @@ async def lifespan(app: FastAPI):
     """Lifespan: startup and shutdown. Replaces deprecated on_event."""
     assert_database_revision_at_head(component="api")
     async with AsyncSessionLocal() as session:
+        await log_external_id_mismatch_audit_async(session)
         await ensure_help_articles_synced(session)
         await session.commit()
     yield

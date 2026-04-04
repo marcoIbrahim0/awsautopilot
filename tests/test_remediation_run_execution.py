@@ -152,6 +152,43 @@ def test_apply_success_targeted_derivable_enqueues_targeted_reconcile() -> None:
     assert payload["resource_ids"] == ["arn:aws:s3:::critical-bucket"]
 
 
+def test_apply_success_includes_helper_bucket_inventory_in_targeted_reconcile() -> None:
+    run, execution, mock_session, job = _build_apply_execution(
+        "s3_bucket_access_logging",
+        target_id="arn:aws:s3:::source-bucket",
+        resource_id=None,
+    )
+    run.artifacts["pr_bundle"] = {
+        "files": [{"path": "main.tf", "content": 'terraform {}'}],
+        "metadata": {
+            "helper_bucket_inventory": [
+                {
+                    "bucket_name": "source-bucket-access-logs",
+                    "helper_bucket_role": "s3-access-logs",
+                    "created": True,
+                }
+            ]
+        },
+    }
+    mock_sqs = _run_apply_job(
+        run,
+        execution,
+        mock_session,
+        job,
+        reconcile_mode="targeted_then_global",
+        prereq_result={"ok": True, "reasons": [], "snapshot": {}},
+    )
+
+    assert mock_sqs.send_message.call_count == 1
+    payload = json.loads(mock_sqs.send_message.call_args_list[0][1]["MessageBody"])
+    assert payload["service"] == "s3"
+    assert payload["sweep_mode"] == "targeted"
+    assert payload["resource_ids"] == [
+        "arn:aws:s3:::source-bucket",
+        "source-bucket-access-logs",
+    ]
+
+
 def test_apply_success_unknown_derivation_falls_back_to_global_reconcile() -> None:
     run, execution, mock_session, job = _build_apply_execution(
         "custom_security_fix",

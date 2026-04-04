@@ -208,3 +208,68 @@ def test_ensure_membership_for_actions_preserves_existing_state_rows(monkeypatch
     assert store.inserted_tables == []
     assert store.states == {(tenant_id, group.id, action.id)}
     assert ActionGroupStatusBucket.not_run_yet.value == "not_run_yet"
+
+
+class _ScalarResult:
+    def __init__(self, rows):
+        self._rows = rows
+
+    def all(self):
+        return list(self._rows)
+
+
+class _CaptureSession:
+    def __init__(self, rows):
+        self.rows = rows
+        self.statements = []
+
+    def execute(self, stmt):
+        self.statements.append(stmt)
+        return SimpleNamespace(scalars=lambda: _ScalarResult(self.rows))
+
+
+def _option_paths(stmt) -> set[str]:
+    return {str(option.path) for option in stmt._with_options}
+
+
+def test_groups_by_key_noloads_heavy_action_group_relationships() -> None:
+    group = ActionGroup(
+        id=uuid.uuid4(),
+        tenant_id=uuid.uuid4(),
+        action_type="s3_bucket_lifecycle_configuration",
+        account_id="696505809372",
+        region="eu-north-1",
+        group_key="group-key",
+        metadata_json={"source": "auto_assign"},
+    )
+    session = _CaptureSession([group])
+
+    result = service._groups_by_key(session, ["group-key"])
+
+    assert result == {"group-key": group}
+    assert len(session.statements) == 1
+    assert _option_paths(session.statements[0]) == {
+        "ORM Path[Mapper[ActionGroup(action_groups)] -> ActionGroup.memberships -> Mapper[ActionGroupMembership(action_group_memberships)]]",
+        "ORM Path[Mapper[ActionGroup(action_groups)] -> ActionGroup.runs -> Mapper[ActionGroupRun(action_group_runs)]]",
+        "ORM Path[Mapper[ActionGroup(action_groups)] -> ActionGroup.action_states -> Mapper[ActionGroupActionState(action_group_action_state)]]",
+    }
+
+
+def test_memberships_by_action_id_noloads_group_and_action_relationships() -> None:
+    membership = ActionGroupMembership(
+        id=uuid.uuid4(),
+        tenant_id=uuid.uuid4(),
+        group_id=uuid.uuid4(),
+        action_id=uuid.uuid4(),
+        source="recompute",
+    )
+    session = _CaptureSession([membership])
+
+    result = service._memberships_by_action_id(session, [membership.action_id])
+
+    assert result == {membership.action_id: membership}
+    assert len(session.statements) == 1
+    assert _option_paths(session.statements[0]) == {
+        "ORM Path[Mapper[ActionGroupMembership(action_group_memberships)] -> ActionGroupMembership.group -> Mapper[ActionGroup(action_groups)]]",
+        "ORM Path[Mapper[ActionGroupMembership(action_group_memberships)] -> ActionGroupMembership.action -> Mapper[Action(actions)]]",
+    }

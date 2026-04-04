@@ -33,6 +33,7 @@ from backend.models.enums import (
 )
 from backend.models.remediation_run import RemediationRun
 from backend.models.remediation_run_execution import RemediationRunExecution
+from backend.services.account_trust import account_assume_role_external_id, canonical_tenant_external_id
 from backend.services.action_run_confirmation import (
     evaluate_confirmation_for_action,
     record_execution_result,
@@ -475,9 +476,17 @@ def _assume_write_role(
     account = account_result.scalar_one_or_none()
     if not account or not account.role_write_arn:
         raise ValueError("WriteRole not configured for this AWS account.")
+    try:
+        tenant_external_id_value = canonical_tenant_external_id(session, run.tenant_id)
+    except Exception:
+        tenant_external_id_value = None
+    tenant_external_id = account_assume_role_external_id(
+        account,
+        tenant_external_id=tenant_external_id_value,
+    ) or ""
     write_session = assume_role(
         role_arn=account.role_write_arn,
-        external_id=account.external_id,
+        external_id=tenant_external_id,
     )
     credentials = write_session.get_credentials()
     if credentials is None:

@@ -28,6 +28,7 @@ from backend.models.action_group_run import ActionGroupRun
 from backend.models.aws_account import AwsAccount
 from backend.models.enums import ActionGroupRunStatus, RemediationRunMode, RemediationRunStatus
 from backend.models.remediation_run import RemediationRun
+from backend.services.account_trust import account_assume_role_external_id, canonical_tenant_external_id
 from backend.services.compliance_pack_spec import build_control_mapping_rows
 from backend.services.pr_automation import build_pr_automation_artifacts
 from backend.services.remediation_metrics import emit_worker_dispatch_error
@@ -518,6 +519,19 @@ def _raise_invalid_grouped_bundle_layout(detail: str, *, action_type: str | None
     raise _grouped_bundle_layout_error(detail, action_type=action_type)
 
 
+def _runner_script_with_execution_root(script: str, *, execution_root: str) -> str:
+    default_line = 'EXECUTION_ROOT="${EXECUTION_ROOT:-actions}"'
+    override_line = f'EXECUTION_ROOT="${{EXECUTION_ROOT:-{execution_root}}}"'
+    if default_line in script:
+        return script.replace(default_line, override_line, 1)
+    override = override_line + "\n"
+    if script.startswith("#!"):
+        newline_index = script.find("\n")
+        if newline_index != -1:
+            return script[: newline_index + 1] + override + script[newline_index + 1 :]
+    return override + script
+
+
 def _mixed_tier_runner_script() -> tuple[str, str, str]:
     script = f"""#!/usr/bin/env bash
 set -euo pipefail
@@ -929,7 +943,15 @@ if [ "$FAILED_COUNT" -gt 0 ]; then
 fi
 echo "All action folders completed successfully."
 """
-    return script, "embedded_mixed_tier", GROUP_BUNDLE_MIXED_TIER_LAYOUT_VERSION
+    loaded_script, source, version = _load_default_runner_script(script)
+    return (
+        _runner_script_with_execution_root(
+            loaded_script,
+            execution_root=GROUP_BUNDLE_MIXED_TIER_EXECUTION_ROOT,
+        ),
+        source,
+        version,
+    )
 
 
 def _grouped_decision_payload(
@@ -1056,6 +1078,49 @@ def _bundle_rollback_command(entry: Mapping[str, Any] | None) -> str:
     return f"{runner} ./{path}"
 
 
+def _bundle_helper_bucket_inventory(bundle: Mapping[str, Any]) -> list[dict[str, Any]]:
+    metadata = bundle.get("metadata")
+    raw_items = metadata.get("helper_bucket_inventory") if isinstance(metadata, Mapping) else None
+    if not isinstance(raw_items, list):
+        return []
+    items: list[dict[str, Any]] = []
+    for raw_item in raw_items:
+        if isinstance(raw_item, Mapping):
+            items.append(copy.deepcopy(dict(raw_item)))
+    return items
+
+
+def _extend_helper_bucket_inventory(
+    inventory: list[dict[str, Any]],
+    entries: Sequence[Mapping[str, Any]],
+    *,
+    action_id: str | None = None,
+) -> None:
+    seen = {
+        (
+            str(item.get("bucket_name") or "").strip(),
+            str(item.get("helper_bucket_role") or "").strip(),
+            bool(item.get("created")),
+        )
+        for item in inventory
+        if isinstance(item, Mapping)
+    }
+    for entry in entries:
+        bucket_name = str(entry.get("bucket_name") or "").strip()
+        helper_bucket_role = str(entry.get("helper_bucket_role") or "").strip()
+        created = bool(entry.get("created"))
+        if not bucket_name or not helper_bucket_role:
+            continue
+        key = (bucket_name, helper_bucket_role, created)
+        if key in seen:
+            continue
+        item = copy.deepcopy(dict(entry))
+        if action_id:
+            item["action_id"] = action_id
+        inventory.append(item)
+        seen.add(key)
+
+
 def _grouped_action_record(
     action: Action,
     decision: _GroupedActionDecision,
@@ -1067,6 +1132,7 @@ def _grouped_action_record(
     has_runnable_terraform: bool,
     bundle_rollback_entry: Mapping[str, Any] | None = None,
     generation_error: Mapping[str, Any] | None = None,
+    helper_bucket_inventory: Sequence[Mapping[str, Any]] | None = None,
 ) -> dict[str, Any]:
     action_id = str(action.id)
     resolution = _grouped_decision_payload(decision, action_id=action_id, action_type=action.action_type)
@@ -1100,6 +1166,8 @@ def _grouped_action_record(
         "finding_coverage": copy.deepcopy(dict(resolution.get("finding_coverage") or {})),
         "preservation_summary": copy.deepcopy(dict(resolution.get("preservation_summary") or {})),
     }
+    if helper_bucket_inventory:
+        record["helper_bucket_inventory"] = [copy.deepcopy(dict(item)) for item in helper_bucket_inventory]
     rollback_command = _bundle_rollback_command(bundle_rollback_entry)
     if rollback_command:
         record["bundle_rollback_command"] = rollback_command
@@ -1163,6 +1231,16 @@ def _grouped_bundle_manifest(
     runner_template_source: str,
     runner_template_version: str,
 ) -> dict[str, Any]:
+    helper_bucket_inventory: list[dict[str, Any]] = []
+    _extend_helper_bucket_inventory(
+        helper_bucket_inventory,
+        [
+            item
+            for record in records
+            for item in list(record.get("helper_bucket_inventory") or [])
+            if isinstance(item, Mapping)
+        ],
+    )
     return {
         "layout_version": GROUP_BUNDLE_MIXED_TIER_LAYOUT_VERSION,
         "execution_root": GROUP_BUNDLE_MIXED_TIER_EXECUTION_ROOT,
@@ -1175,6 +1253,7 @@ def _grouped_bundle_manifest(
         ),
         "runner_template_source": runner_template_source,
         "runner_template_version": runner_template_version,
+        "helper_bucket_inventory": helper_bucket_inventory,
     }
 
 
@@ -1351,6 +1430,7 @@ FINISHED_SUCCESS_TEMPLATE={shell_finished_success_template}
 FINISHED_FAILED_TEMPLATE={shell_finished_failed_template}
 REPLAY_DIR="./.bundle-callback-replay"
 RUNNER="./run_actions.sh"
+SUMMARY_PATH="${{BUNDLE_EXECUTION_SUMMARY_PATH:-./.bundle-execution-summary.json}}"
 RUN_RC=1
 FINISH_SENT=0
 
@@ -1370,6 +1450,32 @@ import sys
 
 payload = json.loads(sys.argv[1])
 payload[str(sys.argv[2])] = str(sys.argv[3])
+print(json.dumps(payload, separators=(",", ":")))
+PY
+}}
+
+inject_execution_summary() {{
+  local template_json="$1"
+  local summary_path="$2"
+  local finished_at="$3"
+  python3 - "$template_json" "$summary_path" "$finished_at" <<'PY'
+import json
+import sys
+from pathlib import Path
+
+payload = json.loads(sys.argv[1])
+summary_path = Path(sys.argv[2])
+finished_at = str(sys.argv[3])
+
+if summary_path.is_file():
+    try:
+        summary = json.loads(summary_path.read_text(encoding="utf-8"))
+    except Exception:
+        summary = {{}}
+    if isinstance(summary.get("action_results"), list):
+        payload["action_results"] = summary["action_results"]
+
+payload["finished_at"] = finished_at
 print(json.dumps(payload, separators=(",", ":")))
 PY
 }}
@@ -1418,16 +1524,23 @@ persist_replay() {{
 
 emit_finished_callback() {{
   local exit_code="$1"
-  local finished_at payload
+  local finished_at payload template_json
   if [ "$FINISH_SENT" -eq 1 ]; then
     return 0
   fi
   FINISH_SENT=1
   finished_at="$(iso_now)"
   if [ "$exit_code" -eq 0 ]; then
-    payload="$(inject_timestamp "$FINISHED_SUCCESS_TEMPLATE" "finished_at" "$finished_at")"
+    template_json="$FINISHED_SUCCESS_TEMPLATE"
   else
-    payload="$(inject_timestamp "$FINISHED_FAILED_TEMPLATE" "finished_at" "$finished_at")"
+    template_json="$FINISHED_FAILED_TEMPLATE"
+  fi
+  if [ -f "$SUMMARY_PATH" ]; then
+    if ! payload="$(inject_execution_summary "$template_json" "$SUMMARY_PATH" "$finished_at")"; then
+      payload="$(inject_timestamp "$template_json" "finished_at" "$finished_at")"
+    fi
+  else
+    payload="$(inject_timestamp "$template_json" "finished_at" "$finished_at")"
   fi
   if ! post_payload "$payload"; then
     persist_replay "finished" "$payload"
@@ -1543,6 +1656,7 @@ def _generate_group_pr_bundle(
     generated_action_ids: list[uuid.UUID] = []
     generated_action_count = 0
     bundle_rollback_entries: dict[str, dict[str, str]] = {}
+    helper_bucket_inventory: list[dict[str, Any]] = []
     skipped_actions: list[dict[str, str]] = []
     first_generation_error: PRBundleGenerationError | None = None
     run_all_script = """#!/usr/bin/env bash
@@ -2084,6 +2198,11 @@ echo "All action folders completed successfully."
             action_id=str(action.id),
             folder=folder,
         )
+        _extend_helper_bucket_inventory(
+            helper_bucket_inventory,
+            _bundle_helper_bucket_inventory(per_action_bundle),
+            action_id=str(action.id),
+        )
         if rollback_entry is not None:
             bundle_rollback_entries[str(action.id)] = rollback_entry
         for file_item in per_action_bundle.get("files", []):
@@ -2171,6 +2290,7 @@ echo "All action folders completed successfully."
             "skipped_action_count": len(skipped_actions),
             "skipped_actions": skipped_actions,
             "bundle_rollback_entries": bundle_rollback_entries,
+            "helper_bucket_inventory": helper_bucket_inventory,
         },
     }
 
@@ -2186,6 +2306,7 @@ def _generate_mixed_tier_group_pr_bundle(
     records: list[dict[str, Any]] = []
     runnable_action_ids: list[uuid.UUID] = []
     bundle_rollback_entries: dict[str, dict[str, str]] = {}
+    helper_bucket_inventory: list[dict[str, Any]] = []
     skipped_actions: list[dict[str, Any]] = []
     first_generation_error: PRBundleGenerationError | None = None
     action_type = actions[0].action_type if actions else None
@@ -2209,6 +2330,7 @@ def _generate_mixed_tier_group_pr_bundle(
         has_runnable_terraform = False
         generation_error: dict[str, Any] | None = None
         rollback_entry: dict[str, str] | None = None
+        per_action_helper_bucket_inventory: list[dict[str, Any]] = []
         if decision.support_tier == "deterministic_bundle":
             try:
                 per_action_bundle = generate_pr_bundle(
@@ -2245,6 +2367,12 @@ def _generate_mixed_tier_group_pr_bundle(
                     )
                 files.extend(action_files)
                 runnable_action_ids.append(action.id)
+                per_action_helper_bucket_inventory = _bundle_helper_bucket_inventory(per_action_bundle)
+                _extend_helper_bucket_inventory(
+                    helper_bucket_inventory,
+                    per_action_helper_bucket_inventory,
+                    action_id=str(action.id),
+                )
                 rollback_entry = _bundle_rollback_entry_for_action(
                     per_action_bundle,
                     action_id=str(action.id),
@@ -2266,6 +2394,7 @@ def _generate_mixed_tier_group_pr_bundle(
             has_runnable_terraform=has_runnable_terraform,
             bundle_rollback_entry=rollback_entry,
             generation_error=generation_error,
+            helper_bucket_inventory=per_action_helper_bucket_inventory,
         )
         records.append(record)
         _append_grouped_action_metadata_files(files, record)
@@ -2362,6 +2491,7 @@ def _generate_mixed_tier_group_pr_bundle(
             "review_required_action_count": int(tier_counts["review_required"]),
             "manual_guidance_action_count": int(tier_counts["manual_guidance"]),
             "bundle_rollback_entries": bundle_rollback_entries,
+            "helper_bucket_inventory": helper_bucket_inventory,
         },
     }
 
@@ -2426,9 +2556,17 @@ def _execute_direct_fix(session: Session, run: RemediationRun, log_lines: list[s
     # Assume WriteRole
     log_lines.append("Assuming WriteRole.")
     try:
+        tenant_external_id_value = canonical_tenant_external_id(session, run.tenant_id)
+    except Exception:
+        tenant_external_id_value = None
+    tenant_external_id = account_assume_role_external_id(
+        account,
+        tenant_external_id=tenant_external_id_value,
+    ) or ""
+    try:
         wr_session = assume_role(
             role_arn=account.role_write_arn,
-            external_id=account.external_id,
+            external_id=tenant_external_id,
         )
     except ClientError as e:
         code = e.response.get("Error", {}).get("Code", "Unknown")
@@ -2851,6 +2989,9 @@ def execute_remediation_run_job(job: dict) -> None:
                                         group_bundle["skipped_action_count"] = skipped_count
                                     if isinstance(skipped_actions, list):
                                         group_bundle["skipped_actions"] = skipped_actions
+                                    helper_bucket_inventory = metadata.get("helper_bucket_inventory")
+                                    if isinstance(helper_bucket_inventory, list):
+                                        group_bundle["helper_bucket_inventory"] = copy.deepcopy(helper_bucket_inventory)
                                     for key in (
                                         "layout_version",
                                         "execution_root",

@@ -14,6 +14,10 @@ from typing import Any
 from botocore.exceptions import ClientError
 
 from backend.services.control_scope import unsupported_control_decision
+from backend.services.remediation_support_bucket import (
+    is_product_managed_support_log_sink,
+    support_bucket_role_from_tags,
+)
 from backend.workers.services.control_plane_events import (
     SHADOW_STATUS_OPEN,
     SHADOW_STATUS_RESOLVED,
@@ -299,6 +303,27 @@ def _s3_bucket_policy_json(s3_client: Any, bucket: str) -> tuple[dict[str, Any] 
         return (None, True)
 
 
+def _s3_bucket_tag_map(s3_client: Any, bucket: str) -> dict[str, str]:
+    if not hasattr(s3_client, "get_bucket_tagging"):
+        return {}
+    try:
+        resp = s3_client.get_bucket_tagging(Bucket=bucket)
+    except ClientError as exc:
+        if _extract_error_code(exc) in {"NoSuchTagSet", "NoSuchBucket"}:
+            return {}
+        raise
+    tag_set = _as_list(resp.get("TagSet"))
+    tag_map: dict[str, str] = {}
+    for tag in tag_set:
+        if not isinstance(tag, dict):
+            continue
+        key = str(tag.get("Key") or "").strip()
+        value = str(tag.get("Value") or "").strip()
+        if key:
+            tag_map[key] = value
+    return tag_map
+
+
 def _policy_condition_has_secure_transport_false(condition: Any) -> bool:
     if not isinstance(condition, dict):
         return False
@@ -545,6 +570,7 @@ def _collect_s3_buckets(
     else:
         resp = s3.list_buckets()
         bucket_names = [str((b or {}).get("Name") or "") for b in _as_list(resp.get("Buckets"))]
+    emit_account_shaped_s32 = bool(resource_ids) and len(bucket_names) == 1
 
     for bucket in bucket_names:
         bucket = bucket.strip()
@@ -706,6 +732,16 @@ def _collect_s3_buckets(
         logging_enabled = False
         s39_error_code: str | None = None
         s39_access_denied = False
+        bucket_tags: dict[str, str] = {}
+        bucket_tag_error_code: str | None = None
+        managed_support_log_sink = False
+        support_bucket_role: str | None = None
+        try:
+            bucket_tags = _s3_bucket_tag_map(s3, bucket)
+            managed_support_log_sink = is_product_managed_support_log_sink(bucket_tags)
+            support_bucket_role = support_bucket_role_from_tags(bucket_tags)
+        except ClientError as exc:
+            bucket_tag_error_code = _extract_error_code(exc)
         try:
             logging_enabled = _s3_bucket_logging_enabled(s3, bucket)
         except ClientError as exc:
@@ -723,6 +759,11 @@ def _collect_s3_buckets(
             s39_reason = "inventory_api_error_s3_get_bucket_logging"
             s39_confidence = 40
             s39_branch = "api_error"
+        elif managed_support_log_sink:
+            s39_status = SHADOW_STATUS_RESOLVED
+            s39_reason = "inventory_product_managed_support_log_sink"
+            s39_confidence = 95
+            s39_branch = "product_managed_support_log_sink"
         else:
             s39_status = SHADOW_STATUS_RESOLVED if logging_enabled else SHADOW_STATUS_OPEN
             s39_reason = "inventory_confirmed_compliant" if logging_enabled else "inventory_confirmed_non_compliant"
@@ -808,23 +849,6 @@ def _collect_s3_buckets(
                 },
             ),
             _control_eval(
-                control_id="S3.2",
-                resource_id=account_id,
-                resource_type="AwsAccount",
-                status=s32_status,
-                title="S3 bucket public access posture",
-                description="Inventory reconciliation for public access posture.",
-                status_reason=s32_reason,
-                state_confidence=s32_confidence,
-                evidence_ref={
-                    "source": "inventory",
-                    "probe_branch": s32_branch,
-                    "access_denied_error_codes": s32_access_denied_error_codes,
-                    "api_error_codes": s32_api_error_codes,
-                    **public_evidence,
-                },
-            ),
-            _control_eval(
                 control_id="S3.4",
                 resource_id=resource_id,
                 resource_type="AwsS3Bucket",
@@ -870,6 +894,10 @@ def _collect_s3_buckets(
                     "probe_branch": s39_branch,
                     "error_code": s39_error_code,
                     "logging_enabled": logging_enabled,
+                    "bucket_tags": bucket_tags,
+                    "bucket_tag_error_code": bucket_tag_error_code,
+                    "product_managed_support_log_sink": managed_support_log_sink,
+                    "support_bucket_role": support_bucket_role,
                 },
                 state_confidence=s39_confidence,
             ),
@@ -909,12 +937,35 @@ def _collect_s3_buckets(
                 state_confidence=s35_confidence,
             ),
         ]
+        if emit_account_shaped_s32:
+            evals.insert(
+                1,
+                _control_eval(
+                    control_id="S3.2",
+                    resource_id=account_id,
+                    resource_type="AwsAccount",
+                    status=s32_status,
+                    title="S3 bucket public access posture",
+                    description="Inventory reconciliation for public access posture.",
+                    status_reason=s32_reason,
+                    state_confidence=s32_confidence,
+                    evidence_ref={
+                        "source": "inventory",
+                        "probe_branch": s32_branch,
+                        "access_denied_error_codes": s32_access_denied_error_codes,
+                        "api_error_codes": s32_api_error_codes,
+                        **public_evidence,
+                    },
+                ),
+            )
         state_for_hash = {
             "public_access_block": public_evidence.get("public_access_block"),
             "policy_is_public": public_evidence.get("policy_is_public"),
             "default_encryption_algorithm": algo,
             "kms_default_enabled": kms_enabled,
             "logging_enabled": logging_enabled,
+            "product_managed_support_log_sink": managed_support_log_sink,
+            "support_bucket_role": support_bucket_role,
             "lifecycle_has_valid_rule": lifecycle_has_valid_rule,
             "ssl_deny_policy": ssl_deny,
             "s32_branch": s32_branch,
@@ -930,6 +981,8 @@ def _collect_s3_buckets(
             "default_encryption_algorithm": algo,
             "kms_default_enabled": kms_enabled,
             "logging_enabled": logging_enabled,
+            "product_managed_support_log_sink": managed_support_log_sink,
+            "support_bucket_role": support_bucket_role,
             "lifecycle_has_valid_rule": lifecycle_has_valid_rule,
             "ssl_deny_policy": ssl_deny,
         }
@@ -940,7 +993,7 @@ def _collect_s3_buckets(
                 resource_type="AwsS3Bucket",
                 key_fields=key_fields,
                 state_for_hash=state_for_hash,
-                metadata_json=None,
+                metadata_json={"bucket_tags": bucket_tags} if bucket_tags else None,
                 evaluations=evals,
             )
         )
