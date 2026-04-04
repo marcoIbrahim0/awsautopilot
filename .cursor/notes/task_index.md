@@ -2,6 +2,13 @@
 
 This index maps notable tasks to discoverable entries in `.cursor/notes/task_log.md`.
 
+## 2026-04
+
+- [Reconcile clean master to the live production runtime and redeploy from the guarded paths (2026-04-04)](task_log.md#reconcile-clean-master-to-the-live-production-runtime-and-redeploy-from-the-guarded-paths-2026-04-04)
+  - Captured rollback anchors under `/Users/marcomaher/repo-backups/aws-security-autopilot/20260404T024255Z-deploy-clean-master/`, proved clean `master` was blocked by the live DB already being at revision `0055_sync_account_external_id_mirror`, and reconciled the live-only source delta onto a clean branch before advancing local `master`.
+  - Added the missing no-UI findings fixture needed by inventory tests, validated the reconciled branch with a focused `285 passed` pytest slice plus explicit runtime/DB head checks, and fast-forwarded local `master` to commit `df3b6f578`.
+  - Redeployed backend/worker to image tag `20260404T025252Z`, redeployed the frontend to Cloudflare version `b7607861-35b5-40d8-b42d-331efb95335e`, and re-verified live `/health` plus `/ready`.
+
 ## 2026-03
 
 - [Add resource-scope handoff UX to findings cards (2026-03-31)](task_log.md#add-resource-scope-handoff-ux-to-findings-cards-2026-03-31)
