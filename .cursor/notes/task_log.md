@@ -1,5 +1,48 @@
 # Task Log
 
+## Preserve the full dirty local state, push a remote safety branch, and restore clean master (2026-04-04)
+
+**Task:** Make the repository clean again without losing any local data by preserving the entire dirty `master` worktree in multiple recoverable forms, pushing that preserved state to GitHub, and then returning the main checkout to clean `origin/master`.
+
+**Files modified:**
+- `/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_log.md`
+- `/Users/marcomaher/AWS Security Autopilot/.cursor/notes/task_index.md`
+
+**What was done:**
+- Verified the starting state on April 4, 2026 UTC:
+  - `master` matched `origin/master` at commit `dd78c9b2b`
+  - the worktree still carried `156` modified tracked files and `3983` untracked files
+- Wrote layered no-loss backups outside the repo under `/Users/marcomaher/repo-backups/aws-security-autopilot/20260404T022816Z-no-loss-cleanup/`:
+  - `git-status.txt`
+  - `tracked-working-tree.patch`
+  - `tracked-working-tree.stat`
+  - `tracked-working-tree.names`
+  - `untracked-files.txt`
+  - `untracked-files.tar.gz`
+  - `pre-clean-all-refs.bundle`
+  - `post-preservation-branch.bundle`
+- Created safety branch `codex/preserve-local-master-state-20260404`.
+- Committed the full dirty state on that branch as commit `83fc2ade5abab8f07cbce831a12fed47e60b8ecc` with message `chore: preserve local master state before cleanup`.
+- Pushed `codex/preserve-local-master-state-20260404` to `origin` so the preserved state now exists on GitHub in addition to the local backup artifacts.
+- Switched the working checkout back to `master` and hard-reset it to `origin/master`, restoring a clean main worktree after the preservation branch and backup artifacts were verified.
+
+**Validation / outcome:**
+- `git push -u origin codex/preserve-local-master-state-20260404`
+  - passed
+- `git status --short --branch` on `master`
+  - returned only `## master...origin/master`
+- Recovery paths now exist in three independent forms:
+  - local backup directory: `/Users/marcomaher/repo-backups/aws-security-autopilot/20260404T022816Z-no-loss-cleanup/`
+  - remote GitHub branch: `origin/codex/preserve-local-master-state-20260404`
+  - local preserved commit: `83fc2ade5abab8f07cbce831a12fed47e60b8ecc`
+
+**Technical debt / gotchas:**
+- The preservation branch intentionally contains generated caches and large live-run evidence artifacts because the task requirement was zero data loss, not selective cleanup.
+- The backup directory is large because it includes both a full `--all` git bundle and explicit tracked/untracked working-tree captures; do not delete it until the preserved branch is no longer needed.
+
+**Open questions / TODOs:**
+- None.
+
 ## Close the remaining stale grouped S3 bucket handoff truthfully and fix the separate scoped recompute wedge (2026-04-02)
 
 **Task:** Start from the retained April 1 stale-action handoff, audit the real live grouped S3 path for deleted or drifted bucket-backed members, create a fresh grouped rerun with dedupe bypass, prove whether stale members are still executable, and if the scoped recompute path is wedged, debug and fix that path before closing the handoff.

@@ -4,6 +4,10 @@ This index maps notable tasks to discoverable entries in `.cursor/notes/task_log
 
 ## 2026-04
 
+- [Preserve the full dirty local state, push a remote safety branch, and restore clean master (2026-04-04)](task_log.md#preserve-the-full-dirty-local-state-push-a-remote-safety-branch-and-restore-clean-master-2026-04-04)
+  - Verified `master` was already aligned with `origin/master`, then preserved the dirty worktree in layered local backups under `/Users/marcomaher/repo-backups/aws-security-autopilot/20260404T022816Z-no-loss-cleanup/` before any cleanup action.
+  - Captured the exact dirty state on safety branch `codex/preserve-local-master-state-20260404`, committed it as `83fc2ade5abab8f07cbce831a12fed47e60b8ecc`, and pushed that branch to GitHub.
+  - Returned the main checkout to a clean `master` with `git status --short --branch` showing only `## master...origin/master`, while preserving recovery in backup artifacts, the local commit, and the remote branch.
 - [Close the remaining stale grouped S3 bucket handoff truthfully and fix the separate scoped recompute wedge (2026-04-02)](task_log.md#close-the-remaining-stale-grouped-s3-bucket-handoff-truthfully-and-fix-the-separate-scoped-recompute-wedge-2026-04-02)
   - Retained a fresh live S3.11 grouped rerun under `docs/test-results/live-runs/20260402T215309Z-s311-stale-action-rerun/` proving the historical deleted or drifted bucket names from the April 1 handoff no longer survive as executable grouped members; the fresh bundle had `0` executable actions and the stale buckets persisted only as truthful `manual_guidance_only` or `review_required_bundle` results.
   - The same pass proved the local bundle runner now has nothing executable to mutate for that stale family and retained final API state showing grouped run `29845b58-eeab-47af-8b3a-9218ada62452` finished through `bundle_callback` with all `21` results `non_executable`.
